@@ -1,0 +1,21 @@
+{
+  "name": "ashlr-stack-mcp",
+  "version": "0.1.0",
+  "description": "MCP server wrapper around the Ashlr Stack CLI. Exposes every `stack` command as an MCP tool.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "ashlr-stack-mcp": "./src/server.ts"
+  },
+  "scripts": {
+    "start": "bun run src/server.ts",
+    "typecheck": "bunx tsc --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.7.0"
+  }
+}

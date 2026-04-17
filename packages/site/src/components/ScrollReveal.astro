@@ -1,0 +1,111 @@
+---
+/**
+ * Lightweight scroll-triggered reveal — no React island required.
+ *
+ * Drop around any subtree to fade + slide up on viewport enter. Children that
+ * also want staggered choreography can put `.reveal` on their own wrappers
+ * inside a parent with `.reveal-stagger`, and set a CSS variable:
+ *
+ *   <div class="reveal" style="--stagger-i: 2"> ... </div>
+ *
+ * The IntersectionObserver is installed once per page.
+ */
+export interface Props {
+  as?: string;
+  stagger?: boolean;
+  className?: string;
+  /** Top-margin offset, e.g. "-10%" to trigger earlier. */
+  rootMargin?: string;
+  /** Intersection threshold 0..1. */
+  threshold?: number;
+}
+const {
+  as: As = "div",
+  stagger = false,
+  className = "",
+  rootMargin = "0px 0px -10% 0px",
+  threshold = 0.15,
+} = Astro.props;
+const tag = As;
+---
+
+<Fragment>
+  {tag === "div" && (
+    <div
+      class={`reveal ${stagger ? "reveal-stagger" : ""} ${className}`}
+      data-reveal
+      data-root-margin={rootMargin}
+      data-threshold={String(threshold)}
+    >
+      <slot />
+    </div>
+  )}
+  {tag === "section" && (
+    <section
+      class={`reveal ${stagger ? "reveal-stagger" : ""} ${className}`}
+      data-reveal
+      data-root-margin={rootMargin}
+      data-threshold={String(threshold)}
+    >
+      <slot />
+    </section>
+  )}
+  {tag !== "div" && tag !== "section" && (
+    <div
+      class={`reveal ${stagger ? "reveal-stagger" : ""} ${className}`}
+      data-reveal
+      data-root-margin={rootMargin}
+      data-threshold={String(threshold)}
+    >
+      <slot />
+    </div>
+  )}
+</Fragment>
+
+<script is:inline>
+  // Register the observer exactly once per page. `astro:page-load` fires on
+  // every client nav; we idempotent-guard with a flag on window.
+  (function () {
+    if (window.__stackRevealInstalled) return;
+    window.__stackRevealInstalled = true;
+
+    const prefersReduced =
+      window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    if (prefersReduced) {
+      document.querySelectorAll("[data-reveal]").forEach((el) => el.classList.add("in-view"));
+      document.querySelectorAll(".draw-on-view").forEach((el) => el.classList.add("in-view"));
+      return;
+    }
+
+    const install = () => {
+      const targets = document.querySelectorAll("[data-reveal], .draw-on-view");
+      const io = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add("in-view");
+              // Propagate to inner .reveal children so staggered timelines fire.
+              entry.target.querySelectorAll(".reveal").forEach((child, i) => {
+                child.style.setProperty("--stagger-i", String(i));
+                requestAnimationFrame(() => child.classList.add("in-view"));
+              });
+              io.unobserve(entry.target);
+            }
+          });
+        },
+        {
+          rootMargin: "0px 0px -10% 0px",
+          threshold: 0.15,
+        },
+      );
+      targets.forEach((t) => io.observe(t));
+    };
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", install);
+    } else {
+      install();
+    }
+  })();
+</script>

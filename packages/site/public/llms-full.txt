@@ -1,0 +1,482 @@
+# Ashlr Stack — full reference
+
+> The control plane for your entire dev stack. CLI + MCP server + Claude Code plugin. MIT. Pre-alpha.
+
+This file is the long-form LLM-friendly reference. For a quick overview, see /llms.txt.
+
+Domain: https://stack.ashlr.ai
+Source: https://github.com/ashlrai/ashlr-stack
+
+---
+
+## Table of contents
+
+1. What Stack is
+2. Install
+3. CLI reference (every command, every flag)
+4. Config files (.stack.toml, .stack.local.toml)
+5. Provider catalog with auth details
+6. Templates
+7. MCP server
+8. Claude Code plugin
+9. Phantom Secrets integration
+10. Typical workflows
+11. FAQ / gotchas
+
+---
+
+## 1. What Stack is
+
+Ashlr Stack (short name "Stack") is a developer tool that collapses the hour of
+tab-hopping after `create-next-app` into one command. For each service you want
+to wire, Stack:
+
+1. Runs the provider's OAuth / PAT flow in your browser (or prompts once for a token).
+2. Creates the upstream resource — a Supabase project, a Neon database, a Sentry project, a Stripe account connection, etc.
+3. Stores every credential in Phantom (a local-only secrets vault; values never touch disk in plaintext).
+4. Writes a `.env` file that references slot names (not raw values).
+5. Adds the provider's MCP server entry to `.mcp.json` so your Claude Code / Cursor session can use it immediately.
+
+Stack ships three surfaces:
+
+- A CLI (`stack`).
+- An MCP server (`ashlr-stack-mcp`) that exposes every CLI command as an MCP tool.
+- A Claude Code plugin (`ashlrai/stack-plugin`) that adds slash commands.
+
+Stack is the **control plane**. [Phantom Secrets](https://phantom.ashlr.ai) is the **vault**. They compose — you can use Phantom without Stack, but Stack requires Phantom.
+
+---
+
+## 2. Install
+
+### One-liner (pre-alpha — placeholder until v0.1 ships)
+
+```bash
+curl -fsSL stack.ashlr.ai/install.sh | bash
+# Installs Phantom if missing, then Stack.
+```
+
+### Package managers (pre-alpha)
+
+```bash
+brew tap ashlrai/phantom && brew install phantom   # prerequisite
+bun add -g @ashlr/stack ashlr-stack-mcp            # or: npm i -g
+```
+
+### From source (dev install)
+
+```bash
+git clone https://github.com/ashlrai/ashlr-stack
+cd ashlr-stack
+bun install
+bun run packages/cli/src/index.ts --help
+
+# Optional PATH alias:
+alias stack="bun run $(pwd)/packages/cli/src/index.ts"
+```
+
+### Verify
+
+```bash
+stack --version
+stack doctor            # checks Phantom, checks each registered provider
+```
+
+---
+
+## 3. CLI reference
+
+All commands accept `--help`, `--json` (machine-readable output), and `--cwd <path>` (operate on a project other than the current directory).
+
+### `stack init [--template <slug>] [--name <name>]`
+
+Scaffold a new project. Interactive by default — shows a picker of templates. With `--template`, non-interactive.
+
+Creates:
+- A new directory (if `--name` is passed).
+- `.stack.toml` (committed; shape of the stack).
+- `.stack.local.toml` (gitignored; per-clone resource IDs).
+- `.gitignore` entry for `.stack.local.toml`.
+- `.env` that references Phantom slots.
+- `.mcp.json` with the MCP servers for the chosen providers.
+
+### `stack add <provider> [--name <alias>] [--yes]`
+
+Provision one service. `--name` is an alias used as the key in `.stack.toml` (lets you wire, e.g., two Supabase projects: `supabase-main` and `supabase-analytics`). `--yes` skips the confirmation after the OAuth callback.
+
+Flow:
+1. Opens browser for OAuth / prompts for PAT (see provider matrix below).
+2. Prompts for region / tier / any required options.
+3. Creates the upstream resource.
+4. Writes secrets to Phantom under provider-specific slot names.
+5. Patches `.env` and `.mcp.json`.
+6. Updates `.stack.toml` with the new service block.
+
+### `stack remove <provider> [--keep-upstream]`
+
+Unlinks a service. By default, also destroys the upstream resource. `--keep-upstream` leaves the remote resource intact — useful if other projects share it.
+
+### `stack list`
+
+Services wired in the current project. Equivalent to reading `.stack.toml`, formatted.
+
+### `stack providers [--category <name>]`
+
+Full catalog of 23 supported providers, grouped by category.
+
+### `stack templates`
+
+List available templates. See section 6.
+
+### `stack scan [--auto] [--dry-run]`
+
+In an existing repo, detect services Stack could manage. Scans:
+- `package.json` dependencies (e.g., `@supabase/supabase-js` → Supabase).
+- `.env.example` / `.env` keys (e.g., `SENTRY_DSN` → Sentry).
+- Config files (`next.config.js`, `wrangler.toml`, etc.).
+
+With `--auto`, interactively runs `stack add` for each detection. With `--dry-run`, prints what it would detect without modifying anything.
+
+### `stack import [--file <.env path>]`
+
+Ingests an existing `.env` into Phantom, then writes a matching `.stack.toml`. Great for adopting Stack on a project with existing secrets.
+
+### `stack clone <repo> [--dir <path>]`
+
+`git clone` + scan. Prints a next-steps list: "Run `stack doctor --fix` to authenticate to each service and create per-clone resources."
+
+### `stack doctor [--fix] [--all]`
+
+Health-check every service in `.stack.toml`. Without `--fix`, read-only — prints what's broken. With `--fix`, re-runs the provision flow for anything broken. With `--all`, runs across every Stack-registered project on this machine (see `stack projects list`).
+
+### `stack status`
+
+One-line summary per service: ok / broken / unconfigured.
+
+### `stack info [--service <name>]`
+
+Deep metadata: template, providers, Phantom vault, file paths, resource IDs.
+
+### `stack open <provider>`
+
+Opens the provider's web dashboard for this project's resource. E.g., `stack open supabase` opens the Supabase project page directly.
+
+### `stack exec -- <cmd> [args…]`
+
+Runs `<cmd>` with Phantom's secret proxy active. Resolved env vars are injected into the child process's environment; they are never written to disk. Idiomatic use:
+
+```bash
+stack exec -- bun dev
+stack exec -- npm run build
+stack exec -- pytest
+```
+
+### `stack env [--json]`
+
+Inspects the active env. Values are masked by default (slot names shown, real values only revealed with `--reveal`, which requires a Phantom confirmation prompt).
+
+### `stack sync`
+
+Pulls latest upstream resource IDs into `.stack.local.toml`. Useful after someone else on the team re-provisions a shared resource.
+
+### `stack projects list`
+
+Every project on this machine that has a `.stack.toml`. Stored in `~/.config/ashlr-stack/projects.json`.
+
+### `stack deps`
+
+Shows the provider dependency graph — e.g., if Stripe Connect depends on a prior Clerk auth setup.
+
+### `stack ci`
+
+Emits CI configuration (GitHub Actions, GitLab CI) — secret references, build steps, deploy hooks. Reads `.stack.toml` and writes `.github/workflows/stack.yml`.
+
+### `stack login [<provider>]` / `stack logout [<provider>]`
+
+Manage per-provider OAuth tokens. `stack login` with no arg re-authenticates all providers that have expired tokens.
+
+### `stack upgrade`
+
+Updates Stack itself (re-runs the install-script variant the user chose).
+
+### `stack completion <bash|zsh|fish>`
+
+Emits shell completions. Typical use:
+
+```bash
+stack completion zsh > ~/.zfunc/_stack
+```
+
+---
+
+## 4. Config files
+
+### `.stack.toml` (committed)
+
+Shape of the stack — shareable across a team. Never contains secret values; only references slot names.
+
+```toml
+[stack]
+version = "1"
+project_id = "stk_xxx"
+template = "nextjs-supabase-posthog"
+
+[services.supabase]
+provider = "supabase"
+resource_id = "abcd1234"                # provider-side id
+region = "us-east-1"
+secrets = ["SUPABASE_URL", "SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY"]
+mcp = "supabase"
+created_at = "2026-04-17T05:00:00Z"
+created_by = "stack add"
+
+[[environments]]
+name = "dev"
+default = true
+
+[[environments]]
+name = "prod"
+```
+
+### `.stack.local.toml` (gitignored)
+
+Per-clone resource IDs. Regenerated by `stack doctor --fix` on each developer's machine.
+
+Invariants:
+- `stack.version` is always "1" in this release. Breaking changes bump to "2" with a one-shot migration.
+- `services[*].secrets` is the single source of truth for Phantom vault keys owned by each service. `stack remove <service>` trusts this list when clearing secrets.
+- `.phantom.toml` is owned by Phantom and is never modified by Stack.
+
+Full schema: https://github.com/ashlrai/ashlr-stack/blob/main/docs/stack-toml-schema.md
+
+---
+
+## 5. Provider catalog
+
+23 providers across 11 categories. Each entry shows: auth method, OAuth app required, rate limit, dashboard.
+
+### Database
+
+- **Supabase** — oauth_pkce, Ashlr OAuth app, 60/min, https://supabase.com/dashboard. Provisions: Postgres + Auth + Storage. Secrets: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`.
+- **Neon** — oauth, Ashlr OAuth app, 100/min, https://console.neon.tech. Provisions: serverless Postgres branch. Secrets: `DATABASE_URL`, `DIRECT_URL`.
+- **Turso** — pat, no OAuth app, https://turso.tech. Provisions: edge SQLite (libSQL) database. Secrets: `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`.
+- **Convex** — cli_shell, https://convex.dev. Provisions: reactive backend project. Secrets: `CONVEX_DEPLOYMENT`, `CONVEX_URL`.
+- **Upstash** — pat, 100/min, https://console.upstash.com. Provisions: serverless Redis + Kafka. Secrets: `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`.
+- **Firebase** — cli_shell (`firebase login`). Provisions: project + Firestore + Auth. Secrets: service-account JSON stored as a single slot.
+
+### Deploy
+
+- **Vercel** — oauth (or user PAT), Ashlr OAuth app, 100/min, https://vercel.com/dashboard. Provisions: project + linked git repo. Secrets: `VERCEL_TOKEN`, `VERCEL_PROJECT_ID`, `VERCEL_ORG_ID`.
+- **Railway** — pat, 100/min, https://railway.app. Provisions: project. Secrets: `RAILWAY_TOKEN`.
+- **Fly.io** — pat, 60/min, https://fly.io/dashboard. Provisions: app. Secrets: `FLY_API_TOKEN`.
+- **Cloudflare** — api_token, https://dash.cloudflare.com. Provisions: Workers / R2 / D1 resources as selected. Secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`.
+- **Render** — pat, https://render.com. Provisions: web service. Secrets: `RENDER_API_KEY`.
+
+### Cloud
+
+- **AWS** — api_key (access key pair), IAM policy recommended. Provisions: scoped IAM user + selected resource (S3 bucket, Lambda, RDS). Secrets: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`.
+
+### AI
+
+- **OpenAI** — api_key, tier-based limits, https://platform.openai.com. Secrets: `OPENAI_API_KEY`.
+- **Anthropic** — api_key, tier-based, https://console.anthropic.com. Secrets: `ANTHROPIC_API_KEY`.
+- **xAI** — api_key, tier-based, https://console.x.ai. Secrets: `XAI_API_KEY`.
+- **DeepSeek** — api_key, tier-based, https://platform.deepseek.com. Secrets: `DEEPSEEK_API_KEY`.
+
+### Analytics
+
+- **PostHog** — pat, 240/min, https://app.posthog.com. Provisions: project. Secrets: `POSTHOG_PROJECT_API_KEY`, `POSTHOG_HOST`.
+
+### Errors
+
+- **Sentry** — oauth, Ashlr OAuth app, 40/s, https://sentry.io. Provisions: project. Secrets: `SENTRY_DSN`, `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT`.
+
+### Payments
+
+- **Stripe** — oauth (Stripe Connect), 100/s, https://dashboard.stripe.com. Provisions: connected account. Secrets: `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET`.
+
+### Code
+
+- **GitHub** — oauth_device, 5000/h, https://github.com. Provisions: repo (optional). Secrets: `GITHUB_TOKEN`.
+
+### Tickets
+
+- **Linear** — oauth, 1500/h, https://linear.app. Secrets: `LINEAR_API_KEY`.
+
+### Email
+
+- **Resend** — pat, 10/s, https://resend.com. Secrets: `RESEND_API_KEY`.
+
+### Auth
+
+- **Clerk** — pat, https://dashboard.clerk.com. Provisions: application. Secrets: `CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`.
+
+Full, live matrix: https://github.com/ashlrai/ashlr-stack/blob/main/docs/provider-auth-matrix.md
+
+### OAuth app registration
+
+For providers needing an OAuth app, Ashlr registers a single "Ashlr Stack" app per provider at `https://stack.ashlr.ai`. Redirect URL is a PKCE loopback (`http://127.0.0.1:PORT/callback`, dynamic port). Client IDs are embedded public identifiers; no client secret ships with user installs.
+
+---
+
+## 6. Templates
+
+Templates are TOML + shell recipes under `templates/` in the source repo. Run `stack templates` for the live list.
+
+- **nextjs-supabase-posthog** — Next.js 15 + Supabase + PostHog + PostHog feature flags. App-router, server components, Tailwind.
+- **nextjs-neon-vercel-sentry** — Next.js + Neon Postgres + Vercel deploy + Sentry error tracking + Drizzle ORM.
+- **cloudflare-turso-clerk** — Cloudflare Workers + Turso (libSQL) + Clerk auth. Edge-native, zero cold starts.
+- **supabase-posthog-sentry-resend** — Full SaaS baseline: Supabase + PostHog + Sentry + Resend transactional email.
+- **claude-agent-openai-anthropic** — Agent starter with both OpenAI + Anthropic SDKs wired, MCP-ready, Phantom-gated.
+
+Each template wires:
+- All services via `stack add` under the hood.
+- A `.env` that references Phantom slots.
+- A `.mcp.json` with provider MCP servers.
+- An opinionated `package.json` / `tsconfig.json` / `tailwind.config.ts`.
+
+---
+
+## 7. MCP server
+
+Package: `ashlr-stack-mcp`.
+
+### Install
+
+```json
+// .mcp.json
+{
+  "mcpServers": {
+    "stack": {
+      "command": "bunx",
+      "args": ["ashlr-stack-mcp"]
+    }
+  }
+}
+```
+
+### Exposed tools
+
+One per CLI command. Each tool accepts the same flags as the CLI:
+
+- `stack_add` — `{ provider: string, name?: string, yes?: boolean }`
+- `stack_remove` — `{ provider: string, keep_upstream?: boolean }`
+- `stack_list` — `{}`
+- `stack_providers` — `{ category?: string }`
+- `stack_templates` — `{}`
+- `stack_scan` — `{ auto?: boolean, dry_run?: boolean }`
+- `stack_import` — `{ file?: string }`
+- `stack_clone` — `{ repo: string, dir?: string }`
+- `stack_doctor` — `{ fix?: boolean, all?: boolean }`
+- `stack_status` — `{}`
+- `stack_info` — `{ service?: string }`
+- `stack_open` — `{ provider: string }`
+- `stack_exec` — `{ cmd: string, args?: string[] }` (note: exec inside MCP is sandboxed; see docs)
+- `stack_env` — `{ reveal?: boolean }`
+- `stack_sync` — `{}`
+- `stack_projects` — `{}`
+- `stack_deps` — `{}`
+- `stack_ci` — `{}`
+
+All tools return structured JSON; errors include a machine-readable `code` and a human-readable `message`.
+
+---
+
+## 8. Claude Code plugin
+
+Install:
+
+```bash
+claude plugin install ashlrai/stack-plugin
+```
+
+Slash commands:
+
+- `/stack:add <provider>` — prompt Claude to provision a service end-to-end in-chat.
+- `/stack:doctor` — health-check the current project.
+- `/stack:list` — list wired services.
+- `/stack:status` — one-line health per service.
+
+The plugin shells out to the `stack` CLI via MCP. Secrets remain behind Phantom's proxy: Claude sees slot names, never raw values.
+
+---
+
+## 9. Phantom Secrets integration
+
+Phantom is a local-only secrets vault (https://phantom.ashlr.ai). Stack writes every credential through Phantom.
+
+When Stack provisions, for example, Supabase:
+
+1. Runs OAuth in the user's browser.
+2. Creates the Supabase project.
+3. Writes `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` to Phantom under slot names.
+4. Writes a `.env` that references those slot names (not values).
+5. Adds the Supabase MCP server to `.mcp.json`.
+
+At runtime, `stack exec -- <cmd>` resolves slot names → values and injects them into the child's environment. Values never land on disk in plaintext, and subprocesses never see a path to the Phantom vault file.
+
+---
+
+## 10. Typical workflows
+
+### Green-field project
+
+```bash
+stack init --template nextjs-supabase-posthog
+cd my-app
+stack exec -- bun dev
+```
+
+### Adopt Stack on an existing repo
+
+```bash
+cd existing-repo
+stack scan                      # what could Stack manage?
+stack scan --auto               # interactively provision each detection
+# or:
+stack import --file .env        # slurp an existing .env into Phantom
+```
+
+### Clone a teammate's Stack-enabled project
+
+```bash
+stack clone github.com/org/repo
+cd repo
+stack doctor --fix              # re-runs OAuth for you; creates per-clone resources
+```
+
+### CI
+
+```bash
+stack ci                        # emits .github/workflows/stack.yml
+# The workflow pulls from Phantom Cloud (if configured) for deployment secrets.
+```
+
+### Agentic (Claude Code)
+
+```
+User: /stack:add supabase
+Claude: [calls stack_add via MCP] → OAuth URL → user approves → Supabase project created → secrets in Phantom → .env and .mcp.json updated.
+```
+
+---
+
+## 11. FAQ / gotchas
+
+- **Secrets never leak.** Stack does not write raw values to disk. If you inspect `.env`, you'll see references like `${phantom:SUPABASE_URL}`. Resolve with `stack env --reveal` (requires Phantom confirmation).
+- **Per-clone resources.** `.stack.local.toml` is unique per clone. Two developers on the same repo may have different Supabase project IDs; `.stack.toml` is identical across clones.
+- **Doctor is idempotent.** Running `stack doctor --fix` repeatedly is safe. Broken services are re-provisioned; healthy ones are left alone.
+- **`stack remove` destroys upstream by default.** Use `--keep-upstream` if you want to preserve the resource.
+- **Pre-alpha.** Do not use Stack for production secret management yet. Evaluate Phantom independently. APIs may change.
+- **MCP server ↔ CLI parity.** Every MCP tool delegates to the CLI. If a CLI flag exists, the MCP tool accepts it with snake_case keys.
+- **License.** MIT. Open-source. No paid tier today.
+
+---
+
+## Links
+
+- Homepage: https://stack.ashlr.ai
+- Short LLM summary: https://stack.ashlr.ai/llms.txt
+- Source: https://github.com/ashlrai/ashlr-stack
+- Phantom Secrets: https://phantom.ashlr.ai
+- Ashlr org: https://ashlr.ai

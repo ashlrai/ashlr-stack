@@ -1,0 +1,29 @@
+node_modules/
+dist/
+*.log
+.DS_Store
+
+# Secrets — Stack never stores secret values; Phantom does. If any .env
+# appears in a repo using Stack, it should only hold phm_ tokens, but we
+# ignore defensively.
+.env
+.env.local
+.env.*.local
+
+# Stack's per-developer instance data. The committed shape lives in .stack.toml.
+.stack.local.toml
+
+# Deploy caches
+.vercel/
+.wrangler/
+
+# Editor + tool scratch
+.turbo/
+.next/
+.astro/
+.cache/
+coverage/
+bun.lockb.backup
+
+# Claude Code session settings — per-dev, not per-repo
+.claude/settings.local.json

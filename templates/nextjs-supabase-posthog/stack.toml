@@ -1,0 +1,31 @@
+# Next.js + Supabase + PostHog starter.
+#
+# `stack init --template nextjs-supabase-posthog` copies this as .stack.toml.
+# Services are stubs (no resource_id yet); `stack add <name>` will provision
+# them in order and fill in the upstream ids.
+
+[stack]
+version = "1"
+project_id = "stk_template"
+template = "nextjs-supabase-posthog"
+
+[services.supabase]
+provider = "supabase"
+secrets = ["SUPABASE_URL", "SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY"]
+mcp = "supabase"
+created_at = "1970-01-01T00:00:00Z"
+created_by = "template"
+
+[services.posthog]
+provider = "posthog"
+secrets = ["POSTHOG_PROJECT_API_KEY", "POSTHOG_PERSONAL_API_KEY"]
+mcp = "posthog"
+created_at = "1970-01-01T00:00:00Z"
+created_by = "template"
+
+[[environments]]
+name = "dev"
+default = true
+
+[[environments]]
+name = "prod"

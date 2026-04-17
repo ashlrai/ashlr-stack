@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "types": ["bun"],
+    "strict": true,
+    "noImplicitAny": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": false,
+    "baseUrl": ".",
+    "paths": {
+      "@ashlr/stack-core": ["packages/core/src/index.ts"],
+      "@ashlr/stack-core/*": ["packages/core/src/*"]
+    }
+  },
+  "include": ["packages/*/src/**/*"],
+  "exclude": [
+    "node_modules",
+    "**/node_modules",
+    "**/dist",
+    "packages/site/**"
+  ]
+}

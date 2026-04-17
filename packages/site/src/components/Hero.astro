@@ -1,0 +1,170 @@
+---
+import Nav from "./Nav.astro";
+import Terminal from "./Terminal";
+import MagneticButton from "./MagneticButton";
+---
+
+<section class="relative overflow-hidden">
+  <!-- Atmospheric backdrop: subtle grid + two soft magenta pools -->
+  <div class="absolute inset-0 grid-bg pointer-events-none" aria-hidden="true"></div>
+
+  <!-- Editorial corner marks — tiny, but make the page feel *designed*. -->
+  <span
+    class="corner-mark hidden md:block"
+    style="top: 86px; left: max(24px, calc(50% - 600px + 24px));"
+    aria-hidden="true"
+  >
+    Vol. 01 · Issue 2026
+  </span>
+  <span
+    class="corner-mark hidden md:block"
+    style="top: 86px; right: max(24px, calc(50% - 600px + 24px));"
+    aria-hidden="true"
+  >
+    stack.ashlr.ai
+  </span>
+
+  <Nav />
+
+  <div class="relative mx-auto max-w-[1200px] px-5 sm:px-8 pt-14 sm:pt-20 lg:pt-24 pb-20 lg:pb-28">
+    <div class="grid grid-cols-1 lg:grid-cols-[1.08fr_1fr] gap-10 lg:gap-16 items-start">
+      <!-- LEFT: copy -->
+      <div class="relative">
+        <div class="chip load-in" style="--load-delay: 40ms">
+          <span class="w-1.5 h-1.5 rounded-full bg-magenta-400"></span>
+          Pre-alpha · v0.1
+        </div>
+
+        <h1
+          class="mt-7 display text-white"
+          style="font-size: clamp(46px, 6.8vw, 84px);"
+        >
+          <span class="load-in block" style="--load-delay: 120ms">
+            <span class="text-gradient-magenta">The control plane</span>
+          </span>
+          <span class="load-in block" style="--load-delay: 200ms">
+            for your entire
+          </span>
+          <span class="load-in block display-italic" style="--load-delay: 280ms">
+            dev stack.
+          </span>
+        </h1>
+
+        <p
+          class="mt-7 max-w-[520px] text-[17px] leading-[1.55] text-ink-300 load-in"
+          style="--load-delay: 380ms"
+        >
+          Every <span class="mono text-ink-200">npx create-next-app</span> is followed by an hour of
+          tab-hopping — create a Supabase project, copy Vercel tokens, paste Sentry DSNs, add MCP
+          servers to <span class="mono text-ink-200">.mcp.json</span>.
+          <span class="text-white">Stack collapses that hour into one command.</span>
+        </p>
+
+        <!-- Install bar — copy on click -->
+        <div
+          class="mt-9 panel rounded-xl p-1 flex items-center justify-between gap-3 max-w-[560px] load-in"
+          style="--load-delay: 480ms"
+        >
+          <div class="mono text-[13px] text-ink-200 pl-4 pr-2 py-2 truncate">
+            <span class="ansi-dim">$</span> curl -fsSL stack.ashlr.ai/install.sh | bash
+          </div>
+          <button
+            class="copy-btn btn-ghost btn mr-1"
+            data-copy="curl -fsSL stack.ashlr.ai/install.sh | bash"
+            aria-label="Copy install command"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+            <span class="copy-label text-[13px]">Copy</span>
+          </button>
+        </div>
+
+        <!-- CTAs -->
+        <div class="mt-6 flex flex-wrap items-center gap-3 load-in" style="--load-delay: 560ms">
+          <MagneticButton client:load href="#docs" className="btn btn-primary">
+            <span>Get started</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M5 12h14"></path>
+              <path d="m12 5 7 7-7 7"></path>
+            </svg>
+          </MagneticButton>
+
+          <a
+            href="https://github.com/ashlrai/ashlr-stack"
+            class="btn btn-ghost"
+            rel="noopener"
+            target="_blank"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 .5A11.5 11.5 0 0 0 .5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.56 0-.28-.01-1.02-.02-2.01-3.2.7-3.87-1.54-3.87-1.54-.52-1.33-1.28-1.69-1.28-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.2 1.77 1.2 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.56-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.44-2.29 1.17-3.1-.12-.29-.51-1.46.11-3.04 0 0 .96-.31 3.15 1.18a10.9 10.9 0 0 1 5.74 0c2.19-1.49 3.15-1.18 3.15-1.18.62 1.58.23 2.75.11 3.04.73.81 1.17 1.84 1.17 3.1 0 4.42-2.69 5.39-5.25 5.68.41.36.78 1.07.78 2.16 0 1.56-.01 2.82-.01 3.2 0 .31.2.68.8.56A11.5 11.5 0 0 0 23.5 12 11.5 11.5 0 0 0 12 .5z"></path>
+            </svg>
+            <span class="text-[13px]">GitHub</span>
+          </a>
+
+          <span class="small-caps hidden sm:inline ml-1">MIT · zero telemetry</span>
+        </div>
+
+        <!-- Provider count strip — static + credible -->
+        <div
+          class="mt-12 flex flex-wrap items-center gap-x-6 gap-y-2 text-[13px] text-ink-400 load-in"
+          style="--load-delay: 660ms"
+        >
+          <span><span class="text-white font-semibold mono">23</span> providers</span>
+          <span class="text-ink-700">·</span>
+          <span><span class="text-white font-semibold mono">5</span> templates</span>
+          <span class="text-ink-700">·</span>
+          <span><span class="text-white font-semibold mono">17</span> MCP tools</span>
+          <span class="text-ink-700">·</span>
+          <span>one command</span>
+        </div>
+      </div>
+
+      <!-- RIGHT: terminal -->
+      <div class="relative load-in" style="--load-delay: 420ms">
+        <!-- Paper seal — rotated "est. 2026" behind the terminal as editorial flavor -->
+        <span
+          class="absolute -top-8 -right-4 hidden xl:block pointer-events-none display-italic text-ink-700 select-none"
+          style="transform: rotate(-6deg); font-size: 44px; line-height: 1;"
+          aria-hidden="true"
+        >
+          est. 2026
+        </span>
+
+        <Terminal client:load />
+      </div>
+    </div>
+  </div>
+
+  <!-- Editorial rule closing the hero -->
+  <div class="relative mx-auto max-w-[1200px] px-5 sm:px-8 pb-2">
+    <div class="edi-rule">
+      <span>§ 01 · Thesis</span>
+    </div>
+  </div>
+
+  <script>
+    const buttons = document.querySelectorAll<HTMLButtonElement>(".copy-btn");
+    buttons.forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const text = btn.getAttribute("data-copy") ?? "";
+        try {
+          await navigator.clipboard.writeText(text);
+          const label = btn.querySelector(".copy-label");
+          if (label) {
+            const original = label.textContent;
+            label.textContent = "Copied";
+            btn.classList.add("text-magenta-300");
+            setTimeout(() => {
+              label.textContent = original;
+              btn.classList.remove("text-magenta-300");
+            }, 1400);
+          }
+        } catch {
+          /* noop */
+        }
+      });
+    });
+  </script>
+</section>

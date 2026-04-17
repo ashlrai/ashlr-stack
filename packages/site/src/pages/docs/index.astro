@@ -1,0 +1,150 @@
+---
+import Docs from "~/layouts/Docs.astro";
+import { Code } from "astro:components";
+import { DOCS_NAV } from "~/lib/docs-nav";
+---
+
+<Docs
+  title="Ashlr Stack docs"
+  description="The control plane for your entire dev stack — one command to provision, wire, and operate every third-party service in your project."
+  eyebrow="Documentation"
+>
+  <h2>Three paths to Stack</h2>
+  <p>
+    Pick the one that matches where you are. You can mix and match — most users
+    start with the quickstart, then come back for the CLI reference.
+  </p>
+
+  <div class="not-prose mt-6 grid gap-4 sm:grid-cols-3">
+    <a href="/docs/quickstart/" class="docs-card group">
+      <div class="flex items-center gap-2.5 mb-3">
+        <span class="mono text-[11px] text-magenta-400 font-semibold">01</span>
+        <div class="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-500">
+          Install
+        </div>
+      </div>
+      <h3 class="text-base font-semibold text-white mb-1.5 group-hover:text-magenta-200 transition-colors">
+        Quickstart
+      </h3>
+      <p class="text-[13px] text-ink-400 leading-relaxed">
+        Install, <code class="mono text-ink-200">stack init</code>, then
+        <code class="mono text-ink-200">stack add supabase</code>. Five minutes,
+        real output.
+      </p>
+    </a>
+
+    <a href="/docs/cli/" class="docs-card group">
+      <div class="flex items-center gap-2.5 mb-3">
+        <span class="mono text-[11px] text-magenta-400 font-semibold">02</span>
+        <div class="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-500">
+          Add a service
+        </div>
+      </div>
+      <h3 class="text-base font-semibold text-white mb-1.5 group-hover:text-magenta-200 transition-colors">
+        CLI reference
+      </h3>
+      <p class="text-[13px] text-ink-400 leading-relaxed">
+        Every <code class="mono text-ink-200">stack</code> command with flags,
+        defaults, and real examples.
+      </p>
+    </a>
+
+    <a href="/docs/providers/" class="docs-card group">
+      <div class="flex items-center gap-2.5 mb-3">
+        <span class="mono text-[11px] text-magenta-400 font-semibold">03</span>
+        <div class="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-500">
+          Browse
+        </div>
+      </div>
+      <h3 class="text-base font-semibold text-white mb-1.5 group-hover:text-magenta-200 transition-colors">
+        Providers
+      </h3>
+      <p class="text-[13px] text-ink-400 leading-relaxed">
+        23 curated providers. What each one wires, which MCP it brings online,
+        where its dashboard is.
+      </p>
+    </a>
+  </div>
+
+  <h2>What Stack is</h2>
+  <p>
+    Stack is a thin control plane over the services your app actually uses. It
+    drives the provider login, creates upstream resources (a Supabase project,
+    a Neon DB, a Sentry project), fetches their credentials, hands the secrets
+    to <a href="/docs/phantom/">Phantom</a> for encryption, and wires
+    <code>.env.local</code>, <code>.mcp.json</code>, and <code>.stack.toml</code>
+    in one shot.
+  </p>
+
+  <Code
+    code={`# before: 45 minutes across 6 tabs
+# after:
+stack add supabase`}
+    lang="bash"
+    theme="github-dark-dimmed"
+  />
+
+  <h2>What Stack isn't</h2>
+  <ul>
+    <li>
+      <strong>Not a secret manager.</strong> Every secret is stored by
+      <a href="/docs/phantom/">Phantom</a>. Stack only knows the <em>slot
+      names</em>.
+    </li>
+    <li>
+      <strong>Not a deploy tool.</strong> We don't rebuild Vercel or Railway —
+      we just give them the keys they need.
+    </li>
+    <li>
+      <strong>Not a lock-in.</strong> Everything writes to standard files:
+      <code>.env</code>, <code>.mcp.json</code>, <code>.stack.toml</code>
+      (TOML). Rip Stack out and your project still boots.
+    </li>
+  </ul>
+
+  <h2>The whole map</h2>
+  <p>Everything in these docs, grouped by purpose:</p>
+
+  <div class="not-prose mt-6 space-y-6">
+    {DOCS_NAV.map((group) => (
+      <div>
+        <div class="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-500 mb-3">
+          {group.title}
+        </div>
+        <ul class="grid gap-2 sm:grid-cols-2">
+          {group.items.map((item) => (
+            <li>
+              <a
+                href={item.href}
+                class="block py-2 px-3 rounded-md hover:bg-white/[0.03] border border-transparent hover:border-white/[0.06] transition-colors group"
+              >
+                <div class="flex items-start justify-between gap-3">
+                  <div>
+                    <div class="text-sm font-medium text-white group-hover:text-magenta-200 transition-colors">
+                      {item.label}
+                    </div>
+                    {item.blurb && (
+                      <div class="text-[13px] text-ink-400 mt-0.5" set:html={item.blurb.replace(/`([^`]+)`/g, '<code class="mono text-ink-200">$1</code>')} />
+                    )}
+                  </div>
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" class="text-ink-600 group-hover:text-magenta-400 transition-colors mt-1 shrink-0" aria-hidden="true">
+                    <path d="M3 3 L9 3 L9 9 M3 9 L9 3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </div>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    ))}
+  </div>
+
+  <h2>Pre-alpha status</h2>
+  <div class="callout callout-warn">
+    <strong>Heads up:</strong> Stack is <strong>v0.1</strong> — pre-alpha. Interfaces
+    are still moving, some OAuth apps aren't yet registered (so a handful of
+    providers fall back to paste-a-token flows), and error messages will get
+    cleaner with each release. See the <a href="/docs/faq/">FAQ</a> for the
+    honest caveats.
+  </div>
+</Docs>

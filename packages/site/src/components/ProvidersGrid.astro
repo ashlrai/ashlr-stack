@@ -1,0 +1,127 @@
+---
+import { PROVIDERS, CATEGORIES, type Provider } from "~/lib/providers";
+import { getIconPath } from "~/lib/icons";
+
+const byCategory = new Map<string, Provider[]>();
+for (const p of PROVIDERS) {
+  const arr = byCategory.get(p.category) ?? [];
+  arr.push(p);
+  byCategory.set(p.category, arr);
+}
+---
+
+<section id="providers" class="relative mx-auto max-w-[1200px] px-5 sm:px-8 pt-14 sm:pt-16 pb-24 sm:pb-28">
+  <!-- Editorial section header -->
+  <div class="edi-rule mb-10">
+    <span>§ 02 · Providers · {String(PROVIDERS.length).padStart(2, "0")}</span>
+  </div>
+
+  <header class="max-w-[720px] reveal" data-reveal>
+    <h2 class="display text-white" style="font-size: clamp(34px, 4.8vw, 58px);">
+      Every service that hits your
+      <span class="mono text-magenta-300 text-[0.82em]" style="letter-spacing: -0.01em">.env</span>
+      — <span class="display-italic">curated</span>.
+    </h2>
+    <p class="mt-5 text-[17px] leading-[1.55] text-ink-300 max-w-[560px]">
+      One hand-tuned adapter per provider — OAuth dance, resource creation, secret slots, MCP
+      wiring — all declarative. Missing one? Adapters are pluggable; write yours in a weekend.
+    </p>
+  </header>
+
+  <div class="mt-14 space-y-12 reveal-stagger" data-reveal>
+    {CATEGORIES.map((cat, catIdx) => {
+      const list = byCategory.get(cat) ?? [];
+      if (list.length === 0) return null;
+      return (
+        <div class="reveal" style={`--stagger-i: ${catIdx}`}>
+          <div class="flex items-baseline gap-3 mb-4">
+            <h3 class="small-caps text-ink-300">{cat}</h3>
+            <span class="text-[11px] text-ink-600 mono tabular-nums">
+              {list.length.toString().padStart(2, "0")}
+            </span>
+            <div class="flex-1 h-px bg-white/[0.05]"></div>
+          </div>
+
+          <ul class="grid gap-2 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+            {list.map((p) => {
+              const path = getIconPath(p.slug);
+              return (
+                <li>
+                  <div
+                    class="provider group relative block rounded-xl panel p-4 h-[112px] overflow-hidden"
+                    style={`--brand:#${p.color};`}
+                    data-provider={p.name}
+                    role="figure"
+                    aria-label={`${p.name} — ${p.blurb}`}
+                  >
+                    <!-- Underglow in brand color -->
+                    <span
+                      aria-hidden="true"
+                      class="provider-glow pointer-events-none absolute inset-0 opacity-0 transition-opacity"
+                      style={`background: radial-gradient(180px 80px at 50% 120%, var(--brand, #d946ef), transparent 60%); mix-blend-mode: screen;`}
+                    ></span>
+
+                    <div class="relative flex items-start justify-between">
+                      <div class="w-8 h-8 flex items-center justify-center rounded-md bg-white/5 group-hover:bg-white/10 transition-colors">
+                        {path ? (
+                          <svg
+                            viewBox="0 0 24 24"
+                            width="18"
+                            height="18"
+                            aria-hidden="true"
+                            class="provider-icon text-ink-200 transition-colors duration-200 group-hover:text-[color:var(--brand)]"
+                            fill="currentColor"
+                          >
+                            <path d={path}></path>
+                          </svg>
+                        ) : (
+                          <span class="text-[10px] mono text-ink-400">
+                            {p.name.slice(0, 2).toUpperCase()}
+                          </span>
+                        )}
+                      </div>
+                      <span class="text-[10px] mono text-ink-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                        stack add
+                      </span>
+                    </div>
+
+                    <div class="relative mt-3">
+                      <div class="text-sm font-medium text-white tracking-tight">{p.name}</div>
+                      <div class="text-[11px] text-ink-400 mt-0.5 leading-snug">{p.blurb}</div>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      );
+    })}
+  </div>
+
+  <p class="mt-12 text-xs text-ink-500 max-w-2xl">
+    Brand marks provided by <a class="underline decoration-white/20 underline-offset-2 hover:text-ink-300" href="https://simpleicons.org" rel="noopener noreferrer" target="_blank">simple-icons</a>
+    and used for identification. All trademarks are property of their respective owners.
+  </p>
+</section>
+
+<style>
+  .provider {
+    transition:
+      border-color 240ms ease,
+      background-color 240ms ease,
+      transform 240ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .provider:hover {
+    border-color: color-mix(in oklab, var(--brand) 40%, transparent);
+    background: linear-gradient(
+      180deg,
+      color-mix(in oklab, var(--brand) 6%, transparent),
+      rgba(255, 255, 255, 0.01)
+    );
+    transform: translateY(-2px);
+  }
+  .provider:hover .provider-glow {
+    opacity: 0.5 !important;
+  }
+</style>

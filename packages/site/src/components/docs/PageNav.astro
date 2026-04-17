@@ -1,0 +1,51 @@
+---
+import { neighboursOf } from "~/lib/docs-nav";
+
+interface Props {
+  href: string;
+}
+
+const { href } = Astro.props;
+const { prev, next } = neighboursOf(href);
+---
+
+{(prev || next) && (
+  <nav
+    class="mt-16 pt-8 hairline-top grid grid-cols-2 gap-4"
+    aria-label="Pagination"
+  >
+    {prev ? (
+      <a
+        href={prev.href}
+        class="panel rounded-xl p-5 group transition-colors hover:border-white/15"
+      >
+        <div class="text-[11px] uppercase tracking-[0.14em] text-ink-500 font-semibold mb-1.5 flex items-center gap-1.5">
+          <svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+            <path d="M8 3 L4 6 L8 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+          Previous
+        </div>
+        <div class="text-base font-medium text-white group-hover:text-magenta-200 transition-colors">
+          {prev.label}
+        </div>
+      </a>
+    ) : <div />}
+
+    {next ? (
+      <a
+        href={next.href}
+        class="panel rounded-xl p-5 group transition-colors hover:border-white/15 text-right"
+      >
+        <div class="text-[11px] uppercase tracking-[0.14em] text-ink-500 font-semibold mb-1.5 flex items-center justify-end gap-1.5">
+          Next
+          <svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+            <path d="M4 3 L8 6 L4 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </div>
+        <div class="text-base font-medium text-white group-hover:text-magenta-200 transition-colors">
+          {next.label}
+        </div>
+      </a>
+    ) : <div />}
+  </nav>
+)}

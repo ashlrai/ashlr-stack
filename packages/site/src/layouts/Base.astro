@@ -1,0 +1,162 @@
+---
+import "~/styles/global.css";
+import {
+  DEFAULT_DESCRIPTION,
+  DEFAULT_TITLE,
+  SITE_NAME,
+  SITE_URL,
+  buildOgMeta,
+} from "~/lib/og";
+import {
+  breadcrumbSchema,
+  homepageSchemas,
+  type BreadcrumbItem,
+} from "~/lib/structured-data";
+
+export interface Props {
+  title?: string;
+  description?: string;
+  /** Full URL. Defaults to the current page URL built from Astro.site. */
+  canonical?: string;
+  /** Override the OG image (absolute or site-root-relative). */
+  ogImage?: string;
+  /** og:type. "website" for marketing, "article" for blog posts. */
+  ogType?: "website" | "article" | "profile";
+  /** Set to true on /docs pages, etc. Defaults to follow,index. */
+  noindex?: boolean;
+  /** Breadcrumb trail for JSON-LD. Omit on the homepage. */
+  breadcrumbs?: BreadcrumbItem[];
+  /**
+   * By default the homepage emits Organization + WebSite + SoftwareApplication
+   * schemas. Sub-pages set this to false to skip the SoftwareApplication entry.
+   */
+  homepageSchema?: boolean;
+}
+
+const {
+  title = DEFAULT_TITLE,
+  description = DEFAULT_DESCRIPTION,
+  canonical: canonicalProp,
+  ogImage,
+  ogType = "website",
+  noindex = false,
+  breadcrumbs,
+  homepageSchema = true,
+} = Astro.props;
+
+const canonical =
+  canonicalProp ??
+  new URL(Astro.url.pathname, Astro.site ?? SITE_URL).toString();
+
+const ogMeta = buildOgMeta({
+  title,
+  description,
+  canonical,
+  ogImage,
+  ogType,
+});
+
+const robots = noindex ? "noindex,nofollow" : "index,follow";
+
+const schemas: Record<string, unknown>[] = [];
+if (homepageSchema) {
+  schemas.push(...homepageSchemas());
+}
+if (breadcrumbs && breadcrumbs.length > 0) {
+  schemas.push(breadcrumbSchema(breadcrumbs));
+}
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <!-- Color scheme + theme -->
+    <meta name="color-scheme" content="dark light" />
+    <meta
+      name="theme-color"
+      content="#d946ef"
+      media="(prefers-color-scheme: dark)"
+    />
+    <meta
+      name="theme-color"
+      content="#0b0b0d"
+      media="(prefers-color-scheme: light)"
+    />
+
+    <!-- Icons -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/svg+xml" sizes="32x32" href="/favicon-32.svg" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.svg" />
+    <link rel="mask-icon" href="/favicon.svg" color="#d946ef" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+
+    <!-- Canonical + robots -->
+    <link rel="canonical" href={canonical} />
+    <meta name="robots" content={robots} />
+    <meta name="googlebot" content={robots} />
+
+    <!-- Title + description -->
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta name="author" content="Ashlr" />
+    <meta name="generator" content={Astro.generator} />
+
+    <!-- OG + Twitter — generated from ~/lib/og.ts -->
+    {
+      ogMeta.map((tag) =>
+        tag.attr === "property" ? (
+          <meta property={tag.key} content={tag.value} />
+        ) : (
+          <meta name={tag.key} content={tag.value} />
+        ),
+      )
+    }
+
+    <!-- RSS (placeholder — add /feed.xml later) -->
+    <link
+      rel="alternate"
+      type="application/rss+xml"
+      title={`${SITE_NAME} — RSS`}
+      href="/feed.xml"
+    />
+
+    <!-- Sitemap (emitted by @astrojs/sitemap) -->
+    <link rel="sitemap" type="application/xml" href="/sitemap-index.xml" />
+
+    <!-- Font preconnect -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    />
+
+    <!-- JSON-LD structured data -->
+    {
+      schemas.map((schema) => (
+        <script
+          is:inline
+          type="application/ld+json"
+          set:html={JSON.stringify(schema)}
+        />
+      ))
+    }
+
+    <slot name="head" />
+  </head>
+  <body class="font-sans antialiased">
+    <a
+      href="#main"
+      class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:bg-magenta-500 focus:text-white focus:px-3 focus:py-2 focus:rounded-md focus:text-sm"
+    >
+      Skip to content
+    </a>
+
+    <main id="main">
+      <slot />
+    </main>
+  </body>
+</html>

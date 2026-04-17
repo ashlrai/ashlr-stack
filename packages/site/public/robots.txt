@@ -1,0 +1,11 @@
+# robots.txt for stack.ashlr.ai
+# Ashlr Stack — the control plane for your entire dev stack.
+
+User-agent: *
+Allow: /
+
+# Helpful explicit allows for the llms.txt standard (https://llmstxt.org/)
+Allow: /llms.txt
+Allow: /llms-full.txt
+
+Sitemap: https://stack.ashlr.ai/sitemap-index.xml

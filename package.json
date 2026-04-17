@@ -1,0 +1,23 @@
+{
+  "name": "ashlr-stack-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Ashlr Stack — the control plane for your entire dev stack. Provisions, wires, and operates every service in your project with one command.",
+  "license": "MIT",
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "bun run --filter '*' build",
+    "typecheck": "bunx tsc --noEmit -p tsconfig.json",
+    "test": "bun test",
+    "lint": "bunx biome check .",
+    "format": "bunx biome format --write ."
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@types/bun": "latest",
+    "typescript": "^5.7.0"
+  }
+}

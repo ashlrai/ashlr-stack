@@ -1,0 +1,135 @@
+---
+import Logo from "./Logo.astro";
+---
+
+<footer class="relative hairline-top mt-8">
+  <div class="mx-auto max-w-[1200px] px-5 sm:px-8 py-16">
+    <div class="panel rounded-2xl p-6 sm:p-8 mb-12 relative overflow-hidden">
+      <div
+        aria-hidden="true"
+        class="pointer-events-none absolute inset-0"
+        style="background: radial-gradient(600px 200px at 50% 0%, rgba(217,70,239,0.15), transparent 60%);"
+      ></div>
+      <div class="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+        <div>
+          <h3 class="text-xl sm:text-2xl font-semibold text-white tracking-tight">
+            Stop tab-hopping. Start shipping.
+          </h3>
+          <p class="mt-1.5 text-sm text-ink-300">
+            One command. 23 providers. Secrets vaulted by Phantom, wired into <code class="mono text-ink-200">.env</code> and <code class="mono text-ink-200">.mcp.json</code>.
+          </p>
+        </div>
+        <div class="flex flex-col sm:flex-row gap-3">
+          <div class="flex items-center gap-2 pl-3 pr-1.5 py-1.5 rounded-xl hairline bg-ink-900 mono text-[13px]">
+            <span class="ansi-magenta select-none">$</span>
+            <code class="text-ink-100 pr-2 whitespace-nowrap">curl -fsSL stack.ashlr.ai/install.sh | bash</code>
+            <button
+              type="button"
+              class="copy-btn inline-flex items-center gap-1 h-7 px-2 text-[11px] rounded-md bg-white/5 hover:bg-white/10 text-ink-200 transition-colors"
+              data-copy="curl -fsSL stack.ashlr.ai/install.sh | bash"
+              aria-label="Copy install command"
+            >
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                <rect x="3.5" y="3.5" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.2"/>
+                <path d="M2 8V2a.5.5 0 0 1 .5-.5H8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+              </svg>
+              <span class="copy-label">Copy</span>
+            </button>
+          </div>
+          <a
+            href="https://github.com/ashlr-ai/stack"
+            rel="noopener noreferrer"
+            target="_blank"
+            class="btn btn-ghost"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+              <path d="M12 .5C5.648.5.5 5.648.5 12c0 5.082 3.292 9.39 7.86 10.91.575.104.79-.25.79-.555 0-.274-.01-1-.016-1.964-3.197.695-3.872-1.541-3.872-1.541-.523-1.33-1.278-1.683-1.278-1.683-1.044-.714.08-.7.08-.7 1.154.08 1.762 1.186 1.762 1.186 1.027 1.758 2.695 1.25 3.352.955.104-.744.402-1.25.73-1.538-2.553-.29-5.236-1.277-5.236-5.682 0-1.255.45-2.282 1.185-3.087-.12-.29-.515-1.461.114-3.046 0 0 .965-.309 3.165 1.179a10.96 10.96 0 0 1 2.88-.388c.977.005 1.963.132 2.881.388 2.2-1.488 3.163-1.18 3.163-1.18.63 1.586.235 2.757.115 3.047.74.805 1.184 1.832 1.184 3.087 0 4.417-2.688 5.39-5.25 5.673.414.355.783 1.055.783 2.126 0 1.536-.014 2.774-.014 3.15 0 .306.21.665.794.553C20.213 21.386 23.5 17.08 23.5 12 23.5 5.648 18.352.5 12 .5Z"/>
+            </svg>
+            GitHub
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-8">
+      <div class="col-span-2">
+        <Logo variant="chip" size={32} />
+        <p class="mt-4 text-sm text-ink-400 max-w-xs leading-relaxed">
+          The control plane for your entire dev stack. Part of the Ashlr platform.
+        </p>
+        <div class="mt-4 text-xs text-ink-500">
+          © {new Date().getFullYear()} Ashlr · MIT licensed
+        </div>
+      </div>
+
+      <div>
+        <div class="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-500 mb-3">Stack</div>
+        <ul class="space-y-2 text-sm">
+          <li><a href="#providers" class="text-ink-300 hover:text-white transition-colors">Providers</a></li>
+          <li><a href="#how-it-works" class="text-ink-300 hover:text-white transition-colors">How it works</a></li>
+          <li><a href="#templates" class="text-ink-300 hover:text-white transition-colors">Templates</a></li>
+          <li><a href="#claude-code" class="text-ink-300 hover:text-white transition-colors">Claude Code</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <div class="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-500 mb-3">Siblings</div>
+        <ul class="space-y-2 text-sm">
+          <li><a href="https://phantom.ashlr.ai" rel="noopener noreferrer" target="_blank" class="text-ink-300 hover:text-white transition-colors">Phantom Secrets</a></li>
+          <li><a href="https://plugin.ashlr.ai" rel="noopener noreferrer" target="_blank" class="text-ink-300 hover:text-white transition-colors">ashlr-plugin</a></li>
+          <li><a href="https://code.ashlr.ai" rel="noopener noreferrer" target="_blank" class="text-ink-300 hover:text-white transition-colors">ashlrcode</a></li>
+          <li><a href="https://workbench.ashlr.ai" rel="noopener noreferrer" target="_blank" class="text-ink-300 hover:text-white transition-colors">ashlr-workbench</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <div class="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-500 mb-3">Resources</div>
+        <ul class="space-y-2 text-sm">
+          <li><a href="https://github.com/ashlr-ai/stack" rel="noopener noreferrer" target="_blank" class="text-ink-300 hover:text-white transition-colors">Source</a></li>
+          <li><a href="https://github.com/ashlr-ai/stack/blob/main/README.md" rel="noopener noreferrer" target="_blank" class="text-ink-300 hover:text-white transition-colors">Docs</a></li>
+          <li><a href="https://github.com/ashlr-ai/stack/blob/main/LICENSE" rel="noopener noreferrer" target="_blank" class="text-ink-300 hover:text-white transition-colors">License (MIT)</a></li>
+          <li><a href="https://github.com/ashlr-ai/stack/issues" rel="noopener noreferrer" target="_blank" class="text-ink-300 hover:text-white transition-colors">Issues</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Giant wordmark -->
+  <div aria-hidden="true" class="relative overflow-hidden select-none pointer-events-none hairline-top">
+    <div class="mx-auto max-w-[1200px] px-5 sm:px-8 pt-10 pb-2">
+      <div class="relative">
+        <div class="text-[22vw] leading-[0.82] font-semibold tracking-[-0.06em] text-white/[0.035] whitespace-nowrap">
+          ▲&nbsp;stack
+        </div>
+        <div
+          class="absolute inset-x-0 bottom-0 h-full pointer-events-none"
+          style="background: linear-gradient(to bottom, transparent 20%, rgba(5,5,6,1) 95%);"
+        ></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const buttons = document.querySelectorAll<HTMLButtonElement>(".copy-btn");
+    buttons.forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const text = btn.getAttribute("data-copy") ?? "";
+        try {
+          await navigator.clipboard.writeText(text);
+          const label = btn.querySelector(".copy-label");
+          if (label) {
+            const original = label.textContent;
+            label.textContent = "Copied";
+            btn.classList.add("text-magenta-300");
+            setTimeout(() => {
+              label.textContent = original;
+              btn.classList.remove("text-magenta-300");
+            }, 1400);
+          }
+        } catch {
+          /* noop */
+        }
+      });
+    });
+  </script>
+</footer>

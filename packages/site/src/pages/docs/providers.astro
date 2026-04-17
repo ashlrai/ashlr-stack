@@ -1,0 +1,246 @@
+---
+import Docs from "~/layouts/Docs.astro";
+import {
+  PROVIDERS_REF,
+  PROVIDER_CATEGORIES,
+  groupByCategory,
+} from "~/lib/providers-ref";
+
+const grouped = groupByCategory();
+
+function authLabel(kind: string): string {
+  switch (kind) {
+    case "oauth_pkce":
+      return "OAuth (PKCE)";
+    case "oauth_device":
+      return "OAuth (device)";
+    case "pat":
+      return "Personal access token";
+    case "api_key":
+      return "API key (paste)";
+    default:
+      return kind;
+  }
+}
+
+const mcpCount = PROVIDERS_REF.filter((p) => p.mcp).length;
+---
+
+<Docs
+  title="Providers"
+  description={`${PROVIDERS_REF.length} curated providers — what each one wires, which ones bring an MCP server online, and how auth works for each.`}
+  eyebrow="Reference"
+>
+  <h2>Overview</h2>
+  <p>
+    Stack ships with <strong>{PROVIDERS_REF.length} curated providers</strong>{" "}
+    across {PROVIDER_CATEGORIES.length} categories. Each provider knows how to
+    log in, provision a resource (when applicable), fetch credentials, and
+    wire the output into your project files. {mcpCount} of them also install
+    an MCP server so an LLM editor can work with the service without leaving
+    your chat.
+  </p>
+
+  <div class="callout callout-info">
+    <strong>How to read this page:</strong> Every provider entry shows its auth
+    flow, the secret slots it writes into Phantom, whether it registers an MCP
+    server, and the exact command to add it. Jump straight to <code>stack add &lt;name&gt;</code>{" "}
+    once you've found what you need.
+  </div>
+
+  <h2>Auth at a glance</h2>
+  <p>
+    Stack supports four auth flows. The provider chooses; you don't configure
+    anything.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Flow</th>
+        <th>What it feels like</th>
+        <th>Providers</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>OAuth (PKCE)</code></td>
+        <td>Browser opens, you click Authorise. No secret pasted.</td>
+        <td>
+          {PROVIDERS_REF.filter((p) => p.authKind === "oauth_pkce")
+            .map((p) => p.name)
+            .join(", ") || "—"}
+        </td>
+      </tr>
+      <tr>
+        <td><code>OAuth (device)</code></td>
+        <td>CLI shows a code, you paste it at a URL. Good for headless environments.</td>
+        <td>
+          {PROVIDERS_REF.filter((p) => p.authKind === "oauth_device")
+            .map((p) => p.name)
+            .join(", ") || "—"}
+        </td>
+      </tr>
+      <tr>
+        <td><code>PAT</code></td>
+        <td>You paste a personal access token once; Stack verifies it.</td>
+        <td>
+          {PROVIDERS_REF.filter((p) => p.authKind === "pat")
+            .map((p) => p.name)
+            .join(", ") || "—"}
+        </td>
+      </tr>
+      <tr>
+        <td><code>API key</code></td>
+        <td>Paste a key; Stack hits the provider's API to verify.</td>
+        <td>
+          {PROVIDERS_REF.filter((p) => p.authKind === "api_key")
+            .map((p) => p.name)
+            .join(", ") || "—"}
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout callout-warn">
+    <strong>Why do some providers fall back to paste-a-token?</strong> Stack's
+    OAuth apps are still in the registration queue for many providers — GitHub
+    and Supabase are done, others aren't yet. When the OAuth app is missing,
+    Stack uses a PAT flow instead so the product still works end-to-end. See
+    the <a href="/docs/faq/">FAQ</a>.
+  </div>
+
+  <h2>Every provider</h2>
+  <p>
+    Grouped by category. Provider names match what you type after{" "}
+    <code>stack add</code>.
+  </p>
+
+  {PROVIDER_CATEGORIES.filter((c) => grouped[c]?.length).map((cat) => (
+    <>
+      <h3 id={`category-${cat.toLowerCase()}`}>{cat}</h3>
+      <div class="not-prose grid gap-4">
+        {grouped[cat].map((p) => (
+          <div class="panel rounded-xl p-5" id={`provider-${p.name}`}>
+            <div class="flex items-start justify-between gap-4 flex-wrap">
+              <div class="min-w-0">
+                <div class="flex items-center gap-2.5 mb-1 flex-wrap">
+                  <h4 class="text-[17px] font-semibold text-white tracking-tight">
+                    {p.displayName}
+                  </h4>
+                  <code class="mono text-[11px] text-ink-500 bg-white/[0.03] px-2 py-0.5 rounded border border-white/[0.05]">
+                    {p.name}
+                  </code>
+                  {p.mcp && (
+                    <span
+                      class="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.08em] px-2 py-0.5 rounded-full border border-cyan-400/30 bg-cyan-400/5 text-cyan-300"
+                      title={p.mcp.detail}
+                    >
+                      <span class="w-1 h-1 bg-cyan-300 rounded-full"></span>
+                      MCP
+                    </span>
+                  )}
+                </div>
+                <p class="text-[14px] text-ink-300 leading-relaxed">
+                  {p.blurb}
+                </p>
+              </div>
+              <a
+                href={p.dashboard}
+                rel="noopener noreferrer"
+                target="_blank"
+                class="shrink-0 inline-flex items-center gap-1.5 text-[12px] text-ink-400 hover:text-magenta-200 transition-colors"
+              >
+                Dashboard
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                  <path d="M2 2h6v6M2 8l6-6" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </a>
+            </div>
+
+            <dl class="mt-4 grid grid-cols-1 sm:grid-cols-[120px_1fr] gap-y-2 gap-x-4 text-[13px]">
+              <dt class="text-ink-500 uppercase tracking-[0.1em] text-[11px] font-semibold sm:pt-0.5">
+                Auth
+              </dt>
+              <dd class="text-ink-200">
+                <code class="mono text-[12.5px]">{authLabel(p.authKind)}</code>
+                <div class="text-[12px] text-ink-400 mt-0.5">{p.howTo}</div>
+              </dd>
+
+              <dt class="text-ink-500 uppercase tracking-[0.1em] text-[11px] font-semibold sm:pt-0.5">
+                Secrets
+              </dt>
+              <dd class="text-ink-200">
+                <div class="flex flex-wrap gap-1.5">
+                  {p.secrets.map((s) => (
+                    <code class="mono text-[11.5px] bg-magenta-500/5 border border-magenta-500/15 text-magenta-200 px-2 py-0.5 rounded">
+                      {s}
+                    </code>
+                  ))}
+                </div>
+              </dd>
+
+              {p.mcp && (
+                <>
+                  <dt class="text-ink-500 uppercase tracking-[0.1em] text-[11px] font-semibold sm:pt-0.5">
+                    MCP
+                  </dt>
+                  <dd class="text-ink-200">
+                    <code class="mono text-[12.5px]">{p.mcp.name}</code>
+                    <div class="text-[12px] text-ink-400 mt-0.5">{p.mcp.detail}</div>
+                  </dd>
+                </>
+              )}
+
+              <dt class="text-ink-500 uppercase tracking-[0.1em] text-[11px] font-semibold sm:pt-0.5">
+                Docs
+              </dt>
+              <dd class="text-ink-200">
+                <a
+                  href={p.docs}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                  class="text-magenta-300 hover:text-magenta-200 inline-flex items-center gap-1"
+                >
+                  {p.docs}
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                    <path d="M2 2h6v6M2 8l6-6" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </a>
+              </dd>
+
+              {p.notes && (
+                <>
+                  <dt class="text-ink-500 uppercase tracking-[0.1em] text-[11px] font-semibold sm:pt-0.5">
+                    Notes
+                  </dt>
+                  <dd class="text-ink-300 text-[12.5px] italic leading-relaxed">
+                    {p.notes}
+                  </dd>
+                </>
+              )}
+            </dl>
+
+            <div class="mt-4 panel-inner rounded-md px-3 py-2 mono text-[12.5px]">
+              <span class="ansi-magenta select-none">$ </span>
+              <span class="ansi-white">stack add {p.name}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </>
+  ))}
+
+  <h2>Missing one?</h2>
+  <p>
+    The provider list is intentionally curated — we ship a provider when it has
+    a real API + a sane auth story, not just a logo. If yours isn't here, open
+    an issue with the shape you'd expect (secret slots, whether it needs
+    upstream provisioning, whether it has an MCP server) on{" "}
+    <a
+      href="https://github.com/ashlr-ai/stack/issues"
+      rel="noopener noreferrer"
+      target="_blank"
+    >GitHub</a>.
+  </p>
+</Docs>

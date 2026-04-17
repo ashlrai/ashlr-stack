@@ -1,0 +1,85 @@
+name: Deploy site — stack.ashlr.ai
+
+# Ships the marketing + docs site at packages/site to production on every
+# merge to main. Uses Vercel as the primary target; the Cloudflare Pages
+# fallback is commented below — flip the boolean at the top to switch.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "packages/site/**"
+      - "packages/core/src/providers/**" # provider catalog changes may affect /docs/providers
+      - "packages/cli/src/commands/**"    # cli ref data
+      - "packages/mcp/src/server.ts"
+      - "templates/**"
+      - ".github/workflows/deploy-site.yml"
+  workflow_dispatch:
+
+env:
+  USE_VERCEL: "true" # flip to "false" and set the Cloudflare job below if you move hosts
+
+jobs:
+  # ─── Vercel ───────────────────────────────────────────────────────────────
+  deploy-vercel:
+    if: ${{ vars.USE_VERCEL != 'false' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install deps (root + site)
+        run: |
+          bun install
+          cd packages/site && bun install
+
+      - name: Install Vercel CLI
+        run: bun add -g vercel@latest
+
+      - name: Pull Vercel env
+        working-directory: packages/site
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: vercel pull --yes --environment=production --token=$VERCEL_TOKEN
+
+      - name: Build (Vercel)
+        working-directory: packages/site
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: vercel build --prod --token=$VERCEL_TOKEN
+
+      - name: Deploy (Vercel)
+        working-directory: packages/site
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
+
+  # ─── Cloudflare Pages (alternative) ───────────────────────────────────────
+  # Uncomment and remove the Vercel job above if you'd rather host on Cloudflare.
+  #
+  # deploy-cloudflare:
+  #   if: ${{ vars.USE_VERCEL == 'false' }}
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: oven-sh/setup-bun@v2
+  #       with:
+  #         bun-version: latest
+  #     - name: Install deps
+  #       run: |
+  #         bun install
+  #         cd packages/site && bun install
+  #     - name: Build
+  #       working-directory: packages/site
+  #       run: bun run build
+  #     - name: Publish to Cloudflare Pages
+  #       uses: cloudflare/wrangler-action@v3
+  #       with:
+  #         apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  #         accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+  #         command: pages deploy packages/site/dist --project-name=ashlr-stack

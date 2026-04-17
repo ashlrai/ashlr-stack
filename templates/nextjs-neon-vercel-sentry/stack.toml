@@ -1,0 +1,32 @@
+# Next.js + Neon + Vercel + Sentry starter.
+
+[stack]
+version = "1"
+project_id = "stk_template"
+template = "nextjs-neon-vercel-sentry"
+
+[services.neon]
+provider = "neon"
+secrets = ["NEON_API_KEY", "DATABASE_URL"]
+created_at = "1970-01-01T00:00:00Z"
+created_by = "template"
+
+[services.vercel]
+provider = "vercel"
+secrets = ["VERCEL_TOKEN"]
+created_at = "1970-01-01T00:00:00Z"
+created_by = "template"
+
+[services.sentry]
+provider = "sentry"
+secrets = ["SENTRY_AUTH_TOKEN", "SENTRY_DSN", "SENTRY_ORG", "SENTRY_PROJECT"]
+mcp = "sentry"
+created_at = "1970-01-01T00:00:00Z"
+created_by = "template"
+
+[[environments]]
+name = "dev"
+default = true
+
+[[environments]]
+name = "prod"

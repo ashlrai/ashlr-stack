@@ -1,0 +1,124 @@
+import { defineCommand } from "citty";
+import { readConfig, removeSecret, writeConfig } from "@ashlr/stack-core";
+import { removeMcpEntry } from "@ashlr/stack-core/mcp-writer";
+import { colors, intro, outro, outroError, prompts } from "../ui.ts";
+
+export const removeCommand = defineCommand({
+  meta: {
+    name: "remove",
+    description: "Remove a service from the stack (vault entries and MCP config).",
+  },
+  args: {
+    service: {
+      type: "positional",
+      required: false,
+      description: "Service name. Omit with --all to remove every service.",
+    },
+    all: {
+      type: "boolean",
+      default: false,
+      description: "Remove every service in this stack (with confirmation).",
+    },
+    keepRemote: {
+      type: "boolean",
+      default: false,
+      description: "Leave the provider-side resource untouched (don't deprovision).",
+    },
+  },
+  async run({ args }) {
+    if (args.all) return runRemoveAll(Boolean(args.keepRemote));
+    if (!args.service) {
+      intro("stack remove");
+      outroError("Missing service name. Pass --all to remove every service.");
+      return;
+    }
+    return runRemoveOne(String(args.service), Boolean(args.keepRemote));
+  },
+});
+
+async function runRemoveOne(serviceName: string, keepRemote: boolean): Promise<void> {
+  intro(`stack remove ${serviceName}`);
+  const config = await readConfig();
+  const entry = config.services[serviceName];
+  if (!entry) {
+    outroError(`${serviceName} is not in this stack.`);
+    return;
+  }
+
+  const confirmed = process.stdout.isTTY
+    ? await prompts.confirm({
+        message: `Remove ${serviceName} from .stack.toml, delete its ${entry.secrets.length} secret(s), and ${keepRemote ? "keep" : "deprovision"} the upstream resource?`,
+        initialValue: false,
+      })
+    : true;
+  if (!confirmed || prompts.isCancel(confirmed)) {
+    outroError("Cancelled.");
+    return;
+  }
+
+  for (const secret of entry.secrets) {
+    await removeSecret(secret);
+  }
+  if (entry.mcp) await removeMcpEntry(entry.mcp);
+  delete config.services[serviceName];
+  await writeConfig(config);
+
+  outro(colors.green(`Removed ${serviceName}.`));
+}
+
+async function runRemoveAll(keepRemote: boolean): Promise<void> {
+  intro("stack remove --all");
+  const config = await readConfig();
+  const serviceNames = Object.keys(config.services);
+  if (serviceNames.length === 0) {
+    outro(colors.dim("No services to remove."));
+    return;
+  }
+
+  const totalSecrets = Object.values(config.services).reduce(
+    (acc, e) => acc + e.secrets.length,
+    0,
+  );
+
+  console.log();
+  console.log(`  ${colors.bold("About to remove:")}`);
+  for (const name of serviceNames) {
+    const entry = config.services[name];
+    console.log(
+      `    ${colors.red("●")} ${name.padEnd(14)} ${colors.dim(`${entry.secrets.length} secret(s)`)}`,
+    );
+  }
+  console.log();
+
+  // Two-step confirmation — large blast radius.
+  if (process.stdout.isTTY) {
+    const confirmed = await prompts.confirm({
+      message: `Delete ${serviceNames.length} service(s), ${totalSecrets} secret(s), and strip MCP entries? ${keepRemote ? "(keeping upstream)" : "(deprovisioning upstream)"}`,
+      initialValue: false,
+    });
+    if (!confirmed || prompts.isCancel(confirmed)) {
+      outroError("Cancelled.");
+      return;
+    }
+    const typed = await prompts.text({
+      message: `Type ${colors.bold("remove all")} to confirm:`,
+      validate(val) {
+        return val === "remove all" ? undefined : "Type exactly: remove all";
+      },
+    });
+    if (prompts.isCancel(typed)) {
+      outroError("Cancelled.");
+      return;
+    }
+  }
+
+  for (const name of serviceNames) {
+    const entry = config.services[name];
+    for (const secret of entry.secrets) await removeSecret(secret);
+    if (entry.mcp) await removeMcpEntry(entry.mcp);
+    delete config.services[name];
+  }
+  await writeConfig(config);
+
+  outro(colors.green(`Removed ${serviceNames.length} service(s), ${totalSecrets} secret(s).`));
+}

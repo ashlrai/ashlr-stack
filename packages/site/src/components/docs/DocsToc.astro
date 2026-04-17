@@ -1,0 +1,156 @@
+---
+/**
+ * On-this-page table of contents. Desktop-only.
+ *
+ * Generates itself from the h2/h3 elements in the prose content at runtime,
+ * then uses IntersectionObserver to highlight the section currently in view.
+ *
+ * The page author only needs to include this component inside the Docs layout —
+ * no per-page TOC definition required.
+ */
+---
+
+<aside
+  class="hidden xl:block w-[200px] shrink-0 sticky top-20 self-start max-h-[calc(100vh-6rem)] overflow-y-auto pl-4"
+  aria-label="On this page"
+>
+  <nav id="docs-toc" class="py-2">
+    <div class="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-500 mb-2.5">
+      On this page
+    </div>
+    <ul class="space-y-1 text-sm" data-toc-list>
+      <!-- Populated by the script below -->
+    </ul>
+  </nav>
+</aside>
+
+<script>
+  /**
+   * Build the TOC from the rendered DOM, then observe the headings to
+   * highlight the one nearest the top of the viewport.
+   */
+  interface TocEntry {
+    id: string;
+    text: string;
+    level: 2 | 3;
+  }
+
+  function slugify(input: string): string {
+    return input
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 80);
+  }
+
+  function buildToc() {
+    const list = document.querySelector<HTMLUListElement>("[data-toc-list]");
+    const article = document.querySelector<HTMLElement>(".docs-prose");
+    if (!list || !article) return;
+
+    const headings = Array.from(
+      article.querySelectorAll<HTMLHeadingElement>("h2, h3"),
+    );
+    const entries: TocEntry[] = [];
+    const seen = new Set<string>();
+
+    for (const h of headings) {
+      if (!h.id) {
+        let base = slugify(h.textContent ?? "");
+        if (!base) continue;
+        let id = base;
+        let i = 2;
+        while (seen.has(id) || document.getElementById(id)) {
+          id = `${base}-${i}`;
+          i += 1;
+        }
+        h.id = id;
+      }
+      seen.add(h.id);
+      entries.push({
+        id: h.id,
+        text: (h.textContent ?? "").trim(),
+        level: h.tagName === "H2" ? 2 : 3,
+      });
+    }
+
+    if (entries.length === 0) {
+      const toc = document.getElementById("docs-toc");
+      if (toc) toc.style.display = "none";
+      return;
+    }
+
+    list.innerHTML = entries
+      .map(
+        (e) => `
+          <li>
+            <a
+              href="#${e.id}"
+              data-toc-link="${e.id}"
+              class="block py-1 text-ink-400 hover:text-ink-100 transition-colors ${
+                e.level === 3 ? "pl-3 text-[13px]" : ""
+              }"
+            >${e.text}</a>
+          </li>`,
+      )
+      .join("");
+
+    const links = new Map<string, HTMLAnchorElement>();
+    list.querySelectorAll<HTMLAnchorElement>("[data-toc-link]").forEach((a) => {
+      links.set(a.getAttribute("data-toc-link") ?? "", a);
+    });
+
+    const setActive = (id: string | null) => {
+      links.forEach((a, linkId) => {
+        const active = linkId === id;
+        a.classList.toggle("text-magenta-300", active);
+        a.classList.toggle("text-ink-400", !active);
+      });
+    };
+
+    // Track which headings are intersecting; mark the topmost visible one as active.
+    const visible = new Set<string>();
+    const observer = new IntersectionObserver(
+      (items) => {
+        for (const item of items) {
+          if (item.isIntersecting) visible.add(item.target.id);
+          else visible.delete(item.target.id);
+        }
+        // Pick the first heading (document order) that's currently visible.
+        let active: string | null = null;
+        for (const e of entries) {
+          if (visible.has(e.id)) {
+            active = e.id;
+            break;
+          }
+        }
+        // Fallback: if nothing visible, pick the one just above the viewport.
+        if (!active) {
+          for (let i = entries.length - 1; i >= 0; i -= 1) {
+            const el = document.getElementById(entries[i].id);
+            if (el && el.getBoundingClientRect().top < 120) {
+              active = entries[i].id;
+              break;
+            }
+          }
+        }
+        setActive(active);
+      },
+      {
+        rootMargin: "-96px 0px -66% 0px",
+        threshold: [0, 1],
+      },
+    );
+
+    for (const e of entries) {
+      const el = document.getElementById(e.id);
+      if (el) observer.observe(el);
+    }
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", buildToc);
+  } else {
+    buildToc();
+  }
+</script>

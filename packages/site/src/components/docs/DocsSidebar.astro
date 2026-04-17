@@ -1,0 +1,80 @@
+---
+import { DOCS_NAV } from "~/lib/docs-nav";
+
+interface Props {
+  /** Current pathname — e.g. `/docs/cli/`. Used for active-state highlighting. */
+  current: string;
+}
+
+const { current } = Astro.props;
+const normalized = current.endsWith("/") ? current : `${current}/`;
+---
+
+<!-- Mobile: top-of-page picker that jumps to the chosen page. -->
+<div class="lg:hidden mb-6">
+  <label for="docs-mobile-nav" class="sr-only">Docs navigation</label>
+  <div class="panel rounded-md">
+    <select
+      id="docs-mobile-nav"
+      class="w-full bg-transparent px-3 py-3 text-sm text-ink-100 mono focus:outline-none"
+      data-current={normalized}
+    >
+      {DOCS_NAV.map((group) => (
+        <optgroup label={group.title}>
+          {group.items.map((item) => (
+            <option value={item.href} selected={item.href === normalized}>
+              {item.label}
+            </option>
+          ))}
+        </optgroup>
+      ))}
+    </select>
+  </div>
+</div>
+
+<!-- Desktop: sticky column on the left. -->
+<aside
+  class="hidden lg:block w-[240px] shrink-0 sticky top-20 self-start max-h-[calc(100vh-6rem)] overflow-y-auto pr-4"
+  aria-label="Docs navigation"
+>
+  <nav class="py-2">
+    {DOCS_NAV.map((group) => (
+      <div class="mb-6">
+        <div class="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-500 mb-2.5 px-2">
+          {group.title}
+        </div>
+        <ul class="space-y-0.5">
+          {group.items.map((item) => {
+            const isActive = item.href === normalized;
+            return (
+              <li>
+                <a
+                  href={item.href}
+                  class:list={[
+                    "block px-2 py-1.5 text-sm rounded-md transition-colors leading-snug",
+                    isActive
+                      ? "bg-magenta-500/10 text-magenta-200 border-l-2 border-magenta-400 pl-[calc(0.5rem-2px)]"
+                      : "text-ink-400 hover:text-ink-100 hover:bg-white/[0.03]",
+                  ]}
+                  aria-current={isActive ? "page" : undefined}
+                >
+                  {item.label}
+                </a>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    ))}
+  </nav>
+</aside>
+
+<script>
+  const sel = document.getElementById("docs-mobile-nav") as HTMLSelectElement | null;
+  if (sel) {
+    sel.addEventListener("change", (e) => {
+      const target = (e.target as HTMLSelectElement).value;
+      if (target) window.location.href = target;
+    });
+  }
+</script>

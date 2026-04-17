@@ -1,0 +1,87 @@
+---
+import Base from "~/layouts/Base.astro";
+import Hero from "~/components/Hero.astro";
+import OneCommand from "~/components/OneCommand";
+import ProvidersGrid from "~/components/ProvidersGrid.astro";
+import HowItWorks from "~/components/HowItWorks.astro";
+import Templates from "~/components/Templates.astro";
+import ClaudeCodeDemo from "~/components/ClaudeCodeDemo";
+import Constellation from "~/components/Constellation.astro";
+import Footer from "~/components/Footer.astro";
+---
+
+<Base>
+  <Hero />
+
+  <!-- The one-command moment -->
+  <section id="one-command" class="relative mx-auto max-w-[1200px] px-5 sm:px-8 py-24 sm:py-28">
+    <header class="max-w-2xl mb-10">
+      <div class="chip mb-4">The one-command moment</div>
+      <h2 class="text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-[-0.03em] text-white">
+        Forty-five minutes, <span class="text-gradient-magenta">or one command.</span>
+      </h2>
+      <p class="mt-4 text-ink-300 leading-relaxed">
+        What wiring a single service actually looks like — before and after. Flip the tab.
+      </p>
+    </header>
+    <OneCommand client:visible />
+  </section>
+
+  <ProvidersGrid />
+  <HowItWorks />
+  <Templates />
+
+  <!-- Claude Code integration -->
+  <section id="claude-code" class="relative mx-auto max-w-[1200px] px-5 sm:px-8 py-24 sm:py-28">
+    <div class="grid grid-cols-1 lg:grid-cols-[0.85fr_1fr] gap-10 lg:gap-14 items-start">
+      <div class="lg:pt-6 lg:sticky lg:top-24">
+        <div class="chip mb-4">Claude Code integration</div>
+        <h2 class="text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-[-0.03em] text-white">
+          Your agent can <span class="text-gradient-magenta">run Stack directly.</span>
+        </h2>
+        <p class="mt-4 text-ink-300 leading-relaxed">
+          Stack ships as a Claude Code plugin and an MCP server. From chat, call
+          <code class="mono text-magenta-300">/stack:add</code> and Claude provisions the service,
+          stores secrets in Phantom, and re-wires your <code class="mono">.mcp.json</code> — no
+          copy-paste back to the terminal.
+        </p>
+
+        <ul class="mt-6 space-y-3 text-sm">
+          <li class="flex items-start gap-3">
+            <span class="mt-0.5 text-magenta-400">▸</span>
+            <div>
+              <div class="text-white font-medium">MCP-native</div>
+              <div class="text-ink-400">Every Stack command is exposed as an MCP tool.</div>
+            </div>
+          </li>
+          <li class="flex items-start gap-3">
+            <span class="mt-0.5 text-magenta-400">▸</span>
+            <div>
+              <div class="text-white font-medium">Plugin commands</div>
+              <div class="text-ink-400"><code class="mono text-ink-200">/stack:add</code>, <code class="mono text-ink-200">/stack:doctor</code>, <code class="mono text-ink-200">/stack:open</code> — all available in-chat.</div>
+            </div>
+          </li>
+          <li class="flex items-start gap-3">
+            <span class="mt-0.5 text-magenta-400">▸</span>
+            <div>
+              <div class="text-white font-medium">Phantom-gated</div>
+              <div class="text-ink-400">Secrets are read through Phantom's proxy. The agent sees a slot name, never a key.</div>
+            </div>
+          </li>
+        </ul>
+
+        <div class="mt-8 panel-inner rounded-lg p-4 mono text-[12px]">
+          <div class="ansi-dim mb-1"># one-time setup</div>
+          <div><span class="ansi-magenta select-none">$ </span><span class="ansi-white">claude plugin install ashlr-ai/stack-plugin</span></div>
+        </div>
+      </div>
+
+      <div>
+        <ClaudeCodeDemo client:visible />
+      </div>
+    </div>
+  </section>
+
+  <Constellation />
+  <Footer />
+</Base>

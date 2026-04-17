@@ -1,0 +1,179 @@
+---
+import Docs from "~/layouts/Docs.astro";
+import { Code } from "astro:components";
+import { CLI_COMMANDS, type CliCommand } from "~/lib/cli-ref";
+
+const slug = (s: string) => s.replace(/^stack\s+/, "").replace(/\s+/g, "-");
+---
+
+<Docs
+  title="CLI reference"
+  description="Every `stack` subcommand, every flag, every default — sourced from the citty `defineCommand` calls in `packages/cli/src/commands/`."
+  eyebrow="Reference"
+>
+  <h2>At a glance</h2>
+  <p>
+    <code>stack</code> ships with {CLI_COMMANDS.length} top-level commands. The
+    core loop is <code>init</code> → <code>add</code> → <code>doctor</code> —
+    everything else is context, migration, or ops.
+  </p>
+
+  <div class="not-prose mt-6 grid gap-2 sm:grid-cols-2">
+    {CLI_COMMANDS.map((cmd) => (
+      <a
+        href={`#${slug(cmd.name)}`}
+        class="flex items-center justify-between gap-3 px-3 py-2 rounded-md border border-white/[0.05] hover:border-magenta-500/30 hover:bg-magenta-500/5 transition-colors group"
+      >
+        <code class="mono text-[13px] text-magenta-200">{cmd.name}</code>
+        <span class="text-[12px] text-ink-400 truncate">{cmd.description}</span>
+      </a>
+    ))}
+  </div>
+
+  <h2>Global behaviour</h2>
+  <ul>
+    <li>
+      Commands that mutate state (<code>add</code>, <code>remove</code>,
+      <code>import</code>) refuse to run unless Phantom is on PATH.
+    </li>
+    <li>
+      Interactive commands auto-detect TTY. In non-interactive contexts (CI,
+      an MCP tool call) they fall through to a sensible default or exit with
+      a structured error instead of prompting.
+    </li>
+    <li>
+      All output honours <code>NO_COLOR</code>. Structured JSON is available on
+      <code>stack doctor --json</code> for CI.
+    </li>
+    <li>
+      Exit codes: <code>0</code> on success, <code>1</code> on any failure that
+      wasn't a cancellation, <code>127</code> if a required dependency
+      (Phantom, git) isn't installed.
+    </li>
+  </ul>
+
+  {CLI_COMMANDS.map((cmd: CliCommand) => (
+    <>
+      <h2 id={slug(cmd.name)}>
+        <code class="mono text-magenta-200 text-[1.15rem]">{cmd.name}</code>
+      </h2>
+      <p>{cmd.description}</p>
+
+      {cmd.notes && <p class="text-ink-300">{cmd.notes}</p>}
+
+      <h4>Synopsis</h4>
+      <Code code={cmd.synopsis} lang="bash" theme="github-dark-dimmed" />
+
+      {cmd.flags && cmd.flags.length > 0 && (
+        <>
+          <h4>Flags</h4>
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 32%">Flag</th>
+                <th style="width: 12%">Type</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              {cmd.flags.map((f) => (
+                <tr>
+                  <td>
+                    <code class="mono text-[12.5px]">{f.synopsis}</code>
+                    {f.required && (
+                      <span class="ml-1.5 text-[10px] uppercase tracking-wider text-magenta-400 font-semibold">
+                        req
+                      </span>
+                    )}
+                  </td>
+                  <td class="text-ink-400">
+                    <span class="mono text-[12px]">{f.type}</span>
+                    {f.default !== undefined && (
+                      <div class="text-[11px] text-ink-500 mt-0.5">
+                        default: <code class="mono">{String(f.default)}</code>
+                      </div>
+                    )}
+                  </td>
+                  <td>{f.description}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
+
+      {cmd.subcommands && cmd.subcommands.length > 0 && (
+        <>
+          <h4>Subcommands</h4>
+          {cmd.subcommands.map((sub) => (
+            <div class="mt-5 panel-inner rounded-xl p-5">
+              <div class="flex items-baseline justify-between gap-3 mb-1.5 flex-wrap">
+                <code class="mono text-magenta-200 text-[14px] font-semibold">{sub.name}</code>
+                <span class="text-[12px] text-ink-400">{sub.description}</span>
+              </div>
+              <Code code={sub.synopsis} lang="bash" theme="github-dark-dimmed" />
+              {sub.flags && sub.flags.length > 0 && (
+                <table class="mt-3">
+                  <thead>
+                    <tr>
+                      <th style="width: 32%">Flag</th>
+                      <th style="width: 12%">Type</th>
+                      <th>Description</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sub.flags.map((f) => (
+                      <tr>
+                        <td>
+                          <code class="mono text-[12.5px]">{f.synopsis}</code>
+                          {f.required && (
+                            <span class="ml-1.5 text-[10px] uppercase tracking-wider text-magenta-400 font-semibold">
+                              req
+                            </span>
+                          )}
+                        </td>
+                        <td class="text-ink-400">
+                          <span class="mono text-[12px]">{f.type}</span>
+                          {f.default !== undefined && (
+                            <div class="text-[11px] text-ink-500 mt-0.5">
+                              default: <code class="mono">{String(f.default)}</code>
+                            </div>
+                          )}
+                        </td>
+                        <td>{f.description}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+              {sub.examples && sub.examples.length > 0 && (
+                <div class="mt-3">
+                  <Code
+                    code={sub.examples
+                      .map((e) => (e.comment ? `${e.comment}\n${e.command}` : e.command))
+                      .join("\n\n")}
+                    lang="bash"
+                    theme="github-dark-dimmed"
+                  />
+                </div>
+              )}
+            </div>
+          ))}
+        </>
+      )}
+
+      {cmd.examples && cmd.examples.length > 0 && (
+        <>
+          <h4>Examples</h4>
+          <Code
+            code={cmd.examples
+              .map((e) => (e.comment ? `${e.comment}\n${e.command}` : e.command))
+              .join("\n\n")}
+            lang="bash"
+            theme="github-dark-dimmed"
+          />
+        </>
+      )}
+    </>
+  ))}
+</Docs>

@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="600" viewBox="0 0 1200 600" shape-rendering="geometricPrecision">
+  <defs>
+    <radialGradient id="glowTop" cx="50%" cy="0%" r="70%">
+      <stop offset="0%" stop-color="#d946ef" stop-opacity="0.38"/>
+      <stop offset="60%" stop-color="#d946ef" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="wordmark" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#e879f9"/>
+    </linearGradient>
+    <linearGradient id="tri" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#f0abfc"/>
+      <stop offset="100%" stop-color="#d946ef"/>
+    </linearGradient>
+    <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse">
+      <path d="M48 0H0V48" fill="none" stroke="#ffffff" stroke-opacity="0.045" stroke-width="1"/>
+    </pattern>
+  </defs>
+  <rect width="1200" height="600" fill="#050506"/>
+  <rect width="1200" height="600" fill="url(#grid)"/>
+  <rect width="1200" height="600" fill="url(#glowTop)"/>
+
+  <g transform="translate(96, 170)">
+    <path d="M0 132 L66 0 L132 132 Z" fill="url(#tri)"/>
+    <text x="164" y="108" font-family="Inter, system-ui, sans-serif" font-size="104" font-weight="700" fill="url(#wordmark)" letter-spacing="-4">stack</text>
+  </g>
+
+  <text x="96" y="390" font-family="Inter, system-ui, sans-serif" font-size="50" font-weight="600" fill="#ffffff" letter-spacing="-1.8">
+    The control plane for your entire dev stack.
+  </text>
+  <text x="96" y="438" font-family="Inter, system-ui, sans-serif" font-size="26" font-weight="400" fill="#8a8a90" letter-spacing="-0.3">
+    One command. 23 providers. CLI + MCP + Claude Code plugin.
+  </text>
+
+  <g transform="translate(96, 484)">
+    <rect x="0" y="0" width="720" height="66" rx="10" fill="#131316" stroke="#2a2a2e"/>
+    <circle cx="20" cy="18" r="5" fill="#3d3d43"/>
+    <circle cx="38" cy="18" r="5" fill="#3d3d43"/>
+    <circle cx="56" cy="18" r="5" fill="#3d3d43"/>
+    <text x="20" y="50" font-family="JetBrains Mono, monospace" font-size="20" fill="#e879f9">$</text>
+    <text x="42" y="50" font-family="JetBrains Mono, monospace" font-size="20" fill="#e5e5e7">stack add supabase</text>
+  </g>
+
+  <text x="1104" y="556" font-family="Inter, system-ui, sans-serif" font-size="20" font-weight="500" fill="#8a8a90" text-anchor="end">
+    stack.ashlr.ai
+  </text>
+</svg>

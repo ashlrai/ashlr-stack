@@ -1,0 +1,19 @@
+# Cloudflare Pages redirects. Keeping canonical slash-less paths.
+
+/docs/                  /docs              301
+/docs/quickstart/       /docs/quickstart   301
+/docs/cli/              /docs/cli          301
+/docs/providers/        /docs/providers    301
+/docs/templates/        /docs/templates    301
+/docs/config/           /docs/config       301
+/docs/phantom/          /docs/phantom      301
+/docs/mcp/              /docs/mcp          301
+/docs/ci/               /docs/ci           301
+/docs/faq/              /docs/faq          301
+
+# Alias a few "search term" paths people are likely to guess into the docs.
+/install                /docs/quickstart#install   302
+/cli                    /docs/cli                  302
+/mcp                    /docs/mcp                  302
+/providers              /docs/providers            302
+/templates              /docs/templates            302

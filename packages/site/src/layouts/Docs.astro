@@ -1,0 +1,337 @@
+---
+import Base from "~/layouts/Base.astro";
+import DocsHeader from "~/components/docs/DocsHeader.astro";
+import DocsSidebar from "~/components/docs/DocsSidebar.astro";
+import DocsToc from "~/components/docs/DocsToc.astro";
+import PageNav from "~/components/docs/PageNav.astro";
+import Footer from "~/components/Footer.astro";
+
+interface Props {
+  title: string;
+  description?: string;
+  /** Optional page-level eyebrow shown above the H1. */
+  eyebrow?: string;
+}
+
+const { title, description, eyebrow } = Astro.props;
+const pathname = Astro.url.pathname;
+const pageTitle = `${title} · Ashlr Stack docs`;
+---
+
+<Base title={pageTitle} description={description}>
+  <DocsHeader />
+
+  <div class="mx-auto max-w-[1400px] px-5 sm:px-8 pt-8 sm:pt-10 pb-24">
+    <div class="flex items-start gap-10">
+      <DocsSidebar current={pathname} />
+
+      <div class="flex-1 min-w-0 flex items-start gap-10">
+        <article class="flex-1 min-w-0 docs-prose">
+          {eyebrow && (
+            <div class="chip mb-5">{eyebrow}</div>
+          )}
+          <h1 class="text-[40px] sm:text-[48px] leading-[1.04] font-semibold tracking-[-0.03em] text-white mb-4">
+            {title}
+          </h1>
+          {description && (
+            <p class="text-lg text-ink-300 leading-relaxed mb-10 max-w-[68ch]">
+              {description}
+            </p>
+          )}
+
+          <slot />
+
+          <PageNav href={pathname} />
+        </article>
+
+        <DocsToc />
+      </div>
+    </div>
+  </div>
+
+  <Footer />
+</Base>
+
+<style is:global>
+  /* ─────────────── Docs prose styling ─────────────── */
+
+  .docs-prose {
+    color: var(--color-ink-200);
+    line-height: 1.7;
+    font-size: 16px;
+  }
+
+  .docs-prose > * + * {
+    margin-top: 1.25em;
+  }
+
+  .docs-prose h2 {
+    font-family: var(--font-sans);
+    font-size: 1.75rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: #fff;
+    margin-top: 3rem;
+    margin-bottom: 1rem;
+    line-height: 1.2;
+    scroll-margin-top: 5rem;
+    position: relative;
+  }
+
+  .docs-prose h2::before {
+    content: "";
+    position: absolute;
+    left: -1rem;
+    top: 0.65rem;
+    width: 3px;
+    height: 1.5rem;
+    background: var(--color-magenta-500);
+    border-radius: 2px;
+    opacity: 0.75;
+  }
+
+  .docs-prose h3 {
+    font-family: var(--font-sans);
+    font-size: 1.25rem;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    color: #fff;
+    margin-top: 2rem;
+    margin-bottom: 0.75rem;
+    line-height: 1.3;
+    scroll-margin-top: 5rem;
+  }
+
+  .docs-prose h4 {
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    font-weight: 600;
+    color: #fff;
+    margin-top: 1.75rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .docs-prose p {
+    color: var(--color-ink-200);
+  }
+
+  .docs-prose strong {
+    color: #fff;
+    font-weight: 600;
+  }
+
+  .docs-prose em {
+    color: var(--color-ink-100);
+    font-style: italic;
+  }
+
+  .docs-prose a:not(.docs-card):not(.unstyled) {
+    color: var(--color-magenta-300);
+    text-decoration: underline;
+    text-decoration-color: rgba(217, 70, 239, 0.3);
+    text-underline-offset: 3px;
+    transition: color 150ms ease, text-decoration-color 150ms ease;
+  }
+
+  .docs-prose a:not(.docs-card):not(.unstyled):hover {
+    color: var(--color-magenta-200);
+    text-decoration-color: rgba(217, 70, 239, 0.7);
+  }
+
+  .docs-prose ul,
+  .docs-prose ol {
+    margin-top: 1.25em;
+    margin-bottom: 1.25em;
+    padding-left: 1.5rem;
+  }
+
+  .docs-prose ul {
+    list-style-type: disc;
+  }
+
+  .docs-prose ul li::marker {
+    color: var(--color-magenta-500);
+  }
+
+  .docs-prose ol {
+    list-style-type: decimal;
+  }
+
+  .docs-prose ol li::marker {
+    color: var(--color-ink-400);
+    font-family: var(--font-mono);
+    font-size: 0.875em;
+  }
+
+  .docs-prose li {
+    margin-top: 0.5em;
+    padding-left: 0.25rem;
+  }
+
+  .docs-prose li > p {
+    margin-top: 0.5em;
+  }
+
+  .docs-prose code:not(pre code) {
+    font-family: var(--font-mono);
+    font-size: 0.875em;
+    padding: 0.1em 0.4em;
+    border-radius: 4px;
+    background: rgba(217, 70, 239, 0.08);
+    border: 1px solid rgba(217, 70, 239, 0.15);
+    color: var(--color-magenta-200);
+  }
+
+  .docs-prose pre {
+    position: relative;
+    margin: 1.5em 0;
+    padding: 1rem 1.25rem;
+    background: rgba(0, 0, 0, 0.45) !important;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 10px;
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.65;
+  }
+
+  /* Astro's Code component emits inline `style="background-color:..."`; override. */
+  .docs-prose pre[style] {
+    background: rgba(0, 0, 0, 0.45) !important;
+  }
+
+  .docs-prose pre code {
+    font-family: var(--font-mono);
+    background: transparent !important;
+    border: none;
+    padding: 0;
+    font-size: 13px;
+    color: inherit;
+  }
+
+  .docs-prose blockquote {
+    border-left: 2px solid var(--color-magenta-500);
+    padding: 0.25rem 0 0.25rem 1.25rem;
+    color: var(--color-ink-300);
+    font-style: italic;
+    background: rgba(217, 70, 239, 0.03);
+    border-radius: 0 6px 6px 0;
+  }
+
+  .docs-prose hr {
+    border: 0;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.1),
+      transparent
+    );
+    margin: 3rem 0;
+  }
+
+  .docs-prose table {
+    width: 100%;
+    margin: 1.5em 0;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .docs-prose thead th {
+    text-align: left;
+    font-weight: 600;
+    color: #fff;
+    background: rgba(255, 255, 255, 0.025);
+    padding: 0.65rem 1rem;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .docs-prose tbody td {
+    padding: 0.65rem 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    vertical-align: top;
+    color: var(--color-ink-200);
+  }
+
+  .docs-prose tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  .docs-prose tbody tr:hover {
+    background: rgba(255, 255, 255, 0.015);
+  }
+
+  /* ─────────────── Docs-local widgets ─────────────── */
+
+  .docs-card {
+    display: block;
+    padding: 1.25rem;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.025),
+      rgba(255, 255, 255, 0.01)
+    );
+    border-radius: 14px;
+    transition:
+      border-color 200ms ease,
+      background-color 200ms ease,
+      transform 200ms ease;
+    color: inherit !important;
+    text-decoration: none !important;
+  }
+
+  .docs-card:hover {
+    border-color: rgba(217, 70, 239, 0.35);
+    background: linear-gradient(
+      180deg,
+      rgba(217, 70, 239, 0.05),
+      rgba(217, 70, 239, 0.01)
+    );
+    transform: translateY(-2px);
+  }
+
+  .callout {
+    margin: 1.5rem 0;
+    padding: 1rem 1.25rem;
+    border-radius: 10px;
+    border: 1px solid rgba(217, 70, 239, 0.2);
+    background: rgba(217, 70, 239, 0.04);
+    font-size: 14px;
+    color: var(--color-ink-200);
+    line-height: 1.6;
+  }
+
+  .callout-warn {
+    border-color: rgba(250, 204, 21, 0.28);
+    background: rgba(250, 204, 21, 0.04);
+  }
+
+  .callout-info {
+    border-color: rgba(103, 232, 249, 0.22);
+    background: rgba(103, 232, 249, 0.03);
+  }
+
+  .callout strong:first-child {
+    color: var(--color-magenta-200);
+  }
+
+  .callout-warn strong:first-child {
+    color: #facc15;
+  }
+
+  .callout-info strong:first-child {
+    color: #67e8f9;
+  }
+
+  /* The Astro Code component wraps in <pre class="astro-code ..."> */
+  .docs-prose .astro-code {
+    background: rgba(0, 0, 0, 0.45) !important;
+  }
+</style>

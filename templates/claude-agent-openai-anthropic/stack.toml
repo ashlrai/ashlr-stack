@@ -1,0 +1,42 @@
+# Multi-provider Claude Code / agent project.
+# Gets you the four flagship model APIs plus GitHub for code access.
+
+[stack]
+version = "1"
+project_id = "stk_template"
+template = "claude-agent-openai-anthropic"
+
+[services.openai]
+provider = "openai"
+secrets = ["OPENAI_API_KEY"]
+created_at = "1970-01-01T00:00:00Z"
+created_by = "template"
+
+[services.anthropic]
+provider = "anthropic"
+secrets = ["ANTHROPIC_API_KEY"]
+created_at = "1970-01-01T00:00:00Z"
+created_by = "template"
+
+[services.xai]
+provider = "xai"
+secrets = ["XAI_API_KEY"]
+created_at = "1970-01-01T00:00:00Z"
+created_by = "template"
+
+[services.deepseek]
+provider = "deepseek"
+secrets = ["DEEPSEEK_API_KEY"]
+created_at = "1970-01-01T00:00:00Z"
+created_by = "template"
+
+[services.github]
+provider = "github"
+secrets = ["GITHUB_TOKEN"]
+mcp = "github"
+created_at = "1970-01-01T00:00:00Z"
+created_by = "template"
+
+[[environments]]
+name = "dev"
+default = true

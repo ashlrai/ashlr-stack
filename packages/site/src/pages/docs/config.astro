@@ -1,0 +1,271 @@
+---
+import Docs from "~/layouts/Docs.astro";
+import { Code } from "astro:components";
+---
+
+<Docs
+  title=".stack.toml schema"
+  description="The two-file config split — what's committed, what's local, and why."
+  eyebrow="Reference"
+>
+  <h2>Why two files</h2>
+  <p>
+    Stack splits its config across two TOML files because one file can't serve
+    both jobs.
+  </p>
+
+  <ul>
+    <li>
+      <strong><code>.stack.toml</code></strong> (committed) — the <em>shape</em>
+      of the stack. Which services this project uses, what their canonical
+      secret slot names are, which MCP servers to wire. Safe to share in git.
+    </li>
+    <li>
+      <strong><code>.stack.local.toml</code></strong> (gitignored automatically)
+      — the <em>instance</em>. Your <code>project_id</code>, the provider-side
+      resource ids (Supabase project ref, Vercel project id), regions you
+      picked, timestamps.
+    </li>
+  </ul>
+
+  <p>
+    When you run <code>stack init</code>, both files are created and Stack
+    appends <code>.stack.local.toml</code> to your <code>.gitignore</code>. A
+    teammate who clones your repo gets the shape file only — their
+    <code>stack add</code> calls provision their own resources and populate
+    their own <code>.stack.local.toml</code>.
+  </p>
+
+  <div class="callout callout-info">
+    <strong>Legacy single-file configs:</strong> If Stack finds a single
+    <code>.stack.toml</code> with instance fields at the top level
+    (<code>project_id</code>, <code>created_at</code>, <code>resource_id</code>),
+    it reads it transparently as a merged config. The next write splits it into
+    the two-file layout.
+  </div>
+
+  <h2>Committed shape — <code>.stack.toml</code></h2>
+  <p>Complete example:</p>
+
+  <Code
+    code={`# Ashlr Stack — committed shape. Defines which services this project uses.
+# Safe to share in git; secret *values* live in Phantom, not here.
+
+[stack]
+version = "1"
+template = "nextjs-supabase-posthog"
+
+[services.supabase]
+provider = "supabase"
+secrets = ["SUPABASE_URL", "SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY"]
+mcp     = "supabase"
+
+[services.posthog]
+provider = "posthog"
+secrets = ["POSTHOG_PERSONAL_API_KEY"]
+mcp     = "posthog"
+
+[[environments]]
+name    = "dev"
+default = true
+
+[[environments]]
+name    = "prod"`}
+    lang="toml"
+    theme="github-dark-dimmed"
+  />
+
+  <h3>Fields</h3>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 24%">Field</th>
+        <th style="width: 16%">Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>[stack].version</code></td>
+        <td><code>string</code></td>
+        <td>Schema version. Currently <code>"1"</code>. Written automatically.</td>
+      </tr>
+      <tr>
+        <td><code>[stack].template</code></td>
+        <td><code>string?</code></td>
+        <td>Optional name of the template this config was seeded from. Used by <code>stack deps</code> and <code>stack projects list</code>.</td>
+      </tr>
+      <tr>
+        <td><code>[services.&lt;name&gt;].provider</code></td>
+        <td><code>string</code></td>
+        <td>The provider key (<code>supabase</code>, <code>neon</code>, etc.) — see <a href="/docs/providers/">Providers</a>.</td>
+      </tr>
+      <tr>
+        <td><code>[services.&lt;name&gt;].secrets</code></td>
+        <td><code>string[]</code></td>
+        <td>Canonical .env names this service owns. Stack stores the values in Phantom under these exact keys.</td>
+      </tr>
+      <tr>
+        <td><code>[services.&lt;name&gt;].mcp</code></td>
+        <td><code>string?</code></td>
+        <td>When set, the name of the MCP server entry Stack maintains in <code>.mcp.json</code> for this service.</td>
+      </tr>
+      <tr>
+        <td><code>[[environments]]</code></td>
+        <td><code>array</code></td>
+        <td>One per environment (e.g. <code>dev</code>, <code>prod</code>). Exactly one should have <code>default = true</code>.</td>
+      </tr>
+      <tr>
+        <td><code>[[environments]].overrides</code></td>
+        <td><code>table?</code></td>
+        <td>Per-env secret overrides — mostly unused in v1, wired for later.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Local instance — <code>.stack.local.toml</code></h2>
+  <p>
+    Gitignored. Holds everything that's per-developer or per-machine. Example:
+  </p>
+
+  <Code
+    code={`# Ashlr Stack — local instance data. Auto-generated; do not commit.
+
+[stack]
+project_id = "stk_8f3c6a2e"
+
+[services.supabase]
+resource_id = "abcdefghijklmnop"
+region      = "us-east-1"
+created_at  = "2026-03-14T09:21:14.211Z"
+created_by  = "mason@evero-consulting.com"
+
+[services.posthog]
+resource_id = "1234"
+created_at  = "2026-03-14T09:21:27.004Z"`}
+    lang="toml"
+    theme="github-dark-dimmed"
+  />
+
+  <h3>Fields</h3>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 28%">Field</th>
+        <th style="width: 16%">Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>[stack].project_id</code></td>
+        <td><code>string</code></td>
+        <td>Stack-generated id (<code>stk_&lt;12 hex&gt;</code>). Used by the cross-project registry at <code>~/.stack/projects.json</code>.</td>
+      </tr>
+      <tr>
+        <td><code>[services.&lt;name&gt;].resource_id</code></td>
+        <td><code>string?</code></td>
+        <td>Provider-side resource id (Supabase project ref, Vercel project id, Fly app name, ...).</td>
+      </tr>
+      <tr>
+        <td><code>[services.&lt;name&gt;].region</code></td>
+        <td><code>string?</code></td>
+        <td>Region the resource was created in. Can differ per developer.</td>
+      </tr>
+      <tr>
+        <td><code>[services.&lt;name&gt;].meta</code></td>
+        <td><code>table?</code></td>
+        <td>Freeform provider-specific fields (org slugs, account ids, pricing plans).</td>
+      </tr>
+      <tr>
+        <td><code>[services.&lt;name&gt;].created_at</code></td>
+        <td><code>string</code></td>
+        <td>ISO-8601 timestamp.</td>
+      </tr>
+      <tr>
+        <td><code>[services.&lt;name&gt;].created_by</code></td>
+        <td><code>string?</code></td>
+        <td>Whoever ran <code>stack add</code> — usually an email from the provider's identity response.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>The merged view in code</h2>
+  <p>
+    Inside the core package, <code>readConfig()</code> merges both files into a
+    single <code>StackConfig</code>. This is the shape CLI commands and the MCP
+    server operate on:
+  </p>
+
+  <Code
+    code={`export interface StackConfig {
+  stack: {
+    version: string;
+    project_id: string;
+    template?: string;
+  };
+  services: Record<string, {
+    provider: string;
+    secrets: string[];
+    mcp?: string;
+    resource_id?: string;
+    region?: string;
+    meta?: Record<string, unknown>;
+    created_at: string;
+    created_by?: string;
+  }>;
+  environments: Array<{
+    name: string;
+    default?: boolean;
+    overrides?: Record<string, string>;
+  }>;
+}`}
+    lang="ts"
+    theme="github-dark-dimmed"
+  />
+
+  <h2>What doesn't live here</h2>
+  <p>
+    Deliberately absent from both files:
+  </p>
+
+  <ul>
+    <li>
+      <strong>Secret values.</strong> Never stored on disk. Live in Phantom's
+      encrypted vault, referenced by slot name.
+    </li>
+    <li>
+      <strong>OAuth access tokens.</strong> Also in Phantom (one slot per
+      provider — e.g. <code>SUPABASE_STACK_PAT</code>, <code>GITHUB_TOKEN</code>).
+    </li>
+    <li>
+      <strong>User-facing display names.</strong> Those live in the provider
+      definitions in <code>packages/core/src/providers/*.ts</code>, not in
+      per-project config.
+    </li>
+  </ul>
+
+  <h2>Editing by hand</h2>
+  <p>
+    You can edit <code>.stack.toml</code> by hand — it's just TOML — but the
+    CLI is the supported path. Common gotchas if you do edit:
+  </p>
+
+  <ul>
+    <li>
+      <strong>Don't remove a <code>secrets</code> entry without running{" "}
+      <code>stack env diff</code></strong> — you'll end up with orphan keys in
+      Phantom.
+    </li>
+    <li>
+      <strong>Don't add an <code>mcp</code> name Stack doesn't know about</strong> —
+      <code>.mcp.json</code> only gets regenerated when <code>stack add</code>
+      or <code>stack remove</code> runs, and both expect the MCP entry to match
+      a provider.
+    </li>
+    <li>
+      <strong>Don't commit <code>.stack.local.toml</code>.</strong> Stack
+      auto-gitignores it, but a force-add will slip through.
+    </li>
+  </ul>
+</Docs>

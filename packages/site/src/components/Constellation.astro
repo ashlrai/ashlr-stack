@@ -1,0 +1,134 @@
+---
+const nodes = [
+  {
+    id: "stack",
+    title: "Stack",
+    tag: "Control plane",
+    body: "The CLI + MCP that provisions, wires, and operates every service.",
+    glyph: "▲",
+    glyphClass: "text-magenta-400",
+    cx: 50,
+    cy: 50,
+    size: "center",
+  },
+  {
+    id: "phantom",
+    title: "Phantom Secrets",
+    tag: "Vault",
+    body: "E2E-encrypted secret storage. Stack writes every credential through Phantom.",
+    glyph: "◇",
+    glyphClass: "text-cyan-300",
+    cx: 16,
+    cy: 28,
+    size: "satellite",
+  },
+  {
+    id: "plugin",
+    title: "ashlr-plugin",
+    tag: "Context compressor",
+    body: "Drops Claude Code token spend ~80% on large repos with genome-indexed read/grep.",
+    glyph: "◈",
+    glyphClass: "text-amber-300",
+    cx: 84,
+    cy: 28,
+    size: "satellite",
+  },
+  {
+    id: "ashlrcode",
+    title: "ashlrcode",
+    tag: "Multi-model CLI",
+    body: "Route the same prompt across Claude, GPT, Grok, DeepSeek. Compare, diff, stream.",
+    glyph: "◎",
+    glyphClass: "text-emerald-300",
+    cx: 50,
+    cy: 88,
+    size: "satellite",
+  },
+];
+---
+
+<section id="constellation" class="relative mx-auto max-w-[1200px] px-5 sm:px-8 pt-14 sm:pt-16 pb-24 sm:pb-28">
+  <div class="edi-rule mb-10">
+    <span>§ 07 · The Ashlr Constellation</span>
+  </div>
+
+  <header class="max-w-[720px] mb-14 reveal" data-reveal>
+    <h2 class="display text-white" style="font-size: clamp(34px, 4.8vw, 58px);">
+      Four tools. <span class="display-italic text-gradient-magenta">One coherent platform.</span>
+    </h2>
+    <p class="mt-5 text-[17px] leading-[1.55] text-ink-300 max-w-[580px]">
+      Stack is the control plane. Phantom is the vault. ashlr-plugin is the context compressor.
+      ashlrcode is the multi-model runtime. They compose — none of them require the others, but
+      together they're load-bearing.
+    </p>
+  </header>
+
+  <div class="relative panel rounded-3xl p-4 sm:p-10 overflow-hidden">
+    <div class="absolute inset-0 grid-bg opacity-60 pointer-events-none" aria-hidden="true"></div>
+
+    <!-- connection lines -->
+    <svg
+      viewBox="0 0 100 100"
+      preserveAspectRatio="none"
+      class="absolute inset-0 w-full h-full pointer-events-none"
+      aria-hidden="true"
+    >
+      <defs>
+        <linearGradient id="line-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#d946ef" stop-opacity="0"/>
+          <stop offset="50%" stop-color="#d946ef" stop-opacity="0.5"/>
+          <stop offset="100%" stop-color="#d946ef" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      {nodes.filter(n => n.id !== "stack").map((n) => (
+        <line
+          x1="50" y1="50"
+          x2={n.cx} y2={n.cy}
+          stroke="url(#line-grad)"
+          stroke-width="0.15"
+          stroke-dasharray="0.6 0.6"
+          vector-effect="non-scaling-stroke"
+        />
+      ))}
+    </svg>
+
+    <!-- central halo -->
+    <div
+      aria-hidden="true"
+      class="absolute pointer-events-none"
+      style="left:50%;top:50%;width:260px;height:260px;transform:translate(-50%,-50%);background:radial-gradient(closest-side, rgba(217,70,239,0.25), transparent 70%);"
+    ></div>
+
+    <div class="relative aspect-[16/10] min-h-[420px] sm:min-h-[500px] w-full">
+      {nodes.map((n) => {
+        const isCenter = n.id === "stack";
+        return (
+          <div
+            class={`absolute -translate-x-1/2 -translate-y-1/2 ${isCenter ? "w-[220px] sm:w-[260px]" : "w-[220px] sm:w-[240px]"}`}
+            style={`left:${n.cx}%; top:${n.cy}%;`}
+          >
+            <article class={`relative panel rounded-2xl p-4 ${isCenter ? "bg-gradient-to-b from-magenta-500/[0.08] to-transparent border-magenta-500/30" : ""}`}>
+              <div class="flex items-start justify-between mb-2">
+                <span class={`font-mono text-lg ${n.glyphClass}`}>{n.glyph}</span>
+                <span class="chip !h-5 !px-2 !text-[9px]">{n.tag}</span>
+              </div>
+              <div class="text-[14px] font-semibold text-white tracking-tight">{n.title}</div>
+              <p class="mt-1 text-[12px] text-ink-400 leading-snug">{n.body}</p>
+              {isCenter && (
+                <span aria-hidden="true" class="absolute -top-2 -right-2 inline-flex items-center gap-1 text-[9px] uppercase tracking-[0.14em] bg-magenta-500 text-white px-1.5 py-0.5 rounded-full font-semibold">
+                  you are here
+                </span>
+              )}
+            </article>
+          </div>
+        );
+      })}
+    </div>
+  </div>
+
+  <div class="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-xs text-ink-500">
+    <span>→ Stack writes through Phantom</span>
+    <span>→ ashlr-plugin shares the same <code class="mono text-ink-300">.stack.toml</code></span>
+    <span>→ ashlrcode respects the same secret slots</span>
+  </div>
+</section>

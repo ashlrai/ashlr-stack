@@ -1,0 +1,57 @@
+---
+import Logo from "~/components/Logo.astro";
+---
+
+<header
+  class="sticky top-0 z-40 w-full backdrop-blur-xl bg-[rgba(5,5,6,0.72)] hairline-bottom"
+>
+  <div
+    class="mx-auto max-w-[1400px] px-5 sm:px-8 h-14 flex items-center justify-between gap-6"
+  >
+    <div class="flex items-center gap-6">
+      <Logo />
+      <span class="text-ink-700 hidden sm:inline">·</span>
+      <a
+        href="/docs/"
+        class="hidden sm:inline-block text-sm text-ink-300 hover:text-white transition-colors tracking-tight"
+      >
+        Docs
+      </a>
+    </div>
+
+    <nav class="hidden md:flex items-center gap-7 text-sm text-ink-300">
+      <a href="/docs/quickstart/" class="hover:text-white transition-colors">
+        Quickstart
+      </a>
+      <a href="/docs/cli/" class="hover:text-white transition-colors">
+        CLI
+      </a>
+      <a href="/docs/providers/" class="hover:text-white transition-colors">
+        Providers
+      </a>
+      <a href="/docs/mcp/" class="hover:text-white transition-colors">
+        MCP
+      </a>
+      <a
+        href="https://github.com/ashlr-ai/stack"
+        class="hover:text-white transition-colors inline-flex items-center gap-1.5"
+        rel="noopener noreferrer"
+        target="_blank"
+      >
+        GitHub
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+          <path d="M2 2h6v6M2 8l6-6" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </a>
+    </nav>
+
+    <div class="flex items-center gap-2">
+      <a href="/" class="btn btn-ghost hidden sm:inline-flex text-sm">
+        Home
+      </a>
+      <a href="/docs/quickstart/" class="btn btn-primary">
+        Get started
+      </a>
+    </div>
+  </div>
+</header>

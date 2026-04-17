@@ -1,0 +1,276 @@
+---
+import Docs from "~/layouts/Docs.astro";
+import { Code } from "astro:components";
+---
+
+<Docs
+  title="Phantom Secrets"
+  description="Stack is the control plane; Phantom is the vault. Understanding the split is the single most important mental model for operating Stack safely."
+  eyebrow="Integrations"
+>
+  <h2>The split</h2>
+  <p>
+    Every secret the provider hands back — a Supabase service-role key, a
+    Vercel token, an AWS secret access key — goes into Phantom, not into
+    <code>.stack.toml</code>. Stack only records the <em>slot name</em> of
+    each secret; Phantom holds the actual value, encrypted end-to-end.
+  </p>
+
+  <div class="not-prose my-8 panel rounded-2xl p-6">
+    <div class="grid gap-6 md:grid-cols-2">
+      <div>
+        <div class="text-[11px] font-semibold uppercase tracking-[0.14em] text-magenta-400 mb-2">
+          Stack (control plane)
+        </div>
+        <ul class="space-y-1.5 text-[13px] text-ink-300">
+          <li class="flex items-start gap-2">
+            <span class="text-magenta-400 mt-0.5">●</span>
+            Drives provider OAuth / API flows
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-magenta-400 mt-0.5">●</span>
+            Creates upstream resources
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-magenta-400 mt-0.5">●</span>
+            Tracks which secrets each service needs (<em>slot names</em>)
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-magenta-400 mt-0.5">●</span>
+            Wires <code class="mono text-[12px]">.env</code> + <code class="mono text-[12px]">.mcp.json</code>
+          </li>
+          <li class="flex items-start gap-2 text-ink-500">
+            <span class="mt-0.5">○</span>
+            Never holds plaintext secrets
+          </li>
+        </ul>
+      </div>
+      <div>
+        <div class="text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-300 mb-2">
+          Phantom (vault)
+        </div>
+        <ul class="space-y-1.5 text-[13px] text-ink-300">
+          <li class="flex items-start gap-2">
+            <span class="text-cyan-300 mt-0.5">●</span>
+            Encrypts every secret at rest (AEAD)
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-cyan-300 mt-0.5">●</span>
+            Proxies <code class="mono text-[12px]">phm_*</code> tokens → real values at exec time
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-cyan-300 mt-0.5">●</span>
+            Syncs across machines via Phantom Cloud (optional)
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-cyan-300 mt-0.5">●</span>
+            Never exposes values to agents or editors
+          </li>
+          <li class="flex items-start gap-2 text-ink-500">
+            <span class="mt-0.5">○</span>
+            Has no opinion on what the keys mean
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <h2>Why Stack refuses to run without Phantom</h2>
+  <p>
+    When you run <code>stack add</code>, <code>stack import</code>, or{" "}
+    <code>stack doctor</code>, Stack calls <code>phantom</code> via its CLI. If
+    Phantom isn't installed, there's nowhere to put the secrets — Stack would
+    have to write them to disk in plaintext. We refuse, loudly:
+  </p>
+
+  <Code
+    code={`$ stack add supabase
+┌  stack add supabase
+│
+└  Phantom is not installed. Install it first:
+     brew install ashlrai/phantom/phantom
+   or
+     npm i -g phantom-secrets`}
+    lang="text"
+    theme="github-dark-dimmed"
+  />
+
+  <p>
+    The one exception is <code>stack init</code>, which only writes the shape
+    file — it warns but proceeds, so you can scaffold before installing
+    Phantom.
+  </p>
+
+  <h2>The flow of a single secret</h2>
+  <p>Take <code>SUPABASE_SERVICE_ROLE_KEY</code> as an example:</p>
+
+  <ol>
+    <li>
+      You run <code>stack add supabase</code>.
+    </li>
+    <li>
+      Stack opens Supabase OAuth in a browser; you click Authorise.
+    </li>
+    <li>
+      Stack creates a new project via the Management API. The project is
+      assigned a project ref (e.g. <code>abcdefghijklmnop</code>).
+    </li>
+    <li>
+      Stack fetches the <code>service_role</code> key from Supabase. Exactly
+      once, in memory.
+    </li>
+    <li>
+      Stack calls <code>phantom add SUPABASE_SERVICE_ROLE_KEY &lt;value&gt;</code>.
+      Phantom encrypts the value and writes it to the vault.
+    </li>
+    <li>
+      Stack writes <code>secrets = ["SUPABASE_SERVICE_ROLE_KEY"]</code> into
+      <code>.stack.toml</code>. <em>The value never touches disk.</em>
+    </li>
+    <li>
+      Stack regenerates <code>.env.local</code> with Phantom tokens:
+      <code>SUPABASE_SERVICE_ROLE_KEY=phm_…</code>.
+    </li>
+  </ol>
+
+  <div class="callout">
+    <strong>What's a <code>phm_</code> token?</strong> It's a placeholder
+    Phantom recognises. When your app runs under <code>phantom exec</code>
+    (which is what <code>stack exec</code> wraps), Phantom swaps the token for
+    the real secret at process-spawn time. The token is safe to check in;
+    the real value never leaves the vault.
+  </div>
+
+  <h2>Runtime injection — <code>stack exec</code></h2>
+  <p>
+    Your app reads secrets from <code>process.env</code> like normal. The trick
+    is how they got there. Compare:
+  </p>
+
+  <Code
+    code={`# bun dev straight up
+# .env.local has SUPABASE_SERVICE_ROLE_KEY=phm_abc123
+# → your app reads "phm_abc123" and breaks
+bun dev
+
+# stack exec wraps with Phantom's proxy
+# → Phantom resolves phm_abc123 to the real value at spawn
+# → your app reads the real key
+stack exec -- bun dev`}
+    lang="bash"
+    theme="github-dark-dimmed"
+  />
+
+  <p>
+    <code>stack exec</code> forwards everything after <code>--</code> to
+    <code>phantom exec</code>. Use it for dev servers, test runners, migrations —
+    anything that needs real secrets locally.
+  </p>
+
+  <h2>Syncing the vault</h2>
+  <p>
+    Phantom Cloud (optional) gives you E2E-encrypted sync so the vault follows
+    you across machines and into CI:
+  </p>
+
+  <Code
+    code={`# set up cloud sync once
+phantom login
+phantom cloud push           # upload the current vault
+
+# on another machine (or in CI)
+phantom cloud pull --force   # download + decrypt the vault`}
+    lang="bash"
+    theme="github-dark-dimmed"
+  />
+
+  <p>
+    <code>stack ci init</code> (see <a href="/docs/ci/">CI integration</a>)
+    writes a GitHub Actions workflow that runs <code>phantom cloud pull</code>
+    before <code>stack doctor --json</code>.
+  </p>
+
+  <h2>Which Stack commands talk to Phantom</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 28%">Command</th>
+        <th style="width: 20%">Needs Phantom?</th>
+        <th>What it does with the vault</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>stack init</code></td>
+        <td>No (warns)</td>
+        <td>Only scaffolds <code>.stack.toml</code>.</td>
+      </tr>
+      <tr>
+        <td><code>stack add</code></td>
+        <td>Yes</td>
+        <td>Writes provisioned secrets into the vault.</td>
+      </tr>
+      <tr>
+        <td><code>stack import</code></td>
+        <td>Yes</td>
+        <td>Routes every key/value from a <code>.env</code> into the vault.</td>
+      </tr>
+      <tr>
+        <td><code>stack remove</code></td>
+        <td>Yes</td>
+        <td>Deletes the service's secrets from the vault.</td>
+      </tr>
+      <tr>
+        <td><code>stack env show / diff</code></td>
+        <td>Yes</td>
+        <td>Reads the vault's key list (never the values).</td>
+      </tr>
+      <tr>
+        <td><code>stack doctor</code></td>
+        <td>Yes</td>
+        <td>Reveals each secret briefly to verify it's still valid upstream.</td>
+      </tr>
+      <tr>
+        <td><code>stack exec</code></td>
+        <td>Yes</td>
+        <td>Forwards to <code>phantom exec</code> — Phantom does the proxy work.</td>
+      </tr>
+      <tr>
+        <td><code>stack list</code>, <code>stack info</code></td>
+        <td>Yes (reveals presence only)</td>
+        <td>Checks whether each declared slot is in the vault.</td>
+      </tr>
+      <tr>
+        <td><code>stack providers</code>, <code>stack templates</code>, <code>stack projects</code></td>
+        <td>No</td>
+        <td>Static catalog / registry data.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Installing Phantom</h2>
+
+  <Code
+    code={`# macOS
+brew install ashlrai/phantom/phantom
+
+# anywhere Node runs
+npm i -g phantom-secrets
+
+# verify
+phantom --version
+phantom status`}
+    lang="bash"
+    theme="github-dark-dimmed"
+  />
+
+  <p>
+    For the full Phantom story, see{" "}
+    <a
+      href="https://phantom.ashlr.ai"
+      rel="noopener noreferrer"
+      target="_blank"
+    >phantom.ashlr.ai</a>.
+  </p>
+</Docs>

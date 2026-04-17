@@ -1,0 +1,22 @@
+{
+  "name": "@ashlr/stack-core",
+  "version": "0.1.0",
+  "description": "Ashlr Stack core — provider adapters, .stack.toml config, Phantom integration.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./providers": "./src/providers/index.ts",
+    "./phantom": "./src/phantom.ts",
+    "./config": "./src/config.ts",
+    "./mcp-writer": "./src/mcp-writer.ts"
+  },
+  "dependencies": {
+    "smol-toml": "^1.3.1"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.7.0"
+  }
+}

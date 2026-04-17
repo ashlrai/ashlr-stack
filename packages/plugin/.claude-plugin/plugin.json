@@ -1,0 +1,19 @@
+{
+  "name": "ashlr-stack",
+  "version": "0.1.0",
+  "description": "Provision, wire, and operate every service in your dev stack from Claude Code. Supabase, Neon, Vercel, Sentry, PostHog, OpenAI, Anthropic, GitHub, and more — one command each.",
+  "author": {
+    "name": "Mason Wyatt",
+    "url": "https://github.com/ashlrai"
+  },
+  "homepage": "https://stack.ashlr.ai/",
+  "repository": "https://github.com/ashlrai/ashlr-stack",
+  "license": "MIT",
+  "keywords": ["claude-code", "plugin", "mcp", "stack", "devops", "ashlr"],
+  "mcpServers": {
+    "ashlr-stack": {
+      "command": "bash",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/mcp-entrypoint.sh"]
+    }
+  }
+}

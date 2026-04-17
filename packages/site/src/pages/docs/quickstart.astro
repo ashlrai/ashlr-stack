@@ -1,0 +1,252 @@
+---
+import Docs from "~/layouts/Docs.astro";
+import { Code } from "astro:components";
+---
+
+<Docs
+  title="Quickstart"
+  description="From a fresh terminal to a provisioned Supabase project with MCP wired into Claude Code — in about five minutes."
+  eyebrow="Getting started"
+>
+  <h2>Before you start</h2>
+  <p>
+    Stack is a thin orchestration layer; two other things do the heavy lifting
+    and must be on your PATH:
+  </p>
+
+  <ul>
+    <li>
+      <strong><a href="/docs/phantom/">Phantom Secrets</a></strong> — holds every
+      secret. Stack refuses to run <code>stack add</code> without it.
+    </li>
+    <li>
+      <strong>Node 20+</strong> or <strong>Bun 1.1+</strong> — for the CLI itself
+      and for the MCP <code>npx</code> shims certain providers wire up.
+    </li>
+  </ul>
+
+  <h2>1. Install Stack</h2>
+  <p>One-liner:</p>
+
+  <Code
+    code={`curl -fsSL stack.ashlr.ai/install.sh | bash`}
+    lang="bash"
+    theme="github-dark-dimmed"
+  />
+
+  <p>Or via your package manager:</p>
+
+  <Code
+    code={`bun add -g @ashlr/stack
+# or
+npm i -g @ashlr/stack
+# or (macOS)
+brew install ashlrai/stack/stack`}
+    lang="bash"
+    theme="github-dark-dimmed"
+  />
+
+  <p>And Phantom (required for anything that touches secrets):</p>
+
+  <Code
+    code={`brew install ashlrai/phantom/phantom
+# or
+npm i -g phantom-secrets`}
+    lang="bash"
+    theme="github-dark-dimmed"
+  />
+
+  <h2>2. Verify the install</h2>
+
+  <Code
+    code={`stack status`}
+    lang="bash"
+    theme="github-dark-dimmed"
+  />
+
+  <p>You should see something like:</p>
+
+  <Code
+    code={`  Ashlr Stack
+
+  ● .stack.toml       missing — run \`stack init\`
+  ● phantom           0 secrets in vault
+  ● services          0 configured`}
+    lang="text"
+    theme="github-dark-dimmed"
+  />
+
+  <p>
+    Two red dots — that's fine. We haven't initialised anything yet. Phantom
+    showing a green dot means Stack can talk to the vault.
+  </p>
+
+  <h2>3. Initialise a project</h2>
+  <p>Inside any repo (Next.js, Astro, Rails, whatever):</p>
+
+  <Code
+    code={`cd path/to/your-app
+stack init`}
+    lang="bash"
+    theme="github-dark-dimmed"
+  />
+
+  <p>
+    Stack prompts for a starter template. Pick <strong>blank</strong> for now —
+    we'll add services one at a time. Output:
+  </p>
+
+  <Code
+    code={`┌  stack init
+│
+◇  Pick a starter template (or blank):
+│  Blank — add services later with \`stack add\`
+│
+└  Wrote .stack.toml (stk_8f3c6a2e).`}
+    lang="text"
+    theme="github-dark-dimmed"
+  />
+
+  <p>Two files appear on disk:</p>
+
+  <ul>
+    <li>
+      <code>.stack.toml</code> — committed. The <em>shape</em> of your stack.
+    </li>
+    <li>
+      <code>.stack.local.toml</code> — gitignored automatically. Your
+      project_id and per-developer instance data.
+    </li>
+  </ul>
+
+  <p>
+    Stack also appends <code>.stack.local.toml</code> to your <code>.gitignore</code>
+    so you can't accidentally commit it. See the <a href="/docs/config/">config
+    reference</a> for the full schema.
+  </p>
+
+  <h2>4. Add your first service</h2>
+  <p>Let's wire up Supabase — the most interesting one, because it has a full
+    upstream provisioning flow plus an MCP server.</p>
+
+  <Code
+    code={`stack add supabase`}
+    lang="bash"
+    theme="github-dark-dimmed"
+  />
+
+  <p>Stack will:</p>
+
+  <ol>
+    <li>Pop a browser window for Supabase OAuth (PKCE — no secrets pasted).</li>
+    <li>Create a new project in your default org.</li>
+    <li>Generate a DB password, store it in Phantom.</li>
+    <li>Fetch the anon + service-role keys and route them into Phantom.</li>
+    <li>Add a <code>supabase</code> MCP entry to <code>.mcp.json</code> scoped to the new project.</li>
+    <li>Write the service into <code>.stack.toml</code> + <code>.stack.local.toml</code>.</li>
+  </ol>
+
+  <p>You'll see something like:</p>
+
+  <Code
+    code={`┌  stack add supabase
+│
+◇  ● supabase (abcdefghijklmnop) · 3 secrets · mcp wired
+│
+└  ✓ supabase is live.`}
+    lang="text"
+    theme="github-dark-dimmed"
+  />
+
+  <div class="callout">
+    <strong>No Phantom prompts?</strong> Good. Stack wrote the secrets through
+    Phantom's programmatic API — you'll never see the real values. See <a
+    href="/docs/phantom/">Phantom</a> for the full story.
+  </div>
+
+  <h2>5. Sanity-check with <code>doctor</code></h2>
+  <p>
+    Before you move on, verify everything is reachable. <code>stack doctor</code>
+    hits each configured provider and confirms the stored credentials still
+    work:
+  </p>
+
+  <Code
+    code={`stack doctor`}
+    lang="bash"
+    theme="github-dark-dimmed"
+  />
+
+  <Code
+    code={`┌  stack doctor
+│
+◇  ● supabase (218ms)
+│
+└  All services healthy.`}
+    lang="text"
+    theme="github-dark-dimmed"
+  />
+
+  <p>
+    Run this before deploys, after a stale laptop comes out of a drawer, or any
+    time something feels off. In CI, use <code>stack doctor --json</code> —
+    exit code <code>0</code> if healthy, <code>1</code> if any service fails.
+    See <a href="/docs/ci/">CI integration</a>.
+  </p>
+
+  <h2>6. Run your app with secrets injected</h2>
+  <p>
+    Instead of <code>bun dev</code>, run <code>stack exec -- bun dev</code>.
+    Phantom's proxy injects real secret values for any <code>phm_</code> tokens
+    at the network layer:
+  </p>
+
+  <Code
+    code={`stack exec -- bun dev`}
+    lang="bash"
+    theme="github-dark-dimmed"
+  />
+
+  <p>
+    Your app boots with <code>SUPABASE_URL</code>, <code>SUPABASE_ANON_KEY</code>,
+    and <code>SUPABASE_SERVICE_ROLE_KEY</code> available in <code>process.env</code>
+    — without any plaintext secret ever touching disk.
+  </p>
+
+  <h2>What now?</h2>
+
+  <div class="not-prose mt-6 grid gap-3 sm:grid-cols-2">
+    <a href="/docs/cli/" class="docs-card group">
+      <h3 class="text-base font-semibold text-white mb-1 group-hover:text-magenta-200 transition-colors">
+        CLI reference
+      </h3>
+      <p class="text-[13px] text-ink-400 leading-relaxed">
+        Every command, flag, and default. Bookmark-worthy.
+      </p>
+    </a>
+    <a href="/docs/providers/" class="docs-card group">
+      <h3 class="text-base font-semibold text-white mb-1 group-hover:text-magenta-200 transition-colors">
+        Providers
+      </h3>
+      <p class="text-[13px] text-ink-400 leading-relaxed">
+        The 23 curated providers — what each wires and where its dashboard is.
+      </p>
+    </a>
+    <a href="/docs/templates/" class="docs-card group">
+      <h3 class="text-base font-semibold text-white mb-1 group-hover:text-magenta-200 transition-colors">
+        Templates
+      </h3>
+      <p class="text-[13px] text-ink-400 leading-relaxed">
+        Five opinionated starter stacks — the "SaaS in a box" ones.
+      </p>
+    </a>
+    <a href="/docs/mcp/" class="docs-card group">
+      <h3 class="text-base font-semibold text-white mb-1 group-hover:text-magenta-200 transition-colors">
+        MCP in Claude Code
+      </h3>
+      <p class="text-[13px] text-ink-400 leading-relaxed">
+        Drive Stack from Claude / Cursor / Windsurf via MCP tools.
+      </p>
+    </a>
+  </div>
+</Docs>

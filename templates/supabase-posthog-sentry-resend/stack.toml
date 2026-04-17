@@ -1,0 +1,47 @@
+# SaaS starter — Supabase (DB + auth), PostHog (analytics), Sentry (errors),
+# Resend (transactional email), Stripe (payments), Clerk (auth, optional).
+
+[stack]
+version = "1"
+project_id = "stk_template"
+template = "supabase-posthog-sentry-resend"
+
+[services.supabase]
+provider = "supabase"
+secrets = ["SUPABASE_URL", "SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY"]
+mcp = "supabase"
+created_at = "1970-01-01T00:00:00Z"
+created_by = "template"
+
+[services.posthog]
+provider = "posthog"
+secrets = ["POSTHOG_PERSONAL_API_KEY"]
+mcp = "posthog"
+created_at = "1970-01-01T00:00:00Z"
+created_by = "template"
+
+[services.sentry]
+provider = "sentry"
+secrets = ["SENTRY_AUTH_TOKEN", "SENTRY_DSN", "SENTRY_ORG", "SENTRY_PROJECT"]
+mcp = "sentry"
+created_at = "1970-01-01T00:00:00Z"
+created_by = "template"
+
+[services.resend]
+provider = "resend"
+secrets = ["RESEND_API_KEY"]
+created_at = "1970-01-01T00:00:00Z"
+created_by = "template"
+
+[services.stripe]
+provider = "stripe"
+secrets = ["STRIPE_SECRET_KEY"]
+created_at = "1970-01-01T00:00:00Z"
+created_by = "template"
+
+[[environments]]
+name = "dev"
+default = true
+
+[[environments]]
+name = "prod"

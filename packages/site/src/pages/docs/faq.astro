@@ -1,0 +1,210 @@
+---
+import Docs from "~/layouts/Docs.astro";
+import { Code } from "astro:components";
+---
+
+<Docs
+  title="FAQ"
+  description="The honest answers. Pre-alpha caveats, the Phantom requirement, OAuth app status, and what happens when things go sideways."
+  eyebrow="Help"
+>
+  <h2>Is this production-ready?</h2>
+  <p>
+    <strong>No — Stack is v0.1, pre-alpha.</strong> Interfaces are still
+    moving, error messages are still being hardened, and some providers have
+    paste-a-token fallbacks because their OAuth apps aren't registered yet
+    (see below). We use it internally every day and it works end-to-end; we
+    wouldn't recommend it for a team of 50 in its current state.
+  </p>
+  <p>
+    The data model (two-file <code>.stack.toml</code> split, Phantom-gated
+    secrets, MCP wiring) is stable. The CLI surface will add commands but
+    won't remove them. Breaking changes will land in the <code>0.x</code>
+    window and stop at <code>1.0</code>.
+  </p>
+
+  <h2>Why is Phantom required?</h2>
+  <p>
+    Because Stack otherwise has nowhere to put your secrets except{" "}
+    <code>.env</code> on disk. That's the thing we're specifically trying to
+    avoid. Phantom gives us an encrypted vault, a uniform way to reveal
+    secrets at exec time, and a clean story for syncing secrets to CI.
+  </p>
+  <p>
+    If you have an existing secret manager (1Password, Doppler, Infisical),
+    we'd rather integrate Phantom with it than compete — Phantom Cloud is
+    designed to be the last-mile layer, not the source of truth. That work
+    isn't in v1 yet. For now: Phantom on every machine that runs <code>stack add</code>.
+  </p>
+
+  <h2>Which providers still fall back to paste-a-token?</h2>
+  <p>
+    Registering an OAuth app with a provider takes a week to a month,
+    depending on who answers first. The following providers currently use a
+    <strong>personal-access-token paste</strong> instead of full OAuth:
+  </p>
+
+  <ul>
+    <li>Neon, Turso, Vercel, Cloudflare, Sentry — PAT paste with automated verification.</li>
+    <li>Railway, Fly.io, Render, Upstash, Convex, Linear, Resend, PostHog, Clerk, Stripe, OpenAI, Anthropic, xAI, DeepSeek — API key paste.</li>
+    <li>Firebase — service-account JSON paste.</li>
+    <li>AWS — IAM access key pair paste.</li>
+  </ul>
+
+  <p>
+    OAuth (PKCE or device flow) is live for <strong>Supabase</strong> and{" "}
+    <strong>GitHub</strong>. Expect steady migration as our OAuth apps get
+    registered with each provider — the API contract for providers is
+    <code>authKind: "api_key" | "pat" | "oauth_pkce" | "oauth_device"</code>,
+    so the CLI surface doesn't change when a provider moves from paste to
+    OAuth.
+  </p>
+
+  <h2>Does Stack touch the internet without asking?</h2>
+  <p>
+    Yes, during these commands (and only these):
+  </p>
+
+  <ul>
+    <li>
+      <code>stack add</code> — logs into the provider, creates an upstream
+      resource, fetches credentials.
+    </li>
+    <li>
+      <code>stack doctor</code> — hits each provider's API to verify the
+      stored credential still works.
+    </li>
+    <li>
+      <code>stack upgrade</code> — pings the npm registry to check for a
+      newer <code>@ashlr/stack</code>.
+    </li>
+    <li>
+      <code>stack login</code> — refreshes OAuth / PAT credentials.
+    </li>
+    <li>
+      <code>stack sync</code> — pushes secrets to Vercel / Railway / Fly.
+    </li>
+    <li>
+      <code>stack clone</code> — <code>git clone</code>s the specified URL,
+      then scans locally.
+    </li>
+  </ul>
+
+  <p>
+    <strong>Zero telemetry.</strong> Stack never calls home. No analytics, no
+    usage pings. Run it with Wireshark open if you want to verify.
+  </p>
+
+  <h2>What happens if I delete <code>.stack.toml</code>?</h2>
+  <p>
+    Your upstream resources stay exactly as they were. Stack would just lose
+    its map of what it had wired. The secrets in Phantom also stay put. You'd
+    see "no services configured" on <code>stack status</code>; running{" "}
+    <code>stack init</code> again would start fresh.
+  </p>
+  <p>
+    To actually tear things down, use <code>stack remove &lt;service&gt;</code>
+    (deprovisions upstream + removes the secrets + cleans up <code>.mcp.json</code>)
+    or <code>stack remove --all --keepRemote</code> (removes local state
+    only).
+  </p>
+
+  <h2>Can I commit <code>.env.local</code> with phm_ tokens?</h2>
+  <p>
+    Technically yes — a <code>phm_</code> token is a meaningless placeholder
+    without the vault. But we don't recommend it; the community is still
+    learning to recognise Phantom tokens on sight, and a leaked token
+    combined with a leaked passphrase is worse than nothing. Add{" "}
+    <code>.env.local</code> to <code>.gitignore</code> and keep the vault
+    story clean.
+  </p>
+
+  <h2>How do I use Stack with a monorepo?</h2>
+  <p>
+    Each <code>.stack.toml</code> is per-project, and most monorepos want one
+    stack per app (marketing site, dashboard, worker all have different
+    services). Run <code>stack init</code> inside each app directory. The
+    cross-project registry (<code>stack projects list</code>) will show each
+    one, and <code>stack doctor --all</code> will run healthchecks across the
+    whole machine.
+  </p>
+  <p>
+    Shared secrets (e.g. one <code>DATABASE_URL</code> used by every app)
+    stay in one Phantom vault — Phantom is machine-wide, not per-project — so
+    de-duping just works. Declare the same secret slot name in each
+    <code>.stack.toml</code>.
+  </p>
+
+  <h2>What does <code>stack doctor --fix</code> actually do?</h2>
+  <p>
+    For each service with a failing healthcheck, Stack asks before re-running{" "}
+    <code>stack add</code>. That <em>may</em> kick off a browser OAuth dance
+    or provision a new resource on your behalf, so we force an interactive
+    confirm. Declining is always safe; the service stays marked as broken and
+    you can fix it by hand.
+  </p>
+
+  <h2>Why not just use <code>.env</code> files like everyone else?</h2>
+  <p>
+    Nothing stops you. Stack's job is to collapse the 45-minute "tab-hop to
+    create these 8 services, then copy 20 keys into <code>.env</code>" step
+    into one command. If your project has one API key and no MCPs, you don't
+    need Stack.
+  </p>
+  <p>
+    Stack earns its keep when (a) your stack has 5+ services, (b) two or more
+    of them have MCP servers worth wiring, or (c) you're onboarding someone
+    new and don't want to write a wiki page about where every key lives.
+  </p>
+
+  <h2>Can I use a template without its MCP servers?</h2>
+  <p>
+    Yes. Apply the template, then edit <code>.stack.toml</code> and remove
+    the <code>mcp = "…"</code> line for services you don't want Claude / Cursor
+    to reach into. On the next <code>stack add</code> or <code>stack
+    remove</code>, <code>.mcp.json</code> gets regenerated accordingly.
+    Alternatively, edit <code>.mcp.json</code> directly — Stack only rewrites
+    entries for services it manages.
+  </p>
+
+  <h2>Where does Stack store OAuth access tokens?</h2>
+  <p>
+    In Phantom, under a per-provider slot name (e.g.{" "}
+    <code>SUPABASE_STACK_PAT</code>, <code>GITHUB_TOKEN</code>). That means
+    your provider auth is subject to the same E2E encryption as your
+    application secrets. Clear them with <code>phantom remove
+    &lt;slot&gt;</code> if you want to force a fresh OAuth.
+  </p>
+
+  <h2>How do I uninstall Stack?</h2>
+
+  <Code
+    code={`# optionally: deprovision everything Stack created
+stack remove --all
+
+# uninstall the CLI
+bun remove -g @ashlr/stack   # or: npm uninstall -g @ashlr/stack
+
+# drop the global state (registry only — does NOT touch Phantom)
+rm -rf ~/.stack/
+
+# Phantom is a separate install; leave it alone unless you also want
+# to nuke every secret, in which case:
+#   phantom remove --all   (interactive confirmation)`}
+    lang="bash"
+    theme="github-dark-dimmed"
+  />
+
+  <h2>Where do I report bugs / request providers?</h2>
+  <p>
+    <a
+      href="https://github.com/ashlr-ai/stack/issues"
+      rel="noopener noreferrer"
+      target="_blank"
+    >github.com/ashlr-ai/stack/issues</a>. Provider requests are most useful
+    when they include: the <em>secret slots</em> you'd expect, whether the
+    provider has an API for creating resources (upstream provisioning) or
+    only an API for reading them, and whether there's an existing MCP server
+    worth wiring.
+  </p>
+</Docs>

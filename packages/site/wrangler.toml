@@ -1,0 +1,18 @@
+# Cloudflare Pages / Wrangler config for ashlr-stack-site.
+# Deploy via:   wrangler pages deploy dist --project-name=ashlr-stack
+#
+# Preferred Git integration: in the Cloudflare Pages dashboard, connect the
+# GitHub repo, set:
+#   Build command:      cd packages/site && bun install && bun run build
+#   Build output dir:   packages/site/dist
+#   Root dir:           /
+#   Environment vars:   (none required for static build)
+
+name = "ashlr-stack"
+compatibility_date = "2026-04-17"
+pages_build_output_dir = "./dist"
+
+[vars]
+# No runtime vars — the site is fully static. Left here so Cloudflare's dash
+# doesn't complain about a missing [vars] block on first deploy.
+PUBLIC_SITE_URL = "https://stack.ashlr.ai"

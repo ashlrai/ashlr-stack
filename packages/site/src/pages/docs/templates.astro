@@ -1,0 +1,163 @@
+---
+import Docs from "~/layouts/Docs.astro";
+import { Code } from "astro:components";
+import { TEMPLATES_REF } from "~/lib/templates-ref";
+---
+
+<Docs
+  title="Templates"
+  description={`${TEMPLATES_REF.length} opinionated starter stacks. Pick one and \`stack init --template <name>\` writes the \`.stack.toml\`; \`stack templates apply <name>\` runs \`stack add\` for every service.`}
+  eyebrow="Reference"
+>
+  <h2>How templates work</h2>
+  <p>
+    A template is just a <code>.stack.toml</code> checked in under{" "}
+    <code>templates/&lt;name&gt;/stack.toml</code> in the monorepo. It declares
+    the services you want wired and the secrets each should expect. Applying a
+    template runs <code>stack add</code> for each service in order; skipped
+    services (provider not registered, already in stack) are reported cleanly
+    at the end.
+  </p>
+
+  <p>Two commands, two workflows:</p>
+
+  <ul>
+    <li>
+      <code>stack init --template &lt;name&gt;</code> — writes the
+      <code>.stack.toml</code> but doesn't provision anything yet. Useful when
+      you want to inspect what you're about to create.
+    </li>
+    <li>
+      <code>stack templates apply &lt;name&gt;</code> — actually runs through
+      every <code>stack add</code>. Needs Phantom and live creds for each
+      provider.
+    </li>
+  </ul>
+
+  <div class="callout">
+    <strong>Continue on error:</strong> By default{" "}
+    <code>stack templates apply</code> keeps going when a single service fails
+    (e.g. you skipped Sentry OAuth). Pass{" "}
+    <code>--continueOnError=false</code> to bail on the first failure.
+  </div>
+
+  <h2>The five starters</h2>
+
+  {TEMPLATES_REF.map((t) => {
+    const totalSecrets = t.services.reduce((n, s) => n + s.secrets.length, 0);
+    const mcpCount = t.services.filter((s) => s.mcp).length;
+    return (
+      <>
+        <h3 id={`template-${t.name}`}>{t.displayName}</h3>
+        <p class="text-ink-300 italic mb-2">{t.tagline}</p>
+        <p>{t.blurb}</p>
+
+        <div class="not-prose mt-4 mb-6 flex flex-wrap gap-2">
+          <span class="inline-flex items-center gap-1 text-[11px] text-ink-400 px-2 py-1 rounded border border-white/[0.06] bg-white/[0.02] mono">
+            <span class="text-magenta-400">{t.services.length}</span> services
+          </span>
+          <span class="inline-flex items-center gap-1 text-[11px] text-ink-400 px-2 py-1 rounded border border-white/[0.06] bg-white/[0.02] mono">
+            <span class="text-magenta-400">{totalSecrets}</span> secrets
+          </span>
+          <span class="inline-flex items-center gap-1 text-[11px] text-ink-400 px-2 py-1 rounded border border-white/[0.06] bg-white/[0.02] mono">
+            <span class="text-cyan-300">{mcpCount}</span> MCP server{mcpCount === 1 ? "" : "s"}
+          </span>
+          <span class="inline-flex items-center gap-1 text-[11px] text-ink-400 px-2 py-1 rounded border border-white/[0.06] bg-white/[0.02] mono">
+            envs: {t.environments.join(", ")}
+          </span>
+        </div>
+
+        <h4>What you get</h4>
+        <div class="not-prose">
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 20%">Service</th>
+                <th style="width: 15%">Provider</th>
+                <th>Secrets</th>
+                <th style="width: 18%">MCP</th>
+              </tr>
+            </thead>
+            <tbody>
+              {t.services.map((s) => (
+                <tr>
+                  <td>
+                    <code class="mono text-[12.5px] text-magenta-200">{s.name}</code>
+                  </td>
+                  <td class="text-ink-300 mono text-[12.5px]">{s.provider}</td>
+                  <td>
+                    <div class="flex flex-wrap gap-1">
+                      {s.secrets.map((secret) => (
+                        <code class="mono text-[11px] bg-white/[0.03] text-ink-200 px-1.5 py-0.5 rounded border border-white/[0.05]">
+                          {secret}
+                        </code>
+                      ))}
+                    </div>
+                  </td>
+                  <td>
+                    {s.mcp ? (
+                      <span class="inline-flex items-center gap-1 text-[11px] text-cyan-300 mono">
+                        <span class="w-1 h-1 bg-cyan-300 rounded-full"></span>
+                        {s.mcp}
+                      </span>
+                    ) : (
+                      <span class="text-ink-600 mono text-[11px]">—</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <p class="mt-4"><strong>Good for:</strong> {t.goodFor}</p>
+
+        <h4>Apply it</h4>
+        <Code
+          code={`# inside a fresh project directory
+stack templates apply ${t.name}
+
+# or: write .stack.toml first, then add services one at a time
+stack init --template ${t.name}`}
+          lang="bash"
+          theme="github-dark-dimmed"
+        />
+      </>
+    );
+  })}
+
+  <h2>Build your own</h2>
+  <p>
+    A template is just a TOML file with a <code>[stack]</code> block, one
+    <code>[services.&lt;name&gt;]</code> per service, and optional
+    <code>[[environments]]</code>. See{" "}
+    <a href="/docs/config/">config reference</a> for the full schema. Drop it
+    into <code>templates/&lt;your-name&gt;/stack.toml</code>, open a PR, and
+    we'll add it to the curated list.
+  </p>
+
+  <Code
+    code={`# templates/my-edge-starter/stack.toml
+
+[stack]
+version = "1"
+template = "my-edge-starter"
+
+[services.cloudflare]
+provider = "cloudflare"
+secrets = ["CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID"]
+
+[services.turso]
+provider = "turso"
+secrets = ["TURSO_DATABASE_URL", "TURSO_AUTH_TOKEN", "TURSO_PLATFORM_TOKEN"]
+
+[[environments]]
+name = "dev"
+default = true
+
+[[environments]]
+name = "prod"`}
+    lang="toml"
+    theme="github-dark-dimmed"
+  />
+</Docs>
