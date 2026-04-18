@@ -82,14 +82,12 @@ export function installScrollChoreo(): void {
   // ─── 4. SVG line-draw on anything with .draw-on-view ──────────────
   const lines = document.querySelectorAll<SVGPathElement | SVGLineElement>(".draw-on-view");
   const lineLength = (el: SVGPathElement | SVGLineElement): number => {
-    const asPath = el as SVGPathElement;
-    if (typeof asPath.getTotalLength === "function") return asPath.getTotalLength();
-    const asLine = el as SVGLineElement;
-    const x1 = asLine.x1?.baseVal?.value ?? 0;
-    const y1 = asLine.y1?.baseVal?.value ?? 0;
-    const x2 = asLine.x2?.baseVal?.value ?? 0;
-    const y2 = asLine.y2?.baseVal?.value ?? 0;
-    return Math.hypot(x2 - x1, y2 - y1) || 400;
+    if (el instanceof SVGLineElement) {
+      const dx = el.x2.baseVal.value - el.x1.baseVal.value;
+      const dy = el.y2.baseVal.value - el.y1.baseVal.value;
+      return Math.hypot(dx, dy) || 400;
+    }
+    return el.getTotalLength();
   };
   lines.forEach((l) => {
     const len = lineLength(l);

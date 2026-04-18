@@ -81,7 +81,6 @@ const StackPlate = forwardRef<Mesh, Props>(function StackPlate(
           opacity={accent ? 0.35 : 0.25}
         />
       </mesh>
-
     </group>
   );
 });
