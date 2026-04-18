@@ -83,6 +83,22 @@ const JS_RULES: DepRule[] = [
     matches: () => false,
     confidence: "low",
   },
+  {
+    provider: "replicate",
+    matches: (d) => d === "replicate",
+    confidence: "high",
+  },
+  {
+    provider: "braintrust",
+    matches: (d) => d === "braintrust" || d === "@braintrust/sdk",
+    confidence: "high",
+  },
+  {
+    provider: "modal",
+    // Modal is Python-first; the dep lives in requirements.txt.
+    matches: () => false,
+    confidence: "low",
+  },
 ];
 
 const PY_RULES: DepRule[] = [
@@ -93,6 +109,9 @@ const PY_RULES: DepRule[] = [
   { provider: "stripe", matches: (d) => d === "stripe", confidence: "high" },
   { provider: "posthog", matches: (d) => d === "posthog", confidence: "high" },
   { provider: "resend", matches: (d) => d === "resend", confidence: "high" },
+  { provider: "modal", matches: (d) => d === "modal", confidence: "high" },
+  { provider: "replicate", matches: (d) => d === "replicate", confidence: "high" },
+  { provider: "braintrust", matches: (d) => d === "braintrust", confidence: "high" },
 ];
 
 const GO_RULES: DepRule[] = [

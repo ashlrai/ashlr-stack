@@ -133,6 +133,21 @@ const RULES: DetectionRule[] = [
     matches: (n) => /^FIREBASE_/.test(n),
     primary: (n) => n === "FIREBASE_SERVICE_ACCOUNT_JSON",
   },
+  {
+    provider: "replicate",
+    matches: (n) => /^REPLICATE_/.test(n),
+    primary: (n) => n === "REPLICATE_API_TOKEN",
+  },
+  {
+    provider: "braintrust",
+    matches: (n) => /^BRAINTRUST_/.test(n),
+    primary: (n) => n === "BRAINTRUST_API_KEY",
+  },
+  {
+    provider: "modal",
+    matches: (n) => /^MODAL_/.test(n),
+    primary: (n) => n === "MODAL_TOKEN",
+  },
 ];
 
 export function detectProvider(envName: string): string | undefined {

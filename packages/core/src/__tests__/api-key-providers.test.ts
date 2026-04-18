@@ -121,6 +121,20 @@ const SPECS: Spec[] = [
     validKey: "rnd_fake",
     validBody: [{ owner: { id: "own_1", name: "Me" } }],
   },
+  {
+    modulePath: "../providers/replicate.ts",
+    providerName: "replicate",
+    secretName: "REPLICATE_API_TOKEN",
+    validKey: "r8_fake",
+    validBody: { username: "mason", type: "user" },
+  },
+  {
+    modulePath: "../providers/braintrust.ts",
+    providerName: "braintrust",
+    secretName: "BRAINTRUST_API_KEY",
+    validKey: "sk-bt-fake",
+    validBody: { objects: [{ id: "org_1", name: "My Org" }] },
+  },
 ];
 
 describe("api-key providers — verify + materialize", () => {
@@ -188,5 +202,15 @@ describe("api-key providers — verify + materialize", () => {
     const resource = await convex.provision(ctx, auth, {});
     const materialized = await convex.materialize(ctx, resource, auth);
     expect(materialized.secrets.CONVEX_DEPLOY_KEY).toBe(validKey);
+  });
+
+  test("modal: accepts <id>:<secret> token shape with ak- or as- prefix", async () => {
+    const modal = (await import("../providers/modal.ts")).default;
+    const validKey = "ak-1234567890abcdef:secret-token-bytes-here";
+    const ctx: ProviderContext = { cwd: process.cwd(), interactive: false, log: () => {} };
+    const auth = { token: validKey, identity: { token_id: "ak-1234567890abcdef" } };
+    const resource = await modal.provision(ctx, auth, {});
+    const materialized = await modal.materialize(ctx, resource, auth);
+    expect(materialized.secrets.MODAL_TOKEN).toBe(validKey);
   });
 });

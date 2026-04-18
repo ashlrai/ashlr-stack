@@ -28,6 +28,9 @@ const registry: Record<string, () => Promise<Provider>> = {
   anthropic: async () => (await import("./anthropic.ts")).default,
   xai: async () => (await import("./xai.ts")).default,
   deepseek: async () => (await import("./deepseek.ts")).default,
+  replicate: async () => (await import("./replicate.ts")).default,
+  braintrust: async () => (await import("./braintrust.ts")).default,
+  modal: async () => (await import("./modal.ts")).default,
 
   // Wave 3 — analytics / errors / code / ops.
   posthog: async () => (await import("./posthog.ts")).default,

@@ -14,10 +14,17 @@ const pathCache = new Map<string, string>();
 /** Returns the value of the `d` attribute of the first <path> in a simple-icons SVG. */
 export function getIconPath(slug: string): string | null {
   if (pathCache.has(slug)) return pathCache.get(slug)!;
-  const file = resolve(ICONS_DIR, `${slug}.svg`);
-  if (!existsSync(file)) {
-    return CUSTOM_ICON_PATHS[slug] ?? null;
+
+  // Custom marks win over simple-icons to let us override when the upstream
+  // icon is wrong for our purposes (e.g. postgresql's elephant for Neon).
+  if (CUSTOM_ICON_PATHS[slug]) {
+    pathCache.set(slug, CUSTOM_ICON_PATHS[slug]);
+    return CUSTOM_ICON_PATHS[slug];
   }
+
+  const file = resolve(ICONS_DIR, `${slug}.svg`);
+  if (!existsSync(file)) return null;
+
   const raw = readFileSync(file, "utf8");
   const match = raw.match(/<path[^>]*\sd="([^"]+)"/);
   if (!match) return null;
@@ -25,13 +32,36 @@ export function getIconPath(slug: string): string | null {
   return match[1]!;
 }
 
-// Fallbacks for providers with no simple-icons entry.
-// Simplified geometric marks — recognizable but not claiming to be the official wordmark.
+// Custom marks for providers that either aren't in simple-icons or whose
+// simple-icons entry doesn't match the right brand. All hand-authored as
+// simplified geometric shapes — recognizable but clearly not claiming to be
+// the official wordmark. 24x24 viewBox throughout.
 export const CUSTOM_ICON_PATHS: Record<string, string> = {
-  // Convex — four chevrons forming a diamond (abstracted)
+  // ─── Neon — stylized lightning-bolt "N", the core of their brand mark ───
+  // simple-icons maps `neon` to postgresql's elephant, which is wrong.
+  // This is a chunky lowercase "n" with the stem kinked like Neon's glowing mark.
+  neon:
+    "M4 4 L4 20 L8 20 L8 10.5 L14.5 20 L20 20 L20 4 L16 4 L16 13.2 L9.8 4 Z",
+
+  // ─── Convex — three stacked wedges ("v") representing compute layers ───
+  // Convex's real mark is three overlapping triangles forming a "V".
   convex:
-    "M12 2 L22 12 L12 22 L2 12 Z M12 6 L18 12 L12 18 L6 12 Z",
-  // DeepSeek — stylized whale silhouette reduced to a wave + dot
+    "M12 3 L22 20 L16 20 L12 13.5 L8 20 L2 20 Z M12 8 L15.5 14 L8.5 14 Z",
+
+  // ─── DeepSeek — stylized whale silhouette ───
+  // DeepSeek's mark is a blue whale. Reduced to a clean side-profile.
   deepseek:
-    "M4 14 C 7 10, 11 10, 14 13 C 16 15, 19 15, 22 13 L 22 17 C 19 19, 15 19, 12 17 C 9 15, 6 15, 4 17 Z M17 9 a1.3 1.3 0 1 1 0.01 0 Z",
+    "M3 13 C 6 10, 9 10, 12 12 C 14 13.5, 17 13.5, 20 12 C 21 11.5, 22 12, 22 13 C 22 16, 19 18, 15 18 C 11 18, 8 17, 5 15 L 3 15 Z M18 9 a1.3 1.3 0 1 1 0.01 0 Z",
+
+  // ─── Modal — diagonally split square (compute / sandbox) ───
+  modal:
+    "M4 4 L20 4 L20 20 L4 20 Z M4 4 L20 20 M8 8 L8 10 M16 14 L16 16",
+
+  // ─── Replicate — concentric quarter-arcs (inference layers) ───
+  replicate:
+    "M4 19 L4 15 L8 15 L8 19 Z M4 14 L4 8 L10 8 L10 14 Z M4 7 L4 4 L14 4 L14 7 Z",
+
+  // ─── Braintrust — layered triangles (eval stack) ───
+  braintrust:
+    "M12 3 L22 19 L2 19 Z M12 8 L18.5 17.5 L5.5 17.5 Z M12 13 L15 17 L9 17 Z",
 };

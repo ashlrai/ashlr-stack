@@ -32,7 +32,7 @@ export interface Provider {
 export const PROVIDERS: Provider[] = [
   // Database
   { name: "Supabase", slug: "supabase",     category: "Database", color: "3ECF8E", blurb: "Postgres + Auth + Storage", mcp: true,  auth: "OAuth" },
-  { name: "Neon",     slug: "postgresql",   category: "Database", color: "00E699", blurb: "Serverless Postgres",       mcp: true,  auth: "PAT" },
+  { name: "Neon",     slug: "neon",         category: "Database", color: "00E699", blurb: "Serverless Postgres",       mcp: true,  auth: "PAT" },
   { name: "Turso",    slug: "turso",        category: "Database", color: "4FF8D2", blurb: "Edge SQLite (libSQL)",      auth: "PAT" },
   { name: "Convex",   slug: "convex",       category: "Database", color: "EE2A6C", blurb: "Reactive backend-as-a-service", auth: "API key" },
   { name: "Upstash",  slug: "upstash",      category: "Database", color: "00E9A3", blurb: "Serverless Redis + Kafka",  auth: "API key" },
@@ -44,15 +44,18 @@ export const PROVIDERS: Provider[] = [
   { name: "Fly.io",      slug: "flydotio",     category: "Deploy", color: "8B5CF6", blurb: "VMs at the edge",       auth: "API key" },
   { name: "Cloudflare",  slug: "cloudflare",   category: "Deploy", color: "F38020", blurb: "Workers, R2, D1",       mcp: true,  auth: "PAT" },
   { name: "Render",      slug: "render",       category: "Deploy", color: "46E3B7", blurb: "Zero-config hosting",   auth: "API key" },
+  { name: "Modal",       slug: "modal",        category: "Deploy", color: "7FEE64", blurb: "Serverless GPU + sandbox", auth: "API key" },
 
   // Cloud
   { name: "AWS", slug: "amazonwebservices", category: "Cloud", color: "FF9900", blurb: "S3, Lambda, RDS", auth: "API key" },
 
   // AI
-  { name: "OpenAI",    slug: "openai",   category: "AI", color: "FFFFFF", blurb: "GPT, Realtime, embeddings", auth: "API key" },
-  { name: "Anthropic", slug: "anthropic", category: "AI", color: "D97757", blurb: "Claude models + MCP",      auth: "API key" },
-  { name: "xAI",       slug: "x",         category: "AI", color: "FFFFFF", blurb: "Grok + tool use",          auth: "API key" },
-  { name: "DeepSeek",  slug: "deepseek",  category: "AI", color: "4D6BFE", blurb: "Open-weight models",       auth: "API key" },
+  { name: "OpenAI",      slug: "openai",     category: "AI", color: "FFFFFF", blurb: "GPT, Realtime, embeddings", auth: "API key" },
+  { name: "Anthropic",   slug: "anthropic",  category: "AI", color: "D97757", blurb: "Claude models + MCP",       auth: "API key" },
+  { name: "xAI",         slug: "x",          category: "AI", color: "FFFFFF", blurb: "Grok + tool use",           auth: "API key" },
+  { name: "DeepSeek",    slug: "deepseek",   category: "AI", color: "4D6BFE", blurb: "Open-weight models",        auth: "API key" },
+  { name: "Replicate",   slug: "replicate",  category: "AI", color: "E5E7EB", blurb: "OSS model inference",       auth: "PAT"     },
+  { name: "Braintrust",  slug: "braintrust", category: "AI", color: "F97316", blurb: "LLM evals + observability", auth: "API key" },
 
   // Analytics
   { name: "PostHog", slug: "posthog", category: "Analytics", color: "F54E00", blurb: "Product analytics + flags", mcp: true, auth: "API key" },
