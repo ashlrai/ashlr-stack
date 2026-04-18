@@ -1,6 +1,7 @@
 ---
 import "~/styles/global.css";
 import SmoothScroll from "~/components/SmoothScroll";
+import StickyInstall from "~/components/StickyInstall";
 import {
   DEFAULT_DESCRIPTION,
   DEFAULT_TITLE,
@@ -201,6 +202,9 @@ const absoluteNext = nextLink ? toAbsoluteLink(nextLink) : undefined;
 
     <!-- Lenis smooth scroll + GSAP ScrollTrigger registration. One mount. -->
     <SmoothScroll client:load />
+
+    <!-- Persistent install bar — slides in after the hero scrolls out. -->
+    <StickyInstall client:idle />
 
     <main id="main">
       <slot />

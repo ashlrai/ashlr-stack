@@ -1,12 +1,16 @@
 ---
 import { getIconPath } from "~/lib/icons";
 import { PROVIDERS } from "~/lib/providers";
+import TemplateExplorer, { type Template } from "./TemplateExplorer";
 
 interface TemplateEntry {
   id: string;
   title: string;
   blurb: string;
-  stack: string[]; // provider Names from providers.ts
+  /** Display names from providers.ts (for icon resolution). */
+  stack: string[];
+  /** Ref names from providers-ref.ts (for recipe generation). */
+  refNames: string[];
   accent?: string;
 }
 
@@ -16,6 +20,7 @@ const TEMPLATES: TemplateEntry[] = [
     title: "Next.js + Supabase + PostHog",
     blurb: "App Router, Supabase Auth + Postgres, PostHog events from server actions.",
     stack: ["Vercel", "Supabase", "PostHog"],
+    refNames: ["vercel", "supabase", "posthog"],
     accent: "3ECF8E",
   },
   {
@@ -23,6 +28,7 @@ const TEMPLATES: TemplateEntry[] = [
     title: "Next.js + Neon + Vercel + Sentry",
     blurb: "Serverless Postgres with Drizzle, deployed to Vercel, observed by Sentry.",
     stack: ["Vercel", "Neon", "Sentry"],
+    refNames: ["vercel", "neon", "sentry"],
     accent: "8B5CF6",
   },
   {
@@ -30,6 +36,7 @@ const TEMPLATES: TemplateEntry[] = [
     title: "Claude Code agent — OpenAI + Anthropic",
     blurb: "MCP-first TypeScript agent with side-by-side model comparison and tool use.",
     stack: ["Anthropic", "OpenAI", "GitHub"],
+    refNames: ["anthropic", "openai", "github"],
     accent: "D97757",
   },
   {
@@ -37,6 +44,7 @@ const TEMPLATES: TemplateEntry[] = [
     title: "SaaS starter — Supabase · PostHog · Sentry · Resend",
     blurb: "Auth, analytics, errors, and transactional email — wired from day one.",
     stack: ["Supabase", "PostHog", "Sentry", "Resend"],
+    refNames: ["supabase", "posthog", "sentry", "resend"],
     accent: "F54E00",
   },
   {
@@ -44,98 +52,52 @@ const TEMPLATES: TemplateEntry[] = [
     title: "Cloudflare Workers + Turso + Clerk",
     blurb: "Edge API on Workers, libSQL at the edge via Turso, users via Clerk.",
     stack: ["Cloudflare", "Turso", "Clerk"],
+    refNames: ["cloudflare", "turso", "clerk"],
     accent: "F38020",
   },
 ];
 
 const providerMap = new Map(PROVIDERS.map((p) => [p.name, p]));
+
+const templates: Template[] = TEMPLATES.map((t) => ({
+  id: t.id,
+  title: t.title,
+  blurb: t.blurb,
+  refNames: t.refNames,
+  accent: t.accent,
+  iconPaths: t.stack.map((name) => {
+    const p = providerMap.get(name);
+    return p ? getIconPath(p.slug) : null;
+  }),
+  iconNames: t.stack,
+  iconColors: t.stack.map((name) => providerMap.get(name)?.color ?? "6b8097"),
+}));
 ---
 
-<section id="templates" class="relative mx-auto max-w-[1200px] px-5 sm:px-8 pt-14 sm:pt-16 pb-24 sm:pb-28">
+<section id="templates" class="relative mx-auto max-w-[1240px] px-6 sm:px-10 pt-16 sm:pt-20 pb-24 sm:pb-28">
   <div class="section-rule mb-10">
-    <span>§ 06 · Starter stacks · 05</span>
+    <span>§ 06 · Starter stacks · {String(TEMPLATES.length).padStart(2, "0")}</span>
   </div>
 
-  <header class="max-w-[720px] mb-14 reveal" data-reveal>
-    <h2 class="display text-white" style="font-size: clamp(34px, 4.8vw, 58px);">
+  <header class="max-w-[760px] mb-12" data-reveal>
+    <h2 class="display text-[color:var(--color-ink-50)]" style="font-size: clamp(32px, 4.4vw, 56px);">
       Opinionated starters, <span class="display-accent">wired end-to-end.</span>
     </h2>
-    <p class="mt-5 text-[17px] leading-[1.55] text-ink-300 max-w-[580px]">
-      Each template is a real stack — not a boilerplate dump.
-      <code class="mono text-magenta-300">stack init</code> runs every provider's OAuth, provisions
-      resources, stores secrets in Phantom, and hands you a repo that
-      <code class="mono">bun dev</code>s in thirty seconds.
+    <p class="mt-5 text-[15px] leading-[1.6] text-[color:var(--color-ink-300)] max-w-[620px]">
+      Each template is a real stack — not a boilerplate dump. Pick one; see the exact
+      <code class="mono text-[color:var(--color-ink-100)]">stack add</code> invocations,
+      every env var that lands in <code class="mono text-[color:var(--color-ink-100)]">.env</code>,
+      and the <code class="mono text-[color:var(--color-ink-100)]">.mcp.json</code> your
+      Claude Code session will see.
     </p>
   </header>
 
-  <ul class="grid gap-4 md:grid-cols-2 lg:grid-cols-3 reveal-stagger" data-reveal>
-    {TEMPLATES.map((t, i) => (
-      <li class={`group relative reveal ${i === 0 ? "lg:col-span-2" : ""}`} style={`--stagger-i: ${i}`}>
-        <article
-          class="panel rounded-2xl p-6 h-full flex flex-col relative overflow-hidden transition-colors hover:border-white/15"
-          style={`--accent:#${t.accent ?? "d946ef"};`}
-        >
-          <span
-            aria-hidden="true"
-            class="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-[0.12] transition-opacity"
-            style="background: radial-gradient(400px 120px at 0% 0%, var(--accent), transparent 60%);"
-          ></span>
+  <div data-reveal>
+    <TemplateExplorer templates={templates} client:visible />
+  </div>
 
-          <div class="relative flex items-center gap-2 mb-4">
-            {t.stack.map((name) => {
-              const p = providerMap.get(name);
-              const path = p ? getIconPath(p.slug) : null;
-              return (
-                <span
-                  class="w-7 h-7 rounded-md bg-white/5 hairline flex items-center justify-center"
-                  style={p ? `--brand:#${p.color};` : ""}
-                  title={name}
-                >
-                  {path ? (
-                    <svg
-                      viewBox="0 0 24 24"
-                      width="14"
-                      height="14"
-                      class="text-ink-200 group-hover:text-[color:var(--brand)] transition-colors"
-                      fill="currentColor"
-                      aria-hidden="true"
-                    >
-                      <path d={path}></path>
-                    </svg>
-                  ) : (
-                    <span class="text-[9px] mono text-ink-400">{name.slice(0, 2).toUpperCase()}</span>
-                  )}
-                </span>
-              );
-            })}
-          </div>
-
-          <h3 class="relative text-base font-semibold text-white tracking-tight">{t.title}</h3>
-          <p class="relative mt-2 text-sm text-ink-300 leading-relaxed">{t.blurb}</p>
-
-          <div class="relative mt-5 panel-inner rounded-lg p-3 mono text-[12px] flex items-center gap-2">
-            <span class="ansi-magenta select-none">$</span>
-            <code class="ansi-white whitespace-nowrap overflow-x-auto">stack init --template {t.id}</code>
-          </div>
-
-          <div class="relative mt-4 flex items-center justify-between">
-            <span class="text-[11px] mono text-ink-500">
-              {t.stack.length} services
-            </span>
-            <span class="text-[11px] text-ink-400 inline-flex items-center gap-1 group-hover:text-magenta-300 transition-colors">
-              Preview
-              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-                <path d="M2 5h6M5 2l3 3-3 3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </span>
-          </div>
-        </article>
-      </li>
-    ))}
-  </ul>
-
-  <div class="mt-6 flex items-center gap-3 text-sm text-ink-400">
-    <span class="w-1 h-1 rounded-full bg-ink-500"></span>
-    Don't see your stack? <code class="mono text-ink-200">stack init</code> opens an interactive picker.
+  <div class="mt-8 flex items-center gap-3 text-sm text-[color:var(--color-ink-400)]">
+    <span class="w-1 h-1 rounded-full bg-[color:var(--color-ink-500)]"></span>
+    Don't see your stack? <code class="mono text-[color:var(--color-ink-200)]">stack init</code> opens an interactive picker — tick providers, stack provisions them.
   </div>
 </section>
