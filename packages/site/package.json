@@ -5,13 +5,14 @@
   "description": "Marketing site for Ashlr Stack — stack.ashlr.ai",
   "type": "module",
   "scripts": {
-    "dev": "bun run sync-content && astro dev",
-    "start": "bun run sync-content && astro dev",
-    "build": "bun run sync-content && astro build",
+    "dev": "bun run sync-content && bun run sync-install && astro dev",
+    "start": "bun run sync-content && bun run sync-install && astro dev",
+    "build": "bun run sync-content && bun run sync-install && astro build",
     "preview": "astro preview",
     "astro": "astro",
     "typecheck": "astro check && tsc --noEmit",
-    "sync-content": "mkdir -p src/data && cp -f ../../CHANGELOG.md src/data/CHANGELOG.md 2>/dev/null || true"
+    "sync-content": "mkdir -p src/data && cp -f ../../CHANGELOG.md src/data/CHANGELOG.md 2>/dev/null || true",
+    "sync-install": "cp -f ../../scripts/install.sh public/install.sh && cp -f ../../scripts/install.ps1 public/install.ps1"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.8",
