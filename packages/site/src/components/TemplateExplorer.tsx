@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { PROVIDERS_REF, type ProviderRef } from "~/lib/providers-ref";
+import CopyBtn from "~/components/primitives/CopyBtn";
 
 /**
  * TemplateExplorer — click a template card to see the real recipe it
@@ -72,32 +73,6 @@ function buildRecipe(refs: ProviderRef[]): {
     totalSecrets: refs.reduce((n, r) => n + r.secrets.length, 0),
     mcpCount: mcpRefs.length,
   };
-}
-
-async function copyText(text: string) {
-  if (!text) return;
-  try { await navigator.clipboard.writeText(text); } catch { /* noop */ }
-}
-
-function CopyBtn({ text }: { text: string }) {
-  const [done, setDone] = useState(false);
-  return (
-    <button
-      type="button"
-      onClick={async () => {
-        await copyText(text);
-        setDone(true);
-        setTimeout(() => setDone(false), 1400);
-      }}
-      className={`mono text-[10px] tracking-[0.12em] uppercase px-2 py-1 border transition-colors ${
-        done
-          ? "border-[color:var(--color-blade-400)] text-[color:var(--color-blade-400)]"
-          : "border-[color:var(--color-steel-500)] text-[color:var(--color-ink-300)] hover:border-[color:var(--color-blade-400)] hover:text-[color:var(--color-blade-400)]"
-      }`}
-    >
-      {done ? "Copied" : "Copy"}
-    </button>
-  );
 }
 
 export default function TemplateExplorer({ templates }: Props) {
@@ -199,7 +174,7 @@ export default function TemplateExplorer({ templates }: Props) {
               <div className="panel p-3" style={{ borderLeft: "2px solid var(--color-blade-500)" }}>
                 <div className="flex items-center justify-between mb-2">
                   <span className="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--color-ink-500)]">template init</span>
-                  <CopyBtn text={`stack init --template ${active.id}`} />
+                  <CopyBtn text={`stack init --template ${active.id}`} compact />
                 </div>
                 <div className="mono text-[13px] text-[color:var(--color-ink-100)] break-all">
                   <span className="text-[color:var(--color-blade-400)]">›</span> stack init --template {active.id}
@@ -210,7 +185,7 @@ export default function TemplateExplorer({ templates }: Props) {
               <div className="panel p-3">
                 <div className="flex items-center justify-between mb-2">
                   <span className="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--color-ink-500)]">which runs</span>
-                  <CopyBtn text={recipe.cmd} />
+                  <CopyBtn text={recipe.cmd} compact />
                 </div>
                 <div className="mono text-[13px] text-[color:var(--color-ink-100)] break-all">
                   <span className="text-[color:var(--color-blade-400)]">›</span> {recipe.cmd}
@@ -221,7 +196,7 @@ export default function TemplateExplorer({ templates }: Props) {
               <div className="panel p-3">
                 <div className="flex items-center justify-between mb-2">
                   <span className="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--color-ink-500)]">.env written</span>
-                  <CopyBtn text={recipe.env} />
+                  <CopyBtn text={recipe.env} compact />
                 </div>
                 <pre className="mono text-[12px] text-[color:var(--color-ink-200)] leading-[1.5] whitespace-pre-wrap break-all max-h-[280px] overflow-y-auto">
                   {recipe.env}
@@ -233,7 +208,7 @@ export default function TemplateExplorer({ templates }: Props) {
                 <div className="panel p-3">
                   <div className="flex items-center justify-between mb-2">
                     <span className="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--color-ink-500)]">.mcp.json written</span>
-                    <CopyBtn text={recipe.mcp} />
+                    <CopyBtn text={recipe.mcp} compact />
                   </div>
                   <pre className="mono text-[12px] text-[color:var(--color-ink-200)] leading-[1.5] overflow-x-auto max-h-[280px] overflow-y-auto">
                     {recipe.mcp}

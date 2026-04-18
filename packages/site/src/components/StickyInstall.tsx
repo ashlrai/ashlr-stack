@@ -44,16 +44,13 @@ export default function StickyInstall() {
     setDismissed(true);
   };
 
-  if (dismissed) return null;
+  if (dismissed || !visible) return null;
 
   return (
     <div
-      aria-hidden={!visible}
-      className="fixed top-0 inset-x-0 z-40 pointer-events-none"
+      className="fixed top-0 inset-x-0 z-40 pointer-events-none sticky-install-enter"
       style={{
-        transform: visible ? "translateY(0)" : "translateY(-100%)",
-        opacity: visible ? 1 : 0,
-        transition: "transform 280ms cubic-bezier(0.22, 1, 0.36, 1), opacity 220ms ease",
+        animation: "stickyInstallSlideIn 280ms cubic-bezier(0.22, 1, 0.36, 1)",
       }}
     >
       <div
@@ -102,6 +99,12 @@ export default function StickyInstall() {
           </button>
         </div>
       </div>
+      <style>{`
+        @keyframes stickyInstallSlideIn {
+          from { transform: translateY(-100%); opacity: 0; }
+          to   { transform: translateY(0);    opacity: 1; }
+        }
+      `}</style>
     </div>
   );
 }

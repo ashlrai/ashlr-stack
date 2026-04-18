@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PROVIDERS_REF, type ProviderRef } from "~/lib/providers-ref";
+import { usePrefersReducedMotion } from "~/lib/use-prefers-reduced-motion";
 
 /**
  * StackREPL — an in-browser pseudo-terminal that speaks `stack` commands.
@@ -33,30 +34,15 @@ const LINE_DELAY = 60;
 
 function genId(): number { return Math.floor(Math.random() * 1e9); }
 
-function usePrefersReducedMotion(): boolean {
-  const [r, setR] = useState(
-    () =>
-      typeof window !== "undefined" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-  );
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const on = (e: MediaQueryListEvent) => setR(e.matches);
-    mq.addEventListener?.("change", on);
-    return () => mq.removeEventListener?.("change", on);
-  }, []);
-  return r;
-}
-
-const HELP_LINES: Line[] = [
-  { id: 0, kind: "out", text: "▲ stack · commands" },
-  { id: 0, kind: "dim", text: "  stack init                       initialise the current directory" },
-  { id: 0, kind: "dim", text: "  stack ls                          list the provider catalog" },
-  { id: 0, kind: "dim", text: "  stack add <name> [<name>...]      provision + store secrets via Phantom" },
-  { id: 0, kind: "dim", text: "  stack mcp list                    list MCP servers Stack wires" },
-  { id: 0, kind: "dim", text: "  stack doctor                      check the local install" },
-  { id: 0, kind: "dim", text: "  stack open <name>                 open a provider dashboard" },
-  { id: 0, kind: "dim", text: "  clear                             clear the screen" },
+const HELP_SOURCE: { kind: LineKind; text: string }[] = [
+  { kind: "out", text: "▲ stack · commands" },
+  { kind: "dim", text: "  stack init                       initialise the current directory" },
+  { kind: "dim", text: "  stack ls                          list the provider catalog" },
+  { kind: "dim", text: "  stack add <name> [<name>...]      provision + store secrets via Phantom" },
+  { kind: "dim", text: "  stack mcp list                    list MCP servers Stack wires" },
+  { kind: "dim", text: "  stack doctor                      check the local install" },
+  { kind: "dim", text: "  stack open <name>                 open a provider dashboard" },
+  { kind: "dim", text: "  clear                             clear the screen" },
 ];
 
 function mkLine(kind: LineKind, text: string, detail?: string): Line {
@@ -200,7 +186,7 @@ export default function StackREPL() {
     try {
       const sub = parts[1];
       if (!sub || sub === "help" || sub === "--help" || sub === "-h") {
-        pushMany(HELP_LINES.map((l) => mkLine(l.kind, l.text)));
+        pushMany(HELP_SOURCE.map((l) => mkLine(l.kind, l.text)));
         return;
       }
 
@@ -338,7 +324,8 @@ export default function StackREPL() {
         <button
           type="button"
           onClick={() => setLines([])}
-          className="mono text-[10px] tracking-[0.12em] uppercase text-[color:var(--color-ink-500)] hover:text-[color:var(--color-ink-100)]"
+          disabled={busy}
+          className="mono text-[10px] tracking-[0.12em] uppercase text-[color:var(--color-ink-500)] hover:text-[color:var(--color-ink-100)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:text-[color:var(--color-ink-500)]"
         >
           clear
         </button>

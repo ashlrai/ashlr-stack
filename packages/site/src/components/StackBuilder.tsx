@@ -1,6 +1,7 @@
-import { useMemo, useState, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PROVIDERS, CATEGORIES, type Provider } from "~/lib/providers";
 import { PROVIDERS_REF, type ProviderRef } from "~/lib/providers-ref";
+import CopyBtn from "~/components/primitives/CopyBtn";
 
 /**
  * StackBuilder — the interactive heart of the landing page.
@@ -112,31 +113,6 @@ function buildMcpBlock(selected: Merged[]): string {
 function buildBatchCommand(selected: Merged[]): string {
   if (selected.length === 0) return "";
   return `stack add ${selected.map((m) => m.ref?.name ?? m.display.name.toLowerCase()).join(" ")}`;
-}
-
-async function copy(text: string): Promise<void> {
-  if (!text) return;
-  try { await navigator.clipboard.writeText(text); } catch { /* noop */ }
-}
-
-interface CopyBtnProps { text: string; label?: string; compact?: boolean }
-function CopyBtn({ text, label = "Copy", compact = false }: CopyBtnProps) {
-  const [done, setDone] = useState(false);
-  return (
-    <button
-      type="button"
-      className={`mono border border-[color:var(--color-steel-500)] hover:border-[color:var(--color-blade-400)] transition-colors ${
-        compact ? "px-2 py-1 text-[10px]" : "px-3 py-1.5 text-[11px]"
-      } tracking-[0.12em] uppercase ${done ? "text-[color:var(--color-blade-400)]" : "text-[color:var(--color-ink-300)]"}`}
-      onClick={async () => {
-        await copy(text);
-        setDone(true);
-        setTimeout(() => setDone(false), 1400);
-      }}
-    >
-      {done ? "Copied" : label}
-    </button>
-  );
 }
 
 interface CardProps {
@@ -416,6 +392,7 @@ function RecipeModal({ selected, onClose }: RecipeProps) {
   const batch = buildBatchCommand(selected);
   const env = buildEnvBlock(selected);
   const mcp = buildMcpBlock(selected);
+  const closeBtnRef = useRef<HTMLButtonElement>(null);
   const full = [
     "# Ashlr Stack — recipe export",
     `# ${new Date().toISOString().slice(0, 10)} · ${selected.length} providers`,
@@ -434,15 +411,19 @@ function RecipeModal({ selected, onClose }: RecipeProps) {
     mcp ? "\n# Result: .mcp.json\n" + mcp : "",
   ].filter(Boolean).join("\n");
 
+  // Intentionally omit `onClose` from deps — listener + body scroll lock
+  // should mount/unmount exactly once per modal instance.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", onKey);
     document.body.style.overflow = "hidden";
+    closeBtnRef.current?.focus();
     return () => {
       window.removeEventListener("keydown", onKey);
       document.body.style.overflow = "";
     };
-  }, [onClose]);
+  }, []);
 
   return (
     <div
@@ -470,9 +451,11 @@ function RecipeModal({ selected, onClose }: RecipeProps) {
             </p>
           </div>
           <button
+            ref={closeBtnRef}
             type="button"
             onClick={onClose}
-            className="mono text-[11px] tracking-[0.12em] uppercase text-[color:var(--color-ink-400)] hover:text-[color:var(--color-ink-100)]"
+            className="mono text-[11px] tracking-[0.12em] uppercase text-[color:var(--color-ink-400)] hover:text-[color:var(--color-ink-100)] focus:outline-none focus:text-[color:var(--color-blade-400)]"
+            aria-label="Close recipe export"
           >
             close ✕
           </button>
@@ -565,6 +548,10 @@ export default function StackBuilder({ iconPaths }: StackBuilderProps) {
 
   const expandedMerged = expanded ? merged.find((m) => m.display.name === expanded) ?? null : null;
 
+  const closeRecipe = useCallback(() => setRecipeOpen(false), []);
+  const clearSelected = useCallback(() => setSelected(new Set()), []);
+  const openRecipe = useCallback(() => setRecipeOpen(true), []);
+
   return (
     <div className="space-y-8">
       {/* Filter bar */}
@@ -644,13 +631,13 @@ export default function StackBuilder({ iconPaths }: StackBuilderProps) {
       {/* Sticky dock */}
       <StackDock
         selected={selectedList}
-        onClear={() => setSelected(new Set())}
-        onOpen={() => setRecipeOpen(true)}
+        onClear={clearSelected}
+        onOpen={openRecipe}
       />
 
       {/* Recipe modal */}
       {recipeOpen && (
-        <RecipeModal selected={selectedList} onClose={() => setRecipeOpen(false)} />
+        <RecipeModal selected={selectedList} onClose={closeRecipe} />
       )}
     </div>
   );

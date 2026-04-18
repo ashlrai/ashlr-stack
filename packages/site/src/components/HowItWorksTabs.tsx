@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { usePrefersReducedMotion } from "~/lib/use-prefers-reduced-motion";
 
 /**
  * HowItWorksTabs — interactive three-step explainer.
@@ -79,18 +80,19 @@ const TABS: Tab[] = [
 const AUTO_ADVANCE_MS = 6000;
 
 export default function HowItWorksTabs() {
+  const reduced = usePrefersReducedMotion();
   const [active, setActive] = useState(0);
-  const [auto, setAuto] = useState(true);
+  const [auto, setAuto] = useState(!reduced);
 
   useEffect(() => {
-    if (!auto) return;
+    if (!auto || reduced) return;
     const id = setInterval(() => {
       setActive((a) => (a + 1) % TABS.length);
     }, AUTO_ADVANCE_MS);
     return () => clearInterval(id);
-  }, [auto]);
+  }, [auto, reduced]);
 
-  const current = TABS[active];
+  const current = TABS[active] ?? TABS[0];
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6">
