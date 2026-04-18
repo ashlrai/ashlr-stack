@@ -7,7 +7,7 @@ import HowItWorks from "~/components/HowItWorks.astro";
 import Templates from "~/components/Templates.astro";
 import ClaudeCodeDemo from "~/components/ClaudeCodeDemo";
 import Constellation from "~/components/Constellation.astro";
-import DemoReel from "~/components/DemoReel";
+import StackREPL from "~/components/StackREPL";
 import McpClients from "~/components/McpClients.astro";
 import Footer from "~/components/Footer.astro";
 ---
@@ -32,21 +32,24 @@ import Footer from "~/components/Footer.astro";
     <OneCommand client:visible />
   </section>
 
-  <!-- § 03 · In motion — DemoReel -->
-  <section id="see-it-run" class="relative mx-auto max-w-[1240px] px-6 sm:px-10 pt-16 sm:pt-20 pb-20 sm:pb-24">
-    <div class="section-rule mb-10"><span>§ 03 · In motion</span></div>
+  <!-- § 03 · Interactive — StackREPL -->
+  <section id="try-it" class="relative mx-auto max-w-[1240px] px-6 sm:px-10 pt-16 sm:pt-20 pb-20 sm:pb-24">
+    <div class="section-rule mb-10"><span>§ 03 · Interactive</span></div>
 
     <header class="max-w-[720px] mb-10" data-reveal>
       <h2 class="display text-[color:var(--color-ink-50)]" style="font-size: clamp(34px, 4.4vw, 56px);">
-        See it <span class="display-accent">run</span>.
+        Try it <span class="display-accent">live</span>.
       </h2>
-      <p class="mt-5 text-[15px] leading-[1.6] text-[color:var(--color-ink-300)] max-w-[560px]">
-        Not a recording — a faithful replay of the real CLI. Initialise, add a provider,
-        run the app. The whole loop is under thirty seconds.
+      <p class="mt-5 text-[15px] leading-[1.6] text-[color:var(--color-ink-300)] max-w-[620px]">
+        Not a recording. Scripted boot-up, then the prompt unlocks — type any
+        <span class="mono text-[color:var(--color-ink-100)]">stack</span> command (try
+        <span class="mono text-[color:var(--color-ink-100)]">stack add supabase posthog</span>)
+        and see the real output the CLI would print, driven by the same provider catalog
+        the binary ships with.
       </p>
     </header>
 
-    <DemoReel client:visible />
+    <StackREPL client:visible />
   </section>
 
   <ProvidersGrid />
