@@ -21,28 +21,46 @@ env:
 
 jobs:
   # ─── Vercel ───────────────────────────────────────────────────────────────
-  # Only runs when the repo has VERCEL_TOKEN set as a secret. Vercel's native
-  # Git integration covers the common case; this Action is the fallback for
-  # people who prefer to own their deploys.
+  # Vercel's native Git integration covers the common case — only wire this
+  # Action when you have a VERCEL_TOKEN repo secret and want authoritative,
+  # Actions-gated deploys. Flip `USE_VERCEL` repo variable to "false" to
+  # disable entirely.
   deploy-vercel:
-    if: ${{ vars.USE_VERCEL != 'false' && secrets.VERCEL_TOKEN != '' }}
+    if: ${{ vars.USE_VERCEL != 'false' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Preflight — skip when no VERCEL_TOKEN is configured
+        id: preflight
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "No VERCEL_TOKEN secret configured. Vercel's native Git integration handles deploys."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
 
-      - uses: oven-sh/setup-bun@v2
+      - if: steps.preflight.outputs.skip != 'true'
+        uses: actions/checkout@v4
+
+      - if: steps.preflight.outputs.skip != 'true'
+        uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
 
-      - name: Install deps (root + site)
+      - if: steps.preflight.outputs.skip != 'true'
+        name: Install deps (root + site)
         run: |
           bun install
           cd packages/site && bun install
 
-      - name: Install Vercel CLI
+      - if: steps.preflight.outputs.skip != 'true'
+        name: Install Vercel CLI
         run: bun add -g vercel@latest
 
-      - name: Pull Vercel env
+      - if: steps.preflight.outputs.skip != 'true'
+        name: Pull Vercel env
         working-directory: packages/site
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
@@ -50,13 +68,15 @@ jobs:
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: vercel pull --yes --environment=production --token=$VERCEL_TOKEN
 
-      - name: Build (Vercel)
+      - if: steps.preflight.outputs.skip != 'true'
+        name: Build (Vercel)
         working-directory: packages/site
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: vercel build --prod --token=$VERCEL_TOKEN
 
-      - name: Deploy (Vercel)
+      - if: steps.preflight.outputs.skip != 'true'
+        name: Deploy (Vercel)
         working-directory: packages/site
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
