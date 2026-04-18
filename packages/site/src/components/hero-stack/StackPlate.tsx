@@ -23,19 +23,18 @@ interface Props {
 const BLADE_500 = "#e96b2a";
 const BLADE_400 = "#f5883e";
 const BLADE_300 = "#f9a877";
-const STEEL_500 = "#39556f";
 const STEEL_300 = "#6b8097";
 const INK_100   = "#e1e5ea";
 const INK_400   = "#6b7480";
 
 const StackPlate = forwardRef<Mesh, Props>(function StackPlate(
-  { y, label, glyph, tier, width = 4.8, depth = 3.4, height = 0.3, accent = false },
+  { y, label, glyph, tier, width = 4.2, depth = 3.0, height = 0.36, accent = false },
   ref,
 ) {
-  const bodyColor         = accent ? "#2a1a10" : "#1a1f27";
-  const emissive          = accent ? BLADE_500 : "#0b1218";
-  const emissiveIntensity = accent ? 0.55 : 0.14;
-  const edgeColor         = accent ? BLADE_400 : STEEL_500;
+  const bodyColor         = accent ? "#3a2212" : "#242d38";
+  const emissive          = accent ? BLADE_500 : "#1a2430";
+  const emissiveIntensity = accent ? 0.7 : 0.22;
+  const edgeColor         = accent ? BLADE_400 : STEEL_300;
   const labelColor        = accent ? BLADE_300 : INK_100;
   const tierColor         = accent ? BLADE_400 : STEEL_300;
   const glyphColor        = accent ? BLADE_300 : INK_400;

@@ -21,12 +21,12 @@ const TIERS = [
   { label: "PHANTOM",       accent: true,  glyph: "◈" },
 ];
 
-const PLATE_GAP    = 0.36;
-const PLATE_HEIGHT = 0.30;
+const PLATE_GAP    = 0.48;
+const PLATE_HEIGHT = 0.36;
 const LAYER_H      = PLATE_HEIGHT + PLATE_GAP;
 
-const MAX_ROT_Y = 0.18;
-const MAX_ROT_X = 0.08;
+const MAX_ROT_Y = 0.20;
+const MAX_ROT_X = 0.09;
 
 export default function StackRig({ reduced = false }: { reduced?: boolean }) {
   const group = useRef<Group>(null);
@@ -62,9 +62,11 @@ export default function StackRig({ reduced = false }: { reduced?: boolean }) {
       child.visible = true;
     });
 
-    // idle sway + cursor offset (camera handles the iso 3/4 view)
+    // Idle sway + cursor offset. Base rotation of 0.28 rad (~16°) keeps
+    // the group angled so plates never project edge-on even at rest.
+    const BASE_ROT_Y = 0.28;
     const drift = reduced ? 0 : Math.sin(now * 0.00022) * 0.12;
-    const wantY = drift + target.current.x * MAX_ROT_Y;
+    const wantY = BASE_ROT_Y + drift + target.current.x * MAX_ROT_Y;
     const wantX = reduced ? 0 : target.current.y * MAX_ROT_X * -1;
     const k = 1 - Math.pow(1 - 0.08, dt * 60);
     group.current.rotation.y += (wantY - group.current.rotation.y) * k;

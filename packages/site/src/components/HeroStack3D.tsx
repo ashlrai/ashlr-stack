@@ -1,18 +1,17 @@
-import { Canvas, useThree } from "@react-three/fiber";
+import { Canvas, useFrame } from "@react-three/fiber";
 import { useEffect, useState } from "react";
 import StackRig from "./hero-stack/StackRig";
 
 /**
- * Sets the camera to look at the stack origin. R3F's default camera faces
- * straight down -Z, so without an explicit lookAt the plates project as
- * thin horizontal bands (the 3/4 camera position does nothing without it).
+ * Locks the camera onto the stack origin every frame. R3F's default camera
+ * faces straight down -Z regardless of the position prop, so without a
+ * continuous lookAt the plates project edge-on as thin horizontal bands.
+ * useFrame keeps it locked even if the camera object is ever re-created.
  */
 function CameraTarget() {
-  const { camera } = useThree();
-  useEffect(() => {
-    camera.lookAt(0, 0, 0);
-    camera.updateProjectionMatrix();
-  }, [camera]);
+  useFrame(({ camera }) => {
+    camera.lookAt(0, 0.2, 0);
+  });
   return null;
 }
 
@@ -43,13 +42,13 @@ export default function HeroStack3D() {
 
   return (
     <Canvas
-      camera={{ position: [4.8, 3.6, 6.8], fov: 38, near: 0.1, far: 60 }}
+      camera={{ position: [3.6, 2.8, 5.4], fov: 42, near: 0.1, far: 60 }}
       dpr={[1, 2]}
       gl={{ alpha: true, antialias: true, powerPreference: "high-performance" }}
       style={{ width: "100%", height: "100%", background: "transparent" }}
     >
       <CameraTarget />
-      <fog attach="fog" args={["#05070a", 10, 22]} />
+      <fog attach="fog" args={["#05070a", 8, 18]} />
 
       {/* base ambient so plates never read as pure black */}
       <ambientLight intensity={0.28} />
