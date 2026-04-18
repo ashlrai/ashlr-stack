@@ -3,31 +3,43 @@ import { forwardRef } from "react";
 import type { Mesh } from "three";
 
 /**
- * A single steel plate in the hero's 3D stack. Brushed-metal look, 1px edge
- * highlight in amber via drei's <Edges>, etched label via drei's <Text>.
- *
- * Eight of these stack vertically inside <StackRig>.
+ * A single plate in the hero's 3D stack. Steel body with amber edge
+ * highlights; labels + tier number etched onto the TOP face so the
+ * isometric 3/4 camera reads them clearly. Accent plate (Phantom)
+ * glows warm amber.
  */
 
 interface Props {
-  y: number;                 // vertical position in rig-local units
-  label: string;             // "COMPUTE" / "DATABASES" / etc.
-  tier: number;              // 0–7, used by the caller for stagger + color
-  width?: number;            // plate width
-  depth?: number;            // plate depth
-  height?: number;           // plate height
-  accent?: boolean;          // bottom ("SECRETS / Phantom") plate gets warm glow
+  y: number;
+  label: string;
+  glyph: string;
+  tier: number;
+  width?: number;
+  depth?: number;
+  height?: number;
+  accent?: boolean;
 }
 
+const BLADE_500 = "#e96b2a";
 const BLADE_400 = "#f5883e";
+const BLADE_300 = "#f9a877";
+const STEEL_500 = "#39556f";
+const STEEL_300 = "#6b8097";
+const INK_100   = "#e1e5ea";
+const INK_400   = "#6b7480";
 
 const StackPlate = forwardRef<Mesh, Props>(function StackPlate(
-  { y, label, tier, width = 6, depth = 4, height = 0.28, accent = false },
+  { y, label, glyph, tier, width = 4.8, depth = 3.4, height = 0.3, accent = false },
   ref,
 ) {
-  const bodyColor = accent ? "#241912" : "#12151a";
-  const emissive  = accent ? BLADE_400 : "#0b0e12";
-  const emissiveIntensity = accent ? 0.45 : 0.08;
+  const bodyColor         = accent ? "#2a1a10" : "#1a1f27";
+  const emissive          = accent ? BLADE_500 : "#0b1218";
+  const emissiveIntensity = accent ? 0.55 : 0.14;
+  const edgeColor         = accent ? BLADE_400 : STEEL_500;
+  const labelColor        = accent ? BLADE_300 : INK_100;
+  const tierColor         = accent ? BLADE_400 : STEEL_300;
+  const glyphColor        = accent ? BLADE_300 : INK_400;
+  const topY              = height / 2 + 0.0015;
 
   return (
     <group position={[0, y, 0]}>
@@ -35,52 +47,61 @@ const StackPlate = forwardRef<Mesh, Props>(function StackPlate(
         <boxGeometry args={[width, height, depth]} />
         <meshStandardMaterial
           color={bodyColor}
-          metalness={0.72}
-          roughness={0.38}
+          metalness={0.78}
+          roughness={0.34}
           emissive={emissive}
           emissiveIntensity={emissiveIntensity}
         />
-        <Edges
-          threshold={1}
-          color={accent ? BLADE_400 : "#3e4651"}
-          linewidth={1}
-        />
+        <Edges threshold={1} color={edgeColor} />
       </mesh>
 
-      {/* Etched tier label — Berkeley Mono, small caps, centered on front face */}
+      {/* Glyph — left side of top face */}
       <Text
-        position={[-width / 2 + 0.35, 0, depth / 2 + 0.002]}
-        fontSize={0.13}
+        position={[-width / 2 + 0.38, topY, 0]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        fontSize={0.26}
         anchorX="left"
         anchorY="middle"
-        color={accent ? BLADE_400 : "#c4ccd5"}
-        letterSpacing={0.18}
-        maxWidth={width - 0.8}
+        color={glyphColor}
+      >
+        {glyph}
+      </Text>
+
+      {/* Tier label — etched on top face */}
+      <Text
+        position={[-width / 2 + 0.82, topY, 0]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        fontSize={0.22}
+        anchorX="left"
+        anchorY="middle"
+        color={labelColor}
+        letterSpacing={0.14}
+        outlineWidth={0.002}
+        outlineColor={accent ? "#3b1a0b" : "#050710"}
       >
         {label}
       </Text>
 
-      {/* Tier number — right side */}
+      {/* Tier number — right side of top face */}
       <Text
-        position={[width / 2 - 0.35, 0, depth / 2 + 0.002]}
-        fontSize={0.11}
+        position={[width / 2 - 0.34, topY, 0]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        fontSize={0.24}
         anchorX="right"
         anchorY="middle"
-        color="#6b7480"
-        letterSpacing={0.1}
+        color={tierColor}
+        letterSpacing={0.08}
       >
         {String(tier).padStart(2, "0")}
       </Text>
 
-      {/* subtle inner highlight stripe along the top edge for depth */}
-      <mesh position={[0, height / 2 + 0.001, 0]}>
-        <planeGeometry args={[width * 0.98, depth * 0.98]} />
-        <meshBasicMaterial
-          color={accent ? BLADE_400 : "#2a3038"}
-          transparent
-          opacity={accent ? 0.35 : 0.25}
-        />
-      </mesh>
+      {/* Amber foot-light under the Phantom plate only — grounds the stack */}
+      {accent && (
+        <mesh position={[0, -height / 2 - 0.04, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[width * 1.04, depth * 1.04]} />
+          <meshBasicMaterial color={BLADE_400} transparent opacity={0.22} />
+        </mesh>
+      )}
     </group>
   );
 });

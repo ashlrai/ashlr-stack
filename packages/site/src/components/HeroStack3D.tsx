@@ -29,30 +29,27 @@ export default function HeroStack3D() {
 
   return (
     <Canvas
-      camera={{ position: [0, 0.8, 7.4], fov: 38 }}
+      camera={{ position: [4.8, 3.6, 6.8], fov: 38, near: 0.1, far: 60 }}
       dpr={[1, 2]}
       gl={{ alpha: true, antialias: true, powerPreference: "high-performance" }}
       style={{ width: "100%", height: "100%", background: "transparent" }}
     >
-      {/* flat ambient so plates don't blow out */}
-      <ambientLight intensity={0.18} />
+      <fog attach="fog" args={["#05070a", 10, 22]} />
 
-      {/* warm rim light from upper-left — matches amber accent */}
-      <directionalLight
-        position={[-3.6, 5.2, 3.4]}
-        intensity={1.1}
-        color="#f5883e"
-      />
+      {/* base ambient so plates never read as pure black */}
+      <ambientLight intensity={0.28} />
 
-      {/* cool fill from lower-right */}
-      <directionalLight
-        position={[4.2, -1.4, 2.2]}
-        intensity={0.42}
-        color="#6b8097"
-      />
+      {/* key amber rim from upper-right — the signature Anduril warmth */}
+      <directionalLight position={[6, 7, 3]} intensity={1.7} color="#f5883e" />
 
-      {/* subtle ground-plane reflection from below */}
-      <pointLight position={[0, -2.8, 2]} intensity={0.2} color="#e96b2a" />
+      {/* cool steel fill from upper-left */}
+      <directionalLight position={[-5.5, 5.5, 4]} intensity={0.7} color="#6b8097" />
+
+      {/* Phantom underglow — warm pool under the bottom plate */}
+      <pointLight position={[0, -3.2, 1.5]} intensity={1.3} color="#e96b2a" distance={8} />
+
+      {/* subtle back rim to kiss the rear edges of the plates */}
+      <directionalLight position={[0, 2, -5]} intensity={0.4} color="#c4ccd5" />
 
       <StackRig reduced={reduced} />
     </Canvas>
