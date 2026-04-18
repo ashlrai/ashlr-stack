@@ -181,7 +181,7 @@ export default function OneCommand() {
                   className="pointer-events-none absolute -inset-px rounded-2xl"
                   style={{
                     background:
-                      "radial-gradient(600px 200px at 50% -10%, rgba(217,70,239,0.14), transparent 60%)",
+                      "radial-gradient(600px 200px at 50% -10%, rgba(233,107,42,0.12), transparent 60%)",
                   }}
                 />
                 <div className="relative mono text-[13px] leading-[1.75] space-y-0">
@@ -239,7 +239,7 @@ function TabButton({
           layoutId="one-command-pill"
           className={`absolute inset-0 rounded-full ${
             accent
-              ? "bg-magenta-500/90 shadow-[0_8px_24px_-8px_rgba(217,70,239,0.6)]"
+              ? "bg-[color:var(--color-blade-500)] shadow-[0_8px_24px_-8px_rgba(233,107,42,0.6)]"
               : "bg-white/8 ring-1 ring-white/10"
           }`}
           transition={{ type: "spring", bounce: 0.18, duration: 0.5 }}

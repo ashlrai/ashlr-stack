@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import Lenis from "lenis";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -11,9 +11,10 @@ import { installScrollChoreo } from "~/lib/motion/scroll";
  * Lenis is a no-op and ScrollTrigger still runs (snap-on entrance, no scrub).
  */
 
-let lenisInstance: Lenis | null = null;
-
 export default function SmoothScroll() {
+  const lenisRef = useRef<Lenis | null>(null);
+  const tickerRef = useRef<((time: number) => void) | null>(null);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -21,32 +22,37 @@ export default function SmoothScroll() {
 
     gsap.registerPlugin(ScrollTrigger);
 
-    // idempotent install guard — HMR + Astro client:load rehydration
-    if (lenisInstance) return;
+    if (lenisRef.current) return;
 
     if (!reduced) {
-      lenisInstance = new Lenis({
+      const lenis = new Lenis({
         duration: 1.1,
         easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
         smoothWheel: true,
         wheelMultiplier: 1,
         touchMultiplier: 1.2,
       });
+      lenisRef.current = lenis;
 
-      lenisInstance.on("scroll", ScrollTrigger.update);
-      gsap.ticker.add((time) => lenisInstance?.raf(time * 1000));
+      lenis.on("scroll", ScrollTrigger.update);
+      const tick = (time: number) => lenis.raf(time * 1000);
+      tickerRef.current = tick;
+      gsap.ticker.add(tick);
       gsap.ticker.lagSmoothing(0);
     }
 
     installScrollChoreo();
 
-    // Give GSAP a tick to see the DOM, then refresh — catches late image loads etc.
     const t = setTimeout(() => ScrollTrigger.refresh(), 180);
 
     return () => {
       clearTimeout(t);
-      lenisInstance?.destroy();
-      lenisInstance = null;
+      if (tickerRef.current) {
+        gsap.ticker.remove(tickerRef.current);
+        tickerRef.current = null;
+      }
+      lenisRef.current?.destroy();
+      lenisRef.current = null;
       ScrollTrigger.getAll().forEach((st) => st.kill());
     };
   }, []);

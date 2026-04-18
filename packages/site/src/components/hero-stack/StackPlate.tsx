@@ -19,7 +19,6 @@ interface Props {
   accent?: boolean;          // bottom ("SECRETS / Phantom") plate gets warm glow
 }
 
-const INK_700  = "#1a1f26";
 const BLADE_400 = "#f5883e";
 
 const StackPlate = forwardRef<Mesh, Props>(function StackPlate(
@@ -83,11 +82,6 @@ const StackPlate = forwardRef<Mesh, Props>(function StackPlate(
         />
       </mesh>
 
-      {/* prevent unused var warning on INK_700 */}
-      <mesh visible={false}>
-        <boxGeometry args={[0.001, 0.001, 0.001]} />
-        <meshBasicMaterial color={INK_700} />
-      </mesh>
     </group>
   );
 });

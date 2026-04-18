@@ -2,6 +2,7 @@
 import Nav from "./Nav.astro";
 import HeroStack3D from "./HeroStack3D";
 import StackFallback from "./hero-stack/StackFallback.astro";
+import { PROVIDERS } from "~/lib/providers";
 ---
 
 <section id="hero" class="relative overflow-hidden">
@@ -98,7 +99,7 @@ import StackFallback from "./hero-stack/StackFallback.astro";
           style="--load-delay: 660ms"
         >
           {[
-            { n: "26", l: "providers" },
+            { n: String(PROVIDERS.length), l: "providers" },
             { n: "17", l: "mcp tools" },
             { n: "05", l: "templates" },
             { n: "MIT", l: "license" },

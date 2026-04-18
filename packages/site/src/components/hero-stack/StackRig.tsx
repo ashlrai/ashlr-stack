@@ -1,4 +1,4 @@
-import { useFrame, useThree } from "@react-three/fiber";
+import { useFrame } from "@react-three/fiber";
 import { useEffect, useRef } from "react";
 import type { Group } from "three";
 import StackPlate from "./StackPlate";
@@ -34,7 +34,6 @@ const MAX_ROT_X  = Math.PI / 30;  // ±6°
 export default function StackRig({ reduced = false }: { reduced?: boolean }) {
   const group = useRef<Group>(null);
   const target = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
-  const { viewport } = useThree();
   const assembledAt = useRef<number>(0);
 
   // Normalize mouse to -1..1 on both axes; update target on move.
@@ -67,13 +66,7 @@ export default function StackRig({ reduced = false }: { reduced?: boolean }) {
       const restY   = (3.5 - i) * LAYER_H;
       const startY  = restY + 2;
       child.position.y = reduced ? restY : startY + (restY - startY) * eased;
-      const opacity = reduced ? 1 : eased;
-      // Fade via inner material emissive intensity instead of opacity to avoid
-      // re-enabling transparency (more GPU cost). We just tint color darker.
       child.visible = true;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (child as any).__assembleT = eased;
-      void opacity;
     });
 
     // Rig-level tilt — lerp current rotation toward target pose.
@@ -86,9 +79,6 @@ export default function StackRig({ reduced = false }: { reduced?: boolean }) {
     // idle breathing — gentle +/- 0.015 on Y position
     const breathe = Math.sin(now * 0.0009) * 0.015;
     group.current.position.y = breathe;
-
-    // prevent unused var warning
-    void viewport;
   });
 
   return (

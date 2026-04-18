@@ -5,18 +5,23 @@ import StackRig from "./hero-stack/StackRig";
 /**
  * Hero 3D scene — eight-plate stack representing Stack's tier architecture.
  *
- * Lazy-hydrates below-the-fold (`client:visible` on the Astro side) so the
- * three/R3F bundle never blocks Time-to-Interactive on the hero.
+ * Hydrated with `client:visible` from the Astro side. Since the canvas lives
+ * above the fold the IntersectionObserver fires almost immediately, but this
+ * still defers the three/R3F bundle parse until the browser is idle enough
+ * to observe it — leaving TTI unblocked.
  *
  * No shadows, no HDR env map, no post-processing — industrial aesthetic is
  * carried by the geometry + amber edge emission, not by WebGL pyrotechnics.
  */
 
 export default function HeroStack3D() {
-  const [reduced, setReduced] = useState(false);
+  const [reduced, setReduced] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+  );
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReduced(mq.matches);
     const onChange = (e: MediaQueryListEvent) => setReduced(e.matches);
     mq.addEventListener?.("change", onChange);
     return () => mq.removeEventListener?.("change", onChange);

@@ -76,12 +76,13 @@
 
   /* ── Back-compat aliases ─────────────────────────────────────────────
    * Old magenta-coded classes (text-magenta-500, bg-magenta-400, etc.) now
-   * resolve to the blade amber family. Existing components carry over
-   * visually during the redesign without file-level churn; new code uses
-   * blade-* directly. Remove these aliases once every reference is ported. */
+   * resolve to the blade amber family. Aliases stay indefinitely so docs +
+   * launch-post content authored against the previous palette keeps working;
+   * new code should prefer blade-* directly. The 50 → 700 ramp mirrors the
+   * blade scale step-for-step so hover/active gradients stay distinct. */
   --color-magenta-50:  #fbe1cf;
   --color-magenta-100: #f9a877;
-  --color-magenta-200: #f5883e;
+  --color-magenta-200: #f9a877;
   --color-magenta-300: #f5883e;
   --color-magenta-400: #f5883e;
   --color-magenta-500: #e96b2a;
