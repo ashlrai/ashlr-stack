@@ -44,13 +44,19 @@ export default function StickyInstall() {
     setDismissed(true);
   };
 
-  if (dismissed || !visible) return null;
+  if (dismissed) return null;
 
+  // Stay mounted for the slide-out; `inert` removes focusable descendants
+  // and hides the subtree from assistive tech while the animation plays.
   return (
     <div
-      className="fixed top-0 inset-x-0 z-40 pointer-events-none sticky-install-enter"
+      {...(!visible ? { inert: "" as unknown as boolean } : {})}
+      aria-hidden={!visible}
+      className="fixed top-0 inset-x-0 z-40 pointer-events-none"
       style={{
-        animation: "stickyInstallSlideIn 280ms cubic-bezier(0.22, 1, 0.36, 1)",
+        transform: visible ? "translateY(0)" : "translateY(-100%)",
+        opacity: visible ? 1 : 0,
+        transition: "transform 280ms cubic-bezier(0.22, 1, 0.36, 1), opacity 220ms ease",
       }}
     >
       <div
@@ -99,12 +105,6 @@ export default function StickyInstall() {
           </button>
         </div>
       </div>
-      <style>{`
-        @keyframes stickyInstallSlideIn {
-          from { transform: translateY(-100%); opacity: 0; }
-          to   { transform: translateY(0);    opacity: 1; }
-        }
-      `}</style>
     </div>
   );
 }
