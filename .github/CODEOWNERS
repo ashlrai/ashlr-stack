@@ -1,0 +1,15 @@
+# Default ownership
+*                                   @masonwyatt23
+
+# Core product surface
+/packages/core/                     @masonwyatt23
+/packages/cli/                      @masonwyatt23
+/packages/mcp/                      @masonwyatt23
+/packages/plugin/                   @masonwyatt23
+
+# Landing / docs
+/packages/site/                     @masonwyatt23
+
+# Templates + auth matrix
+/templates/                         @masonwyatt23
+/docs/                              @masonwyatt23

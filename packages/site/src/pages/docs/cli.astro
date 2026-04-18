@@ -2,14 +2,39 @@
 import Docs from "~/layouts/Docs.astro";
 import { Code } from "astro:components";
 import { CLI_COMMANDS, type CliCommand } from "~/lib/cli-ref";
+import { itemListSchema } from "~/lib/structured-data";
+import { SITE_URL } from "~/lib/og";
 
 const slug = (s: string) => s.replace(/^stack\s+/, "").replace(/\s+/g, "-");
+const pageUrl = `${SITE_URL}/docs/cli/`;
+
+const commandList = itemListSchema({
+  name: "Ashlr Stack CLI commands",
+  description:
+    "Every top-level `stack` command, linked to its reference section.",
+  itemListOrder: "Unordered",
+  url: pageUrl,
+  items: CLI_COMMANDS.map((cmd) => ({
+    type: "SoftwareSourceCode",
+    name: cmd.name,
+    description: cmd.description,
+    url: `${pageUrl}#${slug(cmd.name)}`,
+    extra: {
+      codeSampleType: "shell",
+      programmingLanguage: "bash",
+      codeRepository: "https://github.com/ashlr-ai/stack",
+      targetProduct: { "@id": `${SITE_URL}/#software` },
+      text: cmd.synopsis,
+    },
+  })),
+});
 ---
 
 <Docs
   title="CLI reference"
   description="Every `stack` subcommand, every flag, every default — sourced from the citty `defineCommand` calls in `packages/cli/src/commands/`."
   eyebrow="Reference"
+  extraSchemas={[commandList]}
 >
   <h2>At a glance</h2>
   <p>

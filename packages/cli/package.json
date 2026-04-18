@@ -1,11 +1,52 @@
 {
   "name": "@ashlr/stack",
   "version": "0.1.0",
-  "description": "Ashlr Stack CLI — the control plane for your entire dev stack.",
+  "description": "Ashlr Stack CLI — the control plane for your entire dev stack. One command to provision, wire, and operate every third-party service in your project. 23 providers, MCP-native.",
   "license": "MIT",
+  "author": {
+    "name": "Mason Wyatt",
+    "url": "https://github.com/ashlrai"
+  },
+  "homepage": "https://stack.ashlr.ai",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ashlrai/ashlr-stack.git",
+    "directory": "packages/cli"
+  },
+  "bugs": "https://github.com/ashlrai/ashlr-stack/issues",
+  "keywords": [
+    "ashlr",
+    "stack",
+    "cli",
+    "mcp",
+    "claude-code",
+    "phantom-secrets",
+    "supabase",
+    "neon",
+    "vercel",
+    "cloudflare",
+    "openai",
+    "anthropic",
+    "provisioning",
+    "devops",
+    "control-plane"
+  ],
   "type": "module",
   "bin": {
     "stack": "./src/index.ts"
+  },
+  "files": [
+    "src/**/*",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "engines": {
+    "bun": ">=1.2.0",
+    "node": ">=20"
   },
   "scripts": {
     "dev": "bun run src/index.ts",

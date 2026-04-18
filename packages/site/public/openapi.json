@@ -1,0 +1,377 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Ashlr Stack CLI",
+    "version": "0.1.0",
+    "summary": "Machine-readable catalog of the Ashlr Stack CLI (and MCP tool surface).",
+    "description": "This OpenAPI document treats each `stack` CLI command as a GET operation for the benefit of AI agents, LLM editors, and documentation pipelines that want to reason about Stack programmatically. It is NOT served as a real HTTP API — Stack is a local CLI. Consume this file alongside `/mcp.json` (the MCP tool catalog) and `/.well-known/ai-plugin.json` (discovery manifest).\n\nSource of truth: `packages/cli/src/commands/*.ts` (citty `defineCommand` calls), mirrored into `packages/site/src/lib/cli-ref.ts`. When a command changes there, update this file too.",
+    "contact": {
+      "name": "Ashlr",
+      "email": "mason@evero-consulting.com",
+      "url": "https://stack.ashlr.ai"
+    },
+    "license": {
+      "name": "MIT",
+      "identifier": "MIT"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://stack.ashlr.ai",
+      "description": "Documentation and discovery surface. The CLI itself runs locally via `stack` or `bunx ashlr-stack-mcp`."
+    }
+  ],
+  "tags": [
+    {
+      "name": "setup",
+      "description": "Scaffolding, provisioning, adoption of existing repos."
+    },
+    {
+      "name": "management",
+      "description": "Day-to-day operations on a configured stack."
+    },
+    {
+      "name": "diagnostics",
+      "description": "Health, status, and environment inspection."
+    },
+    {
+      "name": "meta",
+      "description": "Discovery, upgrades, and cross-project registry."
+    }
+  ],
+  "paths": {
+    "/cli/init": {
+      "get": {
+        "tags": ["setup"],
+        "operationId": "stack_init",
+        "summary": "Scaffold a .stack.toml in the current directory.",
+        "description": "Creates `.stack.toml` (committed) and `.stack.local.toml` (gitignored). Offers an interactive template picker unless `--template` or `--noInteractive` is given. Warns (but proceeds) when Phantom is not on PATH — Phantom is only required for commands that touch secrets.",
+        "parameters": [
+          { "name": "template", "in": "query", "schema": { "type": "string" }, "description": "Starter template slug (e.g. nextjs-supabase-posthog)." },
+          { "name": "force", "in": "query", "schema": { "type": "boolean", "default": false }, "description": "Overwrite an existing .stack.toml." },
+          { "name": "noInteractive", "in": "query", "schema": { "type": "boolean", "default": false }, "description": "Skip the template picker; always create a blank .stack.toml." }
+        ],
+        "responses": {
+          "200": { "description": "Project scaffolded.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/StackToml" } } } }
+        }
+      }
+    },
+    "/cli/import": {
+      "get": {
+        "tags": ["setup"],
+        "operationId": "stack_import",
+        "summary": "Import an existing .env into Phantom + .stack.toml.",
+        "description": "Routes every secret into Phantom, then best-guesses which provider each belongs to and writes matching service entries into .stack.toml.",
+        "parameters": [
+          { "name": "from", "in": "query", "schema": { "type": "string", "default": ".env" }, "description": "Path to the .env file to import." },
+          { "name": "dryRun", "in": "query", "schema": { "type": "boolean", "default": false }, "description": "Print what would happen without writing anything." }
+        ],
+        "responses": { "200": { "description": "Import summary." } }
+      }
+    },
+    "/cli/scan": {
+      "get": {
+        "tags": ["setup"],
+        "operationId": "stack_scan",
+        "summary": "Detect providers used by this repo.",
+        "description": "Inspects package.json, lockfiles, config files, and `.env.example` to detect providers already wired into an existing repo.",
+        "parameters": [
+          { "name": "path", "in": "query", "schema": { "type": "string", "default": "." }, "description": "Directory to scan." },
+          { "name": "auto", "in": "query", "schema": { "type": "boolean", "default": false }, "description": "After scanning, offer to run `stack add` for each detected provider interactively." },
+          { "name": "confidence", "in": "query", "schema": { "type": "string", "enum": ["low", "medium", "high"], "default": "medium" }, "description": "Minimum confidence to surface." }
+        ],
+        "responses": { "200": { "description": "Detection report." } }
+      }
+    },
+    "/cli/clone": {
+      "get": {
+        "tags": ["setup"],
+        "operationId": "stack_clone",
+        "summary": "Clone a git repo and auto-detect its Stack services.",
+        "description": "Clones the repo, then runs `stack scan`. If the repo already ships a committed .stack.toml, prints next-step guidance instead.",
+        "parameters": [
+          { "name": "url", "in": "query", "required": true, "schema": { "type": "string" }, "description": "GitHub / git URL. Only https://, http://, ssh://, and git@host:org/repo forms are allowed." },
+          { "name": "dir", "in": "query", "schema": { "type": "string" }, "description": "Optional target directory (defaults to repo name)." }
+        ],
+        "responses": { "200": { "description": "Clone + scan report." } }
+      }
+    },
+    "/cli/add": {
+      "get": {
+        "tags": ["setup"],
+        "operationId": "stack_add",
+        "summary": "Provision a service and wire its secrets + MCP entry.",
+        "description": "Runs the provider's four-step lifecycle: login → provision → materialize → persist. Requires Phantom on PATH.",
+        "parameters": [
+          { "name": "service", "in": "query", "schema": { "type": "string" }, "description": "Service name (supabase, neon, vercel, …). Omit for interactive picker." },
+          { "name": "use", "in": "query", "schema": { "type": "string" }, "description": "Attach to an existing resource by id instead of creating a new one." },
+          { "name": "region", "in": "query", "schema": { "type": "string" }, "description": "Region hint for providers that need one (e.g. us-east-1)." },
+          { "name": "dryRun", "in": "query", "schema": { "type": "boolean", "default": false }, "description": "Preview; no network calls, no vault writes, no MCP edits." }
+        ],
+        "responses": {
+          "200": { "description": "Service wired.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ServiceEntry" } } } }
+        }
+      }
+    },
+    "/cli/remove": {
+      "get": {
+        "tags": ["management"],
+        "operationId": "stack_remove",
+        "summary": "Remove a service from the stack.",
+        "description": "Removes the service from .stack.toml, deletes its vault entries, and cleans up .mcp.json. Optionally leaves the upstream resource intact.",
+        "parameters": [
+          { "name": "service", "in": "query", "schema": { "type": "string" }, "description": "Service name. Omit with --all to remove every service in this stack." },
+          { "name": "all", "in": "query", "schema": { "type": "boolean", "default": false }, "description": "Remove every service. Requires typing `remove all` to confirm." },
+          { "name": "keepRemote", "in": "query", "schema": { "type": "boolean", "default": false }, "description": "Leave the provider-side resource untouched." }
+        ],
+        "responses": { "200": { "description": "Removal summary." } }
+      }
+    },
+    "/cli/list": {
+      "get": {
+        "tags": ["management"],
+        "operationId": "stack_list",
+        "summary": "List services configured in this stack.",
+        "responses": { "200": { "description": "Services array." } }
+      }
+    },
+    "/cli/info": {
+      "get": {
+        "tags": ["diagnostics"],
+        "operationId": "stack_info",
+        "summary": "Show everything Stack knows about a configured service.",
+        "description": "Prints provider, resource id, region, secret slots (with vault presence), MCP wiring, dashboard URL, and runs a fresh healthcheck.",
+        "parameters": [
+          { "name": "service", "in": "query", "required": true, "schema": { "type": "string" }, "description": "Service name." }
+        ],
+        "responses": { "200": { "description": "Service detail." } }
+      }
+    },
+    "/cli/status": {
+      "get": {
+        "tags": ["diagnostics"],
+        "operationId": "stack_status",
+        "summary": "Show stack health at a glance.",
+        "responses": { "200": { "description": "Status block." } }
+      }
+    },
+    "/cli/env": {
+      "get": {
+        "tags": ["diagnostics"],
+        "operationId": "stack_env",
+        "summary": "Inspect the effective env-var map for this stack.",
+        "description": "Has two subcommands: `stack env show` (which secrets are present in Phantom) and `stack env diff` (which declared secrets are missing).",
+        "parameters": [
+          { "name": "sub", "in": "query", "schema": { "type": "string", "enum": ["show", "diff"], "default": "show" }, "description": "Subcommand." },
+          { "name": "env", "in": "query", "schema": { "type": "string", "default": "dev" }, "description": "Environment overlay to preview (show only)." }
+        ],
+        "responses": { "200": { "description": "Env map." } }
+      }
+    },
+    "/cli/deps": {
+      "get": {
+        "tags": ["diagnostics"],
+        "operationId": "stack_deps",
+        "summary": "Show the service dependency graph for this stack.",
+        "description": "Renders an ASCII tree grouped by category, with every secret slot annotated beneath its service.",
+        "responses": { "200": { "description": "Dependency graph." } }
+      }
+    },
+    "/cli/doctor": {
+      "get": {
+        "tags": ["diagnostics"],
+        "operationId": "stack_doctor",
+        "summary": "Verify every service is reachable and credentials are valid.",
+        "description": "Exit code: 0 if all healthy, 1 if any service failed. With --fix, asks before re-running `stack add` for failing services.",
+        "parameters": [
+          { "name": "fix", "in": "query", "schema": { "type": "boolean", "default": false }, "description": "Attempt auto-remediation by re-running `stack add` for failing services." },
+          { "name": "all", "in": "query", "schema": { "type": "boolean", "default": false }, "description": "Run doctor across every registered project on this machine." },
+          { "name": "json", "in": "query", "schema": { "type": "boolean", "default": false }, "description": "Emit machine-readable JSON to stdout." }
+        ],
+        "responses": { "200": { "description": "Health report." } }
+      }
+    },
+    "/cli/exec": {
+      "get": {
+        "tags": ["management"],
+        "operationId": "stack_exec",
+        "summary": "Run a command with Phantom's secret proxy active.",
+        "description": "Thin wrapper over `phantom exec` so env vars with phm_ tokens get swapped for real secrets at the network layer.",
+        "parameters": [
+          { "name": "command", "in": "query", "required": true, "schema": { "type": "string" }, "description": "Command to run after the literal `--` separator." }
+        ],
+        "responses": { "200": { "description": "Spawned child process exit." } }
+      }
+    },
+    "/cli/sync": {
+      "get": {
+        "tags": ["management"],
+        "operationId": "stack_sync",
+        "summary": "Push secrets to a deployment platform.",
+        "parameters": [
+          { "name": "platform", "in": "query", "required": true, "schema": { "type": "string", "enum": ["vercel", "railway", "fly"] }, "description": "Target platform." }
+        ],
+        "responses": { "200": { "description": "Sync summary." } }
+      }
+    },
+    "/cli/open": {
+      "get": {
+        "tags": ["meta"],
+        "operationId": "stack_open",
+        "summary": "Open a service's dashboard in your browser.",
+        "parameters": [
+          { "name": "service", "in": "query", "required": true, "schema": { "type": "string" }, "description": "Service name." }
+        ],
+        "responses": { "200": { "description": "Browser spawned." } }
+      }
+    },
+    "/cli/login": {
+      "get": {
+        "tags": ["management"],
+        "operationId": "stack_login",
+        "summary": "Refresh OAuth / PAT credentials for a specific provider.",
+        "parameters": [
+          { "name": "service", "in": "query", "required": true, "schema": { "type": "string" }, "description": "Provider name." }
+        ],
+        "responses": { "200": { "description": "Auth refreshed." } }
+      }
+    },
+    "/cli/templates": {
+      "get": {
+        "tags": ["setup"],
+        "operationId": "stack_templates",
+        "summary": "List or apply starter stack templates.",
+        "parameters": [
+          { "name": "sub", "in": "query", "schema": { "type": "string", "enum": ["list", "apply"], "default": "list" }, "description": "Subcommand." },
+          { "name": "name", "in": "query", "schema": { "type": "string" }, "description": "Template name (apply only)." },
+          { "name": "continueOnError", "in": "query", "schema": { "type": "boolean", "default": true }, "description": "Keep going when a single service fails (apply only)." }
+        ],
+        "responses": { "200": { "description": "Template list or apply summary." } }
+      }
+    },
+    "/cli/providers": {
+      "get": {
+        "tags": ["meta"],
+        "operationId": "stack_providers",
+        "summary": "List every curated provider Stack can wire up.",
+        "responses": { "200": { "description": "Provider catalog." } }
+      }
+    },
+    "/cli/projects": {
+      "get": {
+        "tags": ["meta"],
+        "operationId": "stack_projects",
+        "summary": "Manage the cross-project registry at ~/.stack/projects.json.",
+        "parameters": [
+          { "name": "sub", "in": "query", "required": true, "schema": { "type": "string", "enum": ["list", "register", "remove", "where"] }, "description": "Subcommand." },
+          { "name": "target", "in": "query", "schema": { "type": "string" }, "description": "Project name or absolute path (remove/where)." }
+        ],
+        "responses": { "200": { "description": "Registry operation result." } }
+      }
+    },
+    "/cli/upgrade": {
+      "get": {
+        "tags": ["meta"],
+        "operationId": "stack_upgrade",
+        "summary": "Check npm for a newer @ashlr/stack release.",
+        "description": "Does not auto-install — prints an install hint.",
+        "responses": { "200": { "description": "Upgrade hint." } }
+      }
+    },
+    "/cli/completion": {
+      "get": {
+        "tags": ["meta"],
+        "operationId": "stack_completion",
+        "summary": "Emit shell completion for bash, zsh, or fish.",
+        "parameters": [
+          { "name": "shell", "in": "query", "required": true, "schema": { "type": "string", "enum": ["bash", "zsh", "fish"] }, "description": "Shell to emit completion for." }
+        ],
+        "responses": { "200": { "description": "Shell completion script (stdout)." } }
+      }
+    },
+    "/cli/ci": {
+      "get": {
+        "tags": ["meta"],
+        "operationId": "stack_ci",
+        "summary": "Scaffold CI integrations that run `stack doctor` on pushes + nightly.",
+        "parameters": [
+          { "name": "sub", "in": "query", "schema": { "type": "string", "enum": ["init"], "default": "init" }, "description": "Subcommand." },
+          { "name": "force", "in": "query", "schema": { "type": "boolean", "default": false }, "description": "Overwrite an existing stack-ci.yml." }
+        ],
+        "responses": { "200": { "description": "Workflow file written." } }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "StackToml": {
+        "type": "object",
+        "title": ".stack.toml",
+        "description": "Committed shape of a project's stack. Per-clone instance data lives in .stack.local.toml.",
+        "required": ["version", "project"],
+        "properties": {
+          "version": { "type": "string", "const": "1", "description": "Schema version." },
+          "project": {
+            "type": "object",
+            "required": ["name"],
+            "properties": {
+              "name": { "type": "string", "description": "Human-readable project name." },
+              "template": { "type": "string", "description": "Optional: template slug this project was scaffolded from." }
+            }
+          },
+          "services": {
+            "type": "object",
+            "description": "Map from service slot name (usually the provider name) to its ServiceEntry.",
+            "additionalProperties": { "$ref": "#/components/schemas/ServiceEntry" }
+          }
+        }
+      },
+      "ServiceEntry": {
+        "type": "object",
+        "title": "Service entry",
+        "description": "One wired service inside a stack.",
+        "required": ["provider"],
+        "properties": {
+          "provider": { "type": "string", "description": "Provider name (matches `stack add <name>`)." },
+          "secrets": {
+            "type": "array",
+            "description": "Secret slot names written into Phantom.",
+            "items": { "type": "string" }
+          },
+          "mcp": { "type": "string", "description": "MCP server id wired into .mcp.json, if any." },
+          "region": { "type": "string", "description": "Region for region-scoped providers." }
+        }
+      },
+      "ProviderEntry": {
+        "type": "object",
+        "title": "Provider",
+        "description": "One curated provider Stack knows how to wire.",
+        "required": ["name", "category", "authKind", "secrets"],
+        "properties": {
+          "name": { "type": "string", "description": "CLI-facing name (what you type after `stack add`)." },
+          "displayName": { "type": "string" },
+          "category": {
+            "type": "string",
+            "enum": ["Database", "Deploy", "Cloud", "AI", "Analytics", "Errors", "Payments", "Code", "Tickets", "Email", "Auth"]
+          },
+          "authKind": {
+            "type": "string",
+            "enum": ["oauth_pkce", "oauth_device", "pat", "api_key"],
+            "description": "Auth flow type."
+          },
+          "secrets": { "type": "array", "items": { "type": "string" } },
+          "mcp": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "detail": { "type": "string" },
+              "preview": { "type": "boolean" }
+            }
+          },
+          "dashboard": { "type": "string", "format": "uri" },
+          "docs": { "type": "string", "format": "uri" }
+        }
+      }
+    }
+  }
+}

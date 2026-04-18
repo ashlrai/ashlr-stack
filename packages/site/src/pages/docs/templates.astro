@@ -2,12 +2,38 @@
 import Docs from "~/layouts/Docs.astro";
 import { Code } from "astro:components";
 import { TEMPLATES_REF } from "~/lib/templates-ref";
+import { itemListSchema } from "~/lib/structured-data";
+import { SITE_URL } from "~/lib/og";
+
+const pageUrl = `${SITE_URL}/docs/templates/`;
+
+const templateList = itemListSchema({
+  name: "Ashlr Stack starter templates",
+  description: `${TEMPLATES_REF.length} opinionated starter stacks Stack can scaffold and provision with one command.`,
+  itemListOrder: "Unordered",
+  url: pageUrl,
+  items: TEMPLATES_REF.map((t) => ({
+    type: "SoftwareSourceCode",
+    name: t.displayName,
+    description: `${t.tagline} ${t.blurb}`,
+    url: `${pageUrl}#template-${t.name}`,
+    extra: {
+      alternateName: t.name,
+      codeSampleType: "template",
+      programmingLanguage: "toml",
+      targetProduct: { "@id": `${SITE_URL}/#software` },
+      text: `stack templates apply ${t.name}`,
+      keywords: t.services.map((s) => s.provider).join(", "),
+    },
+  })),
+});
 ---
 
 <Docs
   title="Templates"
   description={`${TEMPLATES_REF.length} opinionated starter stacks. Pick one and \`stack init --template <name>\` writes the \`.stack.toml\`; \`stack templates apply <name>\` runs \`stack add\` for every service.`}
   eyebrow="Reference"
+  extraSchemas={[templateList]}
 >
   <h2>How templates work</h2>
   <p>

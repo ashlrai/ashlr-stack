@@ -1,0 +1,42 @@
+# Ashlr Stack — committed shape. Defines which services this project uses.
+# Safe to share in git; secret *values* live in Phantom, not here.
+#
+# Stack dogfoods its own product — this file is the real `.stack.toml` for the
+# ashlrai/ashlr-stack monorepo. The services below are actually used:
+#   - GitHub       repo, CI, actions
+#   - Vercel       deploys stack.ashlr.ai + /docs
+#   - Anthropic    Claude Code plugin + MCP authoring
+#   - OpenAI       xAI / Codex compat testing
+#   - Cloudflare   (optional alt deploy target for the site)
+
+[stack]
+version = "1"
+template = "self-host"
+
+[services.github]
+provider = "github"
+secrets = ["GITHUB_TOKEN"]
+mcp = "github"
+
+[services.vercel]
+provider = "vercel"
+secrets = ["VERCEL_TOKEN"]
+
+[services.anthropic]
+provider = "anthropic"
+secrets = ["ANTHROPIC_API_KEY"]
+
+[services.openai]
+provider = "openai"
+secrets = ["OPENAI_API_KEY"]
+
+[services.cloudflare]
+provider = "cloudflare"
+secrets = ["CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID"]
+
+[[environments]]
+name = "dev"
+default = true
+
+[[environments]]
+name = "prod"

@@ -80,13 +80,30 @@ for (const p of PROVIDERS) {
                           </span>
                         )}
                       </div>
-                      <span class="text-[10px] mono text-ink-500 opacity-0 group-hover:opacity-100 transition-opacity">
-                        stack add
-                      </span>
+                      <div class="flex items-center gap-1.5">
+                        {p.mcp && (
+                          <span
+                            class="text-[9px] mono font-semibold tracking-[0.08em] uppercase px-1.5 py-0.5 rounded border border-magenta-500/30 bg-magenta-500/10 text-magenta-300"
+                            title="Ships an official MCP server — Stack wires it into .mcp.json"
+                          >
+                            MCP
+                          </span>
+                        )}
+                        <span class="text-[10px] mono text-ink-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                          stack add
+                        </span>
+                      </div>
                     </div>
 
                     <div class="relative mt-3">
-                      <div class="text-sm font-medium text-white tracking-tight">{p.name}</div>
+                      <div class="flex items-center gap-2">
+                        <span class="text-sm font-medium text-white tracking-tight">{p.name}</span>
+                        {p.auth && (
+                          <span class="text-[9px] mono text-ink-500 tracking-wide">
+                            · {p.auth}
+                          </span>
+                        )}
+                      </div>
                       <div class="text-[11px] text-ink-400 mt-0.5 leading-snug">{p.blurb}</div>
                     </div>
                   </div>

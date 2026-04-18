@@ -1,0 +1,66 @@
+name: Bug report
+description: Something broken in the CLI, MCP server, plugin, or a provider.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a bug. Stack is pre-alpha so specifics help a lot.
+
+  - type: input
+    id: version
+    attributes:
+      label: Stack version
+      description: Output of `stack --version`.
+      placeholder: "0.1.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - CLI command
+        - Provider adapter
+        - MCP server
+        - Claude Code plugin
+        - Landing site / docs
+        - Phantom integration
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: provider
+    attributes:
+      label: Provider (if applicable)
+      description: Supabase, Neon, Vercel, etc.
+      placeholder: supabase
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Paste the exact command you ran and what happened.
+      placeholder: |
+        $ stack add supabase
+        ✗ SUPABASE_CREATE_FAILED: Supabase project creation failed (429): …
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+      placeholder: "Project created, secrets written to Phantom, MCP entry added."
+
+  - type: textarea
+    id: env
+    attributes:
+      label: Environment
+      placeholder: |
+        OS: macOS 15.4
+        Shell: zsh 5.9
+        Bun: 1.3.10
+        Phantom: 0.4.0

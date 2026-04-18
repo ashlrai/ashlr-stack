@@ -1,12 +1,57 @@
 ---
 import Docs from "~/layouts/Docs.astro";
 import { Code } from "astro:components";
+import { howToSchema } from "~/lib/structured-data";
+import { SITE_URL } from "~/lib/og";
+
+const pageUrl = `${SITE_URL}/docs/quickstart/`;
+
+const howTo = howToSchema({
+  name: "Install Ashlr Stack and provision Supabase",
+  description:
+    "From a fresh terminal to a provisioned Supabase project with MCP wired into Claude Code.",
+  totalTime: "PT5M",
+  url: pageUrl,
+  steps: [
+    {
+      name: "Install Stack",
+      text: "Install the @ashlr/stack CLI via curl, bun, npm, or Homebrew so the `stack` binary is on your PATH.",
+      url: `${pageUrl}#1-install-stack`,
+    },
+    {
+      name: "Verify the install",
+      text: "Run `stack status` to confirm the CLI is reachable and Phantom is detected.",
+      url: `${pageUrl}#2-verify-the-install`,
+    },
+    {
+      name: "Initialise a project",
+      text: "Run `stack init` inside your repo to write .stack.toml (committed) and .stack.local.toml (gitignored).",
+      url: `${pageUrl}#3-initialise-a-project`,
+    },
+    {
+      name: "Add your first service",
+      text: "Run `stack add supabase` to provision a Supabase project, store secrets in Phantom, and wire .mcp.json.",
+      url: `${pageUrl}#4-add-your-first-service`,
+    },
+    {
+      name: "Sanity-check with doctor",
+      text: "Run `stack doctor` to verify every provider is reachable and its stored credentials are still valid.",
+      url: `${pageUrl}#5-sanity-check-with-doctor`,
+    },
+    {
+      name: "Run your app with secrets injected",
+      text: "Run your dev server via `stack exec -- bun dev` so Phantom resolves phm_ tokens to real secret values at spawn.",
+      url: `${pageUrl}#6-run-your-app-with-secrets-injected`,
+    },
+  ],
+});
 ---
 
 <Docs
   title="Quickstart"
   description="From a fresh terminal to a provisioned Supabase project with MCP wired into Claude Code — in about five minutes."
   eyebrow="Getting started"
+  extraSchemas={[howTo]}
 >
   <h2>Before you start</h2>
   <p>

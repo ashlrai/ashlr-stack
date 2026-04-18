@@ -1,12 +1,88 @@
 ---
 import Docs from "~/layouts/Docs.astro";
 import { Code } from "astro:components";
+import { faqPageSchema } from "~/lib/structured-data";
+import { SITE_URL } from "~/lib/og";
+
+const pageUrl = `${SITE_URL}/docs/faq/`;
+
+const faq = faqPageSchema(
+  [
+    {
+      question: "Is this production-ready?",
+      answer:
+        "No — Stack is v0.1, pre-alpha. Interfaces are still moving, error messages are still being hardened, and some providers have paste-a-token fallbacks because their OAuth apps aren't registered yet. The data model (two-file .stack.toml split, Phantom-gated secrets, MCP wiring) is stable. The CLI surface will add commands but won't remove them. Breaking changes will land in the 0.x window and stop at 1.0.",
+    },
+    {
+      question: "Why is Phantom required?",
+      answer:
+        "Because Stack otherwise has nowhere to put your secrets except .env on disk. That's the thing we're specifically trying to avoid. Phantom gives us an encrypted vault, a uniform way to reveal secrets at exec time, and a clean story for syncing secrets to CI. If you have an existing secret manager (1Password, Doppler, Infisical), we'd rather integrate Phantom with it than compete — Phantom Cloud is designed to be the last-mile layer, not the source of truth.",
+    },
+    {
+      question: "Which providers still fall back to paste-a-token?",
+      answer:
+        "Neon, Turso, Vercel, Cloudflare, and Sentry use PAT paste with automated verification. Railway, Fly.io, Render, Upstash, Convex, Linear, Resend, PostHog, Clerk, Stripe, OpenAI, Anthropic, xAI, and DeepSeek use API key paste. Firebase uses a service-account JSON paste. AWS uses an IAM access key pair paste. OAuth (PKCE or device flow) is live today for Supabase and GitHub.",
+    },
+    {
+      question: "Does Stack touch the internet without asking?",
+      answer:
+        "Yes — during stack add (logs into the provider, creates upstream resources, fetches credentials), stack doctor (healthchecks each provider), stack upgrade (pings npm for a newer version), stack login (refreshes OAuth/PAT), stack sync (pushes secrets to Vercel/Railway/Fly), and stack clone (git clone the specified URL, then scans locally). Zero telemetry — Stack never calls home.",
+    },
+    {
+      question: "What happens if I delete .stack.toml?",
+      answer:
+        "Your upstream resources stay exactly as they were. Stack loses its map of what was wired. The secrets in Phantom also stay put. Running stack init again starts fresh. To actually tear things down, use `stack remove <service>` (deprovisions upstream + removes secrets + cleans up .mcp.json) or `stack remove --all --keepRemote` (removes local state only).",
+    },
+    {
+      question: "Can I commit .env.local with phm_ tokens?",
+      answer:
+        "Technically yes — a phm_ token is a meaningless placeholder without the vault. But we don't recommend it; the community is still learning to recognise Phantom tokens, and a leaked token combined with a leaked passphrase is worse than nothing. Add .env.local to .gitignore and keep the vault story clean.",
+    },
+    {
+      question: "How do I use Stack with a monorepo?",
+      answer:
+        "Each .stack.toml is per-project, and most monorepos want one stack per app. Run stack init inside each app directory. The cross-project registry (`stack projects list`) will show each one, and `stack doctor --all` will run healthchecks across the whole machine. Shared secrets stay in one Phantom vault — Phantom is machine-wide, not per-project — so de-duping just works.",
+    },
+    {
+      question: "What does stack doctor --fix actually do?",
+      answer:
+        "For each service with a failing healthcheck, Stack asks before re-running stack add. That may kick off a browser OAuth dance or provision a new resource on your behalf, so we force an interactive confirm. Declining is always safe; the service stays marked as broken and you can fix it by hand.",
+    },
+    {
+      question: "Why not just use .env files like everyone else?",
+      answer:
+        "Nothing stops you. Stack's job is to collapse the 45-minute 'tab-hop to create these 8 services, then copy 20 keys into .env' step into one command. If your project has one API key and no MCPs, you don't need Stack. Stack earns its keep when your stack has 5+ services, two or more have MCP servers worth wiring, or you're onboarding someone new.",
+    },
+    {
+      question: "Can I use a template without its MCP servers?",
+      answer:
+        "Yes. Apply the template, then edit .stack.toml and remove the mcp = '…' line for services you don't want Claude/Cursor to reach into. On the next stack add or stack remove, .mcp.json gets regenerated accordingly.",
+    },
+    {
+      question: "Where does Stack store OAuth access tokens?",
+      answer:
+        "In Phantom, under a per-provider slot name (e.g. SUPABASE_STACK_PAT, GITHUB_TOKEN). That means your provider auth is subject to the same E2E encryption as your application secrets. Clear them with `phantom remove <slot>` if you want to force a fresh OAuth.",
+    },
+    {
+      question: "How do I uninstall Stack?",
+      answer:
+        "Optionally run `stack remove --all` to deprovision everything Stack created. Then `bun remove -g @ashlr/stack` (or `npm uninstall -g @ashlr/stack`) to uninstall the CLI. Drop the global state with `rm -rf ~/.stack/`. Phantom is a separate install — leave it alone unless you also want to nuke every secret.",
+    },
+    {
+      question: "Where do I report bugs or request providers?",
+      answer:
+        "File issues at github.com/ashlr-ai/stack/issues. Provider requests are most useful when they include the secret slots you'd expect, whether the provider has an API for creating resources or only reading them, and whether there's an existing MCP server worth wiring.",
+    },
+  ],
+  pageUrl,
+);
 ---
 
 <Docs
   title="FAQ"
   description="The honest answers. Pre-alpha caveats, the Phantom requirement, OAuth app status, and what happens when things go sideways."
   eyebrow="Help"
+  extraSchemas={[faq]}
 >
   <h2>Is this production-ready?</h2>
   <p>

@@ -5,6 +5,8 @@ import {
   PROVIDER_CATEGORIES,
   groupByCategory,
 } from "~/lib/providers-ref";
+import { itemListSchema } from "~/lib/structured-data";
+import { SITE_URL } from "~/lib/og";
 
 const grouped = groupByCategory();
 
@@ -24,12 +26,54 @@ function authLabel(kind: string): string {
 }
 
 const mcpCount = PROVIDERS_REF.filter((p) => p.mcp).length;
+
+const pageUrl = `${SITE_URL}/docs/providers/`;
+
+const providerList = itemListSchema({
+  name: "Ashlr Stack providers",
+  description: `${PROVIDERS_REF.length} curated providers Stack can authenticate, provision, and wire into your project.`,
+  itemListOrder: "Unordered",
+  url: pageUrl,
+  items: PROVIDERS_REF.map((p) => ({
+    type: "SoftwareApplication",
+    name: p.displayName,
+    description: p.blurb,
+    url: `${pageUrl}#provider-${p.name}`,
+    extra: {
+      alternateName: p.name,
+      applicationCategory: `${p.category} provider`,
+      sameAs: [p.dashboard, p.docs],
+      additionalProperty: [
+        {
+          "@type": "PropertyValue",
+          name: "authKind",
+          value: authLabel(p.authKind),
+        },
+        {
+          "@type": "PropertyValue",
+          name: "secretSlots",
+          value: p.secrets.join(", "),
+        },
+        ...(p.mcp
+          ? [
+              {
+                "@type": "PropertyValue",
+                name: "mcpServer",
+                value: p.mcp.name,
+              },
+            ]
+          : []),
+      ],
+    },
+  })),
+});
 ---
 
 <Docs
   title="Providers"
   description={`${PROVIDERS_REF.length} curated providers — what each one wires, which ones bring an MCP server online, and how auth works for each.`}
   eyebrow="Reference"
+  extraSchemas={[providerList]}
 >
   <h2>Overview</h2>
   <p>

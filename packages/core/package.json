@@ -1,8 +1,30 @@
 {
   "name": "@ashlr/stack-core",
   "version": "0.1.0",
-  "description": "Ashlr Stack core — provider adapters, .stack.toml config, Phantom integration.",
+  "description": "Ashlr Stack core — provider adapters, .stack.toml config, Phantom integration. Shared logic behind the Stack CLI and MCP server.",
   "license": "MIT",
+  "author": {
+    "name": "Mason Wyatt",
+    "url": "https://github.com/ashlrai"
+  },
+  "homepage": "https://stack.ashlr.ai",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ashlrai/ashlr-stack.git",
+    "directory": "packages/core"
+  },
+  "bugs": "https://github.com/ashlrai/ashlr-stack/issues",
+  "keywords": [
+    "ashlr",
+    "stack",
+    "provider",
+    "adapter",
+    "mcp",
+    "phantom-secrets",
+    "config",
+    "oauth",
+    "pkce"
+  ],
   "type": "module",
   "main": "./src/index.ts",
   "exports": {
@@ -11,6 +33,19 @@
     "./phantom": "./src/phantom.ts",
     "./config": "./src/config.ts",
     "./mcp-writer": "./src/mcp-writer.ts"
+  },
+  "files": [
+    "src/**/*",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "engines": {
+    "bun": ">=1.2.0",
+    "node": ">=20"
   },
   "dependencies": {
     "smol-toml": "^1.3.1"

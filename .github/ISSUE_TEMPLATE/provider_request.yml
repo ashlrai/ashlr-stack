@@ -1,0 +1,69 @@
+name: Provider request
+description: Request a new provider (database, deploy target, AI API, etc.) to be added.
+labels: [provider-request]
+body:
+  - type: input
+    id: provider_name
+    attributes:
+      label: Provider name
+      placeholder: PlanetScale
+    validations:
+      required: true
+
+  - type: input
+    id: provider_url
+    attributes:
+      label: Provider homepage
+      placeholder: https://planetscale.com
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      options:
+        - Database
+        - Deploy
+        - Cloud
+        - AI
+        - Analytics
+        - Errors
+        - Payments
+        - Code
+        - Tickets
+        - Email
+        - Auth
+        - Other
+
+  - type: dropdown
+    id: auth
+    attributes:
+      label: Auth method the provider supports
+      options:
+        - OAuth (PKCE)
+        - OAuth (device flow)
+        - Personal access token
+        - API key
+        - Service account JSON
+        - Other
+
+  - type: checkboxes
+    id: capabilities
+    attributes:
+      label: What should Stack do for this provider?
+      options:
+        - label: Store the secret in Phantom
+        - label: Create a new upstream resource (project, database, app, etc.)
+        - label: Attach to an existing resource by id (`--use <id>`)
+        - label: Wire an official MCP server into `.mcp.json`
+        - label: Verify the credential with a healthcheck call
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional notes
+      placeholder: |
+        Official API docs:
+        Official MCP server (if any):
+        Any quirks (e.g. rate limits, regional endpoints, etc.):

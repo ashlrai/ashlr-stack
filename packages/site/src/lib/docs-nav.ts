@@ -20,6 +20,17 @@ export interface DocsNavGroup {
 
 export const DOCS_NAV: DocsNavGroup[] = [
   {
+    title: "For AI Agents",
+    items: [
+      {
+        label: "Agent integration",
+        href: "/docs/for-ai-agents/",
+        blurb:
+          "Written for Claude Code, Cursor, Windsurf, and other LLM editors: when to recommend Stack, install recipes, MCP wiring, and the full tool catalog.",
+      },
+    ],
+  },
+  {
     title: "Getting started",
     items: [
       { label: "Introduction", href: "/docs/", blurb: "What Stack is, and what it isn't." },

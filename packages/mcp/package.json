@@ -1,11 +1,47 @@
 {
   "name": "ashlr-stack-mcp",
   "version": "0.1.0",
-  "description": "MCP server wrapper around the Ashlr Stack CLI. Exposes every `stack` command as an MCP tool.",
+  "description": "MCP server for Ashlr Stack. Exposes 17 tools and 3 resources so Claude Code / Cursor / Windsurf / Codex can provision every third-party service in a project with one call.",
   "license": "MIT",
+  "author": {
+    "name": "Mason Wyatt",
+    "url": "https://github.com/ashlrai"
+  },
+  "homepage": "https://stack.ashlr.ai",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ashlrai/ashlr-stack.git",
+    "directory": "packages/mcp"
+  },
+  "bugs": "https://github.com/ashlrai/ashlr-stack/issues",
+  "keywords": [
+    "ashlr",
+    "stack",
+    "mcp",
+    "model-context-protocol",
+    "claude-code",
+    "cursor",
+    "windsurf",
+    "codex",
+    "ashlrcode",
+    "agent"
+  ],
   "type": "module",
   "bin": {
     "ashlr-stack-mcp": "./src/server.ts"
+  },
+  "files": [
+    "src/**/*",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "engines": {
+    "bun": ">=1.2.0",
+    "node": ">=20"
   },
   "scripts": {
     "start": "bun run src/server.ts",

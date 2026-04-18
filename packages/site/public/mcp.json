@@ -1,0 +1,200 @@
+{
+  "$schema": "https://raw.githubusercontent.com/modelcontextprotocol/specification/main/schema/schema.json",
+  "name": "ashlr-stack",
+  "description": "Ashlr Stack as an MCP server. Exposes the `stack` CLI as callable tools for any MCP-capable LLM editor (Claude Code, Cursor, Windsurf, Zed). Install: `bunx ashlr-stack-mcp` (or `npx ashlr-stack-mcp`).",
+  "version": "0.1.0",
+  "homepage": "https://stack.ashlr.ai",
+  "repository": "https://github.com/ashlrai/ashlr-stack",
+  "license": "MIT",
+  "install": {
+    "command": "bunx",
+    "args": ["ashlr-stack-mcp"],
+    "mcpConfigSnippet": {
+      "mcpServers": {
+        "stack": {
+          "command": "bunx",
+          "args": ["ashlr-stack-mcp"]
+        }
+      }
+    }
+  },
+  "tools": [
+    {
+      "name": "stack_init",
+      "description": "Scaffold a new .stack.toml in the current directory.",
+      "cli": "stack init --noInteractive [--template <name>] [--force]",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "template": { "type": "string", "description": "Optional starter template name." },
+          "force": { "type": "boolean", "description": "Overwrite an existing .stack.toml." }
+        },
+        "required": []
+      }
+    },
+    {
+      "name": "stack_import",
+      "description": "Import an existing .env file into Phantom + .stack.toml.",
+      "cli": "stack import [--from <path>] [--dryRun]",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "from": { "type": "string", "description": "Path to the .env file (default: .env)." },
+          "dryRun": { "type": "boolean", "description": "Preview without writing." }
+        },
+        "required": []
+      }
+    },
+    {
+      "name": "stack_scan",
+      "description": "Detect providers this repo uses by reading package.json / requirements.txt / config files.",
+      "cli": "stack scan [--path <dir>] [--confidence low|medium|high]",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": { "type": "string", "description": "Directory to scan (default: cwd)." },
+          "confidence": { "type": "string", "enum": ["low", "medium", "high"], "description": "Minimum confidence (default: medium)." }
+        },
+        "required": []
+      }
+    },
+    {
+      "name": "stack_add",
+      "description": "Provision a service and wire its secrets + MCP entry.",
+      "cli": "stack add <service> [--use <id>]",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "service": { "type": "string", "description": "Service name (e.g. supabase, neon, vercel)." },
+          "use": { "type": "string", "description": "Existing resource id to attach to." }
+        },
+        "required": ["service"]
+      }
+    },
+    {
+      "name": "stack_remove",
+      "description": "Remove a service from the stack (vault entries and MCP config).",
+      "cli": "stack remove <service> [--keepRemote]",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "service": { "type": "string", "description": "Service name." },
+          "keepRemote": { "type": "boolean", "description": "Leave the provider-side resource untouched." }
+        },
+        "required": ["service"]
+      }
+    },
+    {
+      "name": "stack_list",
+      "description": "List services configured in this stack.",
+      "cli": "stack list",
+      "inputSchema": { "type": "object", "properties": {}, "required": [] }
+    },
+    {
+      "name": "stack_info",
+      "description": "Deep-dive on a single service: resource, region, auth, secrets, MCP wiring, health.",
+      "cli": "stack info <service>",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "service": { "type": "string", "description": "Service name." }
+        },
+        "required": ["service"]
+      }
+    },
+    {
+      "name": "stack_status",
+      "description": "Show Phantom + services + config at a glance.",
+      "cli": "stack status",
+      "inputSchema": { "type": "object", "properties": {}, "required": [] }
+    },
+    {
+      "name": "stack_env_show",
+      "description": "Show which declared secrets are present in the Phantom vault (masked).",
+      "cli": "stack env show",
+      "inputSchema": { "type": "object", "properties": {}, "required": [] }
+    },
+    {
+      "name": "stack_env_diff",
+      "description": "Report which declared secrets are missing from the Phantom vault.",
+      "cli": "stack env diff",
+      "inputSchema": { "type": "object", "properties": {}, "required": [] }
+    },
+    {
+      "name": "stack_doctor",
+      "description": "Verify every service is reachable and credentials are valid.",
+      "cli": "stack doctor [--fix] [--all] [--json]",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fix": { "type": "boolean", "description": "Attempt auto-remediation." },
+          "all": { "type": "boolean", "description": "Run across every registered project." },
+          "json": { "type": "boolean", "description": "Machine-readable JSON output." }
+        },
+        "required": []
+      }
+    },
+    {
+      "name": "stack_sync",
+      "description": "Push secrets to a deployment platform (via phantom sync).",
+      "cli": "stack sync --platform <name>",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "platform": { "type": "string", "enum": ["vercel", "railway", "fly"] }
+        },
+        "required": ["platform"]
+      }
+    },
+    {
+      "name": "stack_providers",
+      "description": "List every curated provider Stack can wire up (grouped by category).",
+      "cli": "stack providers",
+      "inputSchema": { "type": "object", "properties": {}, "required": [] }
+    },
+    {
+      "name": "stack_projects_list",
+      "description": "List every Stack-enabled project on this machine.",
+      "cli": "stack projects list",
+      "inputSchema": { "type": "object", "properties": {}, "required": [] }
+    },
+    {
+      "name": "stack_deps",
+      "description": "Show the service dependency graph for the current stack.",
+      "cli": "stack deps",
+      "inputSchema": { "type": "object", "properties": {}, "required": [] }
+    },
+    {
+      "name": "stack_templates_list",
+      "description": "List available starter stack templates.",
+      "cli": "stack templates list",
+      "inputSchema": { "type": "object", "properties": {}, "required": [] }
+    },
+    {
+      "name": "stack_upgrade",
+      "description": "Check npm for a newer @ashlr/stack release.",
+      "cli": "stack upgrade",
+      "inputSchema": { "type": "object", "properties": {}, "required": [] }
+    }
+  ],
+  "resources": [
+    {
+      "uri": "stack://current/.stack.toml",
+      "name": ".stack.toml (this project)",
+      "description": "Committed shape of the current project's stack.",
+      "mimeType": "application/toml"
+    },
+    {
+      "uri": "stack://current/.stack.local.toml",
+      "name": ".stack.local.toml (local instance)",
+      "description": "Local instance data (resource ids, project_id). Gitignored.",
+      "mimeType": "application/toml"
+    },
+    {
+      "uri": "stack://current/.mcp.json",
+      "name": ".mcp.json (MCP wiring)",
+      "description": "Currently-wired MCP servers.",
+      "mimeType": "application/json"
+    }
+  ]
+}

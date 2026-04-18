@@ -31,6 +31,15 @@ export interface Props {
    * schemas. Sub-pages set this to false to skip the SoftwareApplication entry.
    */
   homepageSchema?: boolean;
+  /**
+   * Additional JSON-LD schema objects to emit alongside the defaults. Used by
+   * docs pages to attach TechArticle / HowTo / FAQPage / ItemList data.
+   */
+  extraSchemas?: Record<string, unknown>[];
+  /** rel="prev" pagination link (absolute or site-root-relative). */
+  prevLink?: string;
+  /** rel="next" pagination link (absolute or site-root-relative). */
+  nextLink?: string;
 }
 
 const {
@@ -42,6 +51,9 @@ const {
   noindex = false,
   breadcrumbs,
   homepageSchema = true,
+  extraSchemas,
+  prevLink,
+  nextLink,
 } = Astro.props;
 
 const canonical =
@@ -65,6 +77,19 @@ if (homepageSchema) {
 if (breadcrumbs && breadcrumbs.length > 0) {
   schemas.push(breadcrumbSchema(breadcrumbs));
 }
+if (extraSchemas && extraSchemas.length > 0) {
+  schemas.push(...extraSchemas);
+}
+
+function toAbsoluteLink(pathOrUrl: string): string {
+  if (/^https?:\/\//i.test(pathOrUrl)) return pathOrUrl;
+  const base = (Astro.site ?? new URL(SITE_URL + "/")).toString().replace(/\/$/, "");
+  if (pathOrUrl.startsWith("/")) return base + pathOrUrl;
+  return `${base}/${pathOrUrl}`;
+}
+
+const absolutePrev = prevLink ? toAbsoluteLink(prevLink) : undefined;
+const absoluteNext = nextLink ? toAbsoluteLink(nextLink) : undefined;
 ---
 
 <!doctype html>
@@ -97,6 +122,10 @@ if (breadcrumbs && breadcrumbs.length > 0) {
     <link rel="canonical" href={canonical} />
     <meta name="robots" content={robots} />
     <meta name="googlebot" content={robots} />
+
+    <!-- Pagination hints (rel=prev/next) — used by AI crawlers + classic SEO. -->
+    {absolutePrev && <link rel="prev" href={absolutePrev} />}
+    {absoluteNext && <link rel="next" href={absoluteNext} />}
 
     <!-- Title + description -->
     <title>{title}</title>

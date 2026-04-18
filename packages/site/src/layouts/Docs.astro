@@ -5,20 +5,81 @@ import DocsSidebar from "~/components/docs/DocsSidebar.astro";
 import DocsToc from "~/components/docs/DocsToc.astro";
 import PageNav from "~/components/docs/PageNav.astro";
 import Footer from "~/components/Footer.astro";
+import { neighboursOf } from "~/lib/docs-nav";
+import { SITE_URL } from "~/lib/og";
+import {
+  techArticleSchema,
+  type BreadcrumbItem,
+} from "~/lib/structured-data";
 
 interface Props {
   title: string;
   description?: string;
   /** Optional page-level eyebrow shown above the H1. */
   eyebrow?: string;
+  /** Extra JSON-LD blocks (HowTo / FAQPage / ItemList) for this page. */
+  extraSchemas?: Record<string, unknown>[];
+  /**
+   * ISO-8601 publish / modify dates for the TechArticle schema. Both default
+   * to 2026-04-17 (docs launch).
+   */
+  datePublished?: string;
+  dateModified?: string;
 }
 
-const { title, description, eyebrow } = Astro.props;
+const {
+  title,
+  description,
+  eyebrow,
+  extraSchemas = [],
+  datePublished = "2026-04-17",
+  dateModified = "2026-04-17",
+} = Astro.props;
+
 const pathname = Astro.url.pathname;
 const pageTitle = `${title} · Ashlr Stack docs`;
+const canonical = new URL(pathname, Astro.site ?? SITE_URL).toString();
+
+// Breadcrumbs: Home → Docs → <current page title>.
+// The index page is just Home → Docs.
+const isDocsHome = pathname === "/docs" || pathname === "/docs/";
+const breadcrumbs: BreadcrumbItem[] = isDocsHome
+  ? [
+      { name: "Home", url: "/" },
+      { name: "Docs", url: "/docs/" },
+    ]
+  : [
+      { name: "Home", url: "/" },
+      { name: "Docs", url: "/docs/" },
+      { name: title, url: pathname },
+    ];
+
+// Prev/next adjacency from the sidebar ordering.
+const { prev, next } = neighboursOf(pathname);
+
+// Per-page TechArticle schema.
+const techArticle = techArticleSchema({
+  headline: title,
+  description,
+  url: canonical,
+  datePublished,
+  dateModified,
+  section: eyebrow,
+});
+
+const allExtraSchemas: Record<string, unknown>[] = [techArticle, ...extraSchemas];
 ---
 
-<Base title={pageTitle} description={description}>
+<Base
+  title={pageTitle}
+  description={description}
+  breadcrumbs={breadcrumbs}
+  homepageSchema={false}
+  extraSchemas={allExtraSchemas}
+  prevLink={prev?.href}
+  nextLink={next?.href}
+  ogType="article"
+>
   <DocsHeader />
 
   <div class="mx-auto max-w-[1400px] px-5 sm:px-8 pt-8 sm:pt-10 pb-24">
@@ -26,20 +87,36 @@ const pageTitle = `${title} · Ashlr Stack docs`;
       <DocsSidebar current={pathname} />
 
       <div class="flex-1 min-w-0 flex items-start gap-10">
-        <article class="flex-1 min-w-0 docs-prose">
+        <article
+          class="flex-1 min-w-0 docs-prose"
+          itemscope
+          itemtype="https://schema.org/TechArticle"
+        >
+          <meta itemprop="datePublished" content={datePublished} />
+          <meta itemprop="dateModified" content={dateModified} />
+          <meta itemprop="inLanguage" content="en-US" />
+          <link itemprop="mainEntityOfPage" href={canonical} />
           {eyebrow && (
-            <div class="chip mb-5">{eyebrow}</div>
+            <div class="chip mb-5" itemprop="articleSection">{eyebrow}</div>
           )}
-          <h1 class="text-[40px] sm:text-[48px] leading-[1.04] font-semibold tracking-[-0.03em] text-white mb-4">
+          <h1
+            class="text-[40px] sm:text-[48px] leading-[1.04] font-semibold tracking-[-0.03em] text-white mb-4"
+            itemprop="headline name"
+          >
             {title}
           </h1>
           {description && (
-            <p class="text-lg text-ink-300 leading-relaxed mb-10 max-w-[68ch]">
+            <p
+              class="text-lg text-ink-300 leading-relaxed mb-10 max-w-[68ch]"
+              itemprop="description"
+            >
               {description}
             </p>
           )}
 
-          <slot />
+          <div itemprop="articleBody">
+            <slot />
+          </div>
 
           <PageNav href={pathname} />
         </article>
@@ -88,6 +165,29 @@ const pageTitle = `${title} · Ashlr Stack docs`;
     background: var(--color-magenta-500);
     border-radius: 2px;
     opacity: 0.75;
+  }
+
+  /* ── Hover-revealed anchor links for H2/H3 ─────────────────────────── */
+
+  .docs-prose .docs-anchor {
+    opacity: 0;
+    margin-left: 0.4rem;
+    text-decoration: none !important;
+    color: var(--color-magenta-300);
+    font-weight: 400;
+    transition: opacity 150ms ease, color 150ms ease;
+    font-size: 0.85em;
+    vertical-align: baseline;
+  }
+
+  .docs-prose h2:hover .docs-anchor,
+  .docs-prose h3:hover .docs-anchor,
+  .docs-prose .docs-anchor:focus {
+    opacity: 1;
+  }
+
+  .docs-prose .docs-anchor:hover {
+    color: var(--color-magenta-200);
   }
 
   .docs-prose h3 {
@@ -335,3 +435,62 @@ const pageTitle = `${title} · Ashlr Stack docs`;
     background: rgba(0, 0, 0, 0.45) !important;
   }
 </style>
+
+<script>
+  /**
+   * Attach a hover-revealed "#" anchor link to every H2 and H3 inside the
+   * docs prose container so that deep links like /docs/cli#init work for
+   * every heading, including those authored without an explicit `id`.
+   *
+   * Runs independently of DocsToc — this script only attaches the anchor,
+   * the IntersectionObserver-backed TOC script is separate. Both idempotent
+   * via the `data-has-anchor` marker.
+   */
+  function slugifyHeading(input: string): string {
+    return input
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 80);
+  }
+
+  function ensureHeadingIds() {
+    const article = document.querySelector<HTMLElement>(".docs-prose");
+    if (!article) return;
+
+    const headings = Array.from(
+      article.querySelectorAll<HTMLHeadingElement>("h2, h3"),
+    );
+    const seen = new Set<string>();
+
+    for (const h of headings) {
+      if (!h.id) {
+        const base = slugifyHeading(h.textContent ?? "");
+        if (!base) continue;
+        let id = base;
+        let i = 2;
+        while (seen.has(id) || document.getElementById(id)) {
+          id = `${base}-${i}`;
+          i += 1;
+        }
+        h.id = id;
+      }
+      seen.add(h.id);
+
+      if (h.dataset.hasAnchor === "1") continue;
+      const anchor = document.createElement("a");
+      anchor.href = `#${h.id}`;
+      anchor.className = "docs-anchor";
+      anchor.setAttribute("aria-label", `Permalink to ${h.textContent ?? ""}`);
+      anchor.textContent = "#";
+      h.appendChild(anchor);
+      h.dataset.hasAnchor = "1";
+    }
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", ensureHeadingIds);
+  } else {
+    ensureHeadingIds();
+  }
+</script>
