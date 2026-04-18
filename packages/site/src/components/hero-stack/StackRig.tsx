@@ -5,28 +5,34 @@ import StackPlate from "./StackPlate";
 
 /**
  * Eight-plate stack. Viewed from an isometric 3/4 camera defined in
- * HeroStack3D — the rig itself sits axis-aligned and only receives a
+ * HeroStack3D — the rig itself sits at BASE_ROT_Y and only receives a
  * gentle idle drift + damped cursor-follow tilt. On first mount, plates
  * drop from above into their rest position.
  */
 
-const TIERS = [
-  { label: "HUMAN / AGENT", accent: false, glyph: "◇" },
-  { label: "CLI / MCP",     accent: false, glyph: "⊞" },
-  { label: "AI APIS",       accent: false, glyph: "∴" },
-  { label: "OBSERVABILITY", accent: false, glyph: "◉" },
-  { label: "DEPLOY",        accent: false, glyph: "▲" },
-  { label: "DATABASES",     accent: false, glyph: "▦" },
-  { label: "AUTH",          accent: false, glyph: "⊕" },
-  { label: "PHANTOM",       accent: true,  glyph: "◈" },
+interface Tier { label: string; glyph: string; accent?: boolean }
+
+const TIERS: Tier[] = [
+  { label: "HUMAN / AGENT", glyph: "◇" },
+  { label: "CLI / MCP",     glyph: "⊞" },
+  { label: "AI APIS",       glyph: "∴" },
+  { label: "OBSERVABILITY", glyph: "◉" },
+  { label: "DEPLOY",        glyph: "▲" },
+  { label: "DATABASES",     glyph: "▦" },
+  { label: "AUTH",          glyph: "⊕" },
+  { label: "PHANTOM",       glyph: "◈", accent: true },
 ];
 
 const PLATE_GAP    = 0.48;
 const PLATE_HEIGHT = 0.36;
 const LAYER_H      = PLATE_HEIGHT + PLATE_GAP;
 
-const MAX_ROT_Y = 0.20;
-const MAX_ROT_X = 0.09;
+const CENTER_INDEX = (TIERS.length - 1) / 2;      // 3.5
+const restYFor = (i: number) => (CENTER_INDEX - i) * LAYER_H;
+
+const BASE_ROT_Y = 0.28;   // ~16°, permanent 3/4 pose so plates never edge-on
+const MAX_ROT_Y  = 0.20;
+const MAX_ROT_X  = 0.09;
 
 export default function StackRig({ reduced = false }: { reduced?: boolean }) {
   const group = useRef<Group>(null);
@@ -56,15 +62,12 @@ export default function StackRig({ reduced = false }: { reduced?: boolean }) {
       const totalMs = reduced ? 0 : 220 + stagger;
       const t = Math.max(0, Math.min(1, (elapsed - stagger) / (totalMs || 1)));
       const eased = 1 - Math.pow(1 - t, 3);
-      const restY = (3.5 - i) * LAYER_H;
-      const startY = restY + 3.4;
-      child.position.y = reduced ? restY : startY + (restY - startY) * eased;
+      const rest = restYFor(i);
+      const start = rest + 3.4;
+      child.position.y = reduced ? rest : start + (rest - start) * eased;
       child.visible = true;
     });
 
-    // Idle sway + cursor offset. Base rotation of 0.28 rad (~16°) keeps
-    // the group angled so plates never project edge-on even at rest.
-    const BASE_ROT_Y = 0.28;
     const drift = reduced ? 0 : Math.sin(now * 0.00022) * 0.12;
     const wantY = BASE_ROT_Y + drift + target.current.x * MAX_ROT_Y;
     const wantX = reduced ? 0 : target.current.y * MAX_ROT_X * -1;
@@ -81,7 +84,7 @@ export default function StackRig({ reduced = false }: { reduced?: boolean }) {
       {TIERS.map((tier, i) => (
         <StackPlate
           key={tier.label}
-          y={(3.5 - i) * LAYER_H}
+          y={restYFor(i)}
           label={tier.label}
           glyph={tier.glyph}
           tier={TIERS.length - i}
