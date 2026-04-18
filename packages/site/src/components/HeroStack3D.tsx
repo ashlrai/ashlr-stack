@@ -1,6 +1,20 @@
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useThree } from "@react-three/fiber";
 import { useEffect, useState } from "react";
 import StackRig from "./hero-stack/StackRig";
+
+/**
+ * Sets the camera to look at the stack origin. R3F's default camera faces
+ * straight down -Z, so without an explicit lookAt the plates project as
+ * thin horizontal bands (the 3/4 camera position does nothing without it).
+ */
+function CameraTarget() {
+  const { camera } = useThree();
+  useEffect(() => {
+    camera.lookAt(0, 0, 0);
+    camera.updateProjectionMatrix();
+  }, [camera]);
+  return null;
+}
 
 /**
  * Hero 3D scene — eight-plate stack representing Stack's tier architecture.
@@ -34,6 +48,7 @@ export default function HeroStack3D() {
       gl={{ alpha: true, antialias: true, powerPreference: "high-performance" }}
       style={{ width: "100%", height: "100%", background: "transparent" }}
     >
+      <CameraTarget />
       <fog attach="fog" args={["#05070a", 10, 22]} />
 
       {/* base ambient so plates never read as pure black */}
