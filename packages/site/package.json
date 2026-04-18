@@ -11,7 +11,7 @@
     "preview": "astro preview",
     "astro": "astro",
     "typecheck": "astro check && tsc --noEmit",
-    "sync-content": "mkdir -p src/content && cp -f ../../CHANGELOG.md src/content/CHANGELOG.md 2>/dev/null || ln -sf ../../../CHANGELOG.md src/content/CHANGELOG.md"
+    "sync-content": "mkdir -p src/data && cp -f ../../CHANGELOG.md src/data/CHANGELOG.md 2>/dev/null || true"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.8",

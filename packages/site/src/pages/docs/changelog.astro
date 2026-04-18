@@ -1,10 +1,11 @@
 ---
 import Docs from "~/layouts/Docs.astro";
 import { marked } from "marked";
-// CHANGELOG.md is copied from the repo root into src/content/ by the `prebuild`
+// CHANGELOG.md is copied from the repo root into src/data/ by the `sync-content`
 // step in packages/site/package.json. We can't `?raw`-import from outside the
-// Astro root because Vercel's build context is the site package only.
-import changelogRaw from "../../content/CHANGELOG.md?raw";
+// Astro root because Vercel's build context is the site package only, and we
+// can't use `src/content/` because Astro 5 reserves that for content collections.
+import changelogRaw from "../../data/CHANGELOG.md?raw";
 
 /**
  * /docs/changelog — renders the root CHANGELOG.md as a docs page.
