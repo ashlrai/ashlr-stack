@@ -1,5 +1,6 @@
 ---
 import "~/styles/global.css";
+import SmoothScroll from "~/components/SmoothScroll";
 import {
   DEFAULT_DESCRIPTION,
   DEFAULT_TITLE,
@@ -159,12 +160,22 @@ const absoluteNext = nextLink ? toAbsoluteLink(nextLink) : undefined;
     <!-- Sitemap (emitted by @astrojs/sitemap) -->
     <link rel="sitemap" type="application/xml" href="/sitemap-index.xml" />
 
-    <!-- Font preconnect -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Self-hosted fonts — PP Monument Grotesk + Berkeley Mono. Dropped in
+         at public/fonts/{monument,berkeley}/. If the files are absent,
+         @font-face silently falls back to system fonts. -->
     <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      rel="preload"
+      as="font"
+      href="/fonts/monument/PPMonumentGrotesk-Variable.woff2"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      as="font"
+      href="/fonts/berkeley/BerkeleyMono-Regular.woff2"
+      type="font/woff2"
+      crossorigin
     />
 
     <!-- JSON-LD structured data -->
@@ -180,13 +191,16 @@ const absoluteNext = nextLink ? toAbsoluteLink(nextLink) : undefined;
 
     <slot name="head" />
   </head>
-  <body class="font-sans antialiased">
+  <body class="antialiased">
     <a
       href="#main"
-      class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:bg-magenta-500 focus:text-white focus:px-3 focus:py-2 focus:rounded-md focus:text-sm"
+      class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:bg-[color:var(--color-blade-500)] focus:text-[color:var(--color-ink-950)] focus:px-3 focus:py-2 focus:text-sm"
     >
       Skip to content
     </a>
+
+    <!-- Lenis smooth scroll + GSAP ScrollTrigger registration. One mount. -->
+    <SmoothScroll client:load />
 
     <main id="main">
       <slot />

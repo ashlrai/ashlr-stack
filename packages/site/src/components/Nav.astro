@@ -2,59 +2,26 @@
 import Logo from "./Logo.astro";
 ---
 
-<header
-  class="sticky top-0 z-40 w-full backdrop-blur-xl bg-[rgba(5,5,6,0.65)] hairline-bottom"
->
-  <div
-    class="mx-auto max-w-[1200px] px-5 sm:px-8 h-14 flex items-center justify-between gap-6"
-  >
-    <Logo variant="chip" size={28} />
+<nav class="relative z-30" style="border-bottom: 1px solid var(--color-ink-600);">
+  <div class="mx-auto max-w-[1240px] px-6 sm:px-10 h-12 flex items-center justify-between">
+    <a href="/" class="flex items-center gap-3">
+      <Logo variant="chip" size={22} />
+      <span class="caption text-[color:var(--color-steel-300)] hidden sm:inline">
+        control plane · v0.1
+      </span>
+    </a>
 
-    <nav class="hidden md:flex items-center gap-7 text-sm text-ink-300">
+    <div class="flex items-center gap-6 text-[11px] tracking-[0.16em] uppercase" style="font-family: var(--font-mono);">
+      <a href="/docs" class="text-[color:var(--color-ink-300)] hover:text-[color:var(--color-ink-50)] transition-colors">Docs</a>
+      <a href="/docs/providers" class="text-[color:var(--color-ink-300)] hover:text-[color:var(--color-ink-50)] transition-colors">Providers</a>
+      <a href="/docs/mcp" class="text-[color:var(--color-ink-300)] hover:text-[color:var(--color-ink-50)] transition-colors hidden md:inline">MCP</a>
+      <a href="/docs/changelog" class="text-[color:var(--color-ink-300)] hover:text-[color:var(--color-ink-50)] transition-colors hidden md:inline">Changelog</a>
       <a
-        href="#providers"
-        class="hover:text-white transition-colors"
-      >Providers</a>
-      <a
-        href="#how-it-works"
-        class="hover:text-white transition-colors"
-      >How it works</a>
-      <a
-        href="#templates"
-        class="hover:text-white transition-colors"
-      >Templates</a>
-      <a
-        href="#claude-code"
-        class="hover:text-white transition-colors"
-      >Claude Code</a>
-      <a
-        href="https://github.com/ashlr-ai/stack"
-        class="hover:text-white transition-colors inline-flex items-center gap-1.5"
-        rel="noopener noreferrer"
+        href="https://github.com/ashlrai/ashlr-stack"
+        class="text-[color:var(--color-ink-300)] hover:text-[color:var(--color-blade-400)] transition-colors"
         target="_blank"
-      >
-        GitHub
-        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-          <path d="M2 2h6v6M2 8l6-6" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </a>
-    </nav>
-
-    <div class="flex items-center gap-2">
-      <a
-        href="https://github.com/ashlr-ai/stack"
-        class="btn btn-ghost hidden sm:inline-flex"
-        rel="noopener noreferrer"
-        target="_blank"
-      >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-          <path d="M12 .5C5.648.5.5 5.648.5 12c0 5.082 3.292 9.39 7.86 10.91.575.104.79-.25.79-.555 0-.274-.01-1-.016-1.964-3.197.695-3.872-1.541-3.872-1.541-.523-1.33-1.278-1.683-1.278-1.683-1.044-.714.08-.7.08-.7 1.154.08 1.762 1.186 1.762 1.186 1.027 1.758 2.695 1.25 3.352.955.104-.744.402-1.25.73-1.538-2.553-.29-5.236-1.277-5.236-5.682 0-1.255.45-2.282 1.185-3.087-.12-.29-.515-1.461.114-3.046 0 0 .965-.309 3.165 1.179a10.96 10.96 0 0 1 2.88-.388c.977.005 1.963.132 2.881.388 2.2-1.488 3.163-1.18 3.163-1.18.63 1.586.235 2.757.115 3.047.74.805 1.184 1.832 1.184 3.087 0 4.417-2.688 5.39-5.25 5.673.414.355.783 1.055.783 2.126 0 1.536-.014 2.774-.014 3.15 0 .306.21.665.794.553C20.213 21.386 23.5 17.08 23.5 12 23.5 5.648 18.352.5 12 .5Z"/>
-        </svg>
-        Star
-      </a>
-      <a href="#install" class="btn btn-primary">
-        Install
-      </a>
+        rel="noopener"
+      >GitHub</a>
     </div>
   </div>
-</header>
+</nav>

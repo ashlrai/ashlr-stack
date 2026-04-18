@@ -1,0 +1,55 @@
+---
+/**
+ * Static SVG silhouette of the hero stack, rendered during SSR so there's no
+ * empty box + layout shift before <HeroStack3D client:visible /> hydrates.
+ * Once the island mounts, the Canvas is absolutely-positioned over this.
+ */
+---
+
+<svg
+  viewBox="0 0 600 720"
+  width="100%"
+  height="100%"
+  aria-hidden="true"
+  class="hero-fallback"
+  style="display: block;"
+>
+  <defs>
+    <linearGradient id="plate-grad" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#1a1f26" />
+      <stop offset="100%" stop-color="#121418" />
+    </linearGradient>
+  </defs>
+
+  {Array.from({ length: 8 }).map((_, i) => {
+    const y = 80 + i * 74;
+    const accent = i === 7;
+    const skew = -6;
+    return (
+      <g transform={`translate(60 ${y}) skewY(${skew})`}>
+        <rect
+          x="0"
+          y="0"
+          width="480"
+          height="46"
+          fill="url(#plate-grad)"
+          stroke={accent ? "#f5883e" : "#3e4651"}
+          stroke-width="1"
+        />
+        <rect
+          x="0"
+          y="0"
+          width="2"
+          height="46"
+          fill={accent ? "#f5883e" : "#39556f"}
+        />
+      </g>
+    );
+  })}
+</svg>
+
+<style>
+  .hero-fallback {
+    opacity: 0.9;
+  }
+</style>

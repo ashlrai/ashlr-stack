@@ -1,86 +1,51 @@
 ---
 /**
- * ▲ stack — the wordmark.
- *
- * Geometric, pixel-crisp triangle with optional gradient fill. Renders as
- * inline SVG so it's sharp at every size. Three variants:
- *   - mark      → just the triangle (for favicons / tight spots)
- *   - chip      → triangle + "stack" wordmark in one row (nav / footer)
- *   - wordmark  → large display wordmark (hero, OG)
+ * ▲ stack wordmark — brushed-steel triangle with blade-amber outline.
  */
 export interface Props {
   variant?: "chip" | "mark" | "wordmark";
   size?: number;
   class?: string;
 }
-
-const { variant = "chip", size = 28, class: className = "" } = Astro.props;
+const { variant = "chip", size = 26, class: className = "" } = Astro.props;
 ---
 
 {variant === "mark" && (
-  <svg
-    viewBox="0 0 32 32"
-    width={size}
-    height={size}
-    fill="none"
-    class={className}
-    aria-label="stack"
-    role="img"
-  >
+  <svg viewBox="0 0 32 32" width={size} height={size} fill="none" class={className} aria-label="stack" role="img">
     <defs>
-      <linearGradient id="m-stack-grad" x1="0" x2="1" y1="0" y2="1">
-        <stop offset="0%" stop-color="#f0abfc" />
-        <stop offset="60%" stop-color="#d946ef" />
-        <stop offset="100%" stop-color="#a21caf" />
+      <linearGradient id="m-steel" x1="0" x2="0" y1="0" y2="1">
+        <stop offset="0%" stop-color="#3e4651" />
+        <stop offset="100%" stop-color="#1a1f26" />
       </linearGradient>
     </defs>
-    <path d="M16 5 L28 27 L4 27 Z" fill="url(#m-stack-grad)" />
-    <path
-      d="M16 5 L28 27 L4 27 Z"
-      fill="none"
-      stroke="rgba(255,255,255,0.1)"
-      stroke-width="0.75"
-      stroke-linejoin="round"
-    />
+    <path d="M16 5 L28 27 L4 27 Z" fill="url(#m-steel)" stroke="#e96b2a" stroke-width="1.2" stroke-linejoin="miter" />
   </svg>
 )}
 
 {variant === "chip" && (
-  <span class={`inline-flex items-center gap-2 ${className}`} aria-label="Ashlr Stack">
-    <svg
-      viewBox="0 0 32 32"
-      width={size}
-      height={size}
-      fill="none"
-      aria-hidden="true"
-      role="img"
-    >
+  <span class={`inline-flex items-center gap-2.5 ${className}`} aria-label="Ashlr Stack">
+    <svg viewBox="0 0 32 32" width={size} height={size} fill="none" aria-hidden="true" role="img">
       <defs>
-        <linearGradient id="c-stack-grad" x1="0" x2="1" y1="0" y2="1">
-          <stop offset="0%" stop-color="#f0abfc" />
-          <stop offset="60%" stop-color="#d946ef" />
-          <stop offset="100%" stop-color="#a21caf" />
+        <linearGradient id="c-steel" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stop-color="#3e4651" />
+          <stop offset="100%" stop-color="#1a1f26" />
         </linearGradient>
       </defs>
-      <path d="M16 5 L28 27 L4 27 Z" fill="url(#c-stack-grad)" />
-      <path
-        d="M16 5 L28 27 L4 27 Z"
-        fill="none"
-        stroke="rgba(255,255,255,0.1)"
-        stroke-width="0.75"
-        stroke-linejoin="round"
-      />
+      <path d="M16 5 L28 27 L4 27 Z" fill="url(#c-steel)" stroke="#e96b2a" stroke-width="1.2" stroke-linejoin="miter" />
     </svg>
-    <span class="text-[15px] font-semibold tracking-[-0.02em] text-white">stack</span>
+    <span
+      class="text-[14px] font-medium tracking-[0.14em] uppercase text-[color:var(--color-ink-50)]"
+      style="font-family: var(--font-display); font-stretch: 112%;"
+    >stack</span>
   </span>
 )}
 
 {variant === "wordmark" && (
   <span
-    class={`display text-white ${className}`}
-    style="font-size: clamp(28px, 5vw, 48px); letter-spacing: -0.025em;"
+    class={`display text-[color:var(--color-ink-50)] inline-flex items-baseline gap-3 ${className}`}
+    style="font-size: clamp(28px, 5vw, 48px); letter-spacing: -0.03em;"
     aria-label="stack"
   >
-    <span class="text-magenta-400">▲</span> stack
+    <span class="text-[color:var(--color-blade-500)]">▲</span> stack
   </span>
 )}
