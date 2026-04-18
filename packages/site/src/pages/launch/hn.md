@@ -37,7 +37,7 @@ Honest caveats:
 Free, MIT. Ships as a CLI, an MCP server, and a Claude Code plugin.
 
 - Site: https://stack.ashlr.ai
-- Repo: https://github.com/ashlr-ai/stack
+- Repo: https://github.com/ashlrai/ashlr-stack
 - MCP docs: https://stack.ashlr.ai/docs/mcp
 
 Would love your feedback — especially the providers you'd want wired next.

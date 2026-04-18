@@ -1,5 +1,6 @@
 ---
 import Logo from "./Logo.astro";
+import { PROVIDERS } from "~/lib/providers";
 ---
 
 <footer class="relative hairline-top mt-8">
@@ -8,7 +9,7 @@ import Logo from "./Logo.astro";
       <div
         aria-hidden="true"
         class="pointer-events-none absolute inset-0"
-        style="background: radial-gradient(600px 200px at 50% 0%, rgba(217,70,239,0.15), transparent 60%);"
+        style="background: radial-gradient(600px 200px at 50% 0%, rgba(233,107,42,0.14), transparent 60%);"
       ></div>
       <div class="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
         <div>
@@ -16,7 +17,10 @@ import Logo from "./Logo.astro";
             Stop tab-hopping. Start shipping.
           </h3>
           <p class="mt-1.5 text-sm text-ink-300">
-            One command. 23 providers. Secrets vaulted by Phantom, wired into <code class="mono text-ink-200">.env</code> and <code class="mono text-ink-200">.mcp.json</code>.
+            One command. {PROVIDERS.length} providers. Secrets vaulted by Phantom, wired into <code class="mono text-ink-200">.env</code> and <code class="mono text-ink-200">.mcp.json</code>.
+          </p>
+          <p class="mt-1 text-xs text-[color:var(--color-ink-400)]">
+            Free · MIT-licensed · no account required. Phantom Cloud (team sync) is optional + paid.
           </p>
         </div>
         <div class="flex flex-col sm:flex-row gap-3">
@@ -37,7 +41,7 @@ import Logo from "./Logo.astro";
             </button>
           </div>
           <a
-            href="https://github.com/ashlr-ai/stack"
+            href="https://github.com/ashlrai/ashlr-stack"
             rel="noopener noreferrer"
             target="_blank"
             class="btn btn-ghost"
@@ -85,10 +89,10 @@ import Logo from "./Logo.astro";
       <div>
         <div class="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-500 mb-3">Resources</div>
         <ul class="space-y-2 text-sm">
-          <li><a href="https://github.com/ashlr-ai/stack" rel="noopener noreferrer" target="_blank" class="text-ink-300 hover:text-white transition-colors">Source</a></li>
-          <li><a href="https://github.com/ashlr-ai/stack/blob/main/README.md" rel="noopener noreferrer" target="_blank" class="text-ink-300 hover:text-white transition-colors">Docs</a></li>
-          <li><a href="https://github.com/ashlr-ai/stack/blob/main/LICENSE" rel="noopener noreferrer" target="_blank" class="text-ink-300 hover:text-white transition-colors">License (MIT)</a></li>
-          <li><a href="https://github.com/ashlr-ai/stack/issues" rel="noopener noreferrer" target="_blank" class="text-ink-300 hover:text-white transition-colors">Issues</a></li>
+          <li><a href="https://github.com/ashlrai/ashlr-stack" rel="noopener noreferrer" target="_blank" class="text-ink-300 hover:text-white transition-colors">Source</a></li>
+          <li><a href="https://github.com/ashlrai/ashlr-stack/blob/main/README.md" rel="noopener noreferrer" target="_blank" class="text-ink-300 hover:text-white transition-colors">Docs</a></li>
+          <li><a href="https://github.com/ashlrai/ashlr-stack/blob/main/LICENSE" rel="noopener noreferrer" target="_blank" class="text-ink-300 hover:text-white transition-colors">License (MIT)</a></li>
+          <li><a href="https://github.com/ashlrai/ashlr-stack/issues" rel="noopener noreferrer" target="_blank" class="text-ink-300 hover:text-white transition-colors">Issues</a></li>
         </ul>
       </div>
     </div>

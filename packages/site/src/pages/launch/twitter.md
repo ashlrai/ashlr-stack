@@ -71,7 +71,7 @@ free. MIT. no telemetry.
 
 CLI: `curl -fsSL stack.ashlr.ai/install | bash`
 Docs: stack.ashlr.ai/docs
-Repo: github.com/ashlr-ai/stack
+Repo: github.com/ashlrai/ashlr-stack
 
 would love to hear which providers to wire next. reply with the worst
 tab-hop from your last project and we'll probably add it.
