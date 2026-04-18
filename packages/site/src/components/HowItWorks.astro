@@ -1,102 +1,26 @@
 ---
-const steps = [
-  {
-    n: "01",
-    title: "CLI orchestrates",
-    body:
-      "You run <code class=\"mono text-magenta-300\">stack add</code>. The CLI drives the provider OAuth, creates the upstream resource, and picks sane defaults — region, plan, project name — from your repo.",
-    code: [
-      { kind: "cmd", text: "stack add supabase" },
-      { kind: "out", text: "→ browser · OAuth" },
-      { kind: "out", text: "→ create project raven-prod" },
-      { kind: "out", text: "→ fetch service keys" },
-    ],
-  },
-  {
-    n: "02",
-    title: "Phantom stores",
-    body:
-      "Every secret is written through <a href=\"#constellation\" class=\"text-magenta-300 hover:text-magenta-200 underline underline-offset-2 decoration-magenta-500/30\">Phantom Secrets</a>. Stack never holds the values — it holds the <em>slot names</em> and lets Phantom do the vault work.",
-    code: [
-      { kind: "cmd", text: "phantom status" },
-      { kind: "out", text: "vault: ~/.phantom  ·  E2E encrypted" },
-      { kind: "out", text: "+ SUPABASE_URL" },
-      { kind: "out", text: "+ SUPABASE_SERVICE_ROLE_KEY" },
-    ],
-  },
-  {
-    n: "03",
-    title: "Wired everywhere",
-    body:
-      "Stack patches <code class=\"mono text-magenta-300\">.env.local</code>, <code class=\"mono text-magenta-300\">.mcp.json</code>, and <code class=\"mono text-magenta-300\">.stack.toml</code>. Your dev server, editor, and Claude Code all see the same stack.",
-    code: [
-      { kind: "cmd", text: "stack exec -- bun dev" },
-      { kind: "out", text: "env injected via phantom proxy" },
-      { kind: "out", text: "mcp: supabase attached" },
-      { kind: "out", text: "ready in 812ms" },
-    ],
-  },
-];
+import HowItWorksTabs from "./HowItWorksTabs";
 ---
 
-<section id="how-it-works" class="relative mx-auto max-w-[1200px] px-5 sm:px-8 pt-14 sm:pt-16 pb-24 sm:pb-28">
+<section id="how-it-works" class="relative mx-auto max-w-[1240px] px-6 sm:px-10 pt-14 sm:pt-16 pb-24 sm:pb-28">
   <div class="section-rule mb-10">
     <span>§ 05 · Mechanics</span>
   </div>
 
-  <header class="max-w-[760px] mb-14" data-reveal>
+  <header class="max-w-[760px] mb-12" data-reveal>
     <h2 class="display text-[color:var(--color-ink-50)]" style="font-size: clamp(32px, 4.4vw, 56px);">
       Three surfaces, <span class="display-accent">one source of truth.</span>
     </h2>
-    <p class="mt-5 text-[17px] leading-[1.55] text-ink-300 max-w-[560px]">
-      Stack coordinates the CLI, the vault, and your project files so every dev on a repo — and
-      every agent with access — sees an identical stack.
+    <p class="mt-5 text-[15px] leading-[1.6] text-[color:var(--color-ink-300)] max-w-[620px]">
+      Stack coordinates the <span class="text-[color:var(--color-ink-100)]">CLI</span>, the
+      <span class="text-[color:var(--color-ink-100)]">vault</span>, and your
+      <span class="text-[color:var(--color-ink-100)]">project files</span> so every developer
+      on a repo — and every agent with access — sees an identical stack. Click a step to
+      pause the auto-walkthrough.
     </p>
   </header>
 
-  <ol class="grid gap-5 md:grid-cols-3 relative reveal-stagger" data-reveal>
-    <!-- connector line (desktop) -->
-    <div
-      aria-hidden="true"
-      class="hidden md:block absolute top-[54px] left-[8.333%] right-[8.333%] h-px pointer-events-none"
-      style="background: linear-gradient(to right, transparent, rgba(217,70,239,0.35) 15%, rgba(217,70,239,0.35) 85%, transparent);"
-    ></div>
-
-    {steps.map((s, i) => (
-      <li class="relative reveal" style={`--stagger-i: ${i}`}>
-        <article class="panel rounded-2xl p-6 h-full flex flex-col">
-          <div class="flex items-center gap-3">
-            <span
-              class="relative inline-flex items-center justify-center w-10 h-10 stack-plate text-[12px] mono font-semibold text-[color:var(--color-blade-400)]"
-            >
-              {s.n}
-              <span
-                aria-hidden="true"
-                class="absolute inset-0 rounded-full"
-                style="box-shadow: 0 0 0 4px rgba(217,70,239,0.06), 0 8px 24px -8px rgba(217,70,239,0.35);"
-              ></span>
-            </span>
-            <h3 class="text-base font-semibold text-white tracking-tight">{s.title}</h3>
-          </div>
-
-          <p
-            class="mt-4 text-sm text-ink-300 leading-relaxed"
-            set:html={s.body}
-          />
-
-          <div class="mt-5 panel-inner rounded-lg p-3 mono text-[12px] leading-[1.7] flex-1">
-            {s.code.map((line) => (
-              line.kind === "cmd" ? (
-                <div>
-                  <span class="ansi-magenta select-none">$ </span><span class="ansi-white">{line.text}</span>
-                </div>
-              ) : (
-                <div class="ansi-dim">{line.text}</div>
-              )
-            ))}
-          </div>
-        </article>
-      </li>
-    ))}
-  </ol>
+  <div data-reveal>
+    <HowItWorksTabs client:visible />
+  </div>
 </section>

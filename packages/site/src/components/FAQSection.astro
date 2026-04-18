@@ -1,0 +1,38 @@
+---
+import FAQ from "./FAQ";
+---
+
+<section id="faq" class="relative mx-auto max-w-[1240px] px-6 sm:px-10 pt-20 sm:pt-24 pb-20 sm:pb-24">
+  <div class="section-rule mb-10">
+    <span>§ 10 · Plain answers</span>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-[0.8fr_1.6fr] gap-10 lg:gap-16">
+    <header data-reveal>
+      <h2 class="display text-[color:var(--color-ink-50)]" style="font-size: clamp(30px, 4vw, 52px);">
+        Questions <span class="display-accent">— answered.</span>
+      </h2>
+      <p class="mt-5 text-[15px] leading-[1.6] text-[color:var(--color-ink-300)] max-w-[420px]">
+        The honest objections first. If a question isn't here, open one on
+        <a href="https://github.com/ashlrai/ashlr-stack/discussions" class="text-[color:var(--color-blade-400)] underline decoration-[color:var(--color-blade-500)]/40 underline-offset-2 hover:text-[color:var(--color-blade-300)]" target="_blank" rel="noopener">
+          GitHub Discussions
+        </a>
+        — I'll add it here.
+      </p>
+
+      <div class="mt-8 panel-steel p-4 mono text-[12px]" style="border-left: 2px solid var(--color-blade-500);">
+        <div class="text-[color:var(--color-ink-400)] mb-1"># escape hatch</div>
+        <div class="text-[color:var(--color-ink-100)]">
+          <span class="text-[color:var(--color-blade-400)] select-none">›</span> phantom export &gt; .env.local
+        </div>
+        <div class="mt-2 text-[color:var(--color-ink-500)] text-[11px] leading-[1.5]">
+          Materialises every slot into literal values — zero Stack lock-in.
+        </div>
+      </div>
+    </header>
+
+    <div data-reveal>
+      <FAQ client:visible />
+    </div>
+  </div>
+</section>
