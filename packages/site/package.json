@@ -12,7 +12,7 @@
     "astro": "astro",
     "typecheck": "astro check && tsc --noEmit",
     "sync-content": "mkdir -p src/data && cp -f ../../CHANGELOG.md src/data/CHANGELOG.md 2>/dev/null || true",
-    "sync-install": "cp -f ../../scripts/install.sh public/install.sh && cp -f ../../scripts/install.ps1 public/install.ps1"
+    "sync-install": "cp -f ../../scripts/install.sh public/install.sh 2>/dev/null || true; cp -f ../../scripts/install.ps1 public/install.ps1 2>/dev/null || true"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.8",
