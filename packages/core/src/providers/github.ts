@@ -3,6 +3,7 @@ import { StackError } from "../errors.ts";
 import { addSecret } from "../phantom.ts";
 import { fetchWithRetry } from "../http.ts";
 import { readLine, tryRevealSecret } from "./_helpers.ts";
+import { resolveOAuthClientId } from "../env.ts";
 import type {
   AuthHandle,
   HealthStatus,
@@ -38,7 +39,7 @@ const github: Provider = {
       ctx.log({ level: "warn", msg: "Cached GitHub token invalid; re-authenticating." });
     }
 
-    const clientId = process.env.GITHUB_STACK_CLIENT_ID;
+    const clientId = resolveOAuthClientId("github", process.env.GITHUB_STACK_CLIENT_ID);
     if (clientId) {
       const token = await runDeviceFlow(clientId);
       const identity = await fetchUser(token);

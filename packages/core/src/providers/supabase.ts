@@ -13,6 +13,7 @@ import { addSecret, exec as phantomExec } from "../phantom.ts";
 import { readLine, tryRevealSecret } from "./_helpers.ts";
 import { fetchWithRetry } from "../http.ts";
 import { runPkceFlow } from "../oauth.ts";
+import { resolveOAuthClientId } from "../env.ts";
 
 /**
  * Supabase — the Wave 2 pilot provider. Proves the full loop:
@@ -33,7 +34,7 @@ const supabase: Provider = {
   docs: "https://supabase.com/docs/reference/api/introduction",
 
   async login(ctx: ProviderContext): Promise<AuthHandle> {
-    const clientId = process.env.SUPABASE_STACK_CLIENT_ID;
+    const clientId = resolveOAuthClientId("supabase", process.env.SUPABASE_STACK_CLIENT_ID);
 
     // Path A — cached PAT from a previous login
     const cached = await tryRevealSecret(STACK_PAT_SECRET);

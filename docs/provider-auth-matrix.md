@@ -27,12 +27,39 @@ Living reference for every curated provider. Update as each provider lands. Ops 
 
 ## OAuth app registration checklist
 
-For each provider requiring an OAuth app, Ashlr needs to register a single "Ashlr Stack" application at `https://stack.ashlr.ai`:
+For each provider requiring an OAuth app, Ashlr registers a single "Ashlr Stack" application at `https://stack.ashlr.ai`:
 
-1. Redirect URL: `http://127.0.0.1:PORT/callback` (PKCE loopback, dynamic port)
-2. Privacy policy URL: `https://ashlr.ai/privacy`
-3. Terms of service URL: `https://ashlr.ai/terms`
-4. Logo: Ashlr Stack mark (see `packages/plugin/assets/`)
-5. Scopes: minimum required for provision + materialize + healthcheck (never more)
+1. **Homepage**: `https://stack.ashlr.ai`
+2. **Redirect URL**: `http://127.0.0.1:*/callback` (PKCE loopback, any dynamic port) or `http://localhost:*/callback` where wildcards aren't allowed — in that case, register a broad range like `/callback` on ports 49152–65535
+3. **Privacy policy URL**: `https://ashlr.ai/privacy`
+4. **Terms of service URL**: `https://ashlr.ai/terms`
+5. **Logo**: Ashlr Stack mark (see `packages/plugin/assets/`)
+6. **Scopes**: minimum required for provision + materialize + healthcheck (never more)
 
-Client IDs/secrets live in a dedicated `.ashlr-stack-oauth` vault in Phantom Cloud, pulled at build time by the CLI. Per-user installs use the embedded public client id only; secrets never ship to users' machines (PKCE flow, no client secret needed for public clients).
+### v0.1 target providers
+
+| Provider | Registration URL | Client ID goes to |
+|----------|-----------------|-------------------|
+| Supabase | https://supabase.com/dashboard/org/_/oauth-apps | GH secret `OAUTH_SUPABASE_CLIENT_ID` |
+| GitHub | https://github.com/settings/applications/new | GH secret `OAUTH_GITHUB_CLIENT_ID` |
+
+### Where the client IDs live
+
+Client IDs are **public values** (they travel in browser redirect URLs; only the client secret needs protection). Stack bakes them into the published npm tarball at release time via `scripts/inject-client-ids.mjs`, which is triggered by `.github/workflows/release.yml` and reads from the `OAUTH_*_CLIENT_ID` GitHub Actions secrets.
+
+The resolution precedence at runtime (see `packages/core/src/env.ts`):
+
+1. `process.env.<PROVIDER>_STACK_CLIENT_ID` — per-user override (e.g. a fork with its own OAuth app)
+2. `OAUTH_DEFAULTS.<provider>` — Ashlr-registered default baked in at publish
+3. Neither set — provider falls back to interactive PAT paste
+
+Client secrets stay at the provider (PKCE + device flows don't require a client secret on the user side). If a provider requires a confidential flow later (Stripe Connect), the secret would live in an Ashlr-hosted backend, not on user machines.
+
+### To register a new provider
+
+1. Create an OAuth app at the provider using the settings above.
+2. Copy the public client ID.
+3. Add it as a GitHub Actions secret: `Settings → Secrets and variables → Actions → New repository secret`, name: `OAUTH_<PROVIDER>_CLIENT_ID`.
+4. Add the provider key to `OAUTH_DEFAULTS` in `packages/core/src/env.ts` and to `SOURCES` in `scripts/inject-client-ids.mjs`.
+5. Update the relevant `packages/core/src/providers/<name>.ts` to call `resolveOAuthClientId(...)`.
+6. Cut the next release tag — the workflow injects the ID automatically.
