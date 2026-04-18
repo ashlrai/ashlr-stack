@@ -1,6 +1,7 @@
 import type { ServiceEntry } from "../config.ts";
 import { StackError } from "../errors.ts";
 import { addSecret } from "../phantom.ts";
+import { fetchWithRetry } from "../http.ts";
 import { readLine, tryRevealSecret } from "./_helpers.ts";
 import type {
   AuthHandle,
@@ -101,7 +102,9 @@ export default github;
 
 async function fetchUser(token: string): Promise<Record<string, string> | undefined> {
   try {
-    const res = await fetch("https://api.github.com/user", {
+    // Idempotent GET — retry transient 429s (GitHub's primary-rate-limit
+    // responses usually carry Retry-After) + 5xx from github.com.
+    const res = await fetchWithRetry("https://api.github.com/user", {
       headers: {
         Authorization: `Bearer ${token}`,
         Accept: "application/vnd.github+json",

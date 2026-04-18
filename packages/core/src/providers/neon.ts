@@ -1,6 +1,7 @@
 import type { ServiceEntry } from "../config.ts";
 import { StackError } from "../errors.ts";
 import { addSecret } from "../phantom.ts";
+import { fetchWithRetry } from "../http.ts";
 import { readLine, tryRevealSecret } from "./_helpers.ts";
 import type {
   AuthHandle,
@@ -134,7 +135,9 @@ function authHeaders(token: string): HeadersInit {
 
 async function fetchIdentity(token: string): Promise<Record<string, string> | undefined> {
   try {
-    const res = await fetch(`${API}/users/me`, { headers: authHeaders(token) });
+    // Idempotent GET — retry transient failures so a flaky Neon console
+    // gateway doesn't force the user to re-paste their API key.
+    const res = await fetchWithRetry(`${API}/users/me`, { headers: authHeaders(token) });
     if (!res.ok) return undefined;
     const body = (await res.json()) as Record<string, unknown>;
     const out: Record<string, string> = {};
@@ -146,7 +149,8 @@ async function fetchIdentity(token: string): Promise<Record<string, string> | un
 }
 
 async function fetchProject(token: string, id: string): Promise<NeonProject | undefined> {
-  const res = await fetch(`${API}/projects/${id}`, { headers: authHeaders(token) });
+  // Idempotent GET — healthcheck + doctor both call this on every loop.
+  const res = await fetchWithRetry(`${API}/projects/${id}`, { headers: authHeaders(token) });
   if (res.status === 404) return undefined;
   if (!res.ok) return undefined;
   const body = (await res.json()) as { project: NeonProject };
@@ -154,7 +158,9 @@ async function fetchProject(token: string, id: string): Promise<NeonProject | un
 }
 
 async function fetchConnectionUri(token: string, projectId: string): Promise<string | undefined> {
-  const res = await fetch(`${API}/projects/${projectId}/connection_uri`, {
+  // Idempotent GET — retry transient failures so healthcheck + materialize
+  // don't flap on a single flaky Neon gateway response.
+  const res = await fetchWithRetry(`${API}/projects/${projectId}/connection_uri`, {
     headers: authHeaders(token),
   });
   if (!res.ok) return undefined;

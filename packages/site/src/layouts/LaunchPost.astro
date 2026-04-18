@@ -1,0 +1,46 @@
+---
+import Docs from "~/layouts/Docs.astro";
+
+/**
+ * Wrapper layout for the long-form launch blog post at `/launch/blog`. It
+ * forwards the markdown frontmatter (which Astro passes as
+ * `Astro.props.frontmatter` on `.md`/`.mdx` pages) into the Docs layout so
+ * the post renders inside the same prose shell as every docs page —
+ * sticky sidebar, TOC scrollspy, TechArticle JSON-LD.
+ *
+ * This is the only indexable page under `/launch/` — HN and X notes use
+ * `LaunchNote.astro`, which stamps `noindex`.
+ */
+
+interface Props {
+  frontmatter?: {
+    title?: string;
+    description?: string;
+    eyebrow?: string;
+    datePublished?: string;
+    dateModified?: string;
+  };
+  title?: string;
+  description?: string;
+  eyebrow?: string;
+}
+
+const { frontmatter, title: titleProp, description: descriptionProp, eyebrow: eyebrowProp } = Astro.props;
+
+const title = frontmatter?.title ?? titleProp ?? "Launch post";
+const description =
+  frontmatter?.description ??
+  descriptionProp ??
+  "A launch post for Ashlr Stack.";
+const eyebrow = frontmatter?.eyebrow ?? eyebrowProp ?? "Launch";
+---
+
+<Docs
+  title={title}
+  description={description}
+  eyebrow={eyebrow}
+  datePublished={frontmatter?.datePublished}
+  dateModified={frontmatter?.dateModified}
+>
+  <slot />
+</Docs>

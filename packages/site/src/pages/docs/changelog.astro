@@ -1,0 +1,43 @@
+---
+import Docs from "~/layouts/Docs.astro";
+import { marked } from "marked";
+import changelogRaw from "../../../../../CHANGELOG.md?raw";
+
+/**
+ * /docs/changelog — renders the root CHANGELOG.md as a docs page.
+ *
+ * Strategy:
+ *   - Read the markdown at build time via Vite's `?raw` loader.
+ *   - Strip the top-level `# Changelog` H1 (the Docs layout emits its own <h1>).
+ *   - Render the remainder with `marked`, which is MIT-licensed and ~27 kB.
+ *   - Downshift headings by one level (so `## Unreleased` becomes the first
+ *     top-level heading the docs-prose sidebar anchoring script sees).
+ *
+ * The Docs layout's client script then auto-slugifies every H2/H3 and wires
+ * the hover-revealed `#` anchors + scrollspy TOC.
+ */
+
+const body = changelogRaw.replace(/^#\s+Changelog\s*\n+/, "");
+
+// Configure marked for clean, predictable output. No inline highlighting —
+// the docs-prose CSS handles `<pre>` styling.
+marked.setOptions({
+  gfm: true,
+  breaks: false,
+});
+
+const html = await marked.parse(body);
+---
+
+<Docs
+  title="Changelog"
+  description="Every shipping wave of Ashlr Stack — providers, hardening passes, docs, redesigns, and the rest. Mirrored from the repo root's CHANGELOG.md."
+  eyebrow="Meta"
+>
+  <p>
+    Stack is versioned in lockstep with the root repo. Pre-1.0 releases are
+    additive by default — new commands ship, existing commands don't disappear
+    — with the occasional breaking change called out inline.
+  </p>
+  <div set:html={html} />
+</Docs>

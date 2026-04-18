@@ -1,4 +1,5 @@
 import { makeApiKeyProvider } from "./_api-key.ts";
+import { verifyFetch } from "./_helpers.ts";
 
 export default makeApiKeyProvider({
   name: "xai",
@@ -10,7 +11,7 @@ export default makeApiKeyProvider({
   dashboard: "https://console.x.ai",
   async verify(key) {
     try {
-      const res = await fetch("https://api.x.ai/v1/models", {
+      const res = await verifyFetch("https://api.x.ai/v1/models", {
         headers: { Authorization: `Bearer ${key}` },
       });
       if (!res.ok) return undefined;

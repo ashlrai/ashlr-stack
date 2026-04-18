@@ -1,4 +1,5 @@
 import { makeApiKeyProvider } from "./_api-key.ts";
+import { verifyFetch } from "./_helpers.ts";
 
 export default makeApiKeyProvider({
   name: "resend",
@@ -10,7 +11,7 @@ export default makeApiKeyProvider({
   dashboard: "https://resend.com",
   async verify(key) {
     try {
-      const res = await fetch("https://api.resend.com/domains", {
+      const res = await verifyFetch("https://api.resend.com/domains", {
         headers: { Authorization: `Bearer ${key}` },
       });
       if (!res.ok) return undefined;

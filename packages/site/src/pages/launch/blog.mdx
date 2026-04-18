@@ -1,0 +1,199 @@
+---
+layout: ~/layouts/LaunchPost.astro
+title: "Introducing Ashlr Stack"
+description: "The control plane for your entire dev stack — one command to provision, wire, and operate every third-party service in a project. Pre-alpha, MIT, free."
+eyebrow: "Launch"
+---
+
+Every time I start a new side project, I lose the first hour of it. Not to
+architecture. Not to design. To tab-hopping.
+
+Log into Supabase, click "New project", copy the URL. Click "API", copy
+`anon`. Click again, copy `service_role`. Paste all three into
+`.env.local`. Open Vercel. "Add new project". Import the repo. Copy the
+deploy hook. Open Sentry. "Create project → Next.js". Copy the DSN. Open
+PostHog. Copy the project API key. Open `.mcp.json` by hand, because the
+agent in the next tab also needs to see all of this. Try to remember
+whether it's `SUPABASE_URL` or `NEXT_PUBLIC_SUPABASE_URL`. Guess wrong.
+Debug for ten minutes. Finally write a line of product code.
+
+It's the same hour, every time. It's the same six services. And every
+service has a functional API for the thing I just did by hand.
+
+So we built the thing that does it:
+
+```bash
+stack add supabase
+```
+
+Four seconds. Project provisioned. Keys in an encrypted vault. Files
+patched. SDK installed. MCP wired. Next command.
+
+## What Stack actually is
+
+Stack is three things that share one state file:
+
+1. **A CLI.** `stack init`, `stack add`, `stack doctor`, `stack exec`, plus
+   nineteen more. Twenty-two commands total, all designed around the same
+   kernel: a declarative `.stack.toml` describing which services this
+   project uses and where their secrets live.
+2. **An MCP server.** Every CLI command is also exposed as an MCP tool.
+   Claude Code, Cursor, Windsurf — any MCP-capable editor — can drive Stack
+   directly. `stack_add`, `stack_doctor`, `stack_deps`, `stack_projects_list`,
+   and thirteen others. Plus three resources (`.stack.toml`,
+   `.stack.local.toml`, `.mcp.json`) so the agent can read state without a
+   tool call.
+3. **A Claude Code plugin.** `/stack:add supabase` in chat runs the same
+   pipeline without a terminal round-trip. Good for the flow where Claude
+   drafted the code and now just needs the service to exist.
+
+All three surfaces resolve to the same core package. The CLI is a thin
+wrapper. The MCP server is a thin wrapper. The plugin is a thin wrapper.
+There is one implementation of "add Supabase to this project"; the three
+surfaces just route to it.
+
+## How it works
+
+Under the hood, `stack add supabase` does four things in sequence:
+
+1. **Login.** Where we have an OAuth app registered (Supabase and GitHub,
+   as of v0.1), we open the browser, do PKCE, capture the access token.
+   For the other 21 providers, we prompt for a paste — a PAT or an API key
+   — and verify it against a read-only endpoint before going further. You
+   never leak a bad key halfway through.
+2. **Provision.** We hit the provider's API to create a new upstream
+   resource. Supabase: project in `us-east-1`. Neon: branch + compute.
+   Turso: database + auth token. Where a provider doesn't have a
+   creation API (Stripe, Linear, etc.), we bind to an existing account.
+3. **Materialize.** We read every secret the provider emits, write each
+   to **Phantom** (an encrypted local vault you install separately), and
+   put a `phm_…` placeholder token in `.env.local` and `.stack.local.toml`.
+   The raw secret never touches disk.
+4. **Persist.** We patch the committable `.stack.toml` (declaring which
+   services exist, their slot names, their MCP wiring), the local-only
+   `.stack.local.toml` (instance-level metadata), and `.mcp.json` (so
+   Claude / Cursor can reach the service's MCP server).
+
+At runtime, `stack exec -- bun dev` spawns your dev server with Phantom
+resolving the `phm_…` placeholders to real secrets in the child process's
+environment. If `.env.local` leaks, the attacker gets meaningless tokens.
+
+## A concrete walkthrough: `stack add supabase`
+
+Fresh project. `bun create next-app`. `cd` in.
+
+```bash
+stack init
+```
+
+Writes `.stack.toml` (committed — declares which services this project
+uses) and `.stack.local.toml` (gitignored — instance data like project IDs
+and regions). Appends to `.gitignore`.
+
+```bash
+stack add supabase
+```
+
+Browser opens. OAuth dance. You pick an org. We create a project named
+after your repo directory. Three secrets land in Phantom:
+`SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`. The
+Supabase MCP server gets wired into `.mcp.json`. `@supabase/supabase-js`
+lands in `package.json`. Total elapsed: 4.2 seconds.
+
+```bash
+stack doctor
+```
+
+Healthcheck. Hits Supabase's `/rest/v1/` with your stored token. Returns
+green. If it returned red, `stack doctor --fix` would ask before
+re-running the `add` flow.
+
+```bash
+stack exec -- bun dev
+```
+
+Your Next.js app runs. It reads `process.env.SUPABASE_URL` and gets the
+real URL — resolved by Phantom at spawn, never persisted to `.env`.
+
+## The Ashlr constellation
+
+Stack is the first of a small family of tools under **Ashlr**. Each does
+one thing and composes with the others:
+
+- **Phantom** — the encrypted secret vault Stack depends on. It's its own
+  install (`brew install ashlr-ai/tap/phantom`), its own TUI, its own
+  CLI. Stack never stores a secret; it always shells out to Phantom.
+- **Ashlr Plugin for Claude Code** — a workflow + skill layer that Stack's
+  plugin sits inside. Gives Claude a shared memory, better bash, diff
+  tooling, and so on.
+- **Ashlrcode** — a document-oriented codebase genome format used by the
+  plugin for high-recall, low-token code search.
+
+Stack leans on Phantom hard; it would exist without the plugin and the
+genome, but they make the Claude-Code-native experience noticeably
+better.
+
+## Honest v0.1 caveats
+
+This is a launch post, not a press release. The status is:
+
+- **Pre-alpha.** We use Stack daily. We wouldn't bet a team of 50 on it
+  yet. The data model (`.stack.toml` split, Phantom-gated secrets, MCP
+  wiring) is stable; the CLI surface will add commands but won't remove
+  them until 1.0.
+- **OAuth app registrations are in progress.** 2 of 23 providers have
+  landed (Supabase, GitHub). The other 21 use a PAT or API-key paste
+  with automated verification — it works, it's safe, it's just one extra
+  step. As each OAuth app gets approved (a week to a month per
+  provider), it flips transparently; nothing in the CLI surface changes.
+- **Tests cover the happy paths.** 97 tests across core, CLI, and MCP
+  — we're pairing each provider with an end-to-end recorded sandbox
+  test before we'd call the tool "production-ready". That's the bar for
+  1.0.
+- **Phantom is required.** Not optional. Stack refuses to write raw
+  secrets to disk; Phantom is the only thing keeping us honest about
+  that. Install it once per machine.
+- **Zero telemetry.** Stack never calls home. Auditable. Run it with
+  Wireshark open if you want.
+
+## Roadmap, in order of urgency
+
+1. **Finish OAuth app registrations.** This is the biggest remaining
+   papercut for day-one users.
+2. **End-to-end recorded tests** per provider. We want every `stack add X`
+   to have a sandbox test with a real account before we claim "battle
+   tested".
+3. **Better error messages.** The v0.1 errors are accurate but terse.
+   Rewriting each non-trivial error as _what happened · why · what to do_.
+4. **Phantom Cloud team sync.** v0.1 is single-user push/pull. The team
+   primitive (shared vaults, RBAC, audit log) is in design.
+5. **More providers.** Modal, Replicate, Fireworks, Datadog, New Relic,
+   Segment, Mailchimp are the top requests. Rough cadence is 1–2 new
+   providers a week.
+6. **Windows.** Stack is Bun-native. Bun on Windows is close. Until then,
+   WSL2 works.
+
+See the full [roadmap](/docs/roadmap/) for the "considering" and
+"explicitly not doing" lists.
+
+## Try it
+
+```bash
+curl -fsSL https://stack.ashlr.ai/install | bash
+stack init
+stack add supabase
+```
+
+Or install from npm: `bun add -g @ashlr/stack`.
+
+- **Site:** [stack.ashlr.ai](https://stack.ashlr.ai)
+- **Docs:** [stack.ashlr.ai/docs](/docs/)
+- **Quickstart:** [stack.ashlr.ai/docs/quickstart](/docs/quickstart/)
+- **MCP wiring:** [stack.ashlr.ai/docs/mcp](/docs/mcp/)
+- **Repo:** [github.com/ashlr-ai/stack](https://github.com/ashlr-ai/stack)
+
+If it saves you that first hour, the experiment worked. If it gets in the
+way, file an issue — we're reshuffling the roadmap around real users, not
+a whiteboard.
+
+— The Ashlr team

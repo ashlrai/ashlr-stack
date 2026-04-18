@@ -1,0 +1,234 @@
+---
+import Docs from "~/layouts/Docs.astro";
+---
+
+<Docs
+  title="Roadmap"
+  description="What's shipped in v0.1, what's actively in progress, what we're considering, and what we've explicitly decided not to build. Updated as we ship."
+  eyebrow="Meta"
+>
+  <p>
+    Stack is <strong>v0.1, pre-alpha</strong>. This page is the honest working
+    picture: dated where we can date it, vague where it'd be dishonest to
+    pretend otherwise. Nothing on this list is a promise — it's a snapshot
+    of what we're working on right now.
+  </p>
+
+  <div class="callout">
+    <strong>Requesting a provider?</strong> Open an issue at{" "}
+    <a
+      href="https://github.com/ashlr-ai/stack/issues"
+      target="_blank"
+      rel="noopener noreferrer"
+    >github.com/ashlr-ai/stack/issues</a>{" "}
+    with the secret slot names you'd expect, whether the provider has a
+    resource-provisioning API, and whether there's a real MCP server worth
+    wiring. Provider requests with that shape get triaged first.
+  </div>
+
+  <h2>Shipped in v0.1</h2>
+  <p>
+    Every wave below is live in the{" "}
+    <a href="/docs/changelog/">changelog</a> with more detail — this list is
+    the executive summary.
+  </p>
+
+  <ul>
+    <li>
+      <strong>22 CLI commands</strong> — <code>init</code>,{" "}
+      <code>add</code>, <code>remove</code>, <code>doctor</code>,{" "}
+      <code>exec</code>, <code>env</code>, <code>import</code>,{" "}
+      <code>scan</code>, <code>clone</code>, <code>info</code>,{" "}
+      <code>deps</code>, <code>projects</code>, <code>sync</code>,{" "}
+      <code>upgrade</code>, <code>login</code>, <code>status</code>,{" "}
+      <code>open</code>, <code>ci</code>, <code>completion</code>, plus the
+      interactive picker + <code>--dry-run</code> + <code>--json</code> modes.
+    </li>
+    <li>
+      <strong>23 curated providers</strong> across database, deploy, cloud,
+      analytics, errors, AI, payments, code, tickets, email, and auth
+      categories. Supabase + GitHub are full OAuth; the rest use PAT/API-key
+      paste with automated verification until OAuth apps register.
+    </li>
+    <li>
+      <strong>5 starter templates</strong> —{" "}
+      <code>next-supabase</code>, <code>t3-clerk-neon</code>,{" "}
+      <code>cloudflare-turso-clerk</code>,{" "}
+      <code>ai-openai-pinecone</code>, <code>analytics-posthog-sentry</code>.
+    </li>
+    <li>
+      <strong>17 MCP tools + 3 resources</strong> exposed via{" "}
+      <code>ashlr-stack-mcp</code> — Claude Code, Cursor, Windsurf, and any
+      MCP-capable client can drive Stack directly.
+    </li>
+    <li>
+      <strong>Phantom integration</strong> — every secret lives in the local
+      Phantom vault, read through a <code>phm_</code> placeholder and
+      resolved at <code>stack exec</code> time. Phantom Cloud push/pull for
+      CI.
+    </li>
+    <li>
+      <strong>Claude Code plugin</strong> —{" "}
+      <code>/stack:add</code>, <code>/stack:doctor</code>,{" "}
+      <code>/stack:open</code>, <code>/stack:list</code>,{" "}
+      <code>/stack:status</code> available in-chat.
+    </li>
+    <li>
+      <strong>CI scaffolding</strong> — <code>stack ci init</code> writes a
+      GitHub Actions workflow that runs <code>stack doctor --json</code> on
+      every push and nightly.
+    </li>
+    <li>
+      <strong>Cross-project registry</strong> — <code>~/.stack/projects.json</code>
+      tracks every <code>.stack.toml</code> on the machine;{" "}
+      <code>stack doctor --all</code> runs healthchecks across all of them.
+    </li>
+    <li>
+      <strong>97 tests</strong> passing across the core, CLI, and MCP
+      packages.
+    </li>
+    <li>
+      <strong>Marketing + docs surface</strong> at{" "}
+      <a href="https://stack.ashlr.ai">stack.ashlr.ai</a> —
+      homepage, 10 docs pages, sitemap, <code>llms.txt</code> + <code>llms-full.txt</code>,
+      JSON-LD schemas.
+    </li>
+  </ul>
+
+  <h2>In progress</h2>
+
+  <ul>
+    <li>
+      <strong>OAuth app registrations</strong> — we've filed with most
+      providers; approval times vary from a week (Linear, PostHog) to a month
+      (Stripe, AWS). As each lands, the provider flips from{" "}
+      <code>authKind: "pat"</code> to <code>"oauth_pkce"</code> with no CLI
+      surface change.
+    </li>
+    <li>
+      <strong>Phantom Cloud team sync</strong> — today Phantom Cloud is
+      single-user push/pull. The "team vault" primitive (shared secrets, RBAC,
+      audit log) is in design. Target: v0.3.
+    </li>
+    <li>
+      <strong>More providers</strong> — actively scoping Modal, Replicate,
+      Fireworks, Weights & Biases, Datadog, New Relic, Mailchimp, Segment.
+      Each lands behind a PR you can watch; rough cadence is 1–2 providers
+      per week.
+    </li>
+    <li>
+      <strong>Windows support</strong> — the core + CLI are Bun-native; Bun
+      on Windows is close but not there. Until then, Stack works under WSL2.
+      Full Windows is tracked behind the same flag Bun uses.
+    </li>
+    <li>
+      <strong>Improved error messages</strong> — the v0.1 error surface is
+      accurate but terse. We're rewriting every non-trivial error with a{" "}
+      <em>what happened · why · what to do</em> triplet.
+    </li>
+    <li>
+      <strong>Battle-testing</strong> — 97 tests cover the happy paths. We're
+      pairing each provider with a recorded end-to-end test against a real
+      sandbox account before we'd call the CLI "production-ready".
+    </li>
+  </ul>
+
+  <h2>Considering</h2>
+  <p>
+    The triage list. These ideas have at least one user asking for them, but
+    haven't been committed to a version yet. Loud votes (issues, comments,
+    DMs) move them up.
+  </p>
+
+  <ul>
+    <li>
+      <strong>Template registry</strong> — install community templates with{" "}
+      <code>stack init --template github.com/&lt;owner&gt;/&lt;repo&gt;</code>.
+      The schema is already per-template-compatible; the missing piece is
+      signing / trust.
+    </li>
+    <li>
+      <strong>Opt-in anonymous telemetry</strong> — <em>only</em> if we can
+      publish a live dashboard of every event we emit, and every event is
+      defensible. The default will stay off forever.
+    </li>
+    <li>
+      <strong>Provider plugins</strong> — a third-party publishing surface so
+      providers we don't curate can ship as standalone packages. Today the
+      23-provider list is hand-curated; a plugin API would let us stop being
+      the bottleneck.
+    </li>
+    <li>
+      <strong>Upstream resource migration</strong> — today Stack can
+      provision new resources but not migrate existing ones between
+      providers (e.g. Neon → Supabase). Scoped, not started.
+    </li>
+    <li>
+      <strong>TUI dashboard</strong> — <code>stack dash</code> as a Bubble
+      Tea-style full-screen monitor: provider status, MCP server health,
+      Phantom Cloud sync state. Nice-to-have, not load-bearing.
+    </li>
+    <li>
+      <strong>`stack costs`</strong> — surface each provider's current usage
+      + spend via their billing APIs, rolled up per project.
+    </li>
+  </ul>
+
+  <h2>Explicitly not doing</h2>
+  <p>
+    The honest no-list. These aren't things we haven't gotten to — they're
+    things we've decided against, with reasons.
+  </p>
+
+  <ul>
+    <li>
+      <strong>Replacing Phantom</strong> — we're not building a secret
+      manager. Phantom exists, it's good, and adding a second vault would
+      double the attack surface for no user benefit. If you have 1Password /
+      Doppler / Infisical, we want Phantom Cloud to sync <em>to</em> them,
+      not replace them.
+    </li>
+    <li>
+      <strong>Multi-cloud deploy abstractions</strong> — we're not building{" "}
+      <em>another</em> layer on top of Vercel/Railway/Fly. Each deploy
+      target's opinionated workflow is a feature, not a bug. Stack wires the
+      auth and the environment; the deploy target owns the deploy.
+    </li>
+    <li>
+      <strong>A hosted control plane</strong> — Stack is a local CLI. There
+      is no stack.ashlr.ai-hosted "dashboard" coming. Your project state lives
+      in <code>.stack.toml</code>; your secrets live in Phantom; everything
+      else is the provider's own dashboard.
+    </li>
+    <li>
+      <strong>Yet another config format</strong> — <code>.stack.toml</code>
+      is TOML because TOML is boring, readable, and already in every
+      developer's mental model. No YAML, no custom DSL, no JSONC.
+    </li>
+    <li>
+      <strong>A UI for Phantom</strong> — Phantom ships its own TUI and web
+      UI. We'd rather ship a deep integration than a shallow fork.
+    </li>
+    <li>
+      <strong>Replacing <code>package.json</code> / <code>Cargo.toml</code></strong>
+      {" "}— Stack wires services, not language toolchains. Bun, npm, uv,
+      cargo, and go own their own surfaces.
+    </li>
+  </ul>
+
+  <h2>Versioning</h2>
+  <p>
+    The <code>0.x</code> window reserves the right to make breaking changes
+    to the CLI surface with a one-minor-version deprecation warning. At{" "}
+    <code>1.0</code>, semver kicks in: new commands are minor, renames or
+    removals are major. Data-model changes (<code>.stack.toml</code>,{" "}
+    <code>.stack.local.toml</code>, <code>.mcp.json</code> schema) are
+    already stable and will auto-migrate across versions.
+  </p>
+
+  <p>
+    Timelines on this page are <em>targets</em>, not commitments. If a thing
+    is important enough to block your usage, open an issue — the roadmap
+    reshuffles itself around real users.
+  </p>
+</Docs>

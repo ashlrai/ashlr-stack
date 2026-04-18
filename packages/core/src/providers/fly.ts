@@ -1,4 +1,5 @@
 import { makeApiKeyProvider } from "./_api-key.ts";
+import { verifyFetch } from "./_helpers.ts";
 
 export default makeApiKeyProvider({
   name: "fly",
@@ -10,7 +11,7 @@ export default makeApiKeyProvider({
   dashboard: "https://fly.io/dashboard",
   async verify(key) {
     try {
-      const res = await fetch("https://api.machines.dev/v1/apps", {
+      const res = await verifyFetch("https://api.machines.dev/v1/apps", {
         headers: { Authorization: `Bearer ${key}` },
       });
       if (!res.ok) return undefined;

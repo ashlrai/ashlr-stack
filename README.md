@@ -1,8 +1,42 @@
 # Ashlr Stack
 
+[![CI](https://github.com/ashlrai/ashlr-stack/actions/workflows/ci.yml/badge.svg)](https://github.com/ashlrai/ashlr-stack/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
+[![npm version](https://img.shields.io/npm/v/@ashlr/stack.svg)](https://www.npmjs.com/package/@ashlr/stack)
+
 > The control plane for your entire dev stack. One command to provision, wire, and operate every third‑party service in your project.
 
 **Status:** pre‑alpha, active development.
+
+## Install
+
+Three ways, pick one:
+
+```bash
+# One-liner, macOS / Linux (also installs Phantom Secrets if missing)
+curl -fsSL stack.ashlr.ai/install.sh | bash
+```
+
+```powershell
+# One-liner, Windows (PowerShell)
+irm stack.ashlr.ai/install.ps1 | iex
+```
+
+```bash
+# Manual (registry — once v0.1 ships):
+bun add -g @ashlr/stack ashlr-stack-mcp     # or: npm i -g
+```
+
+**Dev install** (from a local clone of this repo):
+
+```bash
+git clone https://github.com/ashlrai/ashlr-stack && cd ashlr-stack
+bun install
+bun run packages/cli/src/index.ts --help
+# Optional: alias stack=`bun run $(pwd)/packages/cli/src/index.ts` so it's on your PATH
+```
+
+> Using Stack with an AI coding agent? See [STACK.md](./STACK.md) — a self-contained project brief for agents pulling context from the repo.
 
 ## What Stack does
 
@@ -49,30 +83,7 @@ Stack is the *control plane*. Phantom is the *vault*. ashlr-plugin is the *conte
 
 23 providers total. Run `stack providers` to see the live catalog.
 
-## Install
-
-> **Pre-alpha.** The one-liner + brew tap below are placeholders for when v0.1
-> ships to registries. For now, use the dev install path.
-
-```bash
-# One-liner (installs Phantom Secrets too if missing):
-curl -fsSL stack.ashlr.ai/install.sh | bash
-
-# Or, manually:
-brew tap ashlrai/phantom && brew install phantom   # prerequisite
-bun add -g @ashlr/stack ashlr-stack-mcp            # or: npm i -g
-```
-
-**Dev install** (from a local clone of this repo):
-
-```bash
-git clone https://github.com/ashlrai/ashlr-stack && cd ashlr-stack
-bun install
-bun run packages/cli/src/index.ts --help
-# Optional: alias stack=`bun run $(pwd)/packages/cli/src/index.ts` so it's on your PATH
-```
-
-Then:
+## Usage
 
 ```bash
 stack init                    # interactive template picker
@@ -122,6 +133,18 @@ packages/
 templates/  — starter stacks
 docs/       — auth matrix, schema reference
 ```
+
+### Publishing
+
+Three packages ship to npm: `@ashlr/stack-core`, `ashlr-stack-mcp`, `@ashlr/stack`. For monorepo dev, `@ashlr/stack` depends on `@ashlr/stack-core` via `workspace:*` — that's what lets `bun install` link the local checkout. A plain `npm install @ashlr/stack` from outside the workspace **cannot resolve `workspace:*`**, so the publish flow has to rewrite those ranges to an actual version (e.g. `^0.1.0`) right before `npm publish`.
+
+Don't hand-edit the `workspace:*` entries in `packages/*/package.json` — dev needs them. Use the publish script instead:
+
+```bash
+scripts/publish.sh --version 0.1.0
+```
+
+It bumps each package's `version`, swaps `workspace:*` → `^<version>`, runs `npm publish --dry-run` for verification, asks for explicit confirmation, publishes in dep order (`core` → `mcp` → `cli`), restores `workspace:*` so local dev keeps working, and tags the release. See the script header for details.
 
 ## Landing page
 

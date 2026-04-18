@@ -1,4 +1,5 @@
 import { revealSecret } from "../phantom.ts";
+import { fetchWithRetry, type RetryOptions } from "../http.ts";
 
 /**
  * Shared helpers for every hand-written provider. Before this existed, each
@@ -47,4 +48,34 @@ export function bearerJsonHeaders(token: string): HeadersInit {
     "content-type": "application/json",
     Accept: "application/json",
   };
+}
+
+/**
+ * Idempotent GET wrapper for the `verify` closures used by api-key providers
+ * (and for any other read-only provider call). Thin shim around
+ * `fetchWithRetry` that forces `idempotent: true` — callers are always
+ * verifying a credential via a read-only endpoint, so retrying transient
+ * 429/5xx is always safe. Keeps each provider's `verify` free of retry glue.
+ */
+export function verifyFetch(
+  input: RequestInfo | URL,
+  init?: RequestInit,
+  opts?: RetryOptions,
+): Promise<Response> {
+  return fetchWithRetry(input, init, { ...opts, idempotent: true });
+}
+
+/**
+ * Redact all but the last `keepLast` characters of a secret for safe display.
+ * Always show at least a few asterisks so log lines that include the redacted
+ * value still read clearly. Short strings get fully hidden — the suffix alone
+ * could be enough to bruteforce a 6-char token.
+ *
+ * Usage: `ctx.log({ msg: \`token ${scrub(t)} rejected\` })` prints
+ * `token ****abcd rejected`, never the raw secret.
+ */
+export function scrub(value: string, keepLast: number = 4): string {
+  if (!value) return "";
+  if (value.length <= keepLast) return "****";
+  return `****${value.slice(-keepLast)}`;
 }

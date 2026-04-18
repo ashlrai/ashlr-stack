@@ -11,6 +11,7 @@ import type { ServiceEntry } from "../config.ts";
 import { StackError } from "../errors.ts";
 import { addSecret, exec as phantomExec } from "../phantom.ts";
 import { readLine, tryRevealSecret } from "./_helpers.ts";
+import { fetchWithRetry } from "../http.ts";
 import { runPkceFlow } from "../oauth.ts";
 
 /**
@@ -182,9 +183,11 @@ const supabase: Provider = {
     if (!anon) return { kind: "error", detail: "SUPABASE_ANON_KEY missing from vault" };
     const start = Date.now();
     try {
-      const res = await fetch(`https://${entry.resource_id}.supabase.co/rest/v1/`, {
-        headers: { apikey: anon, Authorization: `Bearer ${anon}` },
-      });
+      // GET against the REST root. Safe to retry on transient 5xx / 429.
+      const res = await fetchWithRetry(
+        `https://${entry.resource_id}.supabase.co/rest/v1/`,
+        { headers: { apikey: anon, Authorization: `Bearer ${anon}` } },
+      );
       const latencyMs = Date.now() - start;
       if (res.ok) return { kind: "ok", latencyMs };
       return { kind: "warn", detail: `HTTP ${res.status}` };
@@ -232,7 +235,9 @@ function authHeaders(token: string): HeadersInit {
 
 async function fetchIdentity(token: string): Promise<SupabaseIdentity | undefined> {
   try {
-    const res = await fetch(`${API}/v1/profile`, { headers: authHeaders(token) });
+    // Idempotent GET — retry transient 429/5xx so a flapping Supabase gateway
+    // doesn't force the user to re-paste their PAT.
+    const res = await fetchWithRetry(`${API}/v1/profile`, { headers: authHeaders(token) });
     if (!res.ok) return undefined;
     const body = (await res.json()) as Record<string, unknown>;
     const out: SupabaseIdentity = {};
@@ -246,7 +251,8 @@ async function fetchIdentity(token: string): Promise<SupabaseIdentity | undefine
 }
 
 async function fetchOrganizations(token: string): Promise<SupabaseOrg[]> {
-  const res = await fetch(`${API}/v1/organizations`, { headers: authHeaders(token) });
+  // Idempotent GET — retry transient 429/5xx.
+  const res = await fetchWithRetry(`${API}/v1/organizations`, { headers: authHeaders(token) });
   if (!res.ok)
     throw new StackError(
       "SUPABASE_ORGS_FAILED",
@@ -256,7 +262,8 @@ async function fetchOrganizations(token: string): Promise<SupabaseOrg[]> {
 }
 
 async function fetchProject(token: string, ref: string): Promise<SupabaseProject | undefined> {
-  const res = await fetch(`${API}/v1/projects/${ref}`, { headers: authHeaders(token) });
+  // Idempotent GET — retry transient failures before surfacing 404 vs. outage.
+  const res = await fetchWithRetry(`${API}/v1/projects/${ref}`, { headers: authHeaders(token) });
   if (res.status === 404) return undefined;
   if (!res.ok)
     throw new StackError(
@@ -267,7 +274,10 @@ async function fetchProject(token: string, ref: string): Promise<SupabaseProject
 }
 
 async function fetchApiKeys(token: string, ref: string): Promise<SupabaseApiKey[]> {
-  const res = await fetch(`${API}/v1/projects/${ref}/api-keys`, { headers: authHeaders(token) });
+  // Idempotent GET — materialize calls this immediately after provision.
+  const res = await fetchWithRetry(`${API}/v1/projects/${ref}/api-keys`, {
+    headers: authHeaders(token),
+  });
   if (!res.ok)
     throw new StackError(
       "SUPABASE_KEYS_FAILED",

@@ -1,6 +1,7 @@
 import type { ServiceEntry } from "../config.ts";
 import { StackError } from "../errors.ts";
 import { addSecret } from "../phantom.ts";
+import { fetchWithRetry } from "../http.ts";
 import { readLine, tryRevealSecret } from "./_helpers.ts";
 import type {
   AuthHandle,
@@ -107,7 +108,9 @@ const sentry: Provider = {
     if (!entry.resource_id) return { kind: "warn", detail: "no resource_id" };
     const [orgSlug, projectSlug] = entry.resource_id.split("/");
     const start = Date.now();
-    const res = await fetch(`${API}/projects/${orgSlug}/${projectSlug}/`, {
+    // Idempotent GET — retry transient 429/5xx so a Sentry hiccup doesn't
+    // falsely mark the healthcheck red.
+    const res = await fetchWithRetry(`${API}/projects/${orgSlug}/${projectSlug}/`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     const latencyMs = Date.now() - start;
@@ -127,7 +130,10 @@ export default sentry;
 
 async function fetchIdentity(token: string): Promise<Record<string, string> | undefined> {
   try {
-    const res = await fetch(`${API}/users/me/`, { headers: { Authorization: `Bearer ${token}` } });
+    // Idempotent GET — retry so a flaky Sentry gateway doesn't force re-paste.
+    const res = await fetchWithRetry(`${API}/users/me/`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     if (!res.ok) return undefined;
     const body = (await res.json()) as Record<string, unknown>;
     const out: Record<string, string> = {};
@@ -140,7 +146,10 @@ async function fetchIdentity(token: string): Promise<Record<string, string> | un
 }
 
 async function fetchOrgs(token: string): Promise<Array<{ slug: string; name: string }>> {
-  const res = await fetch(`${API}/organizations/`, { headers: { Authorization: `Bearer ${token}` } });
+  // Idempotent GET — retry transient 429/5xx.
+  const res = await fetchWithRetry(`${API}/organizations/`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
   if (!res.ok) return [];
   return (await res.json()) as Array<{ slug: string; name: string }>;
 }
@@ -149,7 +158,8 @@ async function fetchProjects(
   token: string,
   orgSlug: string,
 ): Promise<Array<{ slug: string; name: string }>> {
-  const res = await fetch(`${API}/organizations/${orgSlug}/projects/`, {
+  // Idempotent GET.
+  const res = await fetchWithRetry(`${API}/organizations/${orgSlug}/projects/`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) return [];
@@ -161,7 +171,8 @@ async function fetchDsn(
   orgSlug: string,
   projectSlug: string,
 ): Promise<string | undefined> {
-  const res = await fetch(`${API}/projects/${orgSlug}/${projectSlug}/keys/`, {
+  // Idempotent GET — called by materialize to fetch the DSN.
+  const res = await fetchWithRetry(`${API}/projects/${orgSlug}/${projectSlug}/keys/`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) return undefined;

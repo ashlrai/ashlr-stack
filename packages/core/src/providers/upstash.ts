@@ -1,4 +1,5 @@
 import { makeApiKeyProvider } from "./_api-key.ts";
+import { verifyFetch } from "./_helpers.ts";
 
 /**
  * Upstash uses HTTP Basic auth with email + Management API key. For v1 we
@@ -18,7 +19,7 @@ export default makeApiKeyProvider({
   async verify(key) {
     try {
       const basic = Buffer.from(key).toString("base64");
-      const res = await fetch("https://api.upstash.com/v2/redis/databases", {
+      const res = await verifyFetch("https://api.upstash.com/v2/redis/databases", {
         headers: { Authorization: `Basic ${basic}` },
       });
       if (!res.ok) return undefined;

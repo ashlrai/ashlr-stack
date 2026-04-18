@@ -1,4 +1,5 @@
 import { makeApiKeyProvider } from "./_api-key.ts";
+import { verifyFetch } from "./_helpers.ts";
 
 /**
  * Render — managed deploys for web services, static sites, private services.
@@ -15,7 +16,7 @@ export default makeApiKeyProvider({
   dashboard: "https://dashboard.render.com",
   async verify(key) {
     try {
-      const res = await fetch("https://api.render.com/v1/owners", {
+      const res = await verifyFetch("https://api.render.com/v1/owners", {
         headers: { Authorization: `Bearer ${key}`, Accept: "application/json" },
       });
       if (!res.ok) return undefined;

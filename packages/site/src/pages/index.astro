@@ -7,6 +7,7 @@ import HowItWorks from "~/components/HowItWorks.astro";
 import Templates from "~/components/Templates.astro";
 import ClaudeCodeDemo from "~/components/ClaudeCodeDemo";
 import Constellation from "~/components/Constellation.astro";
+import DemoReel from "~/components/DemoReel";
 import McpClients from "~/components/McpClients.astro";
 import Footer from "~/components/Footer.astro";
 ---
@@ -26,6 +27,24 @@ import Footer from "~/components/Footer.astro";
       </p>
     </header>
     <OneCommand client:visible />
+  </section>
+
+  <!-- See it run — a looping terminal reel between the "one command" pitch
+       and the providers grid. Third editorial moment of the page. -->
+  <section id="see-it-run" class="relative mx-auto max-w-[1200px] px-5 sm:px-8 py-20 sm:py-24">
+    <header class="max-w-2xl mb-8">
+      <div class="edi-rule edi-rule-left mb-4">
+        <span>§ 03 · In motion</span>
+      </div>
+      <h2 class="text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-[-0.03em] text-white">
+        See it <span class="text-gradient-magenta">run.</span>
+      </h2>
+      <p class="mt-4 text-ink-300 leading-relaxed">
+        Not a recording — a faithful, looping replay of the real CLI. Initialise,
+        add a provider, run the app. The whole loop is under thirty seconds.
+      </p>
+    </header>
+    <DemoReel client:visible />
   </section>
 
   <ProvidersGrid />

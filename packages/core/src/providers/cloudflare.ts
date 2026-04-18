@@ -1,6 +1,7 @@
 import type { ServiceEntry } from "../config.ts";
 import { StackError } from "../errors.ts";
 import { addSecret, revealSecret } from "../phantom.ts";
+import { fetchWithRetry } from "../http.ts";
 import type {
   AuthHandle,
   HealthStatus,
@@ -96,7 +97,8 @@ export default cloudflare;
 
 async function verifyToken(token: string): Promise<Record<string, string> | undefined> {
   try {
-    const res = await fetch(`${API}/user/tokens/verify`, {
+    // Idempotent GET — healthcheck hits this on every loop.
+    const res = await fetchWithRetry(`${API}/user/tokens/verify`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) return undefined;
@@ -109,7 +111,10 @@ async function verifyToken(token: string): Promise<Record<string, string> | unde
 }
 
 async function fetchAccounts(token: string): Promise<Array<{ id: string; name: string }>> {
-  const res = await fetch(`${API}/accounts`, { headers: { Authorization: `Bearer ${token}` } });
+  // Idempotent GET — retry transient failures on `stack add` startup.
+  const res = await fetchWithRetry(`${API}/accounts`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
   if (!res.ok) return [];
   const body = (await res.json()) as { result?: Array<{ id: string; name: string }> };
   return body.result ?? [];

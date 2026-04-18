@@ -1,4 +1,5 @@
 import { makeApiKeyProvider } from "./_api-key.ts";
+import { verifyFetch } from "./_helpers.ts";
 
 /**
  * Braintrust — LLM eval + observability. v1 accepts a Braintrust API key
@@ -15,7 +16,7 @@ export default makeApiKeyProvider({
   dashboard: "https://www.braintrust.dev/app",
   async verify(key) {
     try {
-      const res = await fetch("https://api.braintrust.dev/v1/organization", {
+      const res = await verifyFetch("https://api.braintrust.dev/v1/organization", {
         headers: { Authorization: `Bearer ${key}` },
       });
       if (!res.ok) return undefined;

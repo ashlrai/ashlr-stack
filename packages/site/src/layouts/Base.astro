@@ -98,6 +98,10 @@ const absoluteNext = nextLink ? toAbsoluteLink(nextLink) : undefined;
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
+    <!-- Referrer policy — preserves referrer for same-origin + HTTPS → HTTPS
+         so Vercel Web Analytics + provider attribution work correctly. -->
+    <meta name="referrer" content="no-referrer-when-downgrade" />
+
     <!-- Color scheme + theme -->
     <meta name="color-scheme" content="dark light" />
     <meta
@@ -187,5 +191,9 @@ const absoluteNext = nextLink ? toAbsoluteLink(nextLink) : undefined;
     <main id="main">
       <slot />
     </main>
+
+    <!-- Vercel Web Analytics — ships regardless of plan; no-ops until the
+         dashboard feature flag is on. Deferred so it never blocks paint. -->
+    <script is:inline defer src="/_vercel/insights/script.js"></script>
   </body>
 </html>

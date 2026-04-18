@@ -96,6 +96,21 @@ export const DOCS_NAV: DocsNavGroup[] = [
       },
     ],
   },
+  {
+    title: "Meta",
+    items: [
+      {
+        label: "Changelog",
+        href: "/docs/changelog/",
+        blurb: "Shipped features, hardening passes, and redesigns — in reverse-chronological order.",
+      },
+      {
+        label: "Roadmap",
+        href: "/docs/roadmap/",
+        blurb: "What's shipped, in-progress, considered, and explicitly off the table.",
+      },
+    ],
+  },
 ];
 
 /** Flat list of all pages, in sidebar order — used for prev/next navigation. */

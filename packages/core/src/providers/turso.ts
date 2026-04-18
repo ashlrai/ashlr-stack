@@ -1,6 +1,7 @@
 import type { ServiceEntry } from "../config.ts";
 import { StackError } from "../errors.ts";
 import { addSecret, revealSecret } from "../phantom.ts";
+import { fetchWithRetry } from "../http.ts";
 import type {
   AuthHandle,
   HealthStatus,
@@ -109,7 +110,8 @@ const turso: Provider = {
     if (!entry.resource_id) return { kind: "warn", detail: "no resource_id" };
     const [orgSlug, dbName] = entry.resource_id.split("/");
     const start = Date.now();
-    const res = await fetch(`${API}/organizations/${orgSlug}/databases/${dbName}`, {
+    // Idempotent GET — healthcheck loops on this.
+    const res = await fetchWithRetry(`${API}/organizations/${orgSlug}/databases/${dbName}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     const latencyMs = Date.now() - start;
@@ -127,7 +129,8 @@ export default turso;
 
 async function fetchIdentity(token: string): Promise<Record<string, string> | undefined> {
   try {
-    const res = await fetch(`${API}/auth/validate`, {
+    // Idempotent GET — retry transient failures during token validation.
+    const res = await fetchWithRetry(`${API}/auth/validate`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) return undefined;
@@ -141,7 +144,8 @@ async function fetchIdentity(token: string): Promise<Record<string, string> | un
 }
 
 async function fetchOrganizations(token: string): Promise<Array<{ slug: string; name: string }>> {
-  const res = await fetch(`${API}/organizations`, {
+  // Idempotent GET — retry transient 429/5xx.
+  const res = await fetchWithRetry(`${API}/organizations`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) return [];

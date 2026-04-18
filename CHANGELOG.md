@@ -2,6 +2,48 @@
 
 ## Unreleased
 
+### Reliability + hardening (auto-agent)
+
+Retry + recovery + secret-redaction pass on `packages/core/`. No other package touched.
+
+- **`fetchWithRetry` shipped** (`packages/core/src/http.ts`) — exponential backoff with jitter, `Retry-After` header honored (integer-seconds + HTTP-date), idempotency auto-derived from `init.method` (GET/HEAD) with explicit opt-in for safe POSTs, abortable via `AbortSignal`. Zero new runtime deps. Threaded through GET healthcheck + verify paths on **all seven providers in scope** (supabase, neon, vercel, github, cloudflare, sentry, plus every `makeApiKeyProvider`-based provider via a new `verifyFetch` helper in `_helpers.ts`). Provision POSTs are deliberately NOT retried — a second call could double-create an upstream resource or double-charge a provider API. Railway + Linear GraphQL POSTs explicitly opt in to `idempotent: true` because they use read-only `{ me }` / `{ viewer }` queries.
+- **Partial-failure breadcrumb in the `addService` pipeline** (`packages/core/src/pipeline.ts`) — if `materialize()` throws after `provision()` succeeded, we now persist a minimal `ServiceEntry` (provider, `resource_id`, `region`, `meta`, empty `secrets: []`, `created_by: "stack add (partial)"`) before re-throwing the original error. Leaves a breadcrumb for `stack doctor --fix` or `stack remove` to find and clean up the dangling upstream resource. Documented in a code comment with rationale.
+- **Secret-redaction audit** — 15 log sites reviewed across every provider (supabase, neon, vercel, github, cloudflare, sentry, turso, aws, plus the `_api-key` factory); 0 were interpolating raw tokens — all cached-token-invalid warnings use static strings. Added `scrub(value, keepLast?)` helper to `packages/core/src/providers/_helpers.ts` for future use. Verified `formatArgsForError()` in `phantom.ts` still redacts `phantom add KEY VALUE`'s third argument correctly; added a regression test that exercises a failing phantom binary and asserts the raw value never appears in the thrown `StackError`.
+- Tests: 3 new files — `http.test.ts` (13 cases: happy path, 429 retry, 500 max-out, Retry-After honored, POST no-retry, explicit idempotent opt-in, network-error retry for idempotent, non-idempotent network error bubbles, custom `retryOn`, AbortSignal mid-retry, + 5 `parseRetryAfter` cases), `pipeline-recovery.test.ts` (2 cases: breadcrumb written on partial failure; dry-run skips breadcrumb), `secret-redaction.test.ts` (8 cases: `scrub` unit tests + cached-token-warning doesn't leak raw secret + `formatArgsForError` redacts `phantom add`'s value). **120 tests, all green** (was 97).
+- Sanity: `bun test` green, `bunx tsc --noEmit -p tsconfig.json` clean.
+
+### Marketing surface (auto-agent)
+
+Polish pass on `packages/site/` — landing page + docs, no other package touched.
+
+- **Vercel Web Analytics** — `@vercel/analytics` dependency added; `/_vercel/insights/script.js` loaded defer-ed from `Base.astro`, plus a `referrer-when-downgrade` meta for correct attribution. Ships regardless of plan; no-ops until the Vercel dashboard flag is on.
+- **`/docs/changelog`** — renders the repo-root `CHANGELOG.md` as a docs page via `marked` + Vite `?raw` import. Slots under a new "Meta" sidebar group.
+- **`/docs/roadmap`** — honest Shipped / In progress / Considering / Explicitly not doing list, dated where possible. Also under "Meta".
+- **Launch copy drafts** under `/launch/*` — `hn.md` (Show HN, ≤200 words, `noindex`), `twitter.md` (7-tweet thread with the 🔺 mark, `noindex`), `blog.mdx` (~1000-word "Introducing Ashlr Stack" long-form, indexable, rendered through the Docs layout via a thin `LaunchPost.astro` wrapper). Non-indexable notes use a new `LaunchNote.astro` with minimal self-contained prose styles.
+- **`DemoReel.tsx`** — React island that replays a `stack init → stack add supabase → stack exec -- bun dev` sequence as an auto-looping scripted terminal. Shares visuals with the hero `Terminal.tsx` (magenta prompt, green checkmarks, dim notes), respects `prefers-reduced-motion` by snapping to the last frame and pausing, and carries `role="img"` + a descriptive `aria-label` for screen readers. Mounted on the homepage as "§ 03 · In motion — See it run" between the one-command section and the providers grid.
+- **MDX integration** — `@astrojs/mdx` added so the blog post can mix prose and code fences freely.
+- Build: `bunx astro check` — 48 files, 0 errors / 0 warnings / 0 hints. `bun run build` — 17 pages, sitemap regenerated. Only the existing pre-launch `@import`-order CSS advisory remains.
+
+### Publish + Windows (auto-agent)
+
+Windows support + npm-publish readiness without touching any owner-restricted code (`packages/site/`, `packages/core/src/`, `packages/cli/src/`, `packages/mcp/src/`, `packages/plugin/`):
+
+- **`scripts/install.ps1`** — Windows PowerShell one-liner installer mirroring `scripts/install.sh`. Detects Bun (installs via `irm bun.sh/install.ps1 | iex` if missing), falls back to `npm i -g phantom-secrets` for the vault (no brew on Windows), tries `bun add -g @ashlr/stack ashlr-stack-mcp` first, falls back to git-clone into `$env:LOCALAPPDATA\ashlr-stack` and writes a `stack.cmd` + `ashlr-stack-mcp.cmd` shim into `$env:USERPROFILE\.local\bin` (preferred) or `$env:LOCALAPPDATA\Programs\ashlr-stack\bin`. Warns if the shim dir isn't on PATH. Install body wrapped in `Install-AshlrStack` + a top-level guard so `pwsh -Command { . ./scripts/install.ps1 }` parses without side-effects. Usage: `irm stack.ashlr.ai/install.ps1 | iex`.
+
+- **Per-package README + LICENSE**:
+  - `packages/cli/README.md` — technical overview, the three install paths, quickstart, command cheat-sheet for all 22 commands, links to docs.
+  - `packages/core/README.md` — short explainer that this is the shared library (not usually installed directly), public-API table (`addService`, `readConfig`/`writeConfig`, `listProviderNames`, `getProvider`, `scanSource`, `detectProvider`, `parseEnv`), example import.
+  - `packages/mcp/README.md` — what it is, install, `.mcp.json` snippets for Claude Code / Cursor / Windsurf / Codex, 17 tools grouped by category, 3 resources, links to `stack.ashlr.ai/docs/mcp`.
+  - `packages/cli/LICENSE`, `packages/core/LICENSE`, `packages/mcp/LICENSE` — copies of the root MIT LICENSE (npm doesn't traverse up).
+
+- **npm publish shape audit** — verified each published package.json (`@ashlr/stack`, `@ashlr/stack-core`, `ashlr-stack-mcp`) is ship-ready: `files` arrays include only `src/**/*`, `README.md`, `LICENSE`; `publishConfig.access: "public"` present on all three; `bin` paths correct (`./src/index.ts`); `repository.directory` correct; `main`/`exports` correct on core. **Flagged**: `@ashlr/stack` depends on `@ashlr/stack-core` via `workspace:*` — fine for monorepo dev, would break a bare `npm install @ashlr/stack`. Documented this in the root README "Publishing" section rather than hand-editing dev-critical dep ranges.
+
+- **`scripts/publish.sh`** — automated publish dance. Accepts `--version X.Y.Z` (or prompts), backs up each `package.json`, bumps `version`, rewrites every `workspace:*` → `^X.Y.Z`, runs `npm publish --dry-run` for each of the three packages first, prompts for explicit confirmation (bypass with `--yes`), publishes in dep order `core → mcp → cli`, **always restores `workspace:*` via an EXIT trap** so dev keeps working, then tags `v<version>` and pushes the tag. Never publishes without an explicit confirmation.
+
+- **Root `README.md` polish** — added three badges at the top (CI, MIT license, npm version — latter renders "not found" until publish, by design). New "Install" section right under the tagline with three options (macOS/Linux one-liner, Windows PowerShell one-liner, manual `bun add -g`). Prominent link to `STACK.md` for AI-agent readers. New "Publishing" subsection under "Monorepo layout" pointing at `scripts/publish.sh` and explaining the `workspace:*` caveat.
+
+- **Sanity checks**: `bun install`, `bun test` (97 / 0), `bunx tsc --noEmit -p tsconfig.json`, and PowerShell parse check for `scripts/install.ps1` all pass.
+
 ### Documentation site — /docs subsection
 
 10 documentation pages under `packages/site/src/pages/docs/`:

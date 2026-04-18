@@ -1,4 +1,5 @@
 import { makeApiKeyProvider } from "./_api-key.ts";
+import { verifyFetch } from "./_helpers.ts";
 
 export default makeApiKeyProvider({
   name: "railway",
@@ -10,7 +11,9 @@ export default makeApiKeyProvider({
   dashboard: "https://railway.app/dashboard",
   async verify(key) {
     try {
-      const res = await fetch("https://backboard.railway.app/graphql/v2", {
+      // GraphQL POST, but it's a read-only `{ me }` query — safe to retry,
+      // so we explicitly opt the helper into idempotent semantics.
+      const res = await verifyFetch("https://backboard.railway.app/graphql/v2", {
         method: "POST",
         headers: {
           "content-type": "application/json",

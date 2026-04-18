@@ -1,4 +1,5 @@
 import { makeApiKeyProvider } from "./_api-key.ts";
+import { verifyFetch } from "./_helpers.ts";
 
 /**
  * Linear — v1 uses a personal API key (users create one at
@@ -22,7 +23,8 @@ export default makeApiKeyProvider({
   },
   async verify(key) {
     try {
-      const res = await fetch("https://api.linear.app/graphql", {
+      // GraphQL POST but a read-only `{ viewer }` query — opt-in idempotent.
+      const res = await verifyFetch("https://api.linear.app/graphql", {
         method: "POST",
         headers: { "content-type": "application/json", Authorization: key },
         body: JSON.stringify({ query: "{ viewer { id name email } }" }),

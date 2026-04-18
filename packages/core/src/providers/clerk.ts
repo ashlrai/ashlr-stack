@@ -1,4 +1,5 @@
 import { makeApiKeyProvider } from "./_api-key.ts";
+import { verifyFetch } from "./_helpers.ts";
 
 export default makeApiKeyProvider({
   name: "clerk",
@@ -10,7 +11,7 @@ export default makeApiKeyProvider({
   dashboard: "https://dashboard.clerk.com",
   async verify(key) {
     try {
-      const res = await fetch("https://api.clerk.com/v1/jwks", {
+      const res = await verifyFetch("https://api.clerk.com/v1/jwks", {
         headers: { Authorization: `Bearer ${key}` },
       });
       if (!res.ok) return undefined;

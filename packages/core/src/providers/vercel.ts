@@ -1,6 +1,7 @@
 import type { ServiceEntry } from "../config.ts";
 import { StackError } from "../errors.ts";
 import { addSecret } from "../phantom.ts";
+import { fetchWithRetry } from "../http.ts";
 import { readLine, tryRevealSecret } from "./_helpers.ts";
 import type {
   AuthHandle,
@@ -108,7 +109,8 @@ function authHeaders(token: string): HeadersInit {
 
 async function fetchUser(token: string): Promise<Record<string, string> | undefined> {
   try {
-    const res = await fetch(`${API}/v2/user`, { headers: authHeaders(token) });
+    // Idempotent GET — retry transient failures during login validation + healthcheck.
+    const res = await fetchWithRetry(`${API}/v2/user`, { headers: authHeaders(token) });
     if (!res.ok) return undefined;
     const body = (await res.json()) as { user?: { uid?: string; email?: string; username?: string } };
     if (!body.user) return undefined;
@@ -122,7 +124,8 @@ async function fetchUser(token: string): Promise<Record<string, string> | undefi
 }
 
 async function fetchProject(token: string, id: string): Promise<{ id: string; name: string } | undefined> {
-  const res = await fetch(`${API}/v9/projects/${id}`, { headers: authHeaders(token) });
+  // Idempotent GET — healthcheck reads this on every `stack status` call.
+  const res = await fetchWithRetry(`${API}/v9/projects/${id}`, { headers: authHeaders(token) });
   if (res.status === 404) return undefined;
   if (!res.ok) return undefined;
   return (await res.json()) as { id: string; name: string };

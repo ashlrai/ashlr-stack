@@ -1,4 +1,5 @@
 import { makeApiKeyProvider } from "./_api-key.ts";
+import { verifyFetch } from "./_helpers.ts";
 
 /**
  * Replicate — run open-source ML models via API. v1 accepts a Replicate API
@@ -15,7 +16,7 @@ export default makeApiKeyProvider({
   dashboard: "https://replicate.com",
   async verify(key) {
     try {
-      const res = await fetch("https://api.replicate.com/v1/account", {
+      const res = await verifyFetch("https://api.replicate.com/v1/account", {
         headers: { Authorization: `Bearer ${key}` },
       });
       if (!res.ok) return undefined;

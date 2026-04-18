@@ -1,0 +1,134 @@
+---
+import Base from "~/layouts/Base.astro";
+
+/**
+ * Thin layout for the non-indexable launch notes (`/launch/hn`,
+ * `/launch/twitter`). These are `.md` files routed by Astro — Astro passes
+ * frontmatter as `Astro.props.frontmatter`, so we unpack it here and forward
+ * into the typed Base layout with `noindex: true` baked in.
+ */
+
+interface Props {
+  frontmatter?: {
+    title?: string;
+    description?: string;
+    noindex?: boolean;
+  };
+  // Also accept top-level fields in case a consumer uses this as a regular
+  // layout (Astro spreads frontmatter into props for `.md` pages only via
+  // the `frontmatter` object).
+  title?: string;
+  description?: string;
+}
+
+const {
+  frontmatter,
+  title: titleProp,
+  description: descriptionProp,
+} = Astro.props;
+
+const title = frontmatter?.title ?? titleProp ?? "Launch note · Ashlr Stack";
+const description =
+  frontmatter?.description ??
+  descriptionProp ??
+  "Draft launch copy for Ashlr Stack. Not indexable by search engines.";
+const noindex = frontmatter?.noindex ?? true;
+---
+
+<Base
+  title={title}
+  description={description}
+  noindex={noindex}
+  homepageSchema={false}
+  ogType="article"
+>
+  <article class="mx-auto max-w-[68ch] px-5 sm:px-8 py-16 sm:py-24 docs-prose">
+    <div class="chip mb-5">Launch note · draft</div>
+    <slot />
+  </article>
+</Base>
+
+<style is:global>
+  /* These notes aren't rendered inside a <Docs> layout, so the prose styles
+   * from Docs.astro's `is:global` block don't reach them. Replicate the bits
+   * we need so copy reads right — headings, paragraphs, lists, inline code.
+   */
+  article.docs-prose {
+    color: var(--color-ink-200);
+    line-height: 1.75;
+    font-size: 16px;
+  }
+  article.docs-prose > * + * {
+    margin-top: 1.1em;
+  }
+  article.docs-prose h1 {
+    font-family: var(--font-sans);
+    font-size: clamp(28px, 3.4vw, 40px);
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    color: #fff;
+    line-height: 1.1;
+    margin-bottom: 0.5em;
+  }
+  article.docs-prose h2 {
+    font-family: var(--font-sans);
+    font-size: 1.35rem;
+    font-weight: 600;
+    color: #fff;
+    margin-top: 2.2rem;
+    letter-spacing: -0.015em;
+  }
+  article.docs-prose strong {
+    color: #fff;
+  }
+  article.docs-prose code {
+    font-family: var(--font-mono);
+    font-size: 0.88em;
+    padding: 0.08em 0.38em;
+    border-radius: 4px;
+    background: rgba(217, 70, 239, 0.08);
+    border: 1px solid rgba(217, 70, 239, 0.15);
+    color: var(--color-magenta-200);
+  }
+  article.docs-prose pre {
+    margin: 1.2em 0;
+    padding: 0.9rem 1.1rem;
+    background: rgba(0, 0, 0, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 10px;
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  article.docs-prose pre code {
+    background: transparent;
+    border: none;
+    padding: 0;
+    color: inherit;
+  }
+  article.docs-prose a {
+    color: var(--color-magenta-300);
+    text-decoration: underline;
+    text-decoration-color: rgba(217, 70, 239, 0.3);
+    text-underline-offset: 3px;
+  }
+  article.docs-prose a:hover {
+    color: var(--color-magenta-200);
+  }
+  article.docs-prose ul,
+  article.docs-prose ol {
+    padding-left: 1.4rem;
+  }
+  article.docs-prose ul {
+    list-style: disc;
+  }
+  article.docs-prose ul li::marker {
+    color: var(--color-magenta-500);
+  }
+  article.docs-prose blockquote {
+    border-left: 2px solid var(--color-magenta-500);
+    padding-left: 1rem;
+    color: var(--color-ink-300);
+    font-style: italic;
+  }
+</style>

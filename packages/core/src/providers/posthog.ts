@@ -1,4 +1,5 @@
 import { makeApiKeyProvider } from "./_api-key.ts";
+import { verifyFetch } from "./_helpers.ts";
 
 export default makeApiKeyProvider({
   name: "posthog",
@@ -16,7 +17,7 @@ export default makeApiKeyProvider({
   },
   async verify(key) {
     try {
-      const res = await fetch("https://app.posthog.com/api/projects", {
+      const res = await verifyFetch("https://app.posthog.com/api/projects", {
         headers: { Authorization: `Bearer ${key}` },
       });
       if (!res.ok) return undefined;

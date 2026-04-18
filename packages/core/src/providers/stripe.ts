@@ -1,4 +1,5 @@
 import { makeApiKeyProvider } from "./_api-key.ts";
+import { verifyFetch } from "./_helpers.ts";
 
 /**
  * Stripe — v1 uses a restricted secret key (users create at
@@ -16,7 +17,7 @@ export default makeApiKeyProvider({
   dashboard: "https://dashboard.stripe.com",
   async verify(key) {
     try {
-      const res = await fetch("https://api.stripe.com/v1/account", {
+      const res = await verifyFetch("https://api.stripe.com/v1/account", {
         headers: { Authorization: `Bearer ${key}` },
       });
       if (!res.ok) return undefined;
