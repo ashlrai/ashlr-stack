@@ -15,88 +15,91 @@ import Footer from "~/components/Footer.astro";
 <Base>
   <Hero />
 
-  <!-- The one-command moment -->
-  <section id="one-command" class="relative mx-auto max-w-[1200px] px-5 sm:px-8 py-24 sm:py-28">
-    <header class="max-w-2xl mb-10">
-      <div class="chip mb-4">The one-command moment</div>
-      <h2 class="text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-[-0.03em] text-white">
-        Forty-five minutes, <span class="text-gradient-magenta">or one command.</span>
+  <!-- § 02 · Before / After — the "one command" moment -->
+  <section id="one-command" class="relative mx-auto max-w-[1240px] px-6 sm:px-10 pt-20 sm:pt-24 pb-16 sm:pb-20">
+    <div class="section-rule mb-10"><span>§ 02 · Before / After</span></div>
+
+    <header class="max-w-[720px] mb-10" data-reveal>
+      <h2 class="display text-[color:var(--color-ink-50)]" style="font-size: clamp(34px, 4.4vw, 56px);">
+        Forty-five minutes. Or <span class="display-accent">four seconds</span>.
       </h2>
-      <p class="mt-4 text-ink-300 leading-relaxed">
-        What wiring a single service actually looks like — before and after. Flip the tab.
+      <p class="mt-5 text-[15px] leading-[1.6] text-[color:var(--color-ink-300)] max-w-[560px]">
+        Wiring a single service the old way vs. <span class="text-[color:var(--color-ink-100)] mono">stack add supabase</span>.
+        Scroll through the delta.
       </p>
     </header>
+
     <OneCommand client:visible />
   </section>
 
-  <!-- See it run — a looping terminal reel between the "one command" pitch
-       and the providers grid. Third editorial moment of the page. -->
-  <section id="see-it-run" class="relative mx-auto max-w-[1200px] px-5 sm:px-8 py-20 sm:py-24">
-    <header class="max-w-2xl mb-8">
-      <div class="edi-rule edi-rule-left mb-4">
-        <span>§ 03 · In motion</span>
-      </div>
-      <h2 class="text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-[-0.03em] text-white">
-        See it <span class="text-gradient-magenta">run.</span>
+  <!-- § 03 · In motion — DemoReel -->
+  <section id="see-it-run" class="relative mx-auto max-w-[1240px] px-6 sm:px-10 pt-16 sm:pt-20 pb-20 sm:pb-24">
+    <div class="section-rule mb-10"><span>§ 03 · In motion</span></div>
+
+    <header class="max-w-[720px] mb-10" data-reveal>
+      <h2 class="display text-[color:var(--color-ink-50)]" style="font-size: clamp(34px, 4.4vw, 56px);">
+        See it <span class="display-accent">run</span>.
       </h2>
-      <p class="mt-4 text-ink-300 leading-relaxed">
-        Not a recording — a faithful, looping replay of the real CLI. Initialise,
-        add a provider, run the app. The whole loop is under thirty seconds.
+      <p class="mt-5 text-[15px] leading-[1.6] text-[color:var(--color-ink-300)] max-w-[560px]">
+        Not a recording — a faithful replay of the real CLI. Initialise, add a provider,
+        run the app. The whole loop is under thirty seconds.
       </p>
     </header>
+
     <DemoReel client:visible />
   </section>
 
   <ProvidersGrid />
+
   <HowItWorks />
+
   <Templates />
 
-  <!-- Claude Code integration -->
-  <section id="claude-code" class="relative mx-auto max-w-[1200px] px-5 sm:px-8 py-24 sm:py-28">
+  <!-- § 07 · Claude Code — the agent runs Stack -->
+  <section id="claude-code" class="relative mx-auto max-w-[1240px] px-6 sm:px-10 pt-20 sm:pt-24 pb-20 sm:pb-24">
+    <div class="section-rule mb-10"><span>§ 07 · Agent-native</span></div>
+
     <div class="grid grid-cols-1 lg:grid-cols-[0.85fr_1fr] gap-10 lg:gap-14 items-start">
-      <div class="lg:pt-6 lg:sticky lg:top-24">
-        <div class="chip mb-4">Claude Code integration</div>
-        <h2 class="text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-[-0.03em] text-white">
-          Your agent can <span class="text-gradient-magenta">run Stack directly.</span>
+      <div class="lg:pt-2 lg:sticky lg:top-20" data-reveal>
+        <div class="chip mb-5">
+          <span class="chip-dot"></span>
+          MCP · Claude Code plugin
+        </div>
+
+        <h2 class="display text-[color:var(--color-ink-50)]" style="font-size: clamp(32px, 4.2vw, 52px);">
+          Your agent can <span class="display-accent">run Stack</span> directly.
         </h2>
-        <p class="mt-4 text-ink-300 leading-relaxed">
-          Stack ships as a Claude Code plugin and an MCP server. From chat, call
-          <code class="mono text-magenta-300">/stack:add</code> and Claude provisions the service,
-          stores secrets in Phantom, and re-wires your <code class="mono">.mcp.json</code> — no
-          copy-paste back to the terminal.
+
+        <p class="mt-5 text-[15px] leading-[1.6] text-[color:var(--color-ink-300)]">
+          Stack ships as an MCP server + a first-party Claude Code plugin. From chat,
+          call <code class="mono text-[color:var(--color-ink-100)]">/stack:add</code> and Claude
+          provisions the upstream resource, stores every secret in Phantom, and re-wires
+          <code class="mono text-[color:var(--color-ink-100)]">.mcp.json</code> — zero copy-paste.
         </p>
 
-        <ul class="mt-6 space-y-3 text-sm">
-          <li class="flex items-start gap-3">
-            <span class="mt-0.5 text-magenta-400">▸</span>
-            <div>
-              <div class="text-white font-medium">MCP-native</div>
-              <div class="text-ink-400">Every Stack command is exposed as an MCP tool.</div>
-            </div>
-          </li>
-          <li class="flex items-start gap-3">
-            <span class="mt-0.5 text-magenta-400">▸</span>
-            <div>
-              <div class="text-white font-medium">Plugin commands</div>
-              <div class="text-ink-400"><code class="mono text-ink-200">/stack:add</code>, <code class="mono text-ink-200">/stack:doctor</code>, <code class="mono text-ink-200">/stack:open</code> — all available in-chat.</div>
-            </div>
-          </li>
-          <li class="flex items-start gap-3">
-            <span class="mt-0.5 text-magenta-400">▸</span>
-            <div>
-              <div class="text-white font-medium">Phantom-gated</div>
-              <div class="text-ink-400">Secrets are read through Phantom's proxy. The agent sees a slot name, never a key.</div>
-            </div>
-          </li>
+        <ul class="mt-8 space-y-4 text-sm">
+          {[
+            { t: "MCP-native", d: "Every CLI command is exposed as an MCP tool." },
+            { t: "Plugin commands", d: "/stack:add · /stack:doctor · /stack:open live in chat." },
+            { t: "Phantom-gated", d: "The agent sees a slot name, never a key." },
+          ].map((row) => (
+            <li class="flex items-start gap-3">
+              <span class="mt-1 w-2 h-2 bg-[color:var(--color-blade-500)] shrink-0"></span>
+              <div>
+                <div class="text-[color:var(--color-ink-50)] mono text-[13px]">{row.t}</div>
+                <div class="text-[color:var(--color-ink-400)] mt-0.5">{row.d}</div>
+              </div>
+            </li>
+          ))}
         </ul>
 
-        <div class="mt-8 panel-inner rounded-lg p-4 mono text-[12px]">
+        <div class="mt-8 panel-steel p-4 mono text-[12px]" style="border-left: 2px solid var(--color-blade-500);">
           <div class="ansi-dim mb-1"># one-time setup</div>
-          <div><span class="ansi-magenta select-none">$ </span><span class="ansi-white">claude plugin install ashlr-ai/stack-plugin</span></div>
+          <div><span class="ansi-blade select-none">›</span> <span class="ansi-white">claude plugin install ashlrai/stack-plugin</span></div>
         </div>
       </div>
 
-      <div>
+      <div data-reveal>
         <ClaudeCodeDemo client:visible />
       </div>
     </div>
