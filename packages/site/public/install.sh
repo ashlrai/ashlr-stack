@@ -6,8 +6,9 @@
 # This script installs the `stack` CLI so you can run `stack add supabase`
 # immediately after. It tries, in order:
 #
-#   1. Published registries (`@ashlr/stack` on npm) once we ship v0.1 — fast path.
-#   2. Git clone + symlink — works today against the current repo.
+#   1. Prebuilt binary from the latest GitHub Release — zero dependencies.
+#   2. Published registries (`@ashlr/stack` on npm) — requires bun or node.
+#   3. Git clone + symlink — source-install fallback.
 #
 # It also installs Phantom Secrets (Stack's vault) if it's missing, since every
 # `stack add` writes through Phantom.
@@ -18,8 +19,12 @@ say()  { printf "  \033[1;35m▲\033[0m stack: %s\n" "$1"; }
 warn() { printf "  \033[1;33m!\033[0m stack: %s\n" "$1" >&2; }
 die()  { printf "  \033[1;31m✗\033[0m stack: %s\n" "$1" >&2; exit 1; }
 
-REPO_URL="${STACK_REPO_URL:-https://github.com/ashlrai/ashlr-stack.git}"
+REPO="${STACK_REPO:-ashlrai/ashlr-stack}"
+REPO_URL="${STACK_REPO_URL:-https://github.com/${REPO}.git}"
 INSTALL_DIR="${STACK_INSTALL_DIR:-$HOME/.local/share/ashlr-stack}"
+
+# Where the standalone binary lands on successful prebuilt install.
+BIN_DIR_DEFAULT="$HOME/.ashlr/bin"
 
 # ---------------------------------------------------------------------------
 # 1. Prerequisites — Bun (preferred) or Node+npm.
@@ -58,8 +63,67 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 3. Stack CLI — try registries first, fall back to git clone + symlink.
+# 3. Stack CLI — prebuilt binary first, then npm, then git clone.
 # ---------------------------------------------------------------------------
+
+detect_target() {
+  local os arch
+  os=$(uname -s | tr '[:upper:]' '[:lower:]')
+  arch=$(uname -m)
+  case "$arch" in
+    x86_64|amd64) arch="x64" ;;
+    arm64|aarch64) arch="arm64" ;;
+    *) return 1 ;;
+  esac
+  case "$os" in
+    darwin) echo "stack-darwin-${arch}" ;;
+    linux)  echo "stack-linux-${arch}"  ;;
+    *) return 1 ;;
+  esac
+}
+
+install_via_binary() {
+  local asset url tmp bin_dir sha_url sum actual
+  asset=$(detect_target) || { warn "unsupported OS/arch for prebuilt binary — falling back."; return 1; }
+  url="https://github.com/${REPO}/releases/latest/download/${asset}"
+  sha_url="${url}.sha256"
+  tmp=$(mktemp -d)
+  trap 'rm -rf "$tmp"' RETURN
+
+  say "fetching prebuilt binary: ${asset}"
+  if ! curl -fsSL "$url" -o "$tmp/stack"; then
+    warn "no prebuilt binary available at $url (release not cut yet?) — falling back."
+    return 1
+  fi
+
+  # Verify checksum if the server served one.
+  if curl -fsSL "$sha_url" -o "$tmp/stack.sha256" 2>/dev/null; then
+    sum=$(awk '{print $1}' < "$tmp/stack.sha256")
+    if command -v sha256sum >/dev/null 2>&1; then
+      actual=$(sha256sum "$tmp/stack" | awk '{print $1}')
+    else
+      actual=$(shasum -a 256 "$tmp/stack" | awk '{print $1}')
+    fi
+    if [ "$sum" != "$actual" ]; then
+      die "checksum mismatch on downloaded binary (expected $sum, got $actual)"
+    fi
+    say "checksum verified"
+  else
+    warn "no checksum published for this asset — skipping verification."
+  fi
+
+  chmod +x "$tmp/stack"
+  bin_dir="$BIN_DIR_DEFAULT"
+  mkdir -p "$bin_dir"
+  mv "$tmp/stack" "$bin_dir/stack"
+  say "stack installed to $bin_dir/stack"
+
+  if ! echo "$PATH" | tr ':' '\n' | grep -qx "$bin_dir"; then
+    warn "$bin_dir is not on your PATH — add to your shell init:"
+    warn "  export PATH=\"\$HOME/.ashlr/bin:\$PATH\""
+  fi
+  return 0
+}
 
 install_via_registry() {
   if [ "$PKG_MGR" = "bun" ]; then
@@ -116,10 +180,12 @@ EOF
 }
 
 say "installing the stack CLI…"
-if install_via_registry; then
+if install_via_binary; then
+  say "installed prebuilt binary from GitHub Releases."
+elif install_via_registry; then
   say "installed from npm registry."
 else
-  say "registry install unavailable (v0.1 not published yet) — falling back to source."
+  say "registry install unavailable — falling back to source."
   install_via_clone
 fi
 
