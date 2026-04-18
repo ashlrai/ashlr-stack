@@ -1,0 +1,105 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Test + typecheck (Bun ${{ matrix.bun }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        bun: ["1.2.0", "latest"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ matrix.bun }}
+
+      - name: Install
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck (root workspace)
+        run: bunx tsc --noEmit -p tsconfig.json
+
+      - name: Test (bun test)
+        run: bun test
+
+      - name: Smoke test CLI help
+        run: bun run packages/cli/src/index.ts --help
+
+      - name: Smoke test providers list
+        run: bun run packages/cli/src/index.ts providers
+
+  site:
+    name: Site build (astro check + build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install root
+        run: bun install --frozen-lockfile
+
+      - name: Install site deps
+        working-directory: packages/site
+        run: bun install --frozen-lockfile
+
+      - name: astro check
+        working-directory: packages/site
+        run: bunx astro check
+
+      - name: astro build
+        working-directory: packages/site
+        run: bun run build
+
+      - name: Smoke — key public routes exist in dist/
+        working-directory: packages/site
+        run: |
+          set -e
+          test -f dist/index.html
+          test -f dist/docs/index.html
+          test -f dist/docs/for-ai-agents/index.html
+          test -f dist/openapi.json
+          test -f dist/mcp.json
+          test -f dist/.well-known/ai-plugin.json
+          test -f dist/llms.txt
+          test -f dist/sitemap-0.xml
+          echo "All public routes present."
+
+      - name: Validate public JSON is actually JSON
+        working-directory: packages/site
+        run: |
+          for f in dist/openapi.json dist/mcp.json dist/.well-known/ai-plugin.json dist/manifest.webmanifest; do
+            bunx --bun -e "JSON.parse(require('fs').readFileSync('$f','utf-8')); console.log('ok: $f')"
+          done
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install
+        run: bun install --frozen-lockfile
+
+      - name: Biome check
+        run: bunx biome check packages --reporter=github
+        continue-on-error: true  # biome findings are advisory in CI until we commit to the ruleset
