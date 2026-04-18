@@ -1,32 +1,10 @@
 ---
-/**
- * "Works with every MCP client" — a horizontal strip of brand marks for the
- * agents that can drive Stack via its MCP server.
- *
- * Marks are hand-authored inline SVG (intentional geometry, not stock icons)
- * because simple-icons doesn't cover most of these. Each mark is monochrome
- * on dark with a brand-color hover reveal.
- */
-
-interface Client {
-  name: string;
-  url: string;
-  color: string; // brand accent for hover
-  meta: string;  // short caption
-}
-
-const CLIENTS: Client[] = [
-  { name: "Claude Code",    url: "https://claude.com/claude-code",          color: "#D97757", meta: "Anthropic · MCP native" },
-  { name: "Cursor",         url: "https://cursor.com",                       color: "#FFFFFF", meta: "IDE · MCP" },
-  { name: "Windsurf",       url: "https://codeium.com/windsurf",             color: "#2BC4B6", meta: "Codeium · MCP" },
-  { name: "OpenAI Codex",   url: "https://openai.com/codex",                 color: "#10A37F", meta: "OpenAI · tool use" },
-  { name: "ashlrcode",      url: "https://github.com/ashlrai/ashlrcode",     color: "#D946EF", meta: "Ashlr · multi-model" },
-];
+import McpClientsGrid from "./McpClientsGrid";
 ---
 
 <section
   id="mcp-clients"
-  class="relative mx-auto max-w-[1200px] px-5 sm:px-8 pt-14 sm:pt-16 pb-6"
+  class="relative mx-auto max-w-[1240px] px-6 sm:px-10 pt-14 sm:pt-16 pb-6"
 >
   <div class="section-rule mb-10">
     <span>§ 08 · Agent surface</span>
@@ -36,124 +14,25 @@ const CLIENTS: Client[] = [
     <h2 class="display text-[color:var(--color-ink-50)]" style="font-size: clamp(30px, 4.2vw, 50px);">
       Every MCP-capable agent, <span class="display-accent">out of the box.</span>
     </h2>
-    <p class="mt-5 text-[15px] leading-[1.6] text-[color:var(--color-ink-300)] max-w-[600px]">
+    <p class="mt-5 text-[15px] leading-[1.6] text-[color:var(--color-ink-300)] max-w-[620px]">
       Stack's MCP server drops into Claude Code, Cursor, Windsurf, Codex, or ashlrcode with
-      the same <code class="mono text-[color:var(--color-blade-400)]">.mcp.json</code>. Your agent learns 17 new tools
-      — <span class="text-white">stack_add</span>, <span class="text-white">stack_scan</span>,
-      <span class="text-white">stack_doctor</span>, and the rest — and can wire any of the 23 providers
-      for the user without leaving chat.
+      the same <code class="mono text-[color:var(--color-blade-400)]">stack mcp serve</code>
+      entry point. Click a client to see the exact config Stack writes — path + JSON.
     </p>
   </header>
 
-  <ul class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 reveal-stagger" data-reveal>
-    {CLIENTS.map((client, i) => (
-      <li class="reveal" style={`--stagger-i: ${i}`}>
-        <a
-          href={client.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          class="mcp-client group relative block rounded-xl panel p-5 h-[144px] overflow-hidden"
-          style={`--accent:${client.color};`}
-          aria-label={`${client.name} — ${client.meta}`}
-        >
-          <span
-            aria-hidden="true"
-            class="mcp-glow pointer-events-none absolute inset-0 opacity-0 transition-opacity"
-            style="background: radial-gradient(200px 80px at 50% 130%, var(--accent), transparent 60%); mix-blend-mode: screen;"
-          ></span>
+  <div data-reveal>
+    <McpClientsGrid client:visible />
+  </div>
 
-          <div class="relative flex flex-col h-full justify-between">
-            <div class="mcp-mark w-10 h-10 flex items-center justify-center text-ink-100 group-hover:text-[color:var(--accent)] transition-colors">
-              {client.name === "Claude Code" && (
-                <svg viewBox="0 0 40 40" width="32" height="32" fill="currentColor" aria-hidden="true">
-                  {/* Anthropic's petal/burst mark — 4 elongated ovals radiating from center */}
-                  <g>
-                    <ellipse cx="20" cy="20" rx="3" ry="14" />
-                    <ellipse cx="20" cy="20" rx="3" ry="14" transform="rotate(45 20 20)" />
-                    <ellipse cx="20" cy="20" rx="3" ry="14" transform="rotate(90 20 20)" />
-                    <ellipse cx="20" cy="20" rx="3" ry="14" transform="rotate(135 20 20)" />
-                  </g>
-                </svg>
-              )}
-              {client.name === "Cursor" && (
-                <svg viewBox="0 0 40 40" width="32" height="32" fill="currentColor" aria-hidden="true">
-                  {/* Stylized cursor arrow — chunky, filled */}
-                  <path d="M8 6 L32 20 L21 22 L16 33 Z" />
-                </svg>
-              )}
-              {client.name === "Windsurf" && (
-                <svg viewBox="0 0 40 40" width="32" height="32" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true">
-                  {/* Wave / crest — three parallel curves suggesting a wave */}
-                  <path d="M4 26 Q12 16 20 22 T36 18" />
-                  <path d="M4 20 Q12 10 20 16 T36 12" opacity="0.7" />
-                  <path d="M4 32 Q12 22 20 28 T36 24" opacity="0.4" />
-                </svg>
-              )}
-              {client.name === "OpenAI Codex" && (
-                <svg viewBox="0 0 40 40" width="32" height="32" fill="currentColor" aria-hidden="true">
-                  {/* OpenAI rose/knot — 6 overlapping elongated leaves */}
-                  <g transform="translate(20 20)">
-                    <g>
-                      <ellipse rx="2.4" ry="11" fill="currentColor" />
-                      <ellipse rx="2.4" ry="11" transform="rotate(60)" fill="currentColor" />
-                      <ellipse rx="2.4" ry="11" transform="rotate(120)" fill="currentColor" />
-                    </g>
-                  </g>
-                </svg>
-              )}
-              {client.name === "ashlrcode" && (
-                <svg viewBox="0 0 40 40" width="32" height="32" fill="currentColor" aria-hidden="true">
-                  {/* Ashlr triangle + chevron — ◁▷ stack */}
-                  <path d="M20 7 L33 30 L7 30 Z" />
-                  <path d="M20 14 L27 26 L13 26 Z" fill="var(--color-ink-950, #050506)" />
-                </svg>
-              )}
-            </div>
-
-            <div>
-              <div class="text-[14px] font-semibold text-white tracking-tight">
-                {client.name}
-              </div>
-              <div class="text-[11px] mono text-ink-400 mt-0.5">
-                {client.meta}
-              </div>
-            </div>
-          </div>
-        </a>
-      </li>
-    ))}
-  </ul>
-
-  <div class="mt-8 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-ink-500 reveal" data-reveal>
+  <div class="mt-8 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-[color:var(--color-ink-500)]" data-reveal>
     <span class="small-caps">Protocol:</span>
-    <span class="mono text-ink-300">Model Context Protocol</span>
-    <span class="text-ink-700">·</span>
-    <a href="https://modelcontextprotocol.io" class="hover:text-ink-200 underline decoration-ink-700 underline-offset-2" target="_blank" rel="noopener">
+    <span class="mono text-[color:var(--color-ink-300)]">Model Context Protocol</span>
+    <span class="text-[color:var(--color-ink-600)]">·</span>
+    <a href="https://modelcontextprotocol.io" class="hover:text-[color:var(--color-ink-200)] underline decoration-[color:var(--color-ink-600)] underline-offset-2" target="_blank" rel="noopener">
       modelcontextprotocol.io
     </a>
-    <span class="text-ink-700">·</span>
+    <span class="text-[color:var(--color-ink-600)]">·</span>
     <span>17 tools · 3 resources · stdio + SSE</span>
   </div>
 </section>
-
-<style>
-  .mcp-client {
-    transition:
-      border-color 240ms ease,
-      transform 240ms cubic-bezier(0.34, 1.56, 0.64, 1);
-  }
-  .mcp-client:hover {
-    border-color: color-mix(in oklab, var(--accent) 35%, transparent);
-    transform: translateY(-2px);
-  }
-  .mcp-client:hover .mcp-glow {
-    opacity: 0.55 !important;
-  }
-  .mcp-client:hover .mcp-mark {
-    transform: scale(1.08);
-  }
-  .mcp-mark {
-    transition: transform 240ms cubic-bezier(0.34, 1.56, 0.64, 1),
-                color 180ms ease;
-  }
-</style>

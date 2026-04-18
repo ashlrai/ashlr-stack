@@ -90,7 +90,7 @@ export default function ClaudeCodeDemo() {
   return (
     <div
       ref={ref}
-      className="panel rounded-2xl overflow-hidden shadow-[0_40px_120px_-40px_rgba(217,70,239,0.25)] relative"
+      className="panel rounded-2xl overflow-hidden shadow-[0_40px_120px_-40px_rgba(233,107,42,0.22)] relative"
     >
       {/* Chrome */}
       <div className="flex items-center gap-3 px-4 h-10 hairline-bottom">
@@ -308,8 +308,8 @@ function Avatar({ kind }: { kind: "user" | "assistant" | "tool" }) {
       className="flex-none w-7 h-7 rounded-full flex items-center justify-center"
       style={{
         background:
-          "linear-gradient(135deg, rgba(217,70,239,0.18), rgba(217,70,239,0.05))",
-        border: "1px solid rgba(217,70,239,0.35)",
+          "linear-gradient(135deg, rgba(233,107,42,0.16), rgba(233,107,42,0.04))",
+        border: "1px solid rgba(233,107,42,0.35)",
       }}
     >
       <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden>
