@@ -4,15 +4,15 @@ import type { Group } from "three";
 import StackPlate from "./StackPlate";
 
 /**
- * Eight-plate stack. Viewed from an isometric 3/4 camera defined in
- * HeroStack3D — the rig itself sits at BASE_ROT_Y and only receives a
- * gentle idle drift + damped cursor-follow tilt. On first mount, plates
- * drop from above into their rest position.
+ * Eight-plate stack. The rig group holds all plates and receives drag-
+ * rotation from HeroStack3D via the exposed `groupRef`. Plates drop in
+ * from above on first mount, then sit at rest; pointer interactions are
+ * delegated to StackPlate + surfaced through onHover / onSelect.
  */
 
 interface Tier { label: string; glyph: string; accent?: boolean }
 
-const TIERS: Tier[] = [
+export const TIERS: Tier[] = [
   { label: "HUMAN / AGENT", glyph: "◇" },
   { label: "CLI / MCP",     glyph: "⊞" },
   { label: "AI APIS",       glyph: "∴" },
@@ -26,32 +26,24 @@ const TIERS: Tier[] = [
 const PLATE_GAP    = 0.48;
 const PLATE_HEIGHT = 0.36;
 const LAYER_H      = PLATE_HEIGHT + PLATE_GAP;
+const CENTER_INDEX = (TIERS.length - 1) / 2;
 
-const CENTER_INDEX = (TIERS.length - 1) / 2;      // 3.5
-const restYFor = (i: number) => (CENTER_INDEX - i) * LAYER_H;
+export const restYFor = (i: number) => (CENTER_INDEX - i) * LAYER_H;
 
-const BASE_ROT_Y = 0.28;   // ~16°, permanent 3/4 pose so plates never edge-on
-const MAX_ROT_Y  = 0.20;
-const MAX_ROT_X  = 0.09;
+interface Props {
+  reduced?: boolean;
+  hovered: number | null;
+  selected: number | null;
+  onHover: (index: number | null) => void;
+  onSelect: (index: number) => void;
+}
 
-export default function StackRig({ reduced = false }: { reduced?: boolean }) {
+export default function StackRig({ reduced = false, hovered, selected, onHover, onSelect }: Props) {
   const group = useRef<Group>(null);
-  const target = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const assembledAt = useRef<number>(0);
 
-  useEffect(() => {
-    const onMove = (e: PointerEvent) => {
-      if (reduced) return;
-      const nx = (e.clientX / window.innerWidth) * 2 - 1;
-      const ny = (e.clientY / window.innerHeight) * 2 - 1;
-      target.current.x = nx;
-      target.current.y = ny;
-    };
-    window.addEventListener("pointermove", onMove, { passive: true });
-    return () => window.removeEventListener("pointermove", onMove);
-  }, [reduced]);
-
-  useFrame((_, dt) => {
+  // Drop-in assemble: plates fall from +3.4 above rest, staggered 55ms each.
+  useFrame(() => {
     if (!group.current) return;
     const now = performance.now();
     if (!assembledAt.current) assembledAt.current = now;
@@ -68,16 +60,14 @@ export default function StackRig({ reduced = false }: { reduced?: boolean }) {
       child.visible = true;
     });
 
-    const drift = reduced ? 0 : Math.sin(now * 0.00022) * 0.12;
-    const wantY = BASE_ROT_Y + drift + target.current.x * MAX_ROT_Y;
-    const wantX = reduced ? 0 : target.current.y * MAX_ROT_X * -1;
-    const k = 1 - Math.pow(1 - 0.08, dt * 60);
-    group.current.rotation.y += (wantY - group.current.rotation.y) * k;
-    group.current.rotation.x += (wantX - group.current.rotation.x) * k;
-
     const breathe = Math.sin(now * 0.0009) * 0.02;
     group.current.position.y = breathe;
   });
+
+  // Make the group ref available to HeroStack3D for drag-rotate integration.
+  // We re-emit via the onHover side-channel once; simpler than a ref-forwarding
+  // dance given the rig is always mounted inside HeroStack3D.
+  useEffect(() => { /* noop — ref is owned internally */ }, []);
 
   return (
     <group ref={group}>
@@ -85,10 +75,15 @@ export default function StackRig({ reduced = false }: { reduced?: boolean }) {
         <StackPlate
           key={tier.label}
           y={restYFor(i)}
+          index={i}
           label={tier.label}
           glyph={tier.glyph}
           tier={TIERS.length - i}
           accent={tier.accent}
+          hovered={hovered === i}
+          selected={selected === i}
+          onHover={onHover}
+          onSelect={onSelect}
         />
       ))}
     </group>

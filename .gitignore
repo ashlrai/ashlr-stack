@@ -27,3 +27,4 @@ bun.lockb.backup
 
 # Claude Code session settings — per-dev, not per-repo
 .claude/settings.local.json
+.vercel
