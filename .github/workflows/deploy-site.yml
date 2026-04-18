@@ -21,8 +21,11 @@ env:
 
 jobs:
   # ─── Vercel ───────────────────────────────────────────────────────────────
+  # Only runs when the repo has VERCEL_TOKEN set as a secret. Vercel's native
+  # Git integration covers the common case; this Action is the fallback for
+  # people who prefer to own their deploys.
   deploy-vercel:
-    if: ${{ vars.USE_VERCEL != 'false' }}
+    if: ${{ vars.USE_VERCEL != 'false' && secrets.VERCEL_TOKEN != '' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

@@ -83,7 +83,7 @@ jobs:
         working-directory: packages/site
         run: |
           for f in dist/openapi.json dist/mcp.json dist/.well-known/ai-plugin.json dist/manifest.webmanifest; do
-            bunx --bun -e "JSON.parse(require('fs').readFileSync('$f','utf-8')); console.log('ok: $f')"
+            node -e "JSON.parse(require('fs').readFileSync('$f','utf-8')); console.log('ok: $f')"
           done
 
   lint:
