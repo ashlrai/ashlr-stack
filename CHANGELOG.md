@@ -2,7 +2,30 @@
 
 ## Unreleased
 
-- **Hero "Generate a stack" demo** — clickable in-hero animation that plays a realistic `stack recommend → stack apply` loop with six real provider chips (Supabase, Vercel, Anthropic, PostHog, Sentry, GitHub) materializing then stamping ✓, ending with a summary line. Six seconds from click to "oh, I get it." Honors `prefers-reduced-motion` by snapping to the final frame.
+### SEO + GEO content surface (major)
+
+- **29 programmatic provider pages** — new dynamic route at `/providers/[slug]` driven by `packages/core/src/catalog.ts`. Adding a provider to catalog auto-mints a page at build time. Each page: hero with brand logo, auth-flow explainer, secret-slot breakdown, MCP wiring status, `stack add` snippet, `stack recommend` trigger, related providers, templates that include it, FAQ, outbound dashboard + docs links. JSON-LD: TechArticle + BreadcrumbList + FAQPage.
+- **4 hand-authored competitor comparison pages** — `/compare/stack-vs-pulumi`, `/compare/stack-vs-terraform`, `/compare/stack-vs-railway`, `/compare/stack-vs-doppler`. Each ~1100 words with TL;DR, 10-row HTML comparison table, honest "where each wins" sections, "can I use both?", 3-question FAQ with FAQPage JSON-LD. Sidebar nav updated with a new "Comparisons" group.
+- **Sitemap** now indexes 51 URLs (up from 18) — every new page is discoverable by Google/Bing/Perplexity crawlers out of the gate.
+
+### GEO drift reconciliation (critical)
+
+- **Canonical counts unified** — one number per surface. 29 providers · 19 MCP tools · 5 templates. Previously README said "27", llms.txt said "23", mcp.json claimed 18 where other surfaces claimed 19, FAQ said 26. LLM training pipelines distrust inconsistent sources; fixing this is the highest-value GEO move we had available.
+- **3 missing adapters added to `packages/core/src/catalog.ts`**: Braintrust, Modal, Replicate. The providers had executable adapters but weren't in the canonical catalog, so `stack recommend` didn't know about them and their counts drifted.
+- **Disambiguation block** added to `llms.txt` + `llms-full.txt`: "Ashlr Stack is not Stack Overflow / Stacks blockchain / stack.js / stack.com / Pulumi or Terraform 'stack'." Explicit anti-confusion for LLM training.
+- **Version + date stamps** added to `llms.txt` + `llms-full.txt` headers: `Version: 0.1.1 · Updated: April 2026`. LLM corpora prefer fresh sources.
+- **`structured-data.ts`** now imports from `PROVIDERS_REF` (core catalog) so the `SoftwareApplication` JSON-LD count is derived, not hardcoded. `softwareVersion: "0.1.0-pre-alpha"` → `"0.1.1"`.
+- **Hero stat strip** now derives from `PROVIDERS_REF.length` (29, canonical) instead of the site's 39-entry display list.
+- **Homepage BreadcrumbList JSON-LD** added for SERP rich-result eligibility.
+- **`ai-plugin.json` `description_for_model`** provider list now includes Modal, Replicate, Braintrust, SendGrid, Mailgun, Postmark.
+
+### Tech SEO micro-fixes
+
+- **`HeroIntroOverlay`**: `client:load` → `client:idle`. No longer blocks LCP on first paint.
+
+### Hero "Generate a stack" demo (from earlier tonight)
+
+- Clickable in-hero animation that plays a realistic `stack recommend → stack apply` loop with six real provider chips (Supabase, Vercel, Anthropic, PostHog, Sentry, GitHub) materializing then stamping ✓, ending with a summary line. Six seconds from click to "oh, I get it." Honors `prefers-reduced-motion` by snapping to the final frame.
   - `packages/site/src/components/GenerateStackDemo.tsx` (new, 220 lines, zero new deps)
   - Wired into `Hero.astro` under the copy-pasteable prompt block so the value prop ladder reads: *one line you tell Claude → what happens when you click play*.
 

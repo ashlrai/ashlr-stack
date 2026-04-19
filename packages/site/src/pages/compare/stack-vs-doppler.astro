@@ -1,0 +1,281 @@
+---
+import Docs from "~/layouts/Docs.astro";
+import { faqPageSchema } from "~/lib/structured-data";
+import { SITE_URL } from "~/lib/og";
+
+const pageUrl = `${SITE_URL}/compare/stack-vs-doppler/`;
+
+const faq = faqPageSchema(
+  [
+    {
+      question: "Is Stack a secret manager?",
+      answer:
+        "No. Stack is a control plane that provisions SaaS services and records which secrets each service needs. The actual vault is Phantom (phm.dev), Stack's sister product, which is a local-first E2E-encrypted secret manager. If you prefer Doppler or Infisical as your vault, Stack can still provision — you just pipe the resulting secrets into your existing vault.",
+    },
+    {
+      question: "Can I migrate from Doppler to Phantom?",
+      answer:
+        "Yes — Phantom has an import path for Doppler configs. The reverse also works: Phantom can push its vault to Doppler via `phantom sync` so teams that have already standardized on Doppler can adopt Stack without disrupting their current secret workflow.",
+    },
+    {
+      question: "Which do YC startups use?",
+      answer:
+        "Early-stage startups commonly use Doppler or 1Password for shared team secrets because they're mature and the team primitive is solved. Stack + Phantom is the better choice when you want provider provisioning and secret storage to happen in one atomic step rather than as two separate processes.",
+    },
+  ],
+  pageUrl,
+);
+---
+
+<Docs
+  title="Stack vs Doppler"
+  description="Doppler is a mature cloud secret manager. Stack provisions providers and stores secrets via Phantom. Different problems, sometimes used together."
+  eyebrow="Comparison"
+  extraSchemas={[faq]}
+>
+  <h2>TL;DR</h2>
+  <p>
+    <a href="https://www.doppler.com" target="_blank" rel="noopener">Doppler</a>
+    is a cloud-hosted secret manager built for teams: you define environments,
+    invite teammates, use their CLI or SDK to inject env vars at runtime, and
+    get audit logs and rotation workflows. It's mature, well-adopted, and
+    solves team-wide secret sharing cleanly. Stack is not a secret manager.
+    It's a control plane that provisions SaaS services (Supabase, Stripe,
+    Clerk, etc.) and records slot names for the secrets those services hand
+    back. The actual vault is <a href="/docs/phantom/">Phantom</a>, Stack's
+    sister product — a local-first, E2E-encrypted secret manager. Doppler
+    versus Stack isn't really the comparison; it's Doppler versus
+    Phantom-backed Stack. Here's the honest breakdown.
+  </p>
+
+  <h2>When to pick each</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Pick Doppler when</th>
+        <th>Pick Stack (+ Phantom) when</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Your team already standardized on Doppler and has dev/staging/prod workflows in place.</td>
+        <td>You're starting fresh and want secret storage tied to provisioning, not as a separate step.</td>
+      </tr>
+      <tr>
+        <td>You need audit logs, RBAC, and SOC2-backed cloud storage out of the box.</td>
+        <td>You want local-first, E2E-encrypted secrets that never touch a vendor's servers.</td>
+      </tr>
+      <tr>
+        <td>You want a mature SDK ecosystem (Node, Python, Go, Ruby, PHP, .NET).</td>
+        <td>You want <code>stack add stripe</code> to create the account and safely store the key in one atomic operation.</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>
+    The decisive factor is usually team shape. Doppler excels at "10
+    engineers sharing production secrets." Stack + Phantom excels at "I
+    just provisioned Supabase, and the service-role key must not touch my
+    disk in plaintext."
+  </p>
+
+  <h2>At-a-glance</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Capability</th>
+        <th>Stack (+ Phantom)</th>
+        <th>Doppler</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Category</td>
+        <td>SaaS control plane + E2E vault</td>
+        <td>Cloud-hosted secret manager</td>
+      </tr>
+      <tr>
+        <td>Primary surface</td>
+        <td>CLI + MCP + Claude Code plugin (Stack); CLI + Cloud (Phantom)</td>
+        <td>CLI + dashboard + SDKs</td>
+      </tr>
+      <tr>
+        <td>Vault model</td>
+        <td>Local-first vault with optional E2E-encrypted cloud sync</td>
+        <td>Cloud-hosted with server-side encryption</td>
+      </tr>
+      <tr>
+        <td>Encryption</td>
+        <td>AEAD client-side; vendor cannot decrypt your secrets</td>
+        <td>Server-side encryption with AWS KMS; Doppler admins can technically access</td>
+      </tr>
+      <tr>
+        <td>Runtime injection</td>
+        <td><code>stack exec -- bun dev</code> (wraps <code>phantom exec</code>); <code>phm_*</code> tokens in <code>.env</code></td>
+        <td><code>doppler run -- bun dev</code>; or SDK reads from Doppler API at startup</td>
+      </tr>
+      <tr>
+        <td>Provisioning</td>
+        <td>Provisions 29 upstream SaaS providers and stores their keys atomically</td>
+        <td>Secrets manager only — BYO provider accounts</td>
+      </tr>
+      <tr>
+        <td>Team sharing</td>
+        <td>Phantom Cloud (optional, E2E-encrypted sync); team features on roadmap</td>
+        <td>First-class: workspaces, projects, environments, RBAC, SSO</td>
+      </tr>
+      <tr>
+        <td>Audit logs</td>
+        <td>Roadmap via <code>stack cloud</code></td>
+        <td>Enterprise-grade audit trails</td>
+      </tr>
+      <tr>
+        <td>License / pricing</td>
+        <td>MIT · free forever (Stack); Phantom free tier + optional cloud sync</td>
+        <td>Free tier (3 seats); paid tiers start ~$18/user/mo</td>
+      </tr>
+      <tr>
+        <td>Best for</td>
+        <td>Solo devs, startups, agentic workflows, composed SaaS setups</td>
+        <td>Teams that need mature RBAC, audit logs, and SDK-based secret injection</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Where they overlap</h2>
+  <p>
+    Both solve "my app needs secrets at runtime without hardcoding them."
+    Both provide a CLI that wraps a process with resolved environment
+    variables at spawn time (<code>doppler run --</code> and{" "}
+    <code>stack exec --</code> / <code>phantom exec --</code> are
+    functionally similar). Both support cloud sync across machines and CI
+    runners. Both try to keep plaintext secrets out of your repo.
+  </p>
+  <p>
+    The real overlap is the vault layer. In practice Phantom and Doppler are
+    comparable as secret stores; the difference is Phantom's E2E-encryption
+    model (the vault provider literally cannot read your secrets) versus
+    Doppler's server-side encryption model (Doppler admins have access under
+    their encryption-at-rest scheme). Different threat models, and reasonable
+    people pick either.
+  </p>
+
+  <h2>Where Stack wins</h2>
+  <ul>
+    <li>
+      <strong>Provisioning and vault write are one operation.</strong>{" "}
+      <code>stack add stripe</code> creates the Stripe account, captures the
+      restricted key, and writes it to Phantom — all before the command
+      returns. With Doppler, you provision in a dashboard, copy the key, paste
+      it into <code>doppler secrets set</code>. That copy-paste step is where
+      keys leak into clipboards, shell history, and chat logs.
+    </li>
+    <li>
+      <strong>True E2E encryption.</strong> Phantom uses AEAD client-side
+      encryption with a key only your device holds. Even if Phantom Cloud were
+      compromised, attackers see ciphertext. Doppler's server-side encryption
+      is a different model — fine for most threat models, but not E2E.
+    </li>
+    <li>
+      <strong>No plaintext in <code>.env</code>, ever.</strong> Stack
+      regenerates <code>.env.local</code> with <code>phm_*</code> tokens that
+      resolve at <code>stack exec</code> time. If someone checks in{" "}
+      <code>.env.local</code>, the tokens are useless without the vault.
+    </li>
+    <li>
+      <strong>MCP-native.</strong> Stack's 19 MCP tools let an agent drive
+      provisioning end-to-end. Doppler has no native MCP server — you'd have
+      to wrap its CLI yourself.
+    </li>
+    <li>
+      <strong>Free forever.</strong> Stack is MIT; Phantom's core vault is
+      free. Doppler's team-tier features start at paid plans.
+    </li>
+  </ul>
+
+  <h2>Where Doppler wins</h2>
+  <p>Honest concessions:</p>
+  <ul>
+    <li>
+      <strong>Team-shared secrets with RBAC.</strong> Doppler is built for
+      teams: projects, environments, role-based access, secret-level
+      permissions, SSO. Phantom's team story is on the roadmap, not shipped;
+      today Phantom Cloud is an E2E-sync primitive, not a team RBAC
+      platform.
+    </li>
+    <li>
+      <strong>Audit logs and compliance.</strong> Doppler has SOC2 Type II,
+      GDPR compliance, and full audit trails of who accessed which secret
+      when. Stack and Phantom are pre-alpha; audit logs land with{" "}
+      <code>stack cloud</code>.
+    </li>
+    <li>
+      <strong>Mature SDK ecosystem.</strong> Doppler has first-party SDKs in
+      Node, Python, Go, Ruby, PHP, .NET. Phantom's primary integration path
+      is <code>phantom exec</code> wrapping your process. If you want a
+      native SDK call that refreshes secrets mid-process, Doppler wins.
+    </li>
+    <li>
+      <strong>Existing adoption.</strong> If your team already uses Doppler
+      and has tooling around it, ripping it out to adopt Phantom is almost
+      never the right call. Use <code>stack add</code> for provisioning and
+      pipe the resulting secrets into Doppler instead.
+    </li>
+    <li>
+      <strong>Enterprise maturity.</strong> Years of production usage, a
+      real support organization, and a polished dashboard. Stack is v0.1.1.
+    </li>
+  </ul>
+
+  <h2>Can I use both?</h2>
+  <p>
+    Yes. If your team is committed to Doppler, Stack can still provision —
+    run <code>stack add supabase</code> to create the project and fetch the
+    key, then pipe it into Doppler via <code>doppler secrets set</code>.
+    It's less elegant than the pure Stack + Phantom flow but gets you
+    one-command provisioning while preserving your existing vault. A cleaner
+    path on the roadmap: Phantom will support <code>phantom sync --platform doppler</code>
+    so Stack-managed secrets propagate to Doppler automatically.
+  </p>
+
+  <h2>Migration and caveats</h2>
+  <p>
+    Stack is pre-alpha — these comparisons reflect v0.1.1 as of April 2026.
+    We don't claim parity with Doppler's enterprise maturity, team RBAC, or
+    audit features. Phantom's team story is a deliberate v0.x omission, not
+    a finished product. If you need team-wide audited secret sharing today,
+    Doppler is the mature choice. If you're a solo dev or a small team that
+    wants provisioning and vault to feel like one tool, Stack + Phantom is
+    worth a shot. For the full Phantom mental model, see{" "}
+    <a href="/docs/phantom/">/docs/phantom</a>. For MCP workflows, see{" "}
+    <a href="/docs/mcp/">/docs/mcp</a>. For the provider catalog, see{" "}
+    <a href="/docs/providers/">/docs/providers</a>.
+  </p>
+
+  <h2>FAQ</h2>
+  <h3>Is Stack a secret manager?</h3>
+  <p>
+    No. Stack is a control plane that provisions SaaS services and records
+    which secrets each service needs. The actual vault is{" "}
+    <a href="/docs/phantom/">Phantom</a> (phm.dev), Stack's sister product,
+    which is a local-first E2E-encrypted secret manager. If you prefer
+    Doppler or Infisical as your vault, Stack can still provision — you just
+    pipe the resulting secrets into your existing vault.
+  </p>
+
+  <h3>Can I migrate from Doppler to Phantom?</h3>
+  <p>
+    Yes — Phantom has an import path for Doppler configs. The reverse also
+    works: Phantom can push its vault to Doppler via <code>phantom sync</code>
+    so teams that have already standardized on Doppler can adopt Stack
+    without disrupting their current secret workflow.
+  </p>
+
+  <h3>Which do YC startups use?</h3>
+  <p>
+    Early-stage startups commonly use Doppler or 1Password for shared team
+    secrets because they're mature and the team primitive is solved. Stack +
+    Phantom is the better choice when you want provider provisioning and
+    secret storage to happen in one atomic step rather than as two separate
+    processes.
+  </p>
+</Docs>

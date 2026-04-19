@@ -1,0 +1,287 @@
+---
+import Docs from "~/layouts/Docs.astro";
+import { faqPageSchema } from "~/lib/structured-data";
+import { SITE_URL } from "~/lib/og";
+
+const pageUrl = `${SITE_URL}/compare/stack-vs-pulumi/`;
+
+const faq = faqPageSchema(
+  [
+    {
+      question: "Does Stack replace Pulumi?",
+      answer:
+        "No. Pulumi provisions cloud primitives — VPCs, Lambdas, S3 buckets, RDS databases — using your AWS, GCP, or Azure credentials. Stack provisions third-party SaaS services — Supabase, Stripe, Clerk, Vercel — using their Management APIs and OAuth. They operate at different layers and most teams shipping serious software need both.",
+    },
+    {
+      question: "Can I use Pulumi and Stack together?",
+      answer:
+        "Yes, and it's the common case. A typical SaaS uses Pulumi for the AWS account it owns (networking, S3, IAM) and Stack for the SaaS services it rents (Supabase for Postgres, Stripe for billing, PostHog for analytics). Pulumi outputs can feed Stack config, and Stack-managed env vars can be passed into Pulumi ESC.",
+    },
+    {
+      question: "Why doesn't Stack just use the Pulumi SaaS providers?",
+      answer:
+        "Pulumi's registry has partial coverage for a handful of SaaS providers but lacks the provisioning depth Stack does end-to-end — OAuth onboarding, Management-API project creation, secret extraction, Phantom vault write, .env and .mcp.json generation, doctor checks, and rotation envelopes. Stack is the purpose-built SaaS control plane, not a general IaC engine.",
+    },
+  ],
+  pageUrl,
+);
+---
+
+<Docs
+  title="Stack vs Pulumi"
+  description="Pulumi generates cloud infrastructure. Stack provisions SaaS services. They live at different layers — here's the honest breakdown."
+  eyebrow="Comparison"
+  extraSchemas={[faq]}
+>
+  <h2>TL;DR</h2>
+  <p>
+    Stack and <a href="https://www.pulumi.com" target="_blank" rel="noopener">Pulumi</a>
+    solve adjacent problems at different layers of the stack. Pulumi is
+    infrastructure-as-code for cloud primitives: you write Python, TypeScript,
+    Go, or C# that describes AWS VPCs, GCP buckets, Azure Functions, Kubernetes
+    clusters — Pulumi reconciles state and talks to the cloud provider's API.
+    Stack provisions and wires third-party SaaS services: one command creates a
+    real Supabase project, a Stripe account, a Clerk application, drops the
+    secrets into an E2E-encrypted vault (Phantom), and regenerates your
+    <code>.env</code> and <code>.mcp.json</code>. Neither tool replaces the
+    other. Most teams shipping a modern SaaS end up using both.
+  </p>
+
+  <h2>When to pick each</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Pick Pulumi when</th>
+        <th>Pick Stack when</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>You need real cloud infra: VPCs, subnets, IAM roles, load balancers, RDS, Lambda, CloudFront.</td>
+        <td>You need SaaS services wired end-to-end: Supabase + Stripe + Clerk + PostHog for a product.</td>
+      </tr>
+      <tr>
+        <td>Multi-cloud, multi-region, state file, stack-per-environment, drift detection.</td>
+        <td>You want <code>stack add supabase</code> to create the project, fetch keys, and store them safely.</td>
+      </tr>
+      <tr>
+        <td>Compliance needs explicit resource tagging, policy-as-code (CrossGuard), and audit trails.</td>
+        <td>You are an indie dev, a YC startup, or an agency shipping a SaaS in a week rather than a quarter.</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>
+    Pulumi is the right answer when "infrastructure" means AWS/GCP/Azure
+    primitives your team owns and operates. Stack is the right answer when
+    "infrastructure" means "the ten third-party SaaS services a modern app
+    depends on." If you catch yourself writing a Pulumi <code>Custom&shy;Resource</code>
+    to POST to <code>api.stripe.com</code>, you're in Stack territory.
+  </p>
+
+  <h2>At-a-glance</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Capability</th>
+        <th>Stack</th>
+        <th>Pulumi</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Category</td>
+        <td>SaaS control plane</td>
+        <td>Cloud IaC (infrastructure-as-code)</td>
+      </tr>
+      <tr>
+        <td>Primary surface</td>
+        <td>CLI + MCP server + Claude Code plugin</td>
+        <td>CLI + language SDKs (Python / TS / Go / C# / Java / YAML)</td>
+      </tr>
+      <tr>
+        <td>What it provisions</td>
+        <td>Supabase, Vercel, Stripe, Clerk, PostHog, Sentry, GitHub repos, Resend, etc. (29 providers)</td>
+        <td>AWS, GCP, Azure, Kubernetes, Cloudflare, Docker, 150+ cloud providers</td>
+      </tr>
+      <tr>
+        <td>Describes state with</td>
+        <td>
+          <code>.stack.toml</code> (declarative, slot-name only — secrets live in Phantom)
+        </td>
+        <td>Programs in a real language; state persisted to Pulumi Cloud or self-hosted backend</td>
+      </tr>
+      <tr>
+        <td>Secrets handling</td>
+        <td>E2E-encrypted via Phantom; never written to disk plaintext; <code>phm_*</code> tokens in <code>.env</code></td>
+        <td>Pulumi ESC (Environments, Secrets, Configuration) — encrypted via passphrase or KMS</td>
+      </tr>
+      <tr>
+        <td>AI surface</td>
+        <td>
+          <a href="/docs/recommend/">Native <code>stack recommend</code></a> + MCP tools + Claude Code plugin
+        </td>
+        <td>Pulumi AI (LLM generates Pulumi programs from prompts)</td>
+      </tr>
+      <tr>
+        <td>OAuth automation</td>
+        <td>Built-in: OAuth dance per provider, Ashlr-managed OAuth apps on paid tier</td>
+        <td>You manage provider credentials yourself</td>
+      </tr>
+      <tr>
+        <td>License</td>
+        <td>MIT · pre-alpha v0.1.1</td>
+        <td>Apache 2.0 (core) with paid Pulumi Cloud</td>
+      </tr>
+      <tr>
+        <td>Free tier</td>
+        <td>Full CLI, MCP, plugin — free forever</td>
+        <td>Individual tier free; Team/Enterprise paid</td>
+      </tr>
+      <tr>
+        <td>Best for</td>
+        <td>SaaS composition, agentic workflows, Claude Code users</td>
+        <td>Platform engineers, SREs, compliance-heavy infra</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Where they overlap</h2>
+  <p>
+    Both tools claim to "set up your infrastructure" with one command, and
+    both model desired state declaratively. In edge cases, Pulumi's registry
+    has thin wrappers around a few SaaS providers — there's a community Stripe
+    provider, a partial Vercel provider, a Supabase token resource. In theory
+    you could use those to create a Stripe product or a Vercel project from a
+    Pulumi program. In practice, nobody does, because the Pulumi ergonomic
+    belongs to cloud infra — writing a 200-line <code>index.ts</code> to
+    provision a Stripe webhook is the wrong shape. Stack collapses that to{" "}
+    <code>stack add stripe</code>.
+  </p>
+
+  <h2>Where Stack wins</h2>
+  <p>
+    Stack is purpose-built for the "rent, don't own" half of modern
+    infrastructure. Concrete wins:
+  </p>
+  <ul>
+    <li>
+      <strong>Real upstream projects, not just API tokens.</strong>{" "}
+      <code>stack add supabase</code> calls Supabase's Management API to create
+      a new project, wait for it to come online, pull the service-role key, and
+      store it in Phantom. Pulumi's Supabase providers generally expect you to
+      already have a project and a PAT.
+    </li>
+    <li>
+      <strong>OAuth, not API tokens.</strong> Stack handles OAuth across many
+      providers via Ashlr-managed app registrations — you click "Authorise" in
+      a browser. Pulumi expects you to have already created a long-lived
+      access token in the provider's dashboard.
+    </li>
+    <li>
+      <strong>MCP-native.</strong> Stack ships 19 MCP tools. A Claude Code
+      session can call <code>stack_recommend</code>, then{" "}
+      <code>stack_add</code>, then <code>stack_doctor</code> — provisioning an
+      entire SaaS from a single prompt. Pulumi AI generates Pulumi programs
+      but doesn't operate existing stacks agentically.
+    </li>
+    <li>
+      <strong>No state server.</strong> Stack stores slot names in a
+      checked-in <code>.stack.toml</code>; Phantom holds the actual secrets.
+      There is no "stack state" file, no backend to self-host, no state-lock
+      contention.
+    </li>
+  </ul>
+
+  <h2>Where Pulumi wins</h2>
+  <p>Honest concessions. Pulumi is the right tool when:</p>
+  <ul>
+    <li>
+      <strong>You need real cloud infrastructure.</strong> Stack does not
+      create VPCs, subnets, security groups, IAM roles, or RDS databases. If
+      your app runs on AWS primitives, Pulumi (or Terraform, or CDK) is the
+      answer.
+    </li>
+    <li>
+      <strong>Multi-cloud, multi-region, drift detection.</strong> Pulumi has
+      mature state management, stack references across environments, drift
+      detection, and policy-as-code (CrossGuard). Stack is a
+      single-environment-per-project tool in v0.1.
+    </li>
+    <li>
+      <strong>Enterprise compliance.</strong> Pulumi Cloud has SOC2, SAML SSO,
+      audit logs, and team RBAC. Stack is pre-alpha and MIT; those controls
+      are on the roadmap for <code>stack cloud</code>, not shipped.
+    </li>
+    <li>
+      <strong>You already have a Pulumi monorepo.</strong> Don't re-platform.
+      Extend Pulumi with an ESC environment that pulls Phantom secrets, and
+      keep shipping.
+    </li>
+  </ul>
+
+  <h2>Can I use both?</h2>
+  <p>
+    Yes — and it's the recommended path for any team with serious cloud infra.
+    A realistic division of labor:
+  </p>
+  <ul>
+    <li>
+      <strong>Pulumi</strong> owns your AWS account: VPC, ECS cluster, RDS,
+      CloudFront, IAM, WAF, Route53.
+    </li>
+    <li>
+      <strong>Stack</strong> owns the SaaS your app composes on top: Supabase
+      for auth/DB, Stripe for billing, Clerk for user management, PostHog for
+      product analytics, Sentry for errors, Resend for email.
+    </li>
+  </ul>
+  <p>
+    Hand-off: Pulumi emits outputs (e.g. an <code>ALB DNS</code>) that Stack
+    reads as environment inputs; Stack writes secrets into Phantom, which
+    Pulumi ESC can <a href="/docs/phantom/">import via Phantom Cloud</a> when
+    Pulumi programs need them at apply-time. Use <code>stack doctor</code> in
+    CI to catch drift in the SaaS layer; use <code>pulumi preview</code> to
+    catch drift in the cloud layer.
+  </p>
+
+  <h2>Migration and caveats</h2>
+  <p>
+    Stack is pre-alpha — these comparisons reflect v0.1.1 as of April 2026.
+    Features like multi-env stacks, team-shared recipes, and audit logs are on
+    the <a href="/docs/roadmap/">roadmap</a> but not shipped. If you're an
+    enterprise with strict audit requirements today, Pulumi is the mature
+    choice; revisit Stack when you want to reduce the glue code between your
+    cloud infra and the SaaS services on top of it. Browse the{" "}
+    <a href="/docs/providers/">29-provider catalog</a> to see what Stack
+    actually automates today.
+  </p>
+
+  <h2>FAQ</h2>
+  <h3>Does Stack replace Pulumi?</h3>
+  <p>
+    No. Pulumi provisions cloud primitives — VPCs, Lambdas, S3 buckets, RDS
+    databases — using your AWS, GCP, or Azure credentials. Stack provisions
+    third-party SaaS services — Supabase, Stripe, Clerk, Vercel — using their
+    Management APIs and OAuth. They operate at different layers and most
+    teams shipping serious software need both.
+  </p>
+
+  <h3>Can I use Pulumi and Stack together?</h3>
+  <p>
+    Yes, and it's the common case. A typical SaaS uses Pulumi for the AWS
+    account it owns (networking, S3, IAM) and Stack for the SaaS services it
+    rents (Supabase for Postgres, Stripe for billing, PostHog for analytics).
+    Pulumi outputs can feed Stack config, and Stack-managed env vars can be
+    passed into Pulumi ESC.
+  </p>
+
+  <h3>Why doesn't Stack just use the Pulumi SaaS providers?</h3>
+  <p>
+    Pulumi's registry has partial coverage for a handful of SaaS providers but
+    lacks the provisioning depth Stack does end-to-end — OAuth onboarding,
+    Management-API project creation, secret extraction, Phantom vault write,{" "}
+    <code>.env</code> and <a href="/docs/mcp/"><code>.mcp.json</code></a>{" "}
+    generation, doctor checks, and rotation envelopes. Stack is the
+    purpose-built SaaS control plane, not a general IaC engine.
+  </p>
+</Docs>

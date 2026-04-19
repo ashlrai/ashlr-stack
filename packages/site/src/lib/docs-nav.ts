@@ -63,7 +63,7 @@ export const DOCS_NAV: DocsNavGroup[] = [
       {
         label: "Providers",
         href: "/docs/providers/",
-        blurb: "The 23 curated providers — auth, secrets, MCP wiring.",
+        blurb: "The 29 curated providers — auth, secrets, MCP wiring.",
       },
       {
         label: "Templates",
@@ -89,6 +89,31 @@ export const DOCS_NAV: DocsNavGroup[] = [
         label: "CI",
         href: "/docs/ci/",
         blurb: "Run `stack doctor --json` on every push, with Phantom Cloud.",
+      },
+    ],
+  },
+  {
+    title: "Comparisons",
+    items: [
+      {
+        label: "Stack vs Pulumi",
+        href: "/compare/stack-vs-pulumi/",
+        blurb: "Pulumi builds cloud infra in real code; Stack wires third-party SaaS.",
+      },
+      {
+        label: "Stack vs Terraform",
+        href: "/compare/stack-vs-terraform/",
+        blurb: "Terraform is IaC for cloud primitives; Stack is the SaaS control plane.",
+      },
+      {
+        label: "Stack vs Railway",
+        href: "/compare/stack-vs-railway/",
+        blurb: "Railway is a deploy platform; Stack composes across 29 providers (Railway is one of them).",
+      },
+      {
+        label: "Stack vs Doppler",
+        href: "/compare/stack-vs-doppler/",
+        blurb: "Doppler is a cloud secret manager; Stack + Phantom is local-first E2E vaulting tied to provisioning.",
       },
     ],
   },

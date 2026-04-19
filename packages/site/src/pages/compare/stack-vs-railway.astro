@@ -1,0 +1,284 @@
+---
+import Docs from "~/layouts/Docs.astro";
+import { faqPageSchema } from "~/lib/structured-data";
+import { SITE_URL } from "~/lib/og";
+
+const pageUrl = `${SITE_URL}/compare/stack-vs-railway/`;
+
+const faq = faqPageSchema(
+  [
+    {
+      question: "Does Stack replace Railway?",
+      answer:
+        "No. Railway is a managed deploy platform where you run your apps; Stack is a control plane that provisions third-party SaaS services (databases, auth, billing, observability). Stack actually includes Railway as one of its 29 providers, so you can run `stack add railway` to create and wire a Railway project.",
+    },
+    {
+      question: "Should I deploy on Railway or something else?",
+      answer:
+        "Railway is a great choice if you want a single platform managing both runtime and databases with a polished UX. Pick Vercel or Cloudflare if you're frontend-heavy, Fly.io if you want global edge, or Railway if you want a single-platform Heroku-like experience. Stack works with all of them.",
+    },
+    {
+      question: "Can I use Railway and Stack together?",
+      answer:
+        "Yes. Stack can provision a Railway project and then wire the rest of your stack around it — Supabase or Neon for your database, Stripe for billing, Clerk for auth, Phantom for secrets. `stack add railway` creates the project; the other `stack add` commands provision the surrounding SaaS.",
+    },
+  ],
+  pageUrl,
+);
+---
+
+<Docs
+  title="Stack vs Railway"
+  description="Railway deploys your app. Stack provisions the SaaS around it. You usually want both — and Stack treats Railway as one of its providers."
+  eyebrow="Comparison"
+  extraSchemas={[faq]}
+>
+  <h2>TL;DR</h2>
+  <p>
+    <a href="https://railway.com" target="_blank" rel="noopener">Railway</a>
+    is a managed deploy platform: push code, get a URL, scale containers, run
+    Postgres and Redis next to your app. It's a genuinely pleasant Heroku
+    successor with a polished UI, a template marketplace, and strong
+    defaults. Stack is a control plane that provisions third-party SaaS
+    services across 29 providers, of which Railway is one. Where Railway's
+    answer to "I need a SaaS stack" is "deploy everything inside Railway,"
+    Stack's answer is "compose the best-of-breed SaaS for each capability and
+    wire them together." These tools are not substitutes; they're complements.
+    You can <code>stack add railway</code> today.
+  </p>
+
+  <h2>When to pick each</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Pick Railway when</th>
+        <th>Pick Stack when</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>You want a single managed platform running your app, database, and cron jobs.</td>
+        <td>You want best-of-breed SaaS: Vercel for frontend, Supabase for DB, Stripe for billing, Clerk for auth.</td>
+      </tr>
+      <tr>
+        <td>You want a polished GUI to click through provisioning.</td>
+        <td>You want a CLI + MCP + Claude Code plugin — no dashboard clicking.</td>
+      </tr>
+      <tr>
+        <td>You're deploying a Dockerized app that needs runtime + stateful services co-located.</td>
+        <td>You're shipping a composed SaaS where each layer is a different rented service.</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>
+    Railway shines as the deploy target; Stack shines as the orchestrator
+    that wires everything up. A typical flow: Stack creates a Railway
+    project, a Supabase database, a Stripe account, a Clerk application, and
+    a Sentry project, then writes a coherent <code>.env</code> to the
+    Railway service via the Railway CLI or Management API.
+  </p>
+
+  <h2>At-a-glance</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Capability</th>
+        <th>Stack</th>
+        <th>Railway</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Category</td>
+        <td>SaaS control plane (CLI + MCP)</td>
+        <td>Managed deploy platform (runtime + databases)</td>
+      </tr>
+      <tr>
+        <td>Primary surface</td>
+        <td>CLI, MCP server, Claude Code plugin</td>
+        <td>Web dashboard + CLI + GraphQL API</td>
+      </tr>
+      <tr>
+        <td>What it does</td>
+        <td>Provisions Supabase, Vercel, Stripe, Clerk, Railway, and 24 more providers</td>
+        <td>Builds + runs your containers, plus Postgres, Redis, MySQL, Mongo next to them</td>
+      </tr>
+      <tr>
+        <td>Where your app runs</td>
+        <td>Wherever Stack deploys it: Vercel, Cloudflare, Fly, Railway, your own server</td>
+        <td>Railway's infrastructure (GCP backend)</td>
+      </tr>
+      <tr>
+        <td>Database</td>
+        <td>Supabase, Neon, PlanetScale, Turso, MongoDB Atlas, Upstash — you pick</td>
+        <td>Railway's own managed Postgres / MySQL / Mongo / Redis</td>
+      </tr>
+      <tr>
+        <td>Secrets</td>
+        <td>E2E-encrypted via <a href="/docs/phantom/">Phantom</a>; <code>phm_*</code> tokens in <code>.env</code></td>
+        <td>Railway service variables; team-shared; no E2E encryption primitive</td>
+      </tr>
+      <tr>
+        <td>AI surface</td>
+        <td>
+          <a href="/docs/recommend/"><code>stack recommend</code></a>, 19 MCP tools, Claude Code plugin
+        </td>
+        <td>Railway AI generates Dockerfiles + deployment configs from code</td>
+      </tr>
+      <tr>
+        <td>License</td>
+        <td>MIT · pre-alpha v0.1.1</td>
+        <td>Closed-source commercial platform</td>
+      </tr>
+      <tr>
+        <td>Free tier</td>
+        <td>Full CLI, MCP, plugin — free forever</td>
+        <td>$5/month trial credit; Hobby plan starts at $5/mo</td>
+      </tr>
+      <tr>
+        <td>Best for</td>
+        <td>SaaS composition across many providers</td>
+        <td>Single-platform deploys of containerized apps</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Where they overlap</h2>
+  <p>
+    Both tools want to take a developer from "I have an idea" to "it's
+    running in production" quickly. Railway's answer is "use our templates
+    and our managed infra." Stack's answer is "compose the SaaS you want and
+    I'll wire it." A few specific overlaps:
+  </p>
+  <ul>
+    <li>
+      Railway templates give you a one-click Next.js + Postgres setup. Stack
+      templates give you Next.js + Supabase + PostHog via{" "}
+      <code>stack init --template next-supabase-posthog</code>.
+    </li>
+    <li>
+      Railway can run a Stripe webhook receiver. Stack can provision the
+      Stripe account that fires the webhook and wire its signing secret to
+      your Railway service's env.
+    </li>
+    <li>
+      Both handle some flavor of "create a database and give me a connection
+      string," though Railway runs the database itself while Stack points you
+      at Supabase, Neon, or Turso.
+    </li>
+  </ul>
+
+  <h2>Where Stack wins</h2>
+  <ul>
+    <li>
+      <strong>Multi-provider composition.</strong> A real SaaS usually rents
+      from 8–12 different companies. Railway covers runtime + a handful of
+      databases. Stack covers auth (Clerk, Auth0, Supabase Auth), billing
+      (Stripe, LemonSqueezy), analytics (PostHog), error tracking (Sentry),
+      email (Resend, SendGrid, Mailgun, Postmark), AI (OpenAI, Anthropic),
+      feature flags (PostHog, LaunchDarkly), code hosting (GitHub), and
+      deploy targets (Vercel, Fly, Cloudflare, <em>and</em> Railway).
+    </li>
+    <li>
+      <strong>MCP and agentic workflow.</strong> Stack is built for Claude
+      Code and Cursor to drive. A single prompt — "stack my backend for a
+      multi-tenant billing app" — runs <code>stack recommend</code>, then{" "}
+      <code>stack apply</code>, and lands a running stack. Railway has
+      AI-generated Dockerfiles but no MCP server and no agent-first workflow.
+    </li>
+    <li>
+      <strong>Secrets that never touch disk.</strong> Phantom gives Stack an
+      E2E-encrypted vault by default. Railway's service variables are
+      convenient but live in Railway's cloud and flow through its dashboard.
+    </li>
+    <li>
+      <strong>Portable stacks.</strong> A Stack config describes which SaaS
+      you use, not where your compute runs. You can switch deploy targets
+      without reprovisioning your database, auth, or billing.
+    </li>
+  </ul>
+
+  <h2>Where Railway wins</h2>
+  <p>Honest concessions:</p>
+  <ul>
+    <li>
+      <strong>Single-platform UX.</strong> If you don't want to think about
+      ten different providers, Railway's "everything in one dashboard" is a
+      real productivity win. You get runtime, databases, cron, and a usage
+      bill in one place.
+    </li>
+    <li>
+      <strong>Co-located database performance.</strong> Railway runs your app
+      and its Postgres in the same region, often the same datacenter. A
+      composed stack with Vercel on one continent and Supabase on another can
+      have higher tail latency.
+    </li>
+    <li>
+      <strong>Stateful services next to compute.</strong> Running Postgres,
+      Redis, and your app on the same platform with internal networking is
+      simpler than wiring external services.
+    </li>
+    <li>
+      <strong>Mature platform.</strong> Railway is a shipped, paying-customer
+      product with years of production reliability. Stack is pre-alpha; the
+      provider adapters are thin by comparison to Railway's internal infra.
+    </li>
+    <li>
+      <strong>Templates + community.</strong> Railway's template marketplace
+      has hundreds of one-click starters maintained by a large community.
+      Stack has 5 first-party templates as of v0.1.1.
+    </li>
+  </ul>
+
+  <h2>Can I use both?</h2>
+  <p>
+    Yes — this is the natural pattern when you want Railway as your deploy
+    target and Stack as your provisioning control plane. Run{" "}
+    <code>stack add railway</code> to create a Railway project (Stack uses
+    the Railway API under the hood), then <code>stack add supabase</code>,{" "}
+    <code>stack add stripe</code>, <code>stack add clerk</code>, and so on
+    to provision the rest of your SaaS. Stack writes a coherent{" "}
+    <code>.env</code> with Phantom-tokenized secrets, and at deploy time you
+    either run <code>stack exec -- railway up</code> or push the resolved
+    env into Railway's service variables.
+  </p>
+
+  <h2>Migration and caveats</h2>
+  <p>
+    Stack is pre-alpha — these comparisons reflect v0.1.1 as of April 2026.
+    We don't claim parity with Railway's deploy UX or operational maturity.
+    Pricing specifics shift; check Railway's current plans on their site
+    rather than trusting a comparison page. For Stack's full provider
+    catalog, see <a href="/docs/providers/">/docs/providers</a>. For the
+    agentic recommend + apply loop, see{" "}
+    <a href="/docs/recommend/">/docs/recommend</a>.
+  </p>
+
+  <h2>FAQ</h2>
+  <h3>Does Stack replace Railway?</h3>
+  <p>
+    No. Railway is a managed deploy platform where you run your apps; Stack
+    is a control plane that provisions third-party SaaS services (databases,
+    auth, billing, observability). Stack actually includes Railway as one of
+    its 29 providers, so you can run <code>stack add railway</code> to
+    create and wire a Railway project.
+  </p>
+
+  <h3>Should I deploy on Railway or something else?</h3>
+  <p>
+    Railway is a great choice if you want a single platform managing both
+    runtime and databases with a polished UX. Pick Vercel or Cloudflare if
+    you're frontend-heavy, Fly.io if you want global edge, or Railway if you
+    want a single-platform Heroku-like experience. Stack works with all of
+    them.
+  </p>
+
+  <h3>Can I use Railway and Stack together?</h3>
+  <p>
+    Yes. Stack can provision a Railway project and then wire the rest of
+    your stack around it — Supabase or Neon for your database, Stripe for
+    billing, Clerk for auth, <a href="/docs/phantom/">Phantom</a> for
+    secrets. <code>stack add railway</code> creates the project; the other{" "}
+    <code>stack add</code> commands provision the surrounding SaaS.
+  </p>
+</Docs>

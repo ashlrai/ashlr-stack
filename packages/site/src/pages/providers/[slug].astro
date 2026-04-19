@@ -1,0 +1,261 @@
+---
+/**
+ * /providers/[slug] — one page per provider in the canonical catalog.
+ *
+ * Data source: packages/core/src/catalog.ts (PROVIDERS_REF). This is the
+ * single-source-of-truth catalog for CLI + MCP + AI recommender + site.
+ * Adding a provider to catalog.ts automatically mints a page here at
+ * build time.
+ *
+ * Content shape (each page, ~400-700 words rendered from metadata):
+ *  1. Hero — displayName + category + logo + one-line blurb + `stack add` snippet
+ *  2. Auth flow explainer (from authKind)
+ *  3. Secret slots (from secrets[])
+ *  4. MCP wiring status (from mcp)
+ *  5. Example recipe (link templates that include this provider)
+ *  6. Related providers (others in same category, limit 5)
+ *  7. FAQ (generic trio: "do I need an account?" / "is the key rotated?" /
+ *     "can I use an existing project?")
+ *  8. Dashboard + docs outbound links
+ *
+ * JSON-LD: TechArticle (via Docs layout) + BreadcrumbList + FAQPage.
+ */
+
+import Docs from "~/layouts/Docs.astro";
+import { Code } from "astro:components";
+import { PROVIDERS_REF, type ProviderRef } from "~/lib/providers-ref";
+import { getIconPath } from "~/lib/icons";
+import { breadcrumbSchema, faqPageSchema } from "~/lib/structured-data";
+import { SITE_URL } from "~/lib/og";
+
+export function getStaticPaths() {
+  return PROVIDERS_REF.map((p) => ({
+    params: { slug: p.name },
+    props: { provider: p },
+  }));
+}
+
+interface Props {
+  provider: ProviderRef;
+}
+
+const { provider: p } = Astro.props as Props;
+
+const iconPath = getIconPath(p.name === "fly" ? "flydotio" : p.name === "aws" ? "amazonwebservices" : p.name === "xai" ? "x" : p.name === "github" ? "github" : p.name === "googlecloud" ? "googlecloud" : p.name);
+
+const AUTH_EXPLAINERS: Record<string, string> = {
+  oauth_pkce:
+    "Stack runs Supabase's OAuth (PKCE) flow in your browser. You click Authorise, and Stack captures the token via a one-shot localhost callback server.",
+  oauth_device:
+    "Stack runs the OAuth device flow. You paste a code into the provider's authorization page; Stack polls until you confirm.",
+  pat: "Paste a personal access token (PAT) once. Stack verifies it against the provider's API before writing to Phantom.",
+  api_key: "Paste a long-lived API key once. Stack verifies it against the provider's API before writing to Phantom.",
+};
+
+const authExplainer = AUTH_EXPLAINERS[p.authKind] ?? "Stack runs the provider's auth flow and stores the result in Phantom.";
+
+// Find related providers in the same category (up to 5, excluding self).
+const related = PROVIDERS_REF.filter(
+  (q) => q.category === p.category && q.name !== p.name,
+).slice(0, 5);
+
+// Find templates that include this provider (from packages/core/src/templates
+// indirectly — we don't have templates-ref.ts yet, so we hard-list a tiny
+// mapping for now. This surfaces real recipes without a second data source.
+const TEMPLATES_WITH_PROVIDER: Record<string, string[]> = {
+  supabase: ["nextjs-supabase-posthog", "supabase-posthog-sentry-resend"],
+  neon: ["nextjs-neon-vercel-sentry"],
+  vercel: ["nextjs-neon-vercel-sentry"],
+  posthog: ["nextjs-supabase-posthog", "supabase-posthog-sentry-resend"],
+  sentry: ["nextjs-neon-vercel-sentry", "supabase-posthog-sentry-resend"],
+  resend: ["supabase-posthog-sentry-resend"],
+  turso: ["cloudflare-turso-clerk"],
+  clerk: ["cloudflare-turso-clerk"],
+  cloudflare: ["cloudflare-turso-clerk"],
+  openai: ["claude-agent-openai-anthropic"],
+  anthropic: ["claude-agent-openai-anthropic"],
+};
+const templates = TEMPLATES_WITH_PROVIDER[p.name] ?? [];
+
+const pageUrl = `${SITE_URL}/providers/${p.name}/`;
+const title = `${p.displayName} — Ashlr Stack Provider`;
+const description = `${p.displayName}: ${p.blurb} Wire it into your project with one command via Ashlr Stack.`;
+
+const faq = faqPageSchema(
+  [
+    {
+      question: `Do I need a ${p.displayName} account to use it with Stack?`,
+      answer: `Yes — Stack provisions ${p.displayName} on your behalf, but it authenticates as you. ${authExplainer} If you already have an account, Stack attaches to it; if not, ${p.authKind === "oauth_pkce" || p.authKind === "oauth_device" ? "Stack can create one during the OAuth flow." : `create a ${p.authKind === "pat" ? "personal access token" : "key"} in the provider dashboard (${p.dashboard}) and paste it once.`}`,
+    },
+    {
+      question: `Where does Stack store my ${p.displayName} credentials?`,
+      answer: `In Phantom Secrets, an E2E-encrypted local vault. Stack writes the secret slot names (${p.secrets.join(", ")}) into .stack.toml — the actual values live only in Phantom and never touch disk in plaintext.`,
+    },
+    {
+      question: `Can I rotate or revoke this integration later?`,
+      answer: `Yes. Run \`stack remove ${p.name}\` to pull the ${p.displayName} service back out (Phantom secrets deleted, MCP entry removed, .stack.toml cleaned up). Rotate the underlying ${p.displayName} credentials in their dashboard — ${p.dashboard} — and Stack's next \`doctor --fix\` will pick up the new values.`,
+    },
+  ],
+  pageUrl,
+);
+
+const breadcrumbs = breadcrumbSchema([
+  { name: "Providers", url: "/providers/" },
+  { name: p.displayName, url: `/providers/${p.name}/` },
+]);
+---
+
+<Docs
+  title={title}
+  description={description}
+  eyebrow={`Provider · ${p.category}`}
+  extraSchemas={[faq, breadcrumbs]}
+>
+  <div class="not-prose mb-8 flex items-center gap-4 p-5 panel rounded-xl" style={`border-left: 2px solid #${p.color ?? "e96b2a"};`}>
+    {iconPath && (
+      <svg
+        viewBox="0 0 24 24"
+        width="40"
+        height="40"
+        fill={`#${p.color ?? "e96b2a"}`}
+        aria-hidden="true"
+        style="flex-shrink: 0"
+      >
+        <path d={iconPath} />
+      </svg>
+    )}
+    <div class="flex-1 min-w-0">
+      <div class="text-[11px] font-semibold uppercase tracking-[0.14em] text-magenta-400 mb-1">
+        {p.category} · {p.authKind === "oauth_pkce" ? "OAuth (PKCE)" : p.authKind === "oauth_device" ? "OAuth (device)" : p.authKind === "pat" ? "PAT" : "API key"}
+      </div>
+      <div class="text-[15px] text-ink-100 leading-snug">
+        <strong class="font-semibold">{p.displayName}</strong> — {p.blurb}
+      </div>
+    </div>
+    <a
+      href={p.dashboard}
+      target="_blank"
+      rel="noopener"
+      class="mono text-[12px] tracking-[0.08em] px-3 py-2 border border-ink-600 text-ink-100 hover:border-magenta-400 hover:text-magenta-200 transition-colors rounded-md flex-shrink-0"
+    >
+      Dashboard ↗
+    </a>
+  </div>
+
+  <h2>One command</h2>
+  <p>
+    Add <strong>{p.displayName}</strong> to any Ashlr Stack project with a single command. Stack runs the auth flow,
+    {p.authKind === "oauth_pkce" || p.authKind === "oauth_device" ? ` provisions the upstream resource via the ${p.displayName} Management API, ` : " verifies the credential, "}
+    and writes every secret slot into <a href="/docs/phantom/">Phantom</a>.
+  </p>
+
+  <Code code={`stack add ${p.name}`} lang="bash" theme="github-dark-dimmed" />
+
+  <p>
+    Or describe what you're building and let Claude pick it up via{" "}
+    <a href="/docs/recommend/"><code>stack recommend</code></a>:
+  </p>
+
+  <Code code={`stack recommend "${p.category === "Database" ? "serverless postgres for a B2B SaaS" : p.category === "Payments" ? "accept payments from customers" : p.category === "AI" ? "LLM provider for a coding assistant" : p.category === "Deploy" ? "host a Next.js frontend" : p.category === "Errors" ? "error + performance tracking" : p.category === "Analytics" ? "product analytics and feature flags" : p.category === "Auth" ? "drop-in user auth for my app" : p.category === "Email" ? "transactional email for my app" : p.category === "Code" ? "git hosting and CI" : p.category === "Tickets" ? "issue tracking for my team" : p.category === "Cloud" ? "raw cloud infrastructure for scale" : `I need a ${p.category.toLowerCase()} provider`}"`} lang="bash" theme="github-dark-dimmed" />
+
+  <h2 id="auth">Auth flow</h2>
+  <p>{authExplainer}</p>
+  <p>
+    <strong>How-to:</strong> {p.howTo}
+  </p>
+
+  <h2 id="secrets">Secret slots</h2>
+  <p>
+    <code>stack add {p.name}</code> writes these <strong>{p.secrets.length}</strong> secret
+    {p.secrets.length === 1 ? " slot" : " slots"} into your <a href="/docs/phantom/">Phantom</a> vault:
+  </p>
+  <ul>
+    {p.secrets.map((s) => <li><code>{s}</code></li>)}
+  </ul>
+  <p>
+    The values never leave Phantom in plaintext. Your <code>.env</code> file references slot
+    names, and <code>stack exec -- &lt;cmd&gt;</code> swaps them in at process-spawn time via
+    Phantom's local proxy.
+  </p>
+
+  {p.mcp && (
+    <>
+      <h2 id="mcp">MCP wiring</h2>
+      <p>
+        <strong>{p.displayName}</strong> ships an MCP server.
+        {" "}
+        <code>stack add {p.name}</code> auto-wires it into <code>.mcp.json</code> so your{" "}
+        <a href="/docs/mcp/">Claude Code / Cursor / Windsurf</a> session can use it immediately.
+      </p>
+      <p class="text-ink-400 text-[13px]">
+        {p.mcp.detail}
+      </p>
+    </>
+  )}
+
+  {templates.length > 0 && (
+    <>
+      <h2 id="templates">Starter templates that include {p.displayName}</h2>
+      <p>Apply a pre-wired stack with one command:</p>
+      <ul>
+        {templates.map((t) => (
+          <li>
+            <code>stack init --template {t}</code>
+          </li>
+        ))}
+      </ul>
+    </>
+  )}
+
+  {related.length > 0 && (
+    <>
+      <h2 id="related">Related providers in {p.category}</h2>
+      <ul>
+        {related.map((r) => (
+          <li>
+            <a href={`/providers/${r.name}/`}><strong>{r.displayName}</strong></a> — {r.blurb}
+          </li>
+        ))}
+      </ul>
+    </>
+  )}
+
+  {p.notes && (
+    <>
+      <h2>v1 notes</h2>
+      <p class="text-ink-300">{p.notes}</p>
+    </>
+  )}
+
+  <h2>FAQ</h2>
+  <h3>Do I need a {p.displayName} account to use it with Stack?</h3>
+  <p>
+    Yes — Stack provisions {p.displayName} on your behalf, but it authenticates as you. {authExplainer} {" "}
+    {p.authKind === "oauth_pkce" || p.authKind === "oauth_device"
+      ? `If you don't have an account yet, Stack can create one during the OAuth flow.`
+      : <>If you don't have a credential yet, create one at <a href={p.dashboard} target="_blank" rel="noopener">{p.dashboard}</a> and paste it once.</>}
+  </p>
+
+  <h3>Where does Stack store my {p.displayName} credentials?</h3>
+  <p>
+    In <a href="/docs/phantom/">Phantom Secrets</a>, an E2E-encrypted local vault. Stack writes the
+    secret slot names (<code>{p.secrets.join(", ")}</code>) into <code>.stack.toml</code> — the
+    actual values live only in Phantom and never touch disk in plaintext.
+  </p>
+
+  <h3>Can I rotate or revoke this integration later?</h3>
+  <p>
+    Yes. Run <code>stack remove {p.name}</code> to pull the {p.displayName} service back out
+    (Phantom secrets deleted, MCP entry removed, <code>.stack.toml</code> cleaned up). Rotate the
+    underlying {p.displayName} credentials in their{" "}
+    <a href={p.dashboard} target="_blank" rel="noopener">dashboard</a> — Stack's next{" "}
+    <code>doctor --fix</code> will pick up the new values.
+  </p>
+
+  <h2>Outbound</h2>
+  <ul>
+    <li><a href={p.dashboard} target="_blank" rel="noopener">{p.displayName} dashboard</a></li>
+    <li><a href={p.docs} target="_blank" rel="noopener">{p.displayName} API docs</a></li>
+    <li><a href="/docs/providers/">See the full catalog of {PROVIDERS_REF.length} providers →</a></li>
+  </ul>
+</Docs>

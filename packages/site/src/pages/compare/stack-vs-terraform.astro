@@ -1,0 +1,287 @@
+---
+import Docs from "~/layouts/Docs.astro";
+import { faqPageSchema } from "~/lib/structured-data";
+import { SITE_URL } from "~/lib/og";
+
+const pageUrl = `${SITE_URL}/compare/stack-vs-terraform/`;
+
+const faq = faqPageSchema(
+  [
+    {
+      question: "Can Stack replace Terraform?",
+      answer:
+        "Not for cloud infrastructure. Terraform remains the industry standard for provisioning AWS, GCP, Azure, and on-prem resources with a huge provider ecosystem and mature state management. Stack replaces the hand-written glue around SaaS services — Supabase, Stripe, Clerk — where Terraform providers are thin or non-existent.",
+    },
+    {
+      question: "Does Terraform have a Supabase or Stripe provider?",
+      answer:
+        "There is a community Supabase provider with limited coverage and a Stripe provider that mostly wraps the API surface. Neither handles OAuth onboarding, project creation, secret extraction, or vault routing the way Stack does end-to-end. Stack treats these providers as first-class SaaS citizens, not API wrappers.",
+    },
+    {
+      question: "Which should a two-person startup pick?",
+      answer:
+        "If you deploy to Vercel, Fly, or Railway and rent the rest (Supabase, Stripe, Clerk, PostHog), Stack alone covers 90 percent of your setup. If you run on AWS primitives — EC2, RDS, VPCs — you need Terraform for infra and can add Stack for the SaaS layer on top.",
+    },
+  ],
+  pageUrl,
+);
+---
+
+<Docs
+  title="Stack vs Terraform"
+  description="Terraform is the standard for cloud infrastructure. Stack provisions SaaS services. Different layers, often used together."
+  eyebrow="Comparison"
+  extraSchemas={[faq]}
+>
+  <h2>TL;DR</h2>
+  <p>
+    <a href="https://developer.hashicorp.com/terraform" target="_blank" rel="noopener">Terraform</a>
+    is HashiCorp's battle-tested IaC tool: you write HCL that describes cloud
+    primitives, and Terraform reconciles your described state against the
+    cloud. It has the largest provider ecosystem in the industry (3,000+
+    providers on the registry), mature state management, and is the default
+    choice for anything touching AWS, GCP, or Azure. Stack provisions the
+    other half of modern infrastructure — the third-party SaaS services
+    (Supabase, Stripe, Clerk, Vercel, PostHog, Sentry, and 23 more) — via
+    their Management APIs, with OAuth, secrets routed through Phantom, and
+    MCP-native automation. Stack is not a Terraform replacement. It's what
+    you reach for when Terraform's provider coverage runs out.
+  </p>
+
+  <h2>When to pick each</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Pick Terraform when</th>
+        <th>Pick Stack when</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>You own AWS/GCP/Azure accounts and need VPCs, IAM, RDS, Lambda, CloudFront, GKE.</td>
+        <td>You rent SaaS: Supabase, Stripe, Clerk, Vercel, PostHog, Resend.</td>
+      </tr>
+      <tr>
+        <td>Multi-region, multi-account, remote state, workspaces, policy-as-code (Sentinel / OPA).</td>
+        <td>You want <code>stack add stripe</code> to create the account, capture webhooks, and write the key to an encrypted vault.</td>
+      </tr>
+      <tr>
+        <td>Regulated industry with audit trails and drift detection at the cloud-primitive layer.</td>
+        <td>You are shipping a SaaS and want the third-party glue done in minutes rather than days.</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>
+    The quickest decision heuristic: if the thing you're provisioning lives in
+    the AWS, GCP, or Azure console, Terraform is the right tool. If it lives
+    in the Supabase, Stripe, or Clerk dashboard, Stack is the right tool.
+  </p>
+
+  <h2>At-a-glance</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Capability</th>
+        <th>Stack</th>
+        <th>Terraform</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Category</td>
+        <td>SaaS control plane</td>
+        <td>Cloud IaC</td>
+      </tr>
+      <tr>
+        <td>Primary surface</td>
+        <td>CLI + MCP server + Claude Code plugin</td>
+        <td>CLI (HCL DSL); Terraform Cloud / Enterprise for collaboration</td>
+      </tr>
+      <tr>
+        <td>Language</td>
+        <td>Declarative TOML (<code>.stack.toml</code>)</td>
+        <td>HCL (HashiCorp Configuration Language)</td>
+      </tr>
+      <tr>
+        <td>What it provisions</td>
+        <td>Supabase, Vercel, Stripe, Clerk, PostHog, Sentry, GitHub, Resend, Neon, Fly.io, Railway, and 18 more</td>
+        <td>AWS, GCP, Azure, Kubernetes, Cloudflare, 3,000+ providers</td>
+      </tr>
+      <tr>
+        <td>State management</td>
+        <td>Shape-file only (<code>.stack.toml</code>); Phantom holds values; no server</td>
+        <td>Local or remote state file; locking via backend (S3 + DynamoDB, Terraform Cloud, etc.)</td>
+      </tr>
+      <tr>
+        <td>Secrets</td>
+        <td>E2E-encrypted via <a href="/docs/phantom/">Phantom</a>; never on disk in plaintext</td>
+        <td>Variables marked <code>sensitive</code>; state file contains plaintext secrets unless encrypted at rest</td>
+      </tr>
+      <tr>
+        <td>AI surface</td>
+        <td>
+          <a href="/docs/recommend/">Native <code>stack recommend</code></a> + 19 MCP tools + Claude Code plugin
+        </td>
+        <td>HashiCorp AI in Terraform Cloud (preview); no native MCP</td>
+      </tr>
+      <tr>
+        <td>License</td>
+        <td>MIT · pre-alpha v0.1.1</td>
+        <td>BSL 1.1 (since 2023); OpenTofu is the Apache 2.0 fork</td>
+      </tr>
+      <tr>
+        <td>Free tier</td>
+        <td>Entire CLI, MCP, plugin — free forever</td>
+        <td>CLI free; Terraform Cloud free for up to 5 users</td>
+      </tr>
+      <tr>
+        <td>Best for</td>
+        <td>SaaS composition, indie devs, YC startups, agentic workflows</td>
+        <td>Platform engineering, SRE, regulated cloud deployments</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Where they overlap</h2>
+  <p>
+    The overlap is real but narrow. Terraform's provider registry includes
+    community-maintained wrappers for a handful of SaaS products — there's a
+    <code>supabase/supabase</code> provider, a <code>stripe/stripe</code>
+    provider, a <code>cloudflare/cloudflare</code> provider that's actually
+    first-class. In theory you can write HCL that creates a Stripe product,
+    a Supabase branch, a Clerk application. In practice the ergonomics are
+    wrong: you're spinning up a state backend, writing 80 lines of HCL, and
+    importing plaintext secrets — all to do what <code>stack add stripe</code>
+    does in one command with encrypted secrets by default.
+  </p>
+  <p>
+    The honest cases where Terraform's SaaS providers are the right answer:
+    you already have Terraform in production, your platform team owns all
+    provisioning, and the SaaS resources need to live in the same state graph
+    as your cloud resources.
+  </p>
+
+  <h2>Where Stack wins</h2>
+  <ul>
+    <li>
+      <strong>End-to-end SaaS provisioning.</strong> <code>stack add supabase</code>
+      drives the OAuth flow, calls the Supabase Management API to create a
+      project, waits for it to come online, extracts the service-role key and
+      anon key, writes them to Phantom, and regenerates <code>.env.local</code>
+      with <code>phm_*</code> tokens. Terraform's Supabase provider requires
+      you to already have a project and a PAT before HCL can do anything.
+    </li>
+    <li>
+      <strong>Secrets-safe by default.</strong> Stack never writes plaintext
+      secrets to disk. Terraform's state file contains secrets in plaintext
+      unless you configure encryption at rest. In day-to-day use this
+      difference is huge — an accidentally committed <code>terraform.tfstate</code>
+      has leaked AWS keys many times; a committed <code>.stack.toml</code>
+      contains slot names only.
+    </li>
+    <li>
+      <strong>MCP-native.</strong> Stack's 19 MCP tools let an agent drive the
+      entire lifecycle — recommend, apply, doctor, rotate, remove — from a
+      Claude Code session. Terraform has no first-class MCP surface; you'd
+      have to wrap the CLI yourself.
+    </li>
+    <li>
+      <strong>Zero state server.</strong> No Terraform Cloud, no S3 backend,
+      no DynamoDB lock table. <code>.stack.toml</code> gets checked in; Phantom
+      holds the values. For a solo dev or a small team, that eliminates a
+      whole category of operational overhead.
+    </li>
+    <li>
+      <strong>OAuth onboarding.</strong> Stack handles provider OAuth — you
+      click Authorise in a browser and Stack takes it from there. Terraform
+      expects you to have created long-lived tokens in each provider's
+      dashboard before <code>terraform apply</code> runs.
+    </li>
+  </ul>
+
+  <h2>Where Terraform wins</h2>
+  <p>Honest concessions:</p>
+  <ul>
+    <li>
+      <strong>Cloud primitives.</strong> Stack does not create VPCs, subnets,
+      security groups, IAM roles, RDS instances, GKE clusters, or Azure
+      Function Apps. If you own cloud infrastructure, Terraform is the
+      standard and Stack is not a replacement.
+    </li>
+    <li>
+      <strong>Provider ecosystem.</strong> Terraform has 3,000+ providers on
+      the registry, covering every major cloud, database, monitoring tool,
+      DNS provider, VPN, and identity system. Stack ships 29 curated
+      providers.
+    </li>
+    <li>
+      <strong>State and drift detection.</strong> <code>terraform plan</code>
+      compares desired to actual state across thousands of resources; Stack
+      only checks the presence and validity of declared SaaS services via{" "}
+      <code>stack doctor</code>.
+    </li>
+    <li>
+      <strong>Enterprise controls.</strong> Terraform Cloud has SOC2, SAML
+      SSO, audit logs, policy-as-code via Sentinel, team RBAC, and private
+      registries. Stack is pre-alpha; team-tier features are on the roadmap.
+    </li>
+    <li>
+      <strong>Multi-env and workspaces.</strong> Terraform has first-class
+      support for dev/staging/prod environments with shared modules. Stack v0.1
+      is single-environment-per-project.
+    </li>
+  </ul>
+
+  <h2>Can I use both?</h2>
+  <p>
+    Yes, and it's the most common pattern for teams with any serious cloud
+    footprint. Terraform owns the cloud account — VPCs, IAM, RDS, ECS,
+    CloudFront — and Stack owns the SaaS layer: Supabase for data, Stripe
+    for billing, Clerk for auth, PostHog for analytics, Sentry for errors.
+    Hand-offs happen via environment variables: Terraform outputs feed into
+    Stack config, and Stack-managed Phantom secrets can be injected into
+    Terraform runs via <code>phantom exec -- terraform apply</code>.
+  </p>
+  <p>
+    If you're on OpenTofu (the Apache 2.0 fork of Terraform), the same
+    pattern works — Stack doesn't care which CLI you use for the cloud side.
+  </p>
+
+  <h2>Migration and caveats</h2>
+  <p>
+    Stack is pre-alpha — these comparisons reflect v0.1.1 as of April 2026.
+    We do not claim parity with Terraform's maturity, provider breadth, or
+    enterprise tooling. If you already have a working Terraform monorepo,
+    don't rip it out; add Stack for the SaaS services you're currently
+    hand-wiring. For the provider catalog, see{" "}
+    <a href="/docs/providers/">/docs/providers</a>. For agentic automation
+    via MCP, see <a href="/docs/mcp/">/docs/mcp</a>.
+  </p>
+
+  <h2>FAQ</h2>
+  <h3>Can Stack replace Terraform?</h3>
+  <p>
+    Not for cloud infrastructure. Terraform remains the industry standard for
+    provisioning AWS, GCP, Azure, and on-prem resources with a huge provider
+    ecosystem and mature state management. Stack replaces the hand-written
+    glue around SaaS services — Supabase, Stripe, Clerk — where Terraform
+    providers are thin or non-existent.
+  </p>
+
+  <h3>Does Terraform have a Supabase or Stripe provider?</h3>
+  <p>
+    There is a community Supabase provider with limited coverage and a Stripe
+    provider that mostly wraps the API surface. Neither handles OAuth
+    onboarding, project creation, secret extraction, or vault routing the way
+    Stack does end-to-end. Stack treats these providers as first-class SaaS
+    citizens, not API wrappers.
+  </p>
+
+  <h3>Which should a two-person startup pick?</h3>
+  <p>
+    If you deploy to Vercel, Fly, or Railway and rent the rest (Supabase,
+    Stripe, Clerk, PostHog), Stack alone covers 90 percent of your setup. If
+    you run on AWS primitives — EC2, RDS, VPCs — you need Terraform for
+    infra and can add Stack for the SaaS layer on top.
+  </p>
+</Docs>
