@@ -24,6 +24,7 @@
 import Docs from "~/layouts/Docs.astro";
 import { Code } from "astro:components";
 import { PROVIDERS_REF, type ProviderRef } from "~/lib/providers-ref";
+import { PROVIDERS } from "~/lib/providers";
 import { getIconPath } from "~/lib/icons";
 import { breadcrumbSchema, faqPageSchema } from "~/lib/structured-data";
 import { SITE_URL } from "~/lib/og";
@@ -41,7 +42,15 @@ interface Props {
 
 const { provider: p } = Astro.props as Props;
 
-const iconPath = getIconPath(p.name === "fly" ? "flydotio" : p.name === "aws" ? "amazonwebservices" : p.name === "xai" ? "x" : p.name === "github" ? "github" : p.name === "googlecloud" ? "googlecloud" : p.name);
+// Look up brand color + simple-icons slug from the site's display catalog.
+// catalog.ts is the canonical source for auth/secrets/blurb but doesn't carry
+// brand color; providers.ts does. Joining on `name` gives us both.
+const display = PROVIDERS.find((q) => q.name === p.displayName) ??
+  PROVIDERS.find((q) => q.slug === p.name) ??
+  null;
+const brandColor = display?.color ?? "e96b2a"; // fallback: Stack amber
+const iconSlug = display?.slug ?? p.name;
+const iconPath = getIconPath(iconSlug);
 
 const AUTH_EXPLAINERS: Record<string, string> = {
   oauth_pkce:
@@ -111,13 +120,13 @@ const breadcrumbs = breadcrumbSchema([
   eyebrow={`Provider · ${p.category}`}
   extraSchemas={[faq, breadcrumbs]}
 >
-  <div class="not-prose mb-8 flex items-center gap-4 p-5 panel rounded-xl" style={`border-left: 2px solid #${p.color ?? "e96b2a"};`}>
+  <div class="not-prose mb-8 flex items-center gap-4 p-5 panel rounded-xl" style={`border-left: 2px solid #${brandColor};`}>
     {iconPath && (
       <svg
         viewBox="0 0 24 24"
         width="40"
         height="40"
-        fill={`#${p.color ?? "e96b2a"}`}
+        fill={`#${brandColor}`}
         aria-hidden="true"
         style="flex-shrink: 0"
       >
