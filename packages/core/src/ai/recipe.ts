@@ -39,7 +39,15 @@ function recipesDir(cwd: string): string {
  * `.stack/recipes/` sandbox.
  */
 function assertSafeRecipeId(id: string): void {
-  if (!id || /[\\/]/.test(id) || id.includes("..") || id.startsWith(".") || id.length > 200) {
+  if (
+    !id ||
+    /[\\/]/.test(id) ||
+    id.includes("..") ||
+    id.includes("\0") ||
+    /^[A-Za-z]:/.test(id) || // Windows drive-relative path
+    id.startsWith(".") ||
+    id.length > 200
+  ) {
     throw new StackError(
       "INVALID_RECIPE_ID",
       `Recipe id "${id}" contains illegal path characters. Use kebab-case, no separators.`,
