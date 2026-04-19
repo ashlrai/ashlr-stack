@@ -31,11 +31,16 @@ jobs:
           - target: bun-linux-arm64
             os: ubuntu-latest
             asset: stack-linux-arm64
+          # GitHub's macos-13 (Intel) runner image is being phased out and
+          # the queue regularly sits for 30+ minutes. Bun cross-compiles
+          # cleanly from arm64 → x64 via `--target=bun-darwin-x64`, so we
+          # run both darwin builds on macos-latest (M1/M2) and skip the
+          # Intel-runner dependency entirely.
           - target: bun-darwin-x64
-            os: macos-13       # last Intel runner
+            os: macos-latest
             asset: stack-darwin-x64
           - target: bun-darwin-arm64
-            os: macos-latest   # M1/M2 runner
+            os: macos-latest
             asset: stack-darwin-arm64
     steps:
       - uses: actions/checkout@v4
@@ -67,7 +72,10 @@ jobs:
           cat ${{ matrix.asset }}.sha256
 
       - name: Smoke test (native arch only)
-        if: matrix.target == 'bun-linux-x64' || (matrix.target == 'bun-darwin-arm64' && runner.arch == 'ARM64')
+        # Only run the binary when it matches the runner arch — darwin-x64
+        # is cross-compiled on an arm64 runner, so we can't execute it here
+        # without Rosetta; the linux-arm64 case is similar.
+        if: matrix.target == 'bun-linux-x64' || matrix.target == 'bun-darwin-arm64'
         run: |
           ./dist/${{ matrix.asset }} --help | head -20
           ./dist/${{ matrix.asset }} providers | head -5
