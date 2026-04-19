@@ -217,7 +217,7 @@ const TOOLS: ToolDef[] = [
   {
     name: "stack_recommend",
     description:
-      "Given a free-text description of what the user is building (e.g. 'B2B SaaS with auth, AI, and payments'), return a structured list of the most relevant curated providers with scores, matched terms, and per-category ranking. The caller (Claude) should reason over this payload to propose a concrete Recipe, then invoke stack_add for each chosen provider. Retrieval-only — no LLM inference happens here.",
+      "Given a free-text description of what the user is building (e.g. 'B2B SaaS with auth, AI, and payments'), return a structured list of the most relevant curated providers with scores, matched terms, and per-category ranking. Pass save:true to also persist a Recipe to .stack/recipes/<id>.toml so you (Claude) can follow up with stack_apply. Retrieval-only — no LLM inference happens here.",
     inputSchema: {
       type: "object",
       properties: {
@@ -234,6 +234,11 @@ const TOOLS: ToolDef[] = [
           description:
             "Optional filter to a single category: Database, Deploy, Cloud, AI, Analytics, Errors, Payments, Code, Tickets, Email, Auth.",
         },
+        save: {
+          type: "boolean",
+          description:
+            "When true, also freeze the result to .stack/recipes/<id>.toml so you can run stack_apply. Returns the recipe id in the response.",
+        },
       },
       required: ["query"],
     },
@@ -241,6 +246,7 @@ const TOOLS: ToolDef[] = [
       const args = ["recommend", String(input.query ?? ""), "--json"];
       if (input.k) args.push("--k", String(input.k));
       if (input.category) args.push("--category", String(input.category));
+      if (input.save) args.push("--save");
       return args;
     },
   },

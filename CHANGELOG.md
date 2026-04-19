@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### AI recommendation layer — `stack recommend` + `stack apply` (v1.0 scope)
+
+Stack is now agent-native from day one. Describe what you're building; Stack picks the providers, drafts a reproducible Recipe, and hands it to either Claude Code (via MCP) or the local-SLM fallback for synthesis.
+
+- **`stack recommend [query]`** — free-text → top providers ranked by a zero-dep BM25 + IDF scorer over the curated catalog. Flags: `--json`, `--k`, `--category`, `--save`, `--synth`. `--save` freezes the result to `.stack/recipes/<id>.toml` so the user can follow up with `stack apply <id>`. `--synth` calls the local SLM for model-authored rationales and falls back silently when no endpoint is reachable.
+- **`stack apply [recipe-id]`** — re-runs the existing `stack add` pipeline for every provider in the Recipe, then wires Phantom rotating envelopes + webhook stubs (Stripe, Clerk, Supabase, GitHub). Default ON; `--noWire` opts out. Interactive `@clack/prompts` picker when no id is given.
+- **MCP surface** — `stack_recommend` (with `save:true`) and `stack_apply` exposed so Claude can drive the full loop from a coding session. Retrieval-only on the MCP path by design — Claude owns the reasoning, Stack owns the catalog + execution.
+- **Canonical catalog** — moved from `packages/site/src/lib/providers-ref.ts` into `packages/core/src/catalog.ts`; site now re-exports the shim. One source of truth for CLI, MCP, AI, and docs.
+- **Local SLM backend** — `packages/core/src/ai/inference.ts` talks OpenAI-compatible HTTP to LM Studio (`localhost:1234`) with Ollama fallback (`localhost:11434`). Circuit breaker + cost tracker copied from the ashlrcode router pattern. Zero new npm deps, no OpenAI/Anthropic SDKs in the Stack repo — the user's LLM keys belong to Claude, not to us.
+- **Site surface** — `packages/site/src/pages/api/recommend.ts` Edge-ready API route. StackBuilder gains a "Describe your project" textarea that pre-selects provider cards. StackREPL simulates `stack recommend` client-side.
+- **Tests** — 179 pass / 0 fail (up from 135 before the AI layer). New: `catalog-index.test.ts`, `inference.test.ts`, `circuit-breaker.test.ts`, `recipe.test.ts`, `phantom-wire.test.ts`, `recommend.test.ts` (+ round-trip --save/apply).
+- **CLI fix**: parent `run()` no longer trails a banner after every subcommand — was breaking machine-readable output (`stack providers`, `stack recommend --json`). Detects subcommand via `process.argv[2]`.
+
 ### Reliability + hardening (auto-agent)
 
 Retry + recovery + secret-redaction pass on `packages/core/`. No other package touched.

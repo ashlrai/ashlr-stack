@@ -69,15 +69,18 @@ export default function HeroIntroOverlay() {
       return;
     }
     setPhase("playing");
-    timers.current.push(
-      setTimeout(() => setPhase("fading"), SEQUENCE.fade),
-      setTimeout(() => {
-        sessionStorage.setItem(STORAGE_KEY, "1");
-        setPhase("done");
-      }, TOTAL_MS),
-    );
+    let cancelled = false;
+    const fadeT = setTimeout(() => { if (!cancelled) setPhase("fading"); }, SEQUENCE.fade);
+    const doneT = setTimeout(() => {
+      if (cancelled) return;
+      sessionStorage.setItem(STORAGE_KEY, "1");
+      setPhase("done");
+    }, TOTAL_MS);
+    timers.current = [fadeT, doneT];
     return () => {
-      timers.current.forEach(clearTimeout);
+      cancelled = true;
+      clearTimeout(fadeT);
+      clearTimeout(doneT);
       timers.current = [];
     };
   }, [reduced]);
@@ -317,7 +320,6 @@ export default function HeroIntroOverlay() {
       </div>
 
       <style>{`
-        @keyframes introFadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes introSparkIn {
           0%   { transform: scale(0) translateZ(0); opacity: 0; }
           40%  { transform: scale(1.4); opacity: 1; }

@@ -88,10 +88,36 @@ Stack is the *control plane*. Phantom is the *vault*. ashlr-plugin is the *conte
 ```bash
 stack init                    # interactive template picker
 stack add supabase            # OAuth → new project → secrets → .mcp.json
-stack providers               # full catalog (18 services across 7 categories)
+stack providers               # full catalog (27 services across 11 categories)
 stack doctor --fix            # verify every service; re-run setup for anything broken
 stack exec -- bun dev         # run with Phantom's secret proxy active
 ```
+
+### AI recommendation layer
+
+Describe what you're building — Stack picks the providers.
+
+```bash
+stack recommend "B2B SaaS with auth, AI, and payments"
+# → ranked list of matching providers with rationales
+
+stack recommend "serverless postgres" --save
+# → freezes a Recipe to .stack/recipes/<id>.toml
+
+stack apply <recipe-id>
+# → runs `stack add` for each provider + pre-wires Phantom rotating envelopes
+#   + drops webhook stubs for Stripe / Clerk / Supabase / GitHub
+#   (add --noWire to opt out of the Phantom auto-wiring)
+```
+
+Inside Claude Code, the same flow is one tool call:
+
+```
+stack_recommend { query: "B2B SaaS with auth + payments", save: true }
+stack_apply     { recipe_id: "<id>" }
+```
+
+Reasoning happens in Claude — Stack owns the catalog + execution. Outside Claude, `stack recommend --synth` uses a local SLM (LM Studio on `:1234`, Ollama on `:11434`) for rationales. No remote LLM SDKs live in Stack.
 
 ## Bring Stack to an existing project
 

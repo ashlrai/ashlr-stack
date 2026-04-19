@@ -21,7 +21,17 @@ export interface Props {
 const { variant = "chip", size = 28, class: className = "", idSuffix = "" } = Astro.props;
 const sid = `logo${idSuffix}`;
 
-const stripeYs = [6.875, 9.75, 12.625, 15.5, 18.375, 21.25, 24.125];
+/** [y-position, stroke-opacity] for each of the 7 plate boundaries. The last
+ * line is the Phantom-tier boundary and carries the full amber glow. */
+const STRIPES: Array<[y: number, opacity: number]> = [
+  [6.875, 0.25],
+  [9.75, 0.25],
+  [12.625, 0.25],
+  [15.5, 0.25],
+  [18.375, 0.25],
+  [21.25, 0.25],
+  [24.125, 0.85],
+];
 ---
 
 {(variant === "mark") && (
@@ -56,8 +66,8 @@ const stripeYs = [6.875, 9.75, 12.625, 15.5, 18.375, 21.25, 24.125];
     <g clip-path={`url(#${sid}-clip)`}>
       <rect x="0" y="0" width="32" height="23" fill={`url(#${sid}-steel)`} />
       <rect x="0" y="24.125" width="32" height="2.875" fill={`url(#${sid}-phantom)`} />
-      {stripeYs.map((y) => (
-        <line x1="0" x2="32" y1={y} y2={y} stroke="#e96b2a" stroke-width="0.35" stroke-opacity={y === 24.125 ? 0.85 : 0.25} />
+      {STRIPES.map(([y, op]) => (
+        <line x1="0" x2="32" y1={y} y2={y} stroke="#e96b2a" stroke-width="0.35" stroke-opacity={op} />
       ))}
     </g>
     <path d="M16 4 L28 27 L4 27 Z" fill="none" stroke="#e96b2a" stroke-width="1.3" stroke-linejoin="miter" />
@@ -84,8 +94,8 @@ const stripeYs = [6.875, 9.75, 12.625, 15.5, 18.375, 21.25, 24.125];
       <g clip-path={`url(#${sid}-clip-c)`}>
         <rect x="0" y="0" width="32" height="23" fill={`url(#${sid}-steel-c)`} />
         <rect x="0" y="24.125" width="32" height="2.875" fill={`url(#${sid}-phantom-c)`} />
-        {stripeYs.map((y) => (
-          <line x1="0" x2="32" y1={y} y2={y} stroke="#e96b2a" stroke-width="0.35" stroke-opacity={y === 24.125 ? 0.85 : 0.25} />
+        {STRIPES.map(([y, op]) => (
+          <line x1="0" x2="32" y1={y} y2={y} stroke="#e96b2a" stroke-width="0.35" stroke-opacity={op} />
         ))}
       </g>
       <path d="M16 4 L28 27 L4 27 Z" fill="none" stroke="#e96b2a" stroke-width="1.3" stroke-linejoin="miter" />
@@ -128,8 +138,8 @@ const stripeYs = [6.875, 9.75, 12.625, 15.5, 18.375, 21.25, 24.125];
       <g clip-path={`url(#${sid}-clip-w)`}>
         <rect x="0" y="0" width="32" height="23" fill={`url(#${sid}-steel-w)`} />
         <rect x="0" y="24.125" width="32" height="2.875" fill={`url(#${sid}-phantom-w)`} />
-        {stripeYs.map((y) => (
-          <line x1="0" x2="32" y1={y} y2={y} stroke="#e96b2a" stroke-width="0.35" stroke-opacity={y === 24.125 ? 0.85 : 0.25} />
+        {STRIPES.map(([y, op]) => (
+          <line x1="0" x2="32" y1={y} y2={y} stroke="#e96b2a" stroke-width="0.35" stroke-opacity={op} />
         ))}
       </g>
       <path d="M16 4 L28 27 L4 27 Z" fill="none" stroke="#e96b2a" stroke-width="1.3" stroke-linejoin="miter" />
