@@ -1,20 +1,37 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="180" height="180" viewBox="0 0 180 180" shape-rendering="geometricPrecision">
+<svg xmlns="http://www.w3.org/2000/svg" width="180" height="180" viewBox="0 0 180 180" role="img" aria-label="Ashlr Stack">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#1a1a1d"/>
-      <stop offset="100%" stop-color="#0b0b0d"/>
+      <stop offset="0%" stop-color="#0a0c10"/>
+      <stop offset="100%" stop-color="#05070a"/>
     </linearGradient>
-    <linearGradient id="mark" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#f0abfc"/>
-      <stop offset="100%" stop-color="#d946ef"/>
+    <linearGradient id="steel" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#2a3340"/>
+      <stop offset="60%" stop-color="#1a1f26"/>
+      <stop offset="100%" stop-color="#0f1419"/>
     </linearGradient>
-    <radialGradient id="glow" cx="50%" cy="35%" r="55%">
-      <stop offset="0%" stop-color="#d946ef" stop-opacity="0.45"/>
-      <stop offset="70%" stop-color="#d946ef" stop-opacity="0"/>
+    <linearGradient id="phantom" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#3a2212"/>
+      <stop offset="100%" stop-color="#1a0e08"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="85%" r="55%">
+      <stop offset="0%" stop-color="#e96b2a" stop-opacity="0.5"/>
+      <stop offset="70%" stop-color="#e96b2a" stop-opacity="0"/>
     </radialGradient>
+    <clipPath id="tri"><path d="M90 40 L146 138 L34 138 Z"/></clipPath>
   </defs>
-  <!-- Apple wants no rounded corners — iOS masks automatically. Fill edge-to-edge. -->
+  <!-- Apple wants no rounded corners — iOS masks automatically. -->
   <rect width="180" height="180" fill="url(#bg)"/>
-  <rect width="180" height="180" fill="url(#glow)"/>
-  <path d="M90 40 L146 138 L34 138 Z" fill="url(#mark)"/>
+  <ellipse cx="90" cy="150" rx="60" ry="14" fill="url(#glow)"/>
+  <g clip-path="url(#tri)">
+    <rect x="0" y="0" width="180" height="125" fill="url(#steel)"/>
+    <rect x="0" y="125.75" width="180" height="13" fill="url(#phantom)"/>
+    <line x1="0" x2="180" y1="52.25" y2="52.25" stroke="#e96b2a" stroke-width="1.4" stroke-opacity="0.22"/>
+    <line x1="0" x2="180" y1="64.5"  y2="64.5"  stroke="#e96b2a" stroke-width="1.4" stroke-opacity="0.22"/>
+    <line x1="0" x2="180" y1="76.75" y2="76.75" stroke="#e96b2a" stroke-width="1.4" stroke-opacity="0.22"/>
+    <line x1="0" x2="180" y1="89"    y2="89"    stroke="#e96b2a" stroke-width="1.4" stroke-opacity="0.22"/>
+    <line x1="0" x2="180" y1="101.25" y2="101.25" stroke="#e96b2a" stroke-width="1.4" stroke-opacity="0.22"/>
+    <line x1="0" x2="180" y1="113.5" y2="113.5" stroke="#e96b2a" stroke-width="1.4" stroke-opacity="0.22"/>
+    <line x1="0" x2="180" y1="125.75" y2="125.75" stroke="#e96b2a" stroke-width="1.8" stroke-opacity="0.85"/>
+  </g>
+  <path d="M90 40 L146 138 L34 138 Z" fill="none" stroke="#e96b2a" stroke-width="3.4" stroke-linejoin="miter"/>
 </svg>

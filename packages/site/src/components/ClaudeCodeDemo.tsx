@@ -245,7 +245,7 @@ function MessageBubble({
                   />
                   <path
                     d="M7 2 A5 5 0 0 1 12 7"
-                    stroke="#e879f9"
+                    stroke="#f5883e"
                     strokeWidth="1.75"
                     fill="none"
                     strokeLinecap="round"
@@ -313,7 +313,7 @@ function Avatar({ kind }: { kind: "user" | "assistant" | "tool" }) {
       }}
     >
       <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden>
-        <path d="M12 3 L21 20 L3 20 Z" fill="#d946ef" />
+        <path d="M12 3 L21 20 L3 20 Z" fill="#e96b2a" />
       </svg>
     </div>
   );

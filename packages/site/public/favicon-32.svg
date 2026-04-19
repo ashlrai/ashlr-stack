@@ -1,4 +1,16 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" shape-rendering="geometricPrecision">
-  <rect width="32" height="32" rx="7" fill="#0b0b0d"/>
-  <path d="M16 7 L25 24 L7 24 Z" fill="#d946ef"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" role="img" aria-label="Ashlr Stack">
+  <defs>
+    <linearGradient id="s" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#2a3340"/>
+      <stop offset="100%" stop-color="#0f1419"/>
+    </linearGradient>
+    <clipPath id="t"><path d="M16 4 L28 27 L4 27 Z"/></clipPath>
+  </defs>
+  <rect width="32" height="32" rx="6" fill="#05070a"/>
+  <g clip-path="url(#t)">
+    <rect x="0" y="0" width="32" height="24" fill="url(#s)"/>
+    <rect x="0" y="24.125" width="32" height="3" fill="#3a2212"/>
+    <line x1="0" x2="32" y1="24.125" y2="24.125" stroke="#e96b2a" stroke-width="0.4" stroke-opacity="0.85"/>
+  </g>
+  <path d="M16 4 L28 27 L4 27 Z" fill="none" stroke="#e96b2a" stroke-width="1.2" stroke-linejoin="miter"/>
 </svg>

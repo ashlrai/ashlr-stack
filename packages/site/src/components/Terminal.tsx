@@ -298,7 +298,7 @@ function Line({ line }: { line: RenderedStep }) {
             />
             <path
               d="M7 2 A5 5 0 0 1 12 7"
-              stroke="#e879f9"
+              stroke="#f5883e"
               strokeWidth="1.75"
               fill="none"
               strokeLinecap="round"
