@@ -82,24 +82,45 @@ jobs:
     name: Publish to npm
     needs: build-binaries
     runs-on: ubuntu-latest
+    # Skip cleanly if NPM_TOKEN isn't configured yet — the release still
+    # produces binaries + a GitHub Release so install.sh works. Re-tag a
+    # patch release once the token is set and this job fires.
+    if: ${{ !cancelled() }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Gate on NPM_TOKEN
+        id: gate
+        run: |
+          if [ -z "${{ secrets.NPM_TOKEN }}" ]; then
+            echo "⚠ NPM_TOKEN not configured — skipping npm publish."
+            echo "  Set it with: gh secret set NPM_TOKEN"
+            echo "  Binaries + GitHub Release will still be produced."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - if: steps.gate.outputs.enabled == 'true'
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0   # scripts/publish.sh uses git tag
 
-      - uses: oven-sh/setup-bun@v2
+      - if: steps.gate.outputs.enabled == 'true'
+        uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
 
-      - uses: actions/setup-node@v4
+      - if: steps.gate.outputs.enabled == 'true'
+        uses: actions/setup-node@v4
         with:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org/'
 
-      - name: Install deps
+      - if: steps.gate.outputs.enabled == 'true'
+        name: Install deps
         run: bun install --frozen-lockfile
 
-      - name: Resolve version from tag
+      - if: steps.gate.outputs.enabled == 'true'
+        name: Resolve version from tag
         id: ver
         run: |
           if [ -n "${{ github.event.inputs.version }}" ]; then
@@ -109,26 +130,31 @@ jobs:
             echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Inject OAuth client IDs
+      - if: steps.gate.outputs.enabled == 'true'
+        name: Inject OAuth client IDs
         env:
           OAUTH_SUPABASE_CLIENT_ID: ${{ secrets.OAUTH_SUPABASE_CLIENT_ID }}
           OAUTH_GITHUB_CLIENT_ID:   ${{ secrets.OAUTH_GITHUB_CLIENT_ID }}
         run: node scripts/inject-client-ids.mjs
 
-      - name: Publish @ashlr/stack-core + @ashlr/stack-mcp + @ashlr/stack
+      - if: steps.gate.outputs.enabled == 'true'
+        name: Publish @ashlr/stack-core + @ashlr/stack-mcp + @ashlr/stack
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: 'true'
         run: |
           bash scripts/publish.sh --version ${{ steps.ver.outputs.version }} --yes
 
-      - name: Restore env.ts (never commit injected client IDs)
-        if: always()
+      - if: always() && steps.gate.outputs.enabled == 'true'
+        name: Restore env.ts (never commit injected client IDs)
         run: git checkout -- packages/core/src/env.ts || true
 
   create-release:
     name: Create GitHub Release
+    # publish-npm skips gracefully when NPM_TOKEN is absent; binaries alone
+    # are enough to cut a GitHub Release and make install.sh work.
     needs: [build-binaries, publish-npm]
+    if: ${{ !cancelled() && needs.build-binaries.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

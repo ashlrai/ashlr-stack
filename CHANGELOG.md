@@ -2,7 +2,13 @@
 
 ## Unreleased
 
-### AI recommendation layer — `stack recommend` + `stack apply` (v1.0 scope)
+_Nothing yet._
+
+## 0.1.0 — 2026-04-19
+
+First public release. Binaries for macOS (arm64 + x64) and Linux (arm64 + x64) on GitHub Releases; `install.sh` one-liner; npm publish follows once the `@ashlr` scope is claimed.
+
+### AI recommendation layer — `stack recommend` + `stack apply`
 
 Stack is now agent-native from day one. Describe what you're building; Stack picks the providers, drafts a reproducible Recipe, and hands it to either Claude Code (via MCP) or the local-SLM fallback for synthesis.
 
