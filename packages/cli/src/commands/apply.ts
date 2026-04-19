@@ -1,11 +1,11 @@
-import { defineCommand } from "citty";
 import {
+  type Recipe,
   hasConfig,
   listRecipes,
   readRecipe,
   wirePhantomForRecipe,
-  type Recipe,
 } from "@ashlr/stack-core";
+import { defineCommand } from "citty";
 import { colors, intro, outro, outroError, prompts } from "../ui.ts";
 import { addCommand } from "./add.ts";
 import { doctorCommand } from "./doctor.ts";
@@ -50,9 +50,7 @@ export const applyCommand = defineCommand({
     console.log();
     console.log(`  ${colors.bold("recipe")}   ${recipe.id}`);
     console.log(`  ${colors.dim("query")}    ${recipe.query}`);
-    console.log(
-      `  ${colors.dim("providers")} ${recipe.providers.map((p) => p.name).join(", ")}`,
-    );
+    console.log(`  ${colors.dim("providers")} ${recipe.providers.map((p) => p.name).join(", ")}`);
     console.log();
 
     // Re-run addCommand for each provider. We intentionally do NOT parallelize:
@@ -62,12 +60,14 @@ export const applyCommand = defineCommand({
     for (const { name } of recipe.providers) {
       try {
         console.log(colors.dim(`  › stack add ${name}`));
+        // citty's CommandContext type requires every declared arg key; we only
+        // set the ones addCommand actually reads, so double-cast via unknown.
         await addCommand.run?.({
           args: { service: name, dryRun: false, _: [] },
           cmd: addCommand,
           rawArgs: [name],
           data: undefined,
-        } as Parameters<NonNullable<typeof addCommand.run>>[0]);
+        } as unknown as Parameters<NonNullable<typeof addCommand.run>>[0]);
       } catch (err) {
         failures.push(`${name}: ${(err as Error).message}`);
       }
@@ -84,9 +84,7 @@ export const applyCommand = defineCommand({
           }`,
         );
         if (wire.skipped.length > 0) {
-          console.log(
-            colors.dim(`  (phantom-wire skipped: ${wire.skipped.join(", ")})`),
-          );
+          console.log(colors.dim(`  (phantom-wire skipped: ${wire.skipped.join(", ")})`));
         }
       }
     } catch (err) {
@@ -102,7 +100,7 @@ export const applyCommand = defineCommand({
         cmd: doctorCommand,
         rawArgs: [],
         data: undefined,
-      } as Parameters<NonNullable<typeof doctorCommand.run>>[0]);
+      } as unknown as Parameters<NonNullable<typeof doctorCommand.run>>[0]);
     } catch {
       /* doctor surfaces its own errors */
     }

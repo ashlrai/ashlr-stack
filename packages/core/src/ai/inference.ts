@@ -20,7 +20,7 @@
  */
 
 import { CircuitBreaker } from "./circuit-breaker.ts";
-import { CostTracker, defaultCostTracker } from "./cost-tracker.ts";
+import { type CostTracker, defaultCostTracker } from "./cost-tracker.ts";
 
 // ── Public types ───────────────────────────────────────────────────────
 
@@ -129,6 +129,13 @@ export interface LocalSLMEndpoint {
   apiKey?: string;
 }
 
+/**
+ * Narrow callable signature for `fetch`. We can't use `typeof fetch` directly
+ * because Bun augments that global with `.preconnect`, so callers that pass
+ * a plain arrow function (as our constructor fallback does) don't satisfy it.
+ */
+export type FetchFn = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+
 export interface LocalSLMBackendOptions {
   endpoints?: LocalSLMEndpoint[];
   /** Per-request timeout in ms (default 30s). */
@@ -137,7 +144,7 @@ export interface LocalSLMBackendOptions {
   circuitBreakerThreshold?: number;
   circuitBreakerWindowMs?: number;
   /** Override fetch — used by tests. Defaults to `globalThis.fetch`. */
-  fetchImpl?: typeof fetch;
+  fetchImpl?: FetchFn;
 }
 
 const DEFAULT_LM_STUDIO: LocalSLMEndpoint = {
@@ -167,7 +174,7 @@ export class LocalSLMBackend implements InferenceBackend {
   private readonly timeoutMs: number;
   private readonly costTracker: CostTracker;
   private readonly breakers = new Map<string, CircuitBreaker>();
-  private readonly fetchImpl: typeof fetch;
+  private readonly fetchImpl: FetchFn;
   private lastUsedEndpoint: string | null = null;
 
   constructor(opts: LocalSLMBackendOptions = {}) {
@@ -207,7 +214,8 @@ export class LocalSLMBackend implements InferenceBackend {
     let lastError: Error | null = null;
 
     for (const ep of this.endpoints) {
-      const breaker = this.breakers.get(ep.name)!;
+      const breaker = this.breakers.get(ep.name);
+      if (!breaker) continue; // unreachable — constructor seeds a breaker per endpoint
       if (!breaker.canRequest()) {
         attempted.push(`${ep.name} (circuit-open)`);
         continue;
@@ -279,11 +287,7 @@ export class LocalSLMBackend implements InferenceBackend {
 
     const inputTokens = json.usage?.prompt_tokens ?? estimateTokens(userPrompt);
     const outputTokens = json.usage?.completion_tokens ?? estimateTokens(raw);
-    const usageRecord = this.costTracker.recordUsage(
-      ep.name,
-      inputTokens,
-      outputTokens,
-    );
+    const usageRecord = this.costTracker.recordUsage(ep.name, inputTokens, outputTokens);
 
     return {
       mode: "synth",
@@ -353,9 +357,7 @@ export async function getInferenceBackend(
   if (!(await local.healthy())) {
     throw new NoInferenceBackendError(
       "No local inference endpoint reachable. Start LM Studio (http://localhost:1234) or Ollama (http://localhost:11434), or run Stack inside Claude Code (MCP mode).",
-      (opts.localOptions?.endpoints ?? [DEFAULT_LM_STUDIO, DEFAULT_OLLAMA]).map(
-        (e) => e.name,
-      ),
+      (opts.localOptions?.endpoints ?? [DEFAULT_LM_STUDIO, DEFAULT_OLLAMA]).map((e) => e.name),
     );
   }
   return local;
@@ -376,7 +378,9 @@ function buildUserPrompt(req: InferenceRequest): string {
   }
   parts.push("Catalog excerpt:");
   parts.push(req.catalogContext);
-  parts.push('Respond with JSON only — shape: {"providers":[{"name":"","rationale":""}],"notes":""}');
+  parts.push(
+    'Respond with JSON only — shape: {"providers":[{"name":"","rationale":""}],"notes":""}',
+  );
   return parts.join("\n\n");
 }
 
@@ -394,9 +398,7 @@ export function parseRecipeDraft(raw: string): RecipeDraft {
   try {
     parsed = JSON.parse(candidate);
   } catch (err) {
-    throw new Error(
-      `Inference response was not valid JSON: ${(err as Error).message}`,
-    );
+    throw new Error(`Inference response was not valid JSON: ${(err as Error).message}`);
   }
   if (!parsed || typeof parsed !== "object") {
     throw new Error("Inference response JSON was not an object");
@@ -411,8 +413,7 @@ export function parseRecipeDraft(raw: string): RecipeDraft {
     if (!entry || typeof entry !== "object") continue;
     const e = entry as Record<string, unknown>;
     const name = typeof e.name === "string" ? e.name.trim() : "";
-    const rationale =
-      typeof e.rationale === "string" ? e.rationale.trim() : "";
+    const rationale = typeof e.rationale === "string" ? e.rationale.trim() : "";
     if (!name) continue;
     providers.push({ name, rationale });
   }
@@ -425,20 +426,20 @@ export function parseRecipeDraft(raw: string): RecipeDraft {
 
 function extractJsonObject(raw: string): string | null {
   const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/i);
-  const scan = fenced ? fenced[1]! : raw;
+  const scan = fenced?.[1] ?? raw;
   const start = scan.indexOf("{");
   if (start === -1) return null;
   let depth = 0;
   let inString = false;
-  let escape = false;
+  let isEscaped = false;
   for (let i = start; i < scan.length; i++) {
-    const ch = scan[i]!;
-    if (escape) {
-      escape = false;
+    const ch = scan.charAt(i);
+    if (isEscaped) {
+      isEscaped = false;
       continue;
     }
     if (ch === "\\") {
-      escape = true;
+      isEscaped = true;
       continue;
     }
     if (ch === '"') {

@@ -25,13 +25,13 @@ import { join } from "node:path";
 import { retrieve } from "../ai/catalog-index.ts";
 import { wirePhantomForRecipe } from "../ai/phantom-wire.ts";
 import {
+  type Recipe,
   listRecipes,
   readRecipe,
   recipeFromRetrieval,
   writeRecipe,
-  type Recipe,
 } from "../ai/recipe.ts";
-import { setupFakePhantom, type Harness } from "./_harness.ts";
+import { type Harness, setupFakePhantom } from "./_harness.ts";
 
 describe("recommend → apply e2e", () => {
   let harness: Harness;
@@ -80,11 +80,7 @@ describe("recommend → apply e2e", () => {
     // 3) Simulate `stack apply <id>` reading the TOML back.
     const loaded = await readRecipe("postgres-database-e2e", projectDir);
     expect(loaded.id).toBe(recipe.id);
-    expect(loaded.providers.map((p) => p.name)).toEqual([
-      "neon",
-      "openai",
-      "anthropic",
-    ]);
+    expect(loaded.providers.map((p) => p.name)).toEqual(["neon", "openai", "anthropic"]);
 
     // 4) Wire envelopes via the fake Phantom CLI.
     const result = await wirePhantomForRecipe(loaded, { cwd: projectDir });
@@ -218,7 +214,8 @@ describe("recommend → apply e2e", () => {
 
     // Spot-check the `recipeFromRetrieval`-derived entry survived the
     // round-trip with its rationale intact.
-    const fromList = listed.find((r) => r.id === fromRetrieval.id)!;
+    const fromList = listed.find((r) => r.id === fromRetrieval.id);
+    if (!fromList) throw new Error(`listRecipes missing ${fromRetrieval.id}`);
     expect(fromList.providers).toEqual([{ name: "openai", rationale: "ai" }]);
     expect(fromList.guidance).toBe("ai only");
   });

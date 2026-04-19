@@ -1,9 +1,9 @@
-import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
+import { Canvas } from "@react-three/fiber";
 import { useEffect, useState } from "react";
-import StackRig, { TIERS, restYFor } from "./hero-stack/StackRig";
-import OrbitCluster from "./hero-stack/OrbitCluster";
 import { PROVIDERS, type Provider } from "~/lib/providers";
+import OrbitCluster from "./hero-stack/OrbitCluster";
+import StackRig, { TIERS, restYFor } from "./hero-stack/StackRig";
 
 interface HeroStack3DProps {
   /** Precomputed simple-icons path data, keyed by provider slug. Built server-side in Hero.astro. */
@@ -166,17 +166,19 @@ export default function HeroStack3D({ iconPaths = {} }: HeroStack3DProps) {
               onClick={() => setSelected((prev) => (prev === i ? null : i))}
               aria-pressed={isSelected}
               className={`group pointer-events-auto flex items-center gap-2 px-2 py-1 transition-all ${
-                isActive ? "bg-[color:var(--color-ink-800)]/90" : "bg-[color:var(--color-ink-900)]/60"
+                isActive
+                  ? "bg-[color:var(--color-ink-800)]/90"
+                  : "bg-[color:var(--color-ink-900)]/60"
               }`}
               style={{
                 borderLeft: `2px solid ${
                   isSelected
                     ? "var(--color-blade-500)"
                     : isHovered
-                    ? "var(--color-blade-400)"
-                    : tier.accent
-                    ? "var(--color-blade-500)"
-                    : "var(--color-ink-600)"
+                      ? "var(--color-blade-400)"
+                      : tier.accent
+                        ? "var(--color-blade-500)"
+                        : "var(--color-ink-600)"
                 }`,
                 backdropFilter: "blur(6px)",
               }}
@@ -186,13 +188,22 @@ export default function HeroStack3D({ iconPaths = {} }: HeroStack3DProps) {
                   isActive
                     ? "text-[color:var(--color-blade-400)]"
                     : tier.accent
-                    ? "text-[color:var(--color-blade-400)]"
-                    : "text-[color:var(--color-ink-500)]"
+                      ? "text-[color:var(--color-blade-400)]"
+                      : "text-[color:var(--color-ink-500)]"
                 }`}
               >
                 {String(tierNumber).padStart(2, "0")}
               </span>
-              <span className="text-base leading-none" style={{ color: tier.accent ? "var(--color-blade-300)" : isActive ? "var(--color-blade-400)" : "var(--color-ink-400)" }}>
+              <span
+                className="text-base leading-none"
+                style={{
+                  color: tier.accent
+                    ? "var(--color-blade-300)"
+                    : isActive
+                      ? "var(--color-blade-400)"
+                      : "var(--color-ink-400)",
+                }}
+              >
                 {tier.glyph}
               </span>
               <span
@@ -200,8 +211,8 @@ export default function HeroStack3D({ iconPaths = {} }: HeroStack3DProps) {
                   isActive
                     ? "text-[color:var(--color-ink-50)]"
                     : tier.accent
-                    ? "text-[color:var(--color-ink-100)]"
-                    : "text-[color:var(--color-ink-300)]"
+                      ? "text-[color:var(--color-ink-100)]"
+                      : "text-[color:var(--color-ink-300)]"
                 }`}
               >
                 {tier.label}
@@ -212,13 +223,14 @@ export default function HeroStack3D({ iconPaths = {} }: HeroStack3DProps) {
       </aside>
 
       {/* Persistent tier-detail overlay (never disappears — shows prompt when idle). */}
-      <div
-        role="region"
+      <section
         aria-live="polite"
         aria-label="Tier detail"
         className="absolute left-3 right-3 bottom-3 panel-steel p-4 sm:p-5 z-10 pointer-events-auto"
         style={{
-          borderLeft: activeContent ? "2px solid var(--color-blade-500)" : "2px solid var(--color-ink-600)",
+          borderLeft: activeContent
+            ? "2px solid var(--color-blade-500)"
+            : "2px solid var(--color-ink-600)",
           backgroundColor: "rgba(10, 12, 16, 0.94)",
           backdropFilter: "blur(10px)",
           transition: "border-color 220ms ease",
@@ -288,7 +300,9 @@ export default function HeroStack3D({ iconPaths = {} }: HeroStack3DProps) {
               </div>
             )}
             <div className="mt-2 mono text-[9px] tracking-[0.14em] uppercase text-[color:var(--color-ink-500)]">
-              {selected === null ? "click tier to pin · click plate or rail" : "drag background to rotate · scroll to zoom"}
+              {selected === null
+                ? "click tier to pin · click plate or rail"
+                : "drag background to rotate · scroll to zoom"}
             </div>
           </>
         ) : (
@@ -300,14 +314,15 @@ export default function HeroStack3D({ iconPaths = {} }: HeroStack3DProps) {
               8-tier control plane
             </h3>
             <p className="text-[12px] text-[color:var(--color-ink-300)] leading-[1.55] mb-2">
-              Hover a tier in the rail (top-left) or click any plate to see the {PROVIDERS.length} real providers Stack manages.
+              Hover a tier in the rail (top-left) or click any plate to see the {PROVIDERS.length}{" "}
+              real providers Stack manages.
             </p>
             <div className="mono text-[9px] tracking-[0.14em] uppercase text-[color:var(--color-ink-500)]">
               hover rail · click plate · drag background · scroll to zoom
             </div>
           </>
         )}
-      </div>
+      </section>
 
       <style>{`
         @keyframes tierFadeIn {
