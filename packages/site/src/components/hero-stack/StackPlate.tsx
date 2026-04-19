@@ -64,17 +64,21 @@ const StackPlate = forwardRef<Mesh, Props>(function StackPlate(
   const glyphColor        = hot ? BLADE_400 : accent ? BLADE_300 : INK_400;
   const topY              = height / 2 + 0.0015;
 
-  const handlePointerOver = (e: ThreeEvent<PointerEvent>) => {
-    e.stopPropagation();
+  // IMPORTANT: don't stopPropagation — OrbitControls needs pointerdown/move
+  // bubbling up to the Canvas DOM element to initiate drag-to-rotate. Only
+  // onClick gets consumed since R3F's synthetic click fires only on a genuine
+  // tap (no drag movement between down + up), which is exactly what we want.
+  const handlePointerOver = () => {
     document.body.style.cursor = "pointer";
     onHover?.(index);
   };
-  const handlePointerOut = (e: ThreeEvent<PointerEvent>) => {
-    e.stopPropagation();
+  const handlePointerOut = () => {
     document.body.style.cursor = "";
     onHover?.(null);
   };
   const handleClick = (e: ThreeEvent<MouseEvent>) => {
+    // Consume click so OrbitControls doesn't treat it as a pan gesture, but
+    // pointerdown/move still reach OrbitControls for drag-rotate.
     e.stopPropagation();
     onSelect?.(index);
   };

@@ -26,7 +26,8 @@ export interface ProviderRef {
     | "Code"
     | "Tickets"
     | "Email"
-    | "Auth";
+    | "Auth"
+    | "Features";
   authKind: AuthKind;
   /** Canonical .env names this provider writes into Phantom. */
   secrets: string[];

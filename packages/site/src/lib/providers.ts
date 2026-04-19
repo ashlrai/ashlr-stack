@@ -13,7 +13,8 @@ export type ProviderCategory =
   | "Code"
   | "Tickets"
   | "Email"
-  | "Auth";
+  | "Auth"
+  | "Features";
 
 export interface Provider {
   name: string;
@@ -58,25 +59,42 @@ export const PROVIDERS: Provider[] = [
   { name: "Braintrust",  slug: "braintrust", category: "AI", color: "F97316", blurb: "LLM evals + observability", auth: "API key" },
 
   // Analytics
-  { name: "PostHog", slug: "posthog", category: "Analytics", color: "F54E00", blurb: "Product analytics + flags", mcp: true, auth: "API key" },
+  { name: "PostHog",   slug: "posthog",   category: "Analytics", color: "F54E00", blurb: "Product analytics + flags",       mcp: true, auth: "API key" },
+  { name: "Mixpanel",  slug: "mixpanel",  category: "Analytics", color: "7856FF", blurb: "Event tracking + funnels",                    auth: "API key" },
+  { name: "Plausible", slug: "plausible", category: "Analytics", color: "5850EC", blurb: "Privacy-first web analytics",                auth: "API key" },
 
   // Errors
-  { name: "Sentry", slug: "sentry", category: "Errors", color: "362D59", blurb: "Error + performance tracking", mcp: true, auth: "PAT" },
+  { name: "Sentry",    slug: "sentry",    category: "Errors", color: "362D59", blurb: "Error + performance tracking",      mcp: true, auth: "PAT" },
+  { name: "Datadog",   slug: "datadog",   category: "Errors", color: "632CA6", blurb: "APM + logs + metrics",                         auth: "API key" },
+  { name: "Grafana",   slug: "grafana",   category: "Errors", color: "F46800", blurb: "Dashboards + Loki + Tempo",                    auth: "API key" },
 
   // Payments
-  { name: "Stripe", slug: "stripe", category: "Payments", color: "635BFF", blurb: "Billing, subscriptions, tax", mcp: true, auth: "API key" },
+  { name: "Stripe",    slug: "stripe",    category: "Payments", color: "635BFF", blurb: "Billing, subscriptions, tax",     mcp: true, auth: "API key" },
 
   // Code
-  { name: "GitHub", slug: "github", category: "Code", color: "FFFFFF", blurb: "Repos, Actions, OAuth", mcp: true, auth: "Device" },
+  { name: "GitHub",    slug: "github",    category: "Code", color: "FFFFFF", blurb: "Repos, Actions, OAuth",               mcp: true, auth: "Device" },
 
   // Tickets
-  { name: "Linear", slug: "linear", category: "Tickets", color: "5E6AD2", blurb: "Issues, projects, cycles", mcp: true, auth: "API key" },
+  { name: "Linear",    slug: "linear",    category: "Tickets", color: "5E6AD2", blurb: "Issues, projects, cycles",         mcp: true, auth: "API key" },
 
   // Email
-  { name: "Resend", slug: "resend", category: "Email", color: "FFFFFF", blurb: "Transactional + React email", auth: "API key" },
+  { name: "Resend",    slug: "resend",    category: "Email", color: "FFFFFF", blurb: "Transactional + React email",                   auth: "API key" },
+  { name: "SendGrid",  slug: "twilio",    category: "Email", color: "1A82E2", blurb: "High-volume transactional mail",                auth: "API key" },
+  { name: "Mailgun",   slug: "mailgun",   category: "Email", color: "F06B66", blurb: "API-first email + routing",                     auth: "API key" },
+  { name: "Postmark",  slug: "postmark",  category: "Email", color: "FFDE00", blurb: "Deliverability-focused transactional",          auth: "API key" },
 
   // Auth
-  { name: "Clerk", slug: "clerk", category: "Auth", color: "6C47FF", blurb: "Drop-in auth + users", auth: "API key" },
+  { name: "Clerk",     slug: "clerk",     category: "Auth", color: "6C47FF", blurb: "Drop-in auth + users",                           auth: "API key" },
+  { name: "Auth0",     slug: "auth0",     category: "Auth", color: "EB5424", blurb: "Enterprise auth + OIDC + SAML",                  auth: "API key" },
+  { name: "WorkOS",    slug: "workos",    category: "Auth", color: "6363F1", blurb: "SSO + SCIM + directory sync",                    auth: "API key" },
+
+  // Features (feature flags — new category)
+  { name: "LaunchDarkly", slug: "launchdarkly", category: "Features", color: "405BFF", blurb: "Feature flags + experiments",          auth: "API key" },
+
+  // More Cloud + infra
+  { name: "GCP",         slug: "googlecloud",   category: "Cloud", color: "4285F4", blurb: "Google Cloud Platform",                   auth: "Service key" },
+  { name: "DigitalOcean",slug: "digitalocean",  category: "Cloud", color: "0080FF", blurb: "Droplets + App Platform + Spaces",        auth: "PAT" },
+  { name: "Hetzner",     slug: "hetzner",       category: "Cloud", color: "D50C2D", blurb: "EU cloud + dedicated servers",            auth: "API key" },
 ];
 
 export const CATEGORIES: ProviderCategory[] = [
@@ -91,4 +109,5 @@ export const CATEGORIES: ProviderCategory[] = [
   "Tickets",
   "Email",
   "Auth",
+  "Features",
 ];

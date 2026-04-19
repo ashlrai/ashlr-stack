@@ -1,7 +1,8 @@
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import { useEffect, useState } from "react";
-import StackRig, { TIERS } from "./hero-stack/StackRig";
+import StackRig, { TIERS, restYFor } from "./hero-stack/StackRig";
+import OrbitCluster from "./hero-stack/OrbitCluster";
 import { PROVIDERS, type Provider } from "~/lib/providers";
 
 /**
@@ -44,8 +45,8 @@ const TIER_CONTENT: TierContent[] = [
   },
   {
     title: "Observability",
-    body: "Product analytics + error tracking + LLM eval tooling. MCP-wired where supported.",
-    categories: ["Analytics", "Errors"],
+    body: "Product analytics, error tracking, feature flags, LLM evals. MCP-wired where supported.",
+    categories: ["Analytics", "Errors", "Features"],
   },
   {
     title: "Deploy",
@@ -94,16 +95,16 @@ export default function HeroStack3D() {
   return (
     <div className="relative w-full h-full">
       <Canvas
-        camera={{ position: [3.6, 2.8, 5.4], fov: 42, near: 0.1, far: 60 }}
+        camera={{ position: [7.2, 5.4, 10.2], fov: 36, near: 0.1, far: 80 }}
         dpr={[1, 2]}
         gl={{ alpha: true, antialias: true, powerPreference: "high-performance" }}
         style={{ width: "100%", height: "100%", background: "transparent" }}
       >
-        <fog attach="fog" args={["#05070a", 8, 18]} />
-        <ambientLight intensity={0.28} />
+        <fog attach="fog" args={["#05070a", 14, 32]} />
+        <ambientLight intensity={0.3} />
         <directionalLight position={[6, 7, 3]} intensity={1.7} color="#f5883e" />
         <directionalLight position={[-5.5, 5.5, 4]} intensity={0.7} color="#6b8097" />
-        <pointLight position={[0, -3.2, 1.5]} intensity={1.3} color="#e96b2a" distance={8} />
+        <pointLight position={[0, -3.2, 1.5]} intensity={1.3} color="#e96b2a" distance={10} />
         <directionalLight position={[0, 2, -5]} intensity={0.4} color="#c4ccd5" />
 
         <StackRig
@@ -114,16 +115,27 @@ export default function HeroStack3D() {
           onSelect={(i) => setSelected((prev) => (prev === i ? null : i))}
         />
 
+        {/* When a tier is clicked, its provider satellites orbit that plate. */}
+        {selected !== null && activeProviders.length > 0 && (
+          <OrbitCluster
+            y={restYFor(selected)}
+            providers={activeProviders.map((p) => ({ name: p.name, color: p.color }))}
+          />
+        )}
+
         <OrbitControls
-          enableZoom={false}
+          enableZoom
+          zoomSpeed={0.5}
+          minDistance={7}
+          maxDistance={18}
           enablePan={false}
           enableDamping
           dampingFactor={0.08}
-          minPolarAngle={Math.PI / 3.4}
-          maxPolarAngle={Math.PI / 2.6}
+          minPolarAngle={Math.PI / 6}
+          maxPolarAngle={(Math.PI * 11) / 18}
           target={[0, 0.2, 0]}
-          autoRotate={!reduced && selected === null}
-          autoRotateSpeed={0.5}
+          autoRotate={!reduced && selected === null && hovered === null}
+          autoRotateSpeed={0.4}
         />
       </Canvas>
 
