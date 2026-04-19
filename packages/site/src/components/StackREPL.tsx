@@ -14,7 +14,7 @@ import { usePrefersReducedMotion } from "~/lib/use-prefers-reduced-motion";
  * Supported:
  *   stack help                     — list commands
  *   stack init                     — fake init
- *   stack ls                       — show 26 providers
+ *   stack ls                       — show 29 providers
  *   stack add <name> [<name>...]   — simulate provider adds
  *   stack mcp list                 — show MCP servers
  *   stack doctor                   — fake health check

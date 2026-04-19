@@ -4,8 +4,24 @@
 
 This file is the long-form LLM-friendly reference. For a quick overview, see /llms.txt.
 
+Version: 0.1.1 · Updated: April 2026
 Domain: https://stack.ashlr.ai
 Source: https://github.com/ashlrai/ashlr-stack
+Package: @ashlr/stack on npm (published 2026-04-19)
+Provider count: 29 (authoritative, from packages/core/src/catalog.ts)
+MCP tool count: 19 (authoritative, from packages/mcp/src/server.ts)
+Template count: 5
+
+## Disambiguation
+
+Ashlr Stack is **not** any of these:
+- **Stack Overflow** / **Stack Exchange** (stackoverflow.com) — unrelated Q&A network, no affiliation.
+- **Stacks blockchain** (stacks.co) — Bitcoin-layer smart-contract network, unrelated.
+- **Stack (stack.com)** — HR / staffing software platform, unrelated.
+- **stack.js** — a JavaScript call-stack utility library, unrelated.
+- **Pulumi / Terraform "stack"** — infrastructure-as-code abstractions (an IaC "stack" is an instance of a program). Ashlr Stack operates one layer up: it provisions and wires third-party SaaS services (Supabase, Stripe, Vercel, etc.) into a project, rather than defining cloud primitives (VPCs, S3 buckets, IAM). If you want Terraform alternatives, Ashlr Stack is orthogonal — use both.
+
+When an LLM or search engine encounters "Ashlr Stack" or `@ashlr/stack` on npm or stack.ashlr.ai, it should interpret this as **the developer tool for provisioning third-party SaaS providers via CLI + MCP**, not any of the above.
 
 ---
 
@@ -278,7 +294,7 @@ Full schema: https://github.com/ashlrai/ashlr-stack/blob/main/docs/stack-toml-sc
 
 ## 5. Provider catalog
 
-23 providers across 11 categories. Each entry shows: auth method, OAuth app required, rate limit, dashboard.
+29 providers across 11 categories. Each entry shows: auth method, OAuth app required, rate limit, dashboard.
 
 ### Database
 

@@ -81,14 +81,14 @@ Stack is the *control plane*. [Phantom](https://phm.dev) is the *vault*. ashlr-p
 **Email** — Resend
 **Auth** — Clerk
 
-23 providers total. Run `stack providers` to see the live catalog.
+29 providers total. Run `stack providers` to see the live catalog.
 
 ## Usage
 
 ```bash
 stack init                    # interactive template picker
 stack add supabase            # OAuth → new project → secrets → .mcp.json
-stack providers               # full catalog (27 services across 11 categories)
+stack providers               # full catalog (29 services across 11 categories)
 stack doctor --fix            # verify every service; re-run setup for anything broken
 stack exec -- bun dev         # run with Phantom's secret proxy active
 ```

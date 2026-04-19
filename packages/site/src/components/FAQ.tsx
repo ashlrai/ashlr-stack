@@ -44,7 +44,7 @@ export const QUESTIONS: Q[] = [
   {
     tag: "scope",
     q: "What's in v0.1 today vs later?",
-    a: "v0.1: the 26 providers in the catalog above, the CLI (22 commands), the Claude Code plugin, the MCP server, 5 starter templates. Full OAuth provisioning ships for Supabase + GitHub + Vercel + Cloudflare; the rest are API-key paste flows. Roadmap: Stripe Connect, AWS IAM role-chaining, an Ashlr-hosted control plane for team sync. Everything is MIT-licensed on GitHub.",
+    a: "v0.1: the 29 providers in the catalog above, the CLI (22 commands), the Claude Code plugin, the MCP server, 5 starter templates. Full OAuth provisioning ships for Supabase + GitHub + Vercel + Cloudflare; the rest are API-key paste flows. Roadmap: Stripe Connect, AWS IAM role-chaining, an Ashlr-hosted control plane for team sync. Everything is MIT-licensed on GitHub.",
   },
   {
     tag: "cost",

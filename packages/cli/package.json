@@ -1,7 +1,7 @@
 {
   "name": "@ashlr/stack",
   "version": "0.1.0",
-  "description": "Ashlr Stack CLI — the control plane for your entire dev stack. One command to provision, wire, and operate every third-party service in your project. 23 providers, MCP-native.",
+  "description": "Ashlr Stack CLI — the control plane for your entire dev stack. One command to provision, wire, and operate every third-party service in your project. 29 providers, MCP-native.",
   "license": "MIT",
   "author": {
     "name": "Mason Wyatt",

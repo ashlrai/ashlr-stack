@@ -82,7 +82,7 @@ describe("catalog-index.retrieve", () => {
       categories: ["Deploy"],
     }));
     for (const n of hits) {
-      const cat = ["vercel", "railway", "fly", "cloudflare", "render"].includes(n);
+      const cat = ["vercel", "railway", "fly", "cloudflare", "render", "modal"].includes(n);
       expect(cat).toBe(true);
     }
   });

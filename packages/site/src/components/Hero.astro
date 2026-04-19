@@ -6,6 +6,7 @@ import GenerateStackDemo from "./GenerateStackDemo";
 import StackFallback from "./hero-stack/StackFallback.astro";
 import PhantomBadge from "./PhantomBadge.astro";
 import { PROVIDERS } from "~/lib/providers";
+import { PROVIDERS_REF } from "~/lib/providers-ref";
 import { getIconPath } from "~/lib/icons";
 
 const iconPaths: Record<string, string | null> = Object.fromEntries(
@@ -66,7 +67,7 @@ const CLAUDE_PROMPT = 'Use Stack to set up a B2B SaaS with auth, AI, and payment
           <span class="mono text-[color:var(--color-ink-100)]">.env</span> +
           <span class="mono text-[color:var(--color-ink-100)]">.mcp.json</span> so your dev
           server and your Claude session see an identical stack.
-          {PROVIDERS.length} providers. 11 categories. One prompt.
+          {PROVIDERS_REF.length} providers. 11 categories. One prompt.
         </p>
 
         <!-- the actual prompt — copy-pasteable -->
@@ -139,7 +140,7 @@ const CLAUDE_PROMPT = 'Use Stack to set up a B2B SaaS with auth, AI, and payment
           style="--load-delay: 660ms"
         >
           {[
-            { n: String(PROVIDERS.length), l: "providers" },
+            { n: String(PROVIDERS_REF.length), l: "providers" },
             { n: "17", l: "mcp tools" },
             { n: "05", l: "templates" },
             { n: "MIT", l: "license" },
@@ -176,7 +177,7 @@ const CLAUDE_PROMPT = 'Use Stack to set up a B2B SaaS with auth, AI, and payment
           </div>
 
           <!-- Cinematic intro overlay — plays once per session, fades to 3D -->
-          <HeroIntroOverlay client:load />
+          <HeroIntroOverlay client:idle />
 
           <!-- subtle label overlays -->
           <div class="absolute left-3 bottom-3 caption text-[color:var(--color-steel-300)]">

@@ -186,7 +186,7 @@ bun run "$mcpEntry" %*
     $version = try { (& stack --version) 2>$null } catch { 'unknown' }
     if (-not $version) { $version = 'unknown' }
     Write-StackSay "done. Version: $version"
-    Write-StackSay 'try: stack providers    # see the 23 curated providers'
+    Write-StackSay 'try: stack providers    # see the 29 curated providers'
     Write-StackSay '     stack init         # scaffold a new project'
 }
 

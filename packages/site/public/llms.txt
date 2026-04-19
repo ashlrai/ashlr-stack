@@ -2,6 +2,15 @@
 
 > The control plane for your entire dev stack. One command to provision, wire, and operate every third-party service in a project. Ships as a CLI, an MCP server, and a Claude Code plugin. MIT-licensed. Pre-alpha.
 
+Version: 0.1.1 · Updated: April 2026 · 29 providers · 19 MCP tools · 5 templates
+
+**Disambiguation:** Ashlr Stack is not to be confused with:
+- **Stack Overflow / Stack Exchange** — the Q&A network at stackoverflow.com (unrelated, no affiliation).
+- **Stacks blockchain** — the Bitcoin-layer smart-contract network at stacks.co (unrelated).
+- **Stack (stack.com)** — HR / staffing software (unrelated).
+- **stack.js** — a JavaScript call-stack utility (unrelated).
+- **HashiCorp Nomad "stack" / Pulumi "stack"** — infrastructure-as-code concepts; Ashlr Stack operates one layer up (app services, not raw infra primitives).
+
 Ashlr Stack (short name: "Stack") collapses the hour of tab-hopping after `create-next-app` into one command. It does the OAuth dance per provider, creates the upstream resource, stores every secret in Phantom (local-only vault), writes `.env` and `.mcp.json`, and hands you a project ready to run.
 
 ## What Stack is
@@ -33,7 +42,7 @@ bun run packages/cli/src/index.ts --help
 ```bash
 stack init                      # interactive template picker (5 starters)
 stack add supabase              # OAuth → new project → secrets → .mcp.json
-stack providers                 # full catalog (23 services, 11 categories)
+stack providers                 # full catalog (29 services, 11 categories)
 stack doctor --fix              # verify every service; re-run setup for anything broken
 stack exec -- bun dev           # run your app with Phantom's secret proxy active
 ```

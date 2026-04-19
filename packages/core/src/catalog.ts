@@ -134,6 +134,17 @@ export const PROVIDERS_REF: ProviderRef[] = [
 
   // ── Deploy ────────────────────────────────────────────────────────────────
   {
+    name: "modal",
+    displayName: "Modal",
+    category: "Deploy",
+    authKind: "api_key",
+    secrets: ["MODAL_TOKEN"],
+    blurb: "Serverless compute for AI + data. Token stored in Phantom.",
+    dashboard: "https://modal.com",
+    docs: "https://modal.com/docs",
+    howTo: "Create a token in the Modal dashboard and paste it.",
+  },
+  {
     name: "vercel",
     displayName: "Vercel",
     category: "Deploy",
@@ -247,6 +258,28 @@ export const PROVIDERS_REF: ProviderRef[] = [
     dashboard: "https://platform.deepseek.com",
     docs: "https://api-docs.deepseek.com",
     howTo: "Paste a key from https://platform.deepseek.com/api_keys.",
+  },
+  {
+    name: "replicate",
+    displayName: "Replicate",
+    category: "AI",
+    authKind: "pat",
+    secrets: ["REPLICATE_API_TOKEN"],
+    blurb: "Open-source model inference with per-second billing. API token stored in Phantom.",
+    dashboard: "https://replicate.com",
+    docs: "https://replicate.com/docs/reference/http",
+    howTo: "Create a token at https://replicate.com/account/api-tokens.",
+  },
+  {
+    name: "braintrust",
+    displayName: "Braintrust",
+    category: "AI",
+    authKind: "api_key",
+    secrets: ["BRAINTRUST_API_KEY"],
+    blurb: "LLM evals + observability + prompt playground. Verified against /v1/organization on paste.",
+    dashboard: "https://www.braintrust.dev/app",
+    docs: "https://www.braintrust.dev/docs",
+    howTo: "Create a key at https://www.braintrust.dev/app/settings/api-keys.",
   },
 
   // ── Analytics ─────────────────────────────────────────────────────────────
