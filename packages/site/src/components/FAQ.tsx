@@ -14,7 +14,7 @@ interface Q {
   tag?: string;
 }
 
-const QUESTIONS: Q[] = [
+export const QUESTIONS: Q[] = [
   {
     tag: "model",
     q: "Isn't this just a fancy .env file?",

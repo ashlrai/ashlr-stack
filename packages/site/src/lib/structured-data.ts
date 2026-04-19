@@ -10,6 +10,8 @@
  */
 
 import { SITE_NAME, SITE_URL } from "./og";
+import { PROVIDERS } from "./providers";
+import { QUESTIONS } from "~/components/FAQ";
 
 export interface BreadcrumbItem {
   name: string;
@@ -31,6 +33,7 @@ export function organizationSchema(): Record<string, unknown> {
     },
     sameAs: [
       "https://github.com/ashlrai",
+      "https://github.com/ashlrai/ashlr-stack",
     ],
   };
 }
@@ -61,7 +64,7 @@ export function softwareApplicationSchema(): Record<string, unknown> {
     operatingSystem: "macOS, Linux, Windows",
     url: SITE_URL,
     description:
-      "The control plane for your entire dev stack. One command to provision, wire, and operate every third-party service in a project. Ships as a CLI, an MCP server, and a Claude Code plugin. Supports 23 providers across databases, deploy targets, cloud, AI, analytics, errors, payments, code hosting, tickets, email, and auth.",
+      `The control plane for your entire dev stack. One command to provision, wire, and operate every third-party service in a project. Ships as a CLI, an MCP server, and a Claude Code plugin. Supports ${PROVIDERS.length} providers across databases, deploy targets, cloud, AI, observability, feature flags, payments, code hosting, tickets, email, and auth.`,
     softwareVersion: "0.1.0-pre-alpha",
     license: "https://opensource.org/licenses/MIT",
     offers: {
@@ -83,17 +86,26 @@ export function softwareApplicationSchema(): Record<string, unknown> {
       "OAuth automation",
     ].join(", "),
     featureList: [
-      "One-command provisioning across 23 third-party services",
+      `One-command provisioning across ${PROVIDERS.length} third-party services`,
       "OAuth dance handled automatically per provider",
-      "Secrets written through Phantom (never leak to disk)",
-      "Generates .env and .mcp.json",
+      "Secrets written through Phantom (E2E-encrypted, never leak to disk)",
+      "Generates .env and .mcp.json, per-tier",
       "Claude Code plugin with /stack:add, /stack:doctor, /stack:open",
-      "MCP server exposes every command as a tool",
+      "MCP server exposes every command as a tool (17 tools, 3 resources)",
       "Templated starters: Next.js + Supabase + PostHog, Cloudflare + Turso + Clerk, etc.",
       "stack scan detects existing services in a repo",
       "stack doctor --fix re-provisions broken services",
+      "Works across Claude Code, Cursor, Windsurf, OpenAI Codex, ashlrcode",
     ],
   };
+}
+
+/** FAQPage schema generated from the live FAQ component's QUESTIONS array. */
+export function homepageFaqSchema(): Record<string, unknown> {
+  return faqPageSchema(
+    QUESTIONS.map((q) => ({ question: q.q, answer: q.a })),
+    SITE_URL + "/#faq",
+  );
 }
 
 export function breadcrumbSchema(items: BreadcrumbItem[]): Record<string, unknown> {
@@ -119,7 +131,12 @@ function absolute(pathOrUrl: string): string {
  * Convenience: the default schema set emitted on the homepage.
  */
 export function homepageSchemas(): Record<string, unknown>[] {
-  return [organizationSchema(), websiteSchema(), softwareApplicationSchema()];
+  return [
+    organizationSchema(),
+    websiteSchema(),
+    softwareApplicationSchema(),
+    homepageFaqSchema(),
+  ];
 }
 
 // ───────────────────────────────────────────────────────────────────────────
