@@ -214,6 +214,60 @@ const TOOLS: ToolDef[] = [
     inputSchema: { type: "object", properties: {} },
     cliArgs: () => ["upgrade"],
   },
+  {
+    name: "stack_recommend",
+    description:
+      "Given a free-text description of what the user is building (e.g. 'B2B SaaS with auth, AI, and payments'), return a structured list of the most relevant curated providers with scores, matched terms, and per-category ranking. The caller (Claude) should reason over this payload to propose a concrete Recipe, then invoke stack_add for each chosen provider. Retrieval-only — no LLM inference happens here.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        query: {
+          type: "string",
+          description: "Natural-language description of the project / stack need.",
+        },
+        k: {
+          type: "number",
+          description: "Max top-level hits to return (default 6).",
+        },
+        category: {
+          type: "string",
+          description:
+            "Optional filter to a single category: Database, Deploy, Cloud, AI, Analytics, Errors, Payments, Code, Tickets, Email, Auth.",
+        },
+      },
+      required: ["query"],
+    },
+    cliArgs: (input) => {
+      const args = ["recommend", String(input.query ?? ""), "--json"];
+      if (input.k) args.push("--k", String(input.k));
+      if (input.category) args.push("--category", String(input.category));
+      return args;
+    },
+  },
+  {
+    name: "stack_apply",
+    description:
+      "Apply a saved Recipe: replay `stack add` for each provider, then pre-wire Phantom rotation envelopes + webhook stubs. Set `no_wire: true` to opt out of the Phantom-wire layer (stays pure-provisioning).",
+    inputSchema: {
+      type: "object",
+      properties: {
+        recipe_id: {
+          type: "string",
+          description: "Recipe id (filename stem in .stack/recipes/).",
+        },
+        no_wire: {
+          type: "boolean",
+          description: "Skip Phantom envelope + webhook pre-wiring.",
+        },
+      },
+      required: ["recipe_id"],
+    },
+    cliArgs: (input) => {
+      const args = ["apply", String(input.recipe_id)];
+      if (input.no_wire) args.push("--noWire");
+      return args;
+    },
+  },
 ];
 
 const STACK_BIN = process.env.STACK_BIN ?? "stack";

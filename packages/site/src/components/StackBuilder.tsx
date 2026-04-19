@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { PROVIDERS, CATEGORIES, type Provider } from "~/lib/providers";
 import { PROVIDERS_REF, type ProviderRef } from "~/lib/providers-ref";
+import {
+  retrieve,
+  retrieveByCategory,
+  type RetrievalHit,
+} from "../../../core/src/ai/catalog-index";
+import { PROVIDER_CATEGORIES } from "../../../core/src/catalog";
 import CopyBtn from "~/components/primitives/CopyBtn";
 
 /**
@@ -21,6 +28,22 @@ type Merged = {
   ref: ProviderRef | null;
   iconPath: string | null;
 };
+
+interface RecommendResponse {
+  query: string;
+  hits: Array<{
+    name: string;
+    displayName: string;
+    category: string;
+    authKind: string;
+    secrets: string[];
+    blurb: string;
+    score: number;
+    matched: string[];
+  }>;
+  byCategory: Record<string, Array<{ name: string; score: number }>>;
+  guidance: string;
+}
 
 const SLUG_TO_REF_NAME: Record<string, string> = {
   supabase: "supabase",
@@ -509,6 +532,186 @@ function RecipeModal({ selected, onClose }: RecipeProps) {
   );
 }
 
+/**
+ * Build guidance string matching the CLI's buildGuidance() in
+ * packages/cli/src/commands/recommend.ts — kept in sync so the site fallback
+ * renders identical copy when the API round-trip fails.
+ */
+function buildGuidanceLocal(hits: RetrievalHit[]): string {
+  if (hits.length === 0) {
+    return "No strong matches. Try describing the concrete capability you need (e.g. 'postgres database', 'stripe subscriptions', 'deploy frontend').";
+  }
+  const covered = new Set(hits.map((h) => h.provider.category));
+  const missing = PROVIDER_CATEGORIES.filter((c) => !covered.has(c));
+  const topByCat = Object.entries(
+    hits.reduce<Record<string, RetrievalHit>>((acc, h) => {
+      if (!acc[h.provider.category] || acc[h.provider.category].score < h.score) {
+        acc[h.provider.category] = h;
+      }
+      return acc;
+    }, {}),
+  )
+    .sort((a, b) => b[1].score - a[1].score)
+    .map(([cat, h]) => `${cat} → ${h.provider.name}`);
+  const parts: string[] = [`Top pick per category: ${topByCat.join(", ")}.`];
+  if (missing.length > 0) {
+    parts.push(`No matches for: ${missing.join(", ")}.`);
+  }
+  return parts.join(" ");
+}
+
+/**
+ * Call the /api/recommend endpoint, falling back to the client-side retrieve()
+ * when the endpoint isn't available (current deploy is static — no server
+ * adapter wired yet). `retrieve()` is pure TS over a bundled catalog so the
+ * fallback produces identical results without a network round-trip.
+ */
+async function requestRecommendation(query: string): Promise<RecommendResponse> {
+  try {
+    const res = await fetch("/api/recommend", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query, k: 8 }),
+    });
+    if (res.ok) {
+      return (await res.json()) as RecommendResponse;
+    }
+  } catch {
+    /* fall through to client-side retrieval */
+  }
+  // Client-side fallback: identical inputs/outputs to the CLI's --json shape.
+  const hits = retrieve(query, { k: 8 });
+  const byCategory = retrieveByCategory(query, { k: 20 });
+  return {
+    query,
+    hits: hits.map((h) => ({
+      name: h.provider.name,
+      displayName: h.provider.displayName,
+      category: h.provider.category,
+      authKind: h.provider.authKind,
+      secrets: h.provider.secrets,
+      blurb: h.provider.blurb,
+      score: Number(h.score.toFixed(3)),
+      matched: h.matched,
+    })),
+    byCategory: Object.fromEntries(
+      Object.entries(byCategory).map(([cat, catHits]) => [
+        cat,
+        catHits.map((h) => ({
+          name: h.provider.name,
+          score: Number(h.score.toFixed(3)),
+        })),
+      ]),
+    ),
+    guidance: buildGuidanceLocal(hits),
+  };
+}
+
+interface PromptProps {
+  pending: boolean;
+  guidance: string | null;
+  onSubmit: (query: string) => void;
+}
+function RecommendPrompt({ pending, guidance, onSubmit }: PromptProps) {
+  const [value, setValue] = useState("");
+
+  const submit = () => {
+    const q = value.trim();
+    if (!q || pending) return;
+    onSubmit(q);
+  };
+
+  const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      submit();
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div
+        className="panel-steel p-3 sm:p-4"
+        style={{ borderLeft: "2px solid var(--color-blade-500)" }}
+      >
+        <div className="flex items-center justify-between mb-2">
+          <span className="mono text-[10px] tracking-[0.16em] uppercase text-[color:var(--color-ink-500)]">
+            describe your project
+          </span>
+          <span className="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--color-ink-500)]">
+            ↵ to suggest
+          </span>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-3 items-stretch">
+          <textarea
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            onKeyDown={onKeyDown}
+            rows={2}
+            disabled={pending}
+            placeholder="e.g. B2B SaaS with auth, AI, and payments"
+            className="flex-1 resize-none bg-[color:var(--color-ink-800)] border border-[color:var(--color-ink-600)] focus:border-[color:var(--color-blade-500)] outline-none mono text-[13px] leading-[1.5] text-[color:var(--color-ink-100)] placeholder:text-[color:var(--color-ink-500)] p-3"
+            aria-label="Describe what you're building"
+          />
+          <button
+            type="button"
+            onClick={submit}
+            disabled={pending || value.trim().length === 0}
+            className="mono text-[11px] tracking-[0.14em] uppercase px-5 py-3 bg-[color:var(--color-blade-500)] text-[color:var(--color-ink-950)] border-2 border-[color:var(--color-ink-950)] hover:bg-[color:var(--color-blade-400)] disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2 whitespace-nowrap"
+            style={{ borderRadius: "3px" }}
+          >
+            {pending ? (
+              <span className="inline-flex items-center gap-1" aria-label="Loading">
+                <motion.span
+                  className="w-1.5 h-1.5 rounded-full bg-[color:var(--color-ink-950)]"
+                  animate={{ opacity: [0.3, 1, 0.3] }}
+                  transition={{ duration: 0.9, repeat: Infinity, delay: 0 }}
+                />
+                <motion.span
+                  className="w-1.5 h-1.5 rounded-full bg-[color:var(--color-ink-950)]"
+                  animate={{ opacity: [0.3, 1, 0.3] }}
+                  transition={{ duration: 0.9, repeat: Infinity, delay: 0.15 }}
+                />
+                <motion.span
+                  className="w-1.5 h-1.5 rounded-full bg-[color:var(--color-ink-950)]"
+                  animate={{ opacity: [0.3, 1, 0.3] }}
+                  transition={{ duration: 0.9, repeat: Infinity, delay: 0.3 }}
+                />
+              </span>
+            ) : (
+              <>Suggest stack →</>
+            )}
+          </button>
+        </div>
+      </div>
+
+      <AnimatePresence>
+        {guidance && (
+          <motion.div
+            key={guidance}
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.2 }}
+            className="panel p-3 text-[12px] leading-[1.55] text-[color:var(--color-ink-200)]"
+            style={{
+              borderLeft: "2px solid #d97706",
+              backgroundColor: "rgba(217, 119, 6, 0.06)",
+            }}
+            role="status"
+            aria-live="polite"
+          >
+            <span className="mono text-[10px] tracking-[0.14em] uppercase text-amber-500 mr-2">
+              guidance
+            </span>
+            {guidance}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 interface StackBuilderProps { iconPaths: Record<string, string | null> }
 
 export default function StackBuilder({ iconPaths }: StackBuilderProps) {
@@ -518,6 +721,50 @@ export default function StackBuilder({ iconPaths }: StackBuilderProps) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [expanded, setExpanded] = useState<string | null>(null);
   const [recipeOpen, setRecipeOpen] = useState(false);
+  const [recommendPending, setRecommendPending] = useState(false);
+  const [guidance, setGuidance] = useState<string | null>(null);
+
+  // Reverse index: ref.name → Merged, so AI hits (which use ref names like
+  // "supabase") can be mapped back to the canonical display.name key the
+  // selected set uses.
+  const byRefName = useMemo(() => {
+    const map = new Map<string, Merged>();
+    for (const m of merged) {
+      if (m.ref?.name) map.set(m.ref.name, m);
+      // Also index by display slug variations for stubbed providers.
+      map.set(m.display.slug, m);
+    }
+    return map;
+  }, [merged]);
+
+  const handleRecommend = useCallback(
+    async (query: string) => {
+      setRecommendPending(true);
+      try {
+        const result = await requestRecommendation(query);
+        setGuidance(result.guidance || null);
+        if (result.hits.length === 0) {
+          // No pre-selection — guidance-only.
+          return;
+        }
+        const displayNames = new Set<string>();
+        for (const hit of result.hits) {
+          const m = byRefName.get(hit.name);
+          if (m) displayNames.add(m.display.name);
+        }
+        if (displayNames.size > 0) {
+          setSelected(displayNames);
+        }
+      } catch {
+        setGuidance(
+          "Couldn't reach the recommender. Pick providers from the grid below.",
+        );
+      } finally {
+        setRecommendPending(false);
+      }
+    },
+    [byRefName],
+  );
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -554,6 +801,13 @@ export default function StackBuilder({ iconPaths }: StackBuilderProps) {
 
   return (
     <div className="space-y-8">
+      {/* AI recommend prompt — describe the project, auto-select providers */}
+      <RecommendPrompt
+        pending={recommendPending}
+        guidance={guidance}
+        onSubmit={handleRecommend}
+      />
+
       {/* Filter bar */}
       <div className="flex flex-col lg:flex-row gap-4 lg:items-center lg:justify-between">
         <div className="flex flex-wrap gap-2 -ml-1">

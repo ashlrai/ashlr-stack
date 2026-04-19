@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 import { defineCommand, runMain } from "citty";
 import { addCommand } from "./commands/add.ts";
+import { applyCommand } from "./commands/apply.ts";
 import { ciCommand } from "./commands/ci.ts";
 import { cloneCommand } from "./commands/clone.ts";
 import { completionCommand } from "./commands/completion.ts";
@@ -14,6 +15,7 @@ import { initCommand } from "./commands/init.ts";
 import { listCommand } from "./commands/list.ts";
 import { loginCommand } from "./commands/login.ts";
 import { openCommand } from "./commands/open.ts";
+import { recommendCommand } from "./commands/recommend.ts";
 import { projectsCommand } from "./commands/projects.ts";
 import { providersCommand } from "./commands/providers.ts";
 import { removeCommand } from "./commands/remove.ts";
@@ -47,8 +49,13 @@ const main = defineCommand({
       console.log(VERSION);
       return;
     }
-    // No subcommand — print usage (citty would do this anyway, but we force a
-    // banner first so `stack` alone feels welcoming).
+    // citty 0.1.6 calls the root `run` even when a subcommand matched. Detect
+    // that case by checking process.argv — if the first non-bun arg is a known
+    // subcommand, the subcommand already handled the request and we should
+    // stay silent (otherwise every `stack <sub>` trails a banner and breaks
+    // machine-readable output like `stack recommend --json`).
+    const firstArg = process.argv[2];
+    if (firstArg && !firstArg.startsWith("-")) return;
     console.log(`\n  ▲ stack ${VERSION}`);
     console.log("  The control plane for your entire dev stack.");
     console.log("  Run `stack --help` for the full command list.\n");
@@ -72,6 +79,8 @@ const main = defineCommand({
     login: loginCommand,
     templates: templatesCommand,
     providers: providersCommand,
+    recommend: recommendCommand,
+    apply: applyCommand,
     projects: projectsCommand,
     ci: ciCommand,
     completion: completionCommand,

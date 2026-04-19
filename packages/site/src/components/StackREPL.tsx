@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PROVIDERS_REF, type ProviderRef } from "~/lib/providers-ref";
+import { retrieve } from "../../../core/src/ai/catalog-index";
 import { usePrefersReducedMotion } from "~/lib/use-prefers-reduced-motion";
 
 /**
@@ -39,6 +40,7 @@ const HELP_SOURCE: { kind: LineKind; text: string }[] = [
   { kind: "dim", text: "  stack init                       initialise the current directory" },
   { kind: "dim", text: "  stack ls                          list the provider catalog" },
   { kind: "dim", text: "  stack add <name> [<name>...]      provision + store secrets via Phantom" },
+  { kind: "dim", text: "  stack recommend \"<query>\"         AI-assisted provider picks for your project" },
   { kind: "dim", text: "  stack mcp list                    list MCP servers Stack wires" },
   { kind: "dim", text: "  stack doctor                      check the local install" },
   { kind: "dim", text: "  stack open <name>                 open a provider dashboard" },
@@ -254,6 +256,35 @@ export default function StackREPL() {
         return;
       }
 
+      if (sub === "recommend") {
+        // Re-parse the original command so quoted queries survive tokenisation.
+        // Example: `stack recommend "b2b saas with auth"` → query = "b2b saas with auth".
+        const afterSub = cmd.slice(cmd.indexOf("recommend") + "recommend".length).trim();
+        const query = afterSub.replace(/^["']|["']$/g, "").trim();
+        if (!query) {
+          push(mkLine("out", "▲ stack recommend"));
+          push(mkLine("dim", "  Usage: stack recommend \"B2B SaaS with auth, AI, and payments\""));
+          push(mkLine("dim", "  No query — nothing to recommend."));
+          return;
+        }
+        push(mkLine("out", `▲ stack recommend`));
+        push(mkLine("dim", `  query: ${query}`));
+        await sleep(reduced ? 0 : 200);
+        const hits = retrieve(query, { k: 6 });
+        if (hits.length === 0) {
+          push(mkLine("err", "  No strong matches."));
+          push(mkLine("dim", "  Try describing the concrete capability you need (e.g. 'postgres database', 'stripe subscriptions', 'deploy frontend')."));
+          return;
+        }
+        for (const hit of hits) {
+          push(mkLine("out", `  ● ${hit.provider.displayName.padEnd(14)} ${hit.provider.category.padEnd(10)} (${hit.score.toFixed(2)})  ${hit.provider.blurb.slice(0, 52)}${hit.provider.blurb.length > 52 ? "…" : ""}`));
+          push(mkLine("dim", `      add with: stack add ${hit.provider.name}`));
+        }
+        const topNames = hits.slice(0, 3).map((h) => h.provider.name).join(" ");
+        push(mkLine("ok", `✓ try: stack add ${topNames}`));
+        return;
+      }
+
       push(mkLine("err", `unknown subcommand: ${sub} — try 'stack help'`));
     } finally {
       setBusy(false);
@@ -296,6 +327,7 @@ export default function StackREPL() {
   };
 
   const suggestions = [
+    "stack recommend \"b2b saas with auth and payments\"",
     "stack add supabase posthog sentry",
     "stack mcp list",
     "stack doctor",

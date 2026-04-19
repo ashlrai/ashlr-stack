@@ -1,6 +1,7 @@
 ---
 import Nav from "./Nav.astro";
 import HeroStack3D from "./HeroStack3D";
+import HeroIntroOverlay from "./HeroIntroOverlay";
 import StackFallback from "./hero-stack/StackFallback.astro";
 import { PROVIDERS } from "~/lib/providers";
 ---
@@ -35,13 +36,13 @@ import { PROVIDERS } from "~/lib/providers";
           style="font-size: clamp(42px, 5.6vw, 78px);"
         >
           <span class="block load-in" style="--load-delay: 120ms">
-            Wire your
+            Tell Stack
           </span>
           <span class="block load-in" style="--load-delay: 200ms">
-            entire dev stack.
+            what you're <span class="display-accent">building</span>.
           </span>
           <span class="block load-in" style="--load-delay: 280ms">
-            In <span class="display-accent">one command</span>.
+            It wires the rest.
           </span>
         </h1>
 
@@ -49,10 +50,11 @@ import { PROVIDERS } from "~/lib/providers";
           class="mt-8 max-w-[540px] text-[15px] leading-[1.6] text-[color:var(--color-ink-300)] load-in"
           style="--load-delay: 380ms"
         >
-          Stack is the control plane between you, your agents, and 26 third-party services.
-          One command provisions the resource, stores every secret in Phantom,
-          and wires <span class="text-[color:var(--color-ink-100)]">.env</span> + <span class="text-[color:var(--color-ink-100)]">.mcp.json</span>
-          so your dev server and your Claude Code session see an identical stack.
+          Describe your project in one sentence. Stack picks the providers, creates
+          the accounts, and vaults every key in Phantom — then wires
+          <span class="text-[color:var(--color-ink-100)]">.env</span> +
+          <span class="text-[color:var(--color-ink-100)]">.mcp.json</span> so your
+          dev server and your Claude Code session see an identical stack.
         </p>
 
         <!-- install one-liner -->
@@ -134,6 +136,9 @@ import { PROVIDERS } from "~/lib/providers";
           <div class="absolute inset-0">
             <HeroStack3D client:visible />
           </div>
+
+          <!-- Cinematic intro overlay — plays once per session, fades to 3D -->
+          <HeroIntroOverlay client:load />
 
           <!-- subtle label overlays -->
           <div class="absolute left-3 bottom-3 caption text-[color:var(--color-steel-300)]">
