@@ -39,6 +39,9 @@ const registry: Record<string, () => Promise<Provider>> = {
   linear: async () => (await import("./linear.ts")).default,
   stripe: async () => (await import("./stripe.ts")).default,
   resend: async () => (await import("./resend.ts")).default,
+  sendgrid: async () => (await import("./sendgrid.ts")).default,
+  mailgun: async () => (await import("./mailgun.ts")).default,
+  postmark: async () => (await import("./postmark.ts")).default,
   clerk: async () => (await import("./clerk.ts")).default,
   aws: async () => (await import("./aws.ts")).default,
 };

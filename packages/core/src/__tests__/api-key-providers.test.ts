@@ -135,6 +135,27 @@ const SPECS: Spec[] = [
     validKey: "sk-bt-fake",
     validBody: { objects: [{ id: "org_1", name: "My Org" }] },
   },
+  {
+    modulePath: "../providers/sendgrid.ts",
+    providerName: "sendgrid",
+    secretName: "SENDGRID_API_KEY",
+    validKey: "SG.fake",
+    validBody: { scopes: ["mail.send", "mail.batch.read"] },
+  },
+  {
+    modulePath: "../providers/mailgun.ts",
+    providerName: "mailgun",
+    secretName: "MAILGUN_API_KEY",
+    validKey: "key-mailgun-fake",
+    validBody: { items: [{ name: "mg.example.com" }] },
+  },
+  {
+    modulePath: "../providers/postmark.ts",
+    providerName: "postmark",
+    secretName: "POSTMARK_ACCOUNT_TOKEN",
+    validKey: "postmark-account-fake",
+    validBody: { Servers: [{ ID: 1, Name: "default" }] },
+  },
 ];
 
 describe("api-key providers — verify + materialize", () => {

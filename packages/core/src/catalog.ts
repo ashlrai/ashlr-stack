@@ -142,8 +142,7 @@ export const PROVIDERS_REF: ProviderRef[] = [
     blurb: "Frontend platform. Stores a scoped access token for deploys + env sync.",
     dashboard: "https://vercel.com/dashboard",
     docs: "https://vercel.com/docs/rest-api",
-    howTo:
-      "Paste a personal access token from https://vercel.com/account/tokens.",
+    howTo: "Paste a personal access token from https://vercel.com/account/tokens.",
   },
   {
     name: "railway",
@@ -176,8 +175,7 @@ export const PROVIDERS_REF: ProviderRef[] = [
     blurb: "Workers, R2, D1. Account id inferred from the token's scope.",
     dashboard: "https://dash.cloudflare.com",
     docs: "https://developers.cloudflare.com/api",
-    howTo:
-      "Create a scoped API token at https://dash.cloudflare.com/profile/api-tokens.",
+    howTo: "Create a scoped API token at https://dash.cloudflare.com/profile/api-tokens.",
   },
   {
     name: "render",
@@ -201,10 +199,8 @@ export const PROVIDERS_REF: ProviderRef[] = [
     blurb: "S3, Lambda, RDS. IAM access keys stored in Phantom.",
     dashboard: "https://console.aws.amazon.com",
     docs: "https://docs.aws.amazon.com/iam/",
-    howTo:
-      "Create an IAM access key pair in the AWS console and paste both halves.",
-    notes:
-      "v1 stores the keys only — no resource provisioning. Scope the IAM policy narrowly.",
+    howTo: "Create an IAM access key pair in the AWS console and paste both halves.",
+    notes: "v1 stores the keys only — no resource provisioning. Scope the IAM policy narrowly.",
   },
 
   // ── AI ────────────────────────────────────────────────────────────────────
@@ -268,8 +264,7 @@ export const PROVIDERS_REF: ProviderRef[] = [
     },
     dashboard: "https://app.posthog.com",
     docs: "https://posthog.com/docs/api",
-    howTo:
-      "Create a personal API key at https://app.posthog.com/me/settings (scope: all).",
+    howTo: "Create a personal API key at https://app.posthog.com/me/settings (scope: all).",
   },
 
   // ── Errors ────────────────────────────────────────────────────────────────
@@ -322,8 +317,7 @@ export const PROVIDERS_REF: ProviderRef[] = [
     },
     dashboard: "https://github.com",
     docs: "https://docs.github.com/en/rest",
-    howTo:
-      "Browser device-code flow — enter the code GitHub shows you, authorise, done.",
+    howTo: "Browser device-code flow — enter the code GitHub shows you, authorise, done.",
   },
 
   // ── Tickets ───────────────────────────────────────────────────────────────
@@ -355,6 +349,40 @@ export const PROVIDERS_REF: ProviderRef[] = [
     docs: "https://resend.com/docs",
     howTo: "Paste an API key from https://resend.com/api-keys.",
   },
+  {
+    name: "sendgrid",
+    displayName: "SendGrid",
+    category: "Email",
+    authKind: "api_key",
+    secrets: ["SENDGRID_API_KEY"],
+    blurb: "High-volume transactional mail. API key verified against /v3/scopes on paste.",
+    dashboard: "https://app.sendgrid.com",
+    docs: "https://docs.sendgrid.com/api-reference",
+    howTo: "Paste an API key from https://app.sendgrid.com/settings/api_keys.",
+  },
+  {
+    name: "mailgun",
+    displayName: "Mailgun",
+    category: "Email",
+    authKind: "api_key",
+    secrets: ["MAILGUN_API_KEY"],
+    blurb: "API-first email + routing. Key verified against /v3/domains on paste (HTTP Basic).",
+    dashboard: "https://app.mailgun.com",
+    docs: "https://documentation.mailgun.com/docs/mailgun/api-reference/",
+    howTo: "Paste an API key from https://app.mailgun.com/settings/api_security.",
+  },
+  {
+    name: "postmark",
+    displayName: "Postmark",
+    category: "Email",
+    authKind: "api_key",
+    secrets: ["POSTMARK_ACCOUNT_TOKEN"],
+    blurb:
+      "Deliverability-focused transactional. Account token verified against /servers on paste.",
+    dashboard: "https://account.postmarkapp.com",
+    docs: "https://postmarkapp.com/developer/api/overview",
+    howTo: "Paste an account token from https://account.postmarkapp.com/api_tokens.",
+  },
 
   // ── Auth ──────────────────────────────────────────────────────────────────
   {
@@ -366,8 +394,7 @@ export const PROVIDERS_REF: ProviderRef[] = [
     blurb: "Drop-in auth + users. Secret key stored in Phantom.",
     dashboard: "https://dashboard.clerk.com",
     docs: "https://clerk.com/docs",
-    howTo:
-      "Paste a secret key from https://dashboard.clerk.com (API Keys).",
+    howTo: "Paste a secret key from https://dashboard.clerk.com (API Keys).",
   },
 ];
 
@@ -388,7 +415,12 @@ export const PROVIDER_CATEGORIES = [
 export function groupByCategory(): Record<string, ProviderRef[]> {
   const out: Record<string, ProviderRef[]> = {};
   for (const p of PROVIDERS_REF) {
-    (out[p.category] ??= []).push(p);
+    let bucket = out[p.category];
+    if (!bucket) {
+      bucket = [];
+      out[p.category] = bucket;
+    }
+    bucket.push(p);
   }
   return out;
 }
