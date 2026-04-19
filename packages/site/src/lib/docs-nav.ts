@@ -6,6 +6,8 @@
  * current pathname.
  */
 
+import { PROVIDERS_REF } from "./providers-ref";
+
 export interface DocsNavItem {
   label: string;
   href: string;
@@ -63,7 +65,7 @@ export const DOCS_NAV: DocsNavGroup[] = [
       {
         label: "Providers",
         href: "/docs/providers/",
-        blurb: "The 29 curated providers — auth, secrets, MCP wiring.",
+        blurb: `The ${PROVIDERS_REF.length} curated providers — auth, secrets, MCP wiring.`,
       },
       {
         label: "Templates",

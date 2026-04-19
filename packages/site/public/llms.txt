@@ -29,7 +29,7 @@ curl -fsSL stack.ashlr.ai/install.sh | bash
 
 # Package managers (pre-alpha):
 brew tap ashlrai/phantom && brew install phantom   # prerequisite
-bun add -g @ashlr/stack ashlr-stack-mcb            # or: npm i -g
+bun add -g @ashlr/stack ashlr-stack-mcp            # or: npm i -g
 
 # Dev install (from source):
 git clone https://github.com/ashlrai/ashlr-stack
@@ -47,18 +47,18 @@ stack doctor --fix              # verify every service; re-run setup for anythin
 stack exec -- bun dev           # run your app with Phantom's secret proxy active
 ```
 
-## Provider catalog (23)
+## Provider catalog (29)
 
 - **Database (6):** Supabase (Postgres + Auth + Storage), Neon (serverless Postgres), Turso (edge SQLite / libSQL), Convex (reactive backend), Upstash (serverless Redis + Kafka), Firebase (realtime DB + Auth)
-- **Deploy (5):** Vercel, Railway, Fly.io, Cloudflare (Workers / R2 / D1), Render
+- **Deploy (6):** Vercel, Railway, Fly.io, Cloudflare (Workers / R2 / D1), Render, Modal (serverless GPU / compute)
 - **Cloud (1):** AWS (S3, Lambda, RDS)
-- **AI (4):** OpenAI, Anthropic (Claude + MCP), xAI (Grok), DeepSeek
+- **AI (6):** OpenAI, Anthropic (Claude + MCP), xAI (Grok), DeepSeek, Replicate (OSS model inference), Braintrust (LLM evals + observability)
 - **Analytics (1):** PostHog (product analytics + feature flags)
 - **Errors (1):** Sentry
 - **Payments (1):** Stripe
 - **Code (1):** GitHub
 - **Tickets (1):** Linear
-- **Email (1):** Resend
+- **Email (4):** Resend, SendGrid, Mailgun, Postmark
 - **Auth (1):** Clerk
 
 ## Core commands

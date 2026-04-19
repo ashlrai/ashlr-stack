@@ -292,9 +292,7 @@ export function itemListSchema(input: ItemListInput): Record<string, unknown> {
     "@type": "ItemList",
     name: input.name,
     description: input.description,
-    itemListOrder:
-      "https://schema.org/ItemListOrder" +
-      (input.itemListOrder ?? "Ascending"),
+    itemListOrder: `https://schema.org/ItemListOrder${input.itemListOrder ?? "Ascending"}`,
     numberOfItems: input.items.length,
     itemListElement: input.items.map((entry, idx) => {
       const item: Record<string, unknown> = {

@@ -54,14 +54,67 @@ const iconPath = getIconPath(iconSlug);
 
 const AUTH_EXPLAINERS: Record<string, string> = {
   oauth_pkce:
-    "Stack runs Supabase's OAuth (PKCE) flow in your browser. You click Authorise, and Stack captures the token via a one-shot localhost callback server.",
+    "Stack runs the provider's OAuth (PKCE) flow in your browser. You click Authorise, and Stack captures the token via a one-shot localhost callback server.",
   oauth_device:
     "Stack runs the OAuth device flow. You paste a code into the provider's authorization page; Stack polls until you confirm.",
   pat: "Paste a personal access token (PAT) once. Stack verifies it against the provider's API before writing to Phantom.",
   api_key: "Paste a long-lived API key once. Stack verifies it against the provider's API before writing to Phantom.",
 };
+const AUTH_LABELS: Record<string, string> = {
+  oauth_pkce: "OAuth (PKCE)",
+  oauth_device: "OAuth (device)",
+  pat: "PAT",
+  api_key: "API key",
+};
 
-const authExplainer = AUTH_EXPLAINERS[p.authKind] ?? "Stack runs the provider's auth flow and stores the result in Phantom.";
+/**
+ * Category-specific `stack recommend "..."` example prompts. Keeps the JSX
+ * clean and makes per-category copy editable in one place.
+ */
+const CATEGORY_BRIEFS: Record<string, string> = {
+  Database: "serverless postgres for a B2B SaaS",
+  Payments: "accept payments from customers",
+  AI: "LLM provider for a coding assistant",
+  Deploy: "host a Next.js frontend",
+  Errors: "error + performance tracking",
+  Analytics: "product analytics and feature flags",
+  Auth: "drop-in user auth for my app",
+  Email: "transactional email for my app",
+  Code: "git hosting and CI",
+  Tickets: "issue tracking for my team",
+  Cloud: "raw cloud infrastructure for scale",
+};
+
+const authExplainer =
+  AUTH_EXPLAINERS[p.authKind] ??
+  "Stack runs the provider's auth flow and stores the result in Phantom.";
+const authLabel = AUTH_LABELS[p.authKind] ?? p.authKind;
+const recommendBrief =
+  CATEGORY_BRIEFS[p.category] ?? `I need a ${p.category.toLowerCase()} provider`;
+
+/**
+ * Single source of truth for the 3 FAQ items — rendered once for the FAQPage
+ * JSON-LD and again in the visible markup below. Keeping one array prevents
+ * prose drift between the schema and the page.
+ */
+const FAQ_ITEMS: Array<{ q: string; a: string }> = [
+  {
+    q: `Do I need a ${p.displayName} account to use it with Stack?`,
+    a: `Yes — Stack provisions ${p.displayName} on your behalf, but it authenticates as you. ${authExplainer} ${
+      p.authKind === "oauth_pkce" || p.authKind === "oauth_device"
+        ? `If you don't have an account yet, Stack can create one during the OAuth flow.`
+        : `If you don't have a credential yet, create one at ${p.dashboard} and paste it once.`
+    }`,
+  },
+  {
+    q: `Where does Stack store my ${p.displayName} credentials?`,
+    a: `In Phantom Secrets, an E2E-encrypted local vault. Stack writes the secret slot names (${p.secrets.join(", ")}) into .stack.toml — the actual values live only in Phantom and never touch disk in plaintext.`,
+  },
+  {
+    q: `Can I rotate or revoke this integration later?`,
+    a: `Yes. Run \`stack remove ${p.name}\` to pull the ${p.displayName} service back out (Phantom secrets deleted, MCP entry removed, .stack.toml cleaned up). Rotate the underlying ${p.displayName} credentials in their dashboard — ${p.dashboard} — and Stack's next \`doctor --fix\` will pick up the new values.`,
+  },
+];
 
 // Find related providers in the same category (up to 5, excluding self).
 const related = PROVIDERS_REF.filter(
@@ -91,20 +144,7 @@ const title = `${p.displayName} — Ashlr Stack Provider`;
 const description = `${p.displayName}: ${p.blurb} Wire it into your project with one command via Ashlr Stack.`;
 
 const faq = faqPageSchema(
-  [
-    {
-      question: `Do I need a ${p.displayName} account to use it with Stack?`,
-      answer: `Yes — Stack provisions ${p.displayName} on your behalf, but it authenticates as you. ${authExplainer} If you already have an account, Stack attaches to it; if not, ${p.authKind === "oauth_pkce" || p.authKind === "oauth_device" ? "Stack can create one during the OAuth flow." : `create a ${p.authKind === "pat" ? "personal access token" : "key"} in the provider dashboard (${p.dashboard}) and paste it once.`}`,
-    },
-    {
-      question: `Where does Stack store my ${p.displayName} credentials?`,
-      answer: `In Phantom Secrets, an E2E-encrypted local vault. Stack writes the secret slot names (${p.secrets.join(", ")}) into .stack.toml — the actual values live only in Phantom and never touch disk in plaintext.`,
-    },
-    {
-      question: `Can I rotate or revoke this integration later?`,
-      answer: `Yes. Run \`stack remove ${p.name}\` to pull the ${p.displayName} service back out (Phantom secrets deleted, MCP entry removed, .stack.toml cleaned up). Rotate the underlying ${p.displayName} credentials in their dashboard — ${p.dashboard} — and Stack's next \`doctor --fix\` will pick up the new values.`,
-    },
-  ],
+  FAQ_ITEMS.map((it) => ({ question: it.q, answer: it.a })),
   pageUrl,
 );
 
@@ -135,7 +175,7 @@ const breadcrumbs = breadcrumbSchema([
     )}
     <div class="flex-1 min-w-0">
       <div class="text-[11px] font-semibold uppercase tracking-[0.14em] text-magenta-400 mb-1">
-        {p.category} · {p.authKind === "oauth_pkce" ? "OAuth (PKCE)" : p.authKind === "oauth_device" ? "OAuth (device)" : p.authKind === "pat" ? "PAT" : "API key"}
+        {p.category} · {authLabel}
       </div>
       <div class="text-[15px] text-ink-100 leading-snug">
         <strong class="font-semibold">{p.displayName}</strong> — {p.blurb}
@@ -165,7 +205,7 @@ const breadcrumbs = breadcrumbSchema([
     <a href="/docs/recommend/"><code>stack recommend</code></a>:
   </p>
 
-  <Code code={`stack recommend "${p.category === "Database" ? "serverless postgres for a B2B SaaS" : p.category === "Payments" ? "accept payments from customers" : p.category === "AI" ? "LLM provider for a coding assistant" : p.category === "Deploy" ? "host a Next.js frontend" : p.category === "Errors" ? "error + performance tracking" : p.category === "Analytics" ? "product analytics and feature flags" : p.category === "Auth" ? "drop-in user auth for my app" : p.category === "Email" ? "transactional email for my app" : p.category === "Code" ? "git hosting and CI" : p.category === "Tickets" ? "issue tracking for my team" : p.category === "Cloud" ? "raw cloud infrastructure for scale" : `I need a ${p.category.toLowerCase()} provider`}"`} lang="bash" theme="github-dark-dimmed" />
+  <Code code={`stack recommend "${recommendBrief}"`} lang="bash" theme="github-dark-dimmed" />
 
   <h2 id="auth">Auth flow</h2>
   <p>{authExplainer}</p>
@@ -237,29 +277,12 @@ const breadcrumbs = breadcrumbSchema([
   )}
 
   <h2>FAQ</h2>
-  <h3>Do I need a {p.displayName} account to use it with Stack?</h3>
-  <p>
-    Yes — Stack provisions {p.displayName} on your behalf, but it authenticates as you. {authExplainer} {" "}
-    {p.authKind === "oauth_pkce" || p.authKind === "oauth_device"
-      ? `If you don't have an account yet, Stack can create one during the OAuth flow.`
-      : <>If you don't have a credential yet, create one at <a href={p.dashboard} target="_blank" rel="noopener">{p.dashboard}</a> and paste it once.</>}
-  </p>
-
-  <h3>Where does Stack store my {p.displayName} credentials?</h3>
-  <p>
-    In <a href="/docs/phantom/">Phantom Secrets</a>, an E2E-encrypted local vault. Stack writes the
-    secret slot names (<code>{p.secrets.join(", ")}</code>) into <code>.stack.toml</code> — the
-    actual values live only in Phantom and never touch disk in plaintext.
-  </p>
-
-  <h3>Can I rotate or revoke this integration later?</h3>
-  <p>
-    Yes. Run <code>stack remove {p.name}</code> to pull the {p.displayName} service back out
-    (Phantom secrets deleted, MCP entry removed, <code>.stack.toml</code> cleaned up). Rotate the
-    underlying {p.displayName} credentials in their{" "}
-    <a href={p.dashboard} target="_blank" rel="noopener">dashboard</a> — Stack's next{" "}
-    <code>doctor --fix</code> will pick up the new values.
-  </p>
+  {FAQ_ITEMS.map((item) => (
+    <>
+      <h3>{item.q}</h3>
+      <p>{item.a}</p>
+    </>
+  ))}
 
   <h2>Outbound</h2>
   <ul>
