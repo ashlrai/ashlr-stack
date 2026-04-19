@@ -4,9 +4,18 @@
 
 _Nothing yet._
 
-## 0.1.0 — 2026-04-19
+## 0.1.1 — 2026-04-19
 
-First public release. Binaries for macOS (arm64 + x64) and Linux (arm64 + x64) on GitHub Releases; `install.sh` one-liner; npm publish follows once the `@ashlr` scope is claimed.
+First fully-published release: binaries on GitHub Releases, npm scope claimed, all three packages live.
+
+- **npm**: `@ashlr/stack-core`, `ashlr-stack-mcp`, `@ashlr/stack` all published to the registry under the new `@ashlr` org.
+- **Binaries**: darwin arm64/x64 + linux arm64/x64 on https://github.com/ashlrai/ashlr-stack/releases/tag/v0.1.1, all cross-compiled on `macos-latest` (the macos-13 Intel runner queue was killing us).
+- **`install.sh`**: now resolves a real release. `curl -fsSL https://stack.ashlr.ai/install.sh | bash` is the canonical install path.
+- Same feature surface as the 0.1.0 tag (below); 0.1.0 shipped a GitHub Release + binaries but no npm packages, so v0.1.1 is what users should pin.
+
+## 0.1.0 — 2026-04-19 (superseded by 0.1.1)
+
+Initial tag. Binaries for macOS (arm64 + x64) and Linux (arm64 + x64) on GitHub Releases; `install.sh` one-liner. npm publish deferred to 0.1.1.
 
 ### AI recommendation layer — `stack recommend` + `stack apply`
 

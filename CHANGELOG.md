@@ -2,7 +2,9 @@
 
 ## Unreleased
 
-_Nothing yet._
+- **Hero "Generate a stack" demo** — clickable in-hero animation that plays a realistic `stack recommend → stack apply` loop with six real provider chips (Supabase, Vercel, Anthropic, PostHog, Sentry, GitHub) materializing then stamping ✓, ending with a summary line. Six seconds from click to "oh, I get it." Honors `prefers-reduced-motion` by snapping to the final frame.
+  - `packages/site/src/components/GenerateStackDemo.tsx` (new, 220 lines, zero new deps)
+  - Wired into `Hero.astro` under the copy-pasteable prompt block so the value prop ladder reads: *one line you tell Claude → what happens when you click play*.
 
 ## 0.1.1 — 2026-04-19
 

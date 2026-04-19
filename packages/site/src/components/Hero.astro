@@ -2,6 +2,7 @@
 import Nav from "./Nav.astro";
 import HeroStack3D from "./HeroStack3D";
 import HeroIntroOverlay from "./HeroIntroOverlay";
+import GenerateStackDemo from "./GenerateStackDemo";
 import StackFallback from "./hero-stack/StackFallback.astro";
 import PhantomBadge from "./PhantomBadge.astro";
 import { PROVIDERS } from "~/lib/providers";
@@ -85,6 +86,11 @@ const CLAUDE_PROMPT = 'Use Stack to set up a B2B SaaS with auth, AI, and payment
           >
             <span class="copy-label">Copy</span>
           </button>
+        </div>
+
+        <!-- Live demo — click to watch a real recipe materialize -->
+        <div class="max-w-[620px] load-in" style="--load-delay: 500ms">
+          <GenerateStackDemo iconPaths={iconPaths} client:visible />
         </div>
 
         <!-- install one-liner, smaller -->
