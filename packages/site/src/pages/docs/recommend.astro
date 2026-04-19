@@ -3,8 +3,11 @@ import Docs from "~/layouts/Docs.astro";
 import { Code } from "astro:components";
 import { faqPageSchema, howToSchema } from "~/lib/structured-data";
 import { SITE_URL } from "~/lib/og";
+import { PROVIDERS, CATEGORIES } from "~/lib/providers";
 
 const pageUrl = `${SITE_URL}/docs/recommend/`;
+const providerCount = PROVIDERS.length;
+const categoryCount = CATEGORIES.length;
 
 const howTo = howToSchema({
   name: "Recommend and apply a Stack recipe",
@@ -57,7 +60,7 @@ const faq = faqPageSchema(
   <h2>Why this exists</h2>
   <p>
     Picking the right providers is the first friction point in a new project.
-    Stack's catalog has <strong>23 curated providers</strong> across 11
+    Stack's catalog has <strong>{providerCount} curated providers</strong> across {categoryCount}
     categories — too many to hold in your head, too few to outsource to a
     generic LLM. <code>stack recommend</code> closes the gap: free-text in,
     ranked providers out, frozen to a reproducible Recipe that{" "}
@@ -602,7 +605,7 @@ rationale = "auth"`}
         Browse every provider
       </h3>
       <p class="text-[13px] text-ink-400 leading-relaxed">
-        The full catalog retrieval runs against — 23 providers across 11
+        The full catalog retrieval runs against — {providerCount} providers across {categoryCount}
         categories.
       </p>
     </a>

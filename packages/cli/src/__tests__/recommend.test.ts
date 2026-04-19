@@ -1,25 +1,18 @@
 import { afterEach, describe, expect, it } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
-import { mkdtempSync, rmSync, readdirSync } from "node:fs";
+import { mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 /**
  * Smoke tests for `stack recommend`. Spawns the CLI the same way the MCP
  * server will (bun subprocess) to cover the full JSON contract end-to-end.
  */
 
-const CLI_ENTRY = join(
-  dirname(fileURLToPath(import.meta.url)),
-  "..",
-  "index.ts",
-);
+const CLI_ENTRY = join(dirname(fileURLToPath(import.meta.url)), "..", "index.ts");
 
-function runCli(
-  args: string[],
-  cwd?: string,
-): { stdout: string; stderr: string; code: number } {
+function runCli(args: string[], cwd?: string): { stdout: string; stderr: string; code: number } {
   const result = spawnSync("bun", [CLI_ENTRY, ...args], {
     encoding: "utf8",
     cwd,
@@ -35,12 +28,8 @@ function runCli(
 const createdDirs: string[] = [];
 afterEach(() => {
   while (createdDirs.length > 0) {
-    const dir = createdDirs.pop()!;
-    try {
-      rmSync(dir, { recursive: true, force: true });
-    } catch {
-      /* best effort */
-    }
+    const dir = createdDirs.pop();
+    if (dir) rmSync(dir, { recursive: true, force: true });
   }
 });
 
@@ -52,11 +41,7 @@ function mkTmp(): string {
 
 describe("stack recommend --json", () => {
   it("returns structured JSON with hits for a SaaS query", () => {
-    const { stdout, code } = runCli([
-      "recommend",
-      "B2B SaaS with auth and payments",
-      "--json",
-    ]);
+    const { stdout, code } = runCli(["recommend", "B2B SaaS with auth and payments", "--json"]);
     expect(code).toBe(0);
     const payload = JSON.parse(stdout);
     expect(payload.query).toBe("B2B SaaS with auth and payments");
@@ -65,9 +50,7 @@ describe("stack recommend --json", () => {
     const hitNames = payload.hits.map((h: { name: string }) => h.name);
     expect(hitNames).toContain("stripe");
     // clerk or supabase should cover the auth side
-    expect(hitNames.some((n: string) => ["clerk", "supabase"].includes(n))).toBe(
-      true,
-    );
+    expect(hitNames.some((n: string) => ["clerk", "supabase"].includes(n))).toBe(true);
     expect(typeof payload.guidance).toBe("string");
     expect(payload.byCategory).toBeDefined();
   });
@@ -89,10 +72,7 @@ describe("stack recommend --json", () => {
 
   it("with --save persists a recipe under .stack/recipes/", () => {
     const dir = mkTmp();
-    const { stdout, code } = runCli(
-      ["recommend", "postgres database", "--save", "--json"],
-      dir,
-    );
+    const { stdout, code } = runCli(["recommend", "postgres database", "--save", "--json"], dir);
     expect(code).toBe(0);
     const payload = JSON.parse(stdout);
     expect(payload.recipe).toBeDefined();
@@ -120,11 +100,7 @@ describe("stack recommend --json", () => {
   });
 
   it("emits an empty hits array with fallback guidance for a gibberish query", () => {
-    const { stdout, code } = runCli([
-      "recommend",
-      "xyzabcxyzabc nonsenseword",
-      "--json",
-    ]);
+    const { stdout, code } = runCli(["recommend", "xyzabcxyzabc nonsenseword", "--json"]);
     expect(code).toBe(0);
     const payload = JSON.parse(stdout);
     expect(payload.hits).toEqual([]);

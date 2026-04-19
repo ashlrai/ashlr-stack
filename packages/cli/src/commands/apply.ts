@@ -60,8 +60,8 @@ export const applyCommand = defineCommand({
     for (const { name } of recipe.providers) {
       try {
         console.log(colors.dim(`  › stack add ${name}`));
-        // citty's CommandContext type requires every declared arg key; we only
-        // set the ones addCommand actually reads, so double-cast via unknown.
+        // citty's CommandContext type requires every declared arg key; we
+        // only set the ones addCommand actually reads, so cast via unknown.
         await addCommand.run?.({
           args: { service: name, dryRun: false, _: [] },
           cmd: addCommand,

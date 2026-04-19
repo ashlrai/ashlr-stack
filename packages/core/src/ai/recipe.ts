@@ -32,7 +32,23 @@ function recipesDir(cwd: string): string {
   return resolve(cwd, RECIPES_SUBDIR);
 }
 
+/**
+ * Guard recipe ids against path-traversal. `stack apply <id>` forwards the
+ * positional directly and `writeRecipe` is also called from MCP (LLM-authored
+ * ids), so any `/`, `\`, or `..` would let a caller read/write outside the
+ * `.stack/recipes/` sandbox.
+ */
+function assertSafeRecipeId(id: string): void {
+  if (!id || /[\\/]/.test(id) || id.includes("..") || id.startsWith(".") || id.length > 200) {
+    throw new StackError(
+      "INVALID_RECIPE_ID",
+      `Recipe id "${id}" contains illegal path characters. Use kebab-case, no separators.`,
+    );
+  }
+}
+
 function recipePath(cwd: string, id: string): string {
+  assertSafeRecipeId(id);
   return join(recipesDir(cwd), `${id}.toml`);
 }
 
@@ -84,11 +100,7 @@ export async function readRecipe(id: string, cwd: string = process.cwd()): Promi
   try {
     text = await readFile(path, "utf-8");
   } catch (err) {
-    throw new StackError(
-      "RECIPE_NOT_FOUND",
-      `No recipe "${id}" at ${path}`,
-      { cause: err },
-    );
+    throw new StackError("RECIPE_NOT_FOUND", `No recipe "${id}" at ${path}`, { cause: err });
   }
   const raw = parseToml(text) as Record<string, unknown>;
   const recipe = coerceRecipe(raw, id);
@@ -141,8 +153,7 @@ export function recipeFromRetrieval(
 function coerceRecipe(raw: Record<string, unknown>, fallbackId: string): Recipe {
   const id = typeof raw.id === "string" ? raw.id : fallbackId;
   const query = typeof raw.query === "string" ? raw.query : "";
-  const createdAt =
-    typeof raw.createdAt === "string" ? raw.createdAt : new Date(0).toISOString();
+  const createdAt = typeof raw.createdAt === "string" ? raw.createdAt : new Date(0).toISOString();
   const providersRaw = Array.isArray(raw.providers) ? raw.providers : [];
   const providers = providersRaw.map((entry) => {
     const e = entry as Record<string, unknown>;

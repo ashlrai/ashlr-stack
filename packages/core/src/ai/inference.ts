@@ -129,13 +129,6 @@ export interface LocalSLMEndpoint {
   apiKey?: string;
 }
 
-/**
- * Narrow callable signature for `fetch`. We can't use `typeof fetch` directly
- * because Bun augments that global with `.preconnect`, so callers that pass
- * a plain arrow function (as our constructor fallback does) don't satisfy it.
- */
-export type FetchFn = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-
 export interface LocalSLMBackendOptions {
   endpoints?: LocalSLMEndpoint[];
   /** Per-request timeout in ms (default 30s). */
@@ -144,18 +137,21 @@ export interface LocalSLMBackendOptions {
   circuitBreakerThreshold?: number;
   circuitBreakerWindowMs?: number;
   /** Override fetch — used by tests. Defaults to `globalThis.fetch`. */
-  fetchImpl?: FetchFn;
+  fetchImpl?: typeof fetch;
 }
+
+const LM_STUDIO_URL = "http://localhost:1234/v1";
+const OLLAMA_URL = "http://localhost:11434/v1";
 
 const DEFAULT_LM_STUDIO: LocalSLMEndpoint = {
   name: "lm-studio",
-  baseUrl: process.env.STACK_LM_URL ?? "http://localhost:1234/v1",
+  baseUrl: process.env.STACK_LM_URL ?? LM_STUDIO_URL,
   model: process.env.STACK_LM_MODEL ?? "local-model",
 };
 
 const DEFAULT_OLLAMA: LocalSLMEndpoint = {
   name: "ollama",
-  baseUrl: "http://localhost:11434/v1",
+  baseUrl: OLLAMA_URL,
   model: process.env.STACK_OLLAMA_MODEL ?? "llama3.1",
 };
 
@@ -174,14 +170,17 @@ export class LocalSLMBackend implements InferenceBackend {
   private readonly timeoutMs: number;
   private readonly costTracker: CostTracker;
   private readonly breakers = new Map<string, CircuitBreaker>();
-  private readonly fetchImpl: FetchFn;
+  private readonly fetchImpl: typeof fetch;
   private lastUsedEndpoint: string | null = null;
 
   constructor(opts: LocalSLMBackendOptions = {}) {
     this.endpoints = opts.endpoints ?? [DEFAULT_LM_STUDIO, DEFAULT_OLLAMA];
     this.timeoutMs = opts.timeoutMs ?? 30_000;
     this.costTracker = opts.costTracker ?? defaultCostTracker;
-    this.fetchImpl = opts.fetchImpl ?? ((...args) => fetch(...args));
+    // `bind` keeps the right receiver without picking up Bun's
+    // `fetch.preconnect` augmentation, which is incompatible with our
+    // constructor-arg type.
+    this.fetchImpl = opts.fetchImpl ?? globalThis.fetch.bind(globalThis);
     for (const ep of this.endpoints) {
       this.breakers.set(
         ep.name,
@@ -356,7 +355,7 @@ export async function getInferenceBackend(
   const local = new LocalSLMBackend(opts.localOptions);
   if (!(await local.healthy())) {
     throw new NoInferenceBackendError(
-      "No local inference endpoint reachable. Start LM Studio (http://localhost:1234) or Ollama (http://localhost:11434), or run Stack inside Claude Code (MCP mode).",
+      `No local inference endpoint reachable. Start LM Studio (${LM_STUDIO_URL.replace("/v1", "")}) or Ollama (${OLLAMA_URL.replace("/v1", "")}), or run Stack inside Claude Code (MCP mode).`,
       (opts.localOptions?.endpoints ?? [DEFAULT_LM_STUDIO, DEFAULT_OLLAMA]).map((e) => e.name),
     );
   }
