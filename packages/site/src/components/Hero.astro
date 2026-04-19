@@ -3,6 +3,7 @@ import Nav from "./Nav.astro";
 import HeroStack3D from "./HeroStack3D";
 import HeroIntroOverlay from "./HeroIntroOverlay";
 import StackFallback from "./hero-stack/StackFallback.astro";
+import PhantomBadge from "./PhantomBadge.astro";
 import { PROVIDERS } from "~/lib/providers";
 import { getIconPath } from "~/lib/icons";
 
@@ -60,7 +61,7 @@ const CLAUDE_PROMPT = 'Use Stack to set up a B2B SaaS with auth, AI, and payment
           You describe the project. Claude picks the providers via
           <span class="mono text-[color:var(--color-ink-100)]">stack_recommend</span>.
           Stack creates real accounts through each provider's Management API, vaults every key in
-          <span class="text-[color:var(--color-ink-100)]">Phantom</span>, and wires
+          <PhantomBadge size="sm" />, and wires
           <span class="mono text-[color:var(--color-ink-100)]">.env</span> +
           <span class="mono text-[color:var(--color-ink-100)]">.mcp.json</span> so your dev
           server and your Claude session see an identical stack.

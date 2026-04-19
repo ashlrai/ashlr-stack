@@ -1,0 +1,51 @@
+---
+/**
+ * PhantomMark — logo-only variant of PhantomBadge. Use for tight inline
+ * spots (labels, icon-first chips) where the wordmark would be redundant.
+ */
+export interface Props {
+  /** Logo size in pixels. Default 14. */
+  size?: number;
+  /** If true, wraps in an <a> to phm.dev. Default true. */
+  link?: boolean;
+  /** Extra classes. */
+  class?: string;
+}
+
+const { size = 14, link = true, class: extraClass = "" } = Astro.props;
+---
+
+{link ? (
+  <a
+    href="https://phm.dev"
+    target="_blank"
+    rel="noopener"
+    class:list={["phantom-mark inline-flex align-middle", extraClass]}
+    aria-label="Phantom Secrets"
+    title="Phantom Secrets — phm.dev"
+  >
+    <img
+      src="/brand/phantom/logo.svg"
+      alt=""
+      width={size}
+      height={size}
+      style="flex-shrink:0"
+      aria-hidden="true"
+    />
+  </a>
+) : (
+  <img
+    class:list={["phantom-mark inline-block align-middle", extraClass]}
+    src="/brand/phantom/logo.svg"
+    alt="Phantom Secrets"
+    width={size}
+    height={size}
+  />
+)}
+
+<style>
+  .phantom-mark:focus-visible {
+    outline: 1px solid #3b82f6;
+    outline-offset: 2px;
+  }
+</style>

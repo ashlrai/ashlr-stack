@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { linkifyPhantom } from "~/lib/phantom-link";
 
 /**
  * FAQ — collapsible objection-addressing section.
@@ -90,7 +91,7 @@ function Row({ q, idx }: { q: Q; idx: number }) {
         style={{ maxHeight: open ? "400px" : "0px" }}
       >
         <p className="pb-5 pl-[88px] sm:pl-[88px] pr-8 text-[14px] leading-[1.7] text-[color:var(--color-ink-300)] max-w-[780px]">
-          {q.a}
+          {linkifyPhantom(q.a)}
         </p>
       </div>
     </div>

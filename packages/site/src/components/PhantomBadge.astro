@@ -1,0 +1,77 @@
+---
+/**
+ * PhantomBadge — Phantom Secrets logo + "Phantom" wordmark + phm.dev link.
+ *
+ * Use this every time the site surfaces "Phantom" in prose or UI so we
+ * consistently show Phantom's real brand (padlock mark, native blue) and
+ * point readers to phm.dev. For tight inline spots where the wordmark is
+ * redundant, use <PhantomMark /> instead (logo only).
+ */
+export interface Props {
+  /** sm = 14px logo, md = 18px, lg = 24px. Default md. */
+  size?: "sm" | "md" | "lg";
+  /** Include the word "Phantom" next to the logo. Default true. */
+  showName?: boolean;
+  /** Include the trailing "phm.dev ↗" callout. Default false (the whole badge is the link anyway). */
+  showUrl?: boolean;
+  /** Extra classes applied to the outer anchor. */
+  class?: string;
+}
+
+const {
+  size = "md",
+  showName = true,
+  showUrl = false,
+  class: extraClass = "",
+} = Astro.props;
+
+const pxBySize = { sm: 14, md: 18, lg: 24 } as const;
+const px = pxBySize[size];
+const textSize = size === "sm" ? "text-[13px]" : size === "lg" ? "text-[16px]" : "text-[14px]";
+---
+
+<a
+  href="https://phm.dev"
+  target="_blank"
+  rel="noopener"
+  class:list={[
+    "phantom-badge inline-flex items-center gap-1.5 align-middle transition-colors",
+    extraClass,
+  ]}
+  aria-label="Phantom Secrets — phm.dev"
+  title="Phantom Secrets — the E2E-encrypted vault Stack writes to"
+>
+  <img
+    src="/brand/phantom/logo.svg"
+    alt=""
+    width={px}
+    height={px}
+    style={`flex-shrink:0;display:inline-block`}
+    aria-hidden="true"
+  />
+  {showName && (
+    <span class={`font-semibold tracking-tight ${textSize} text-[color:var(--color-ink-100)] phantom-word`}>
+      Phantom
+    </span>
+  )}
+  {showUrl && (
+    <span class="mono text-[11px] tracking-[0.08em] text-[color:var(--color-ink-400)] phantom-url">
+      phm.dev ↗
+    </span>
+  )}
+</a>
+
+<style>
+  .phantom-badge:hover .phantom-word,
+  .phantom-badge:focus-visible .phantom-word {
+    color: #3b82f6; /* Phantom brand blue */
+  }
+  .phantom-badge:hover .phantom-url,
+  .phantom-badge:focus-visible .phantom-url {
+    color: #3b82f6;
+  }
+  .phantom-badge:focus-visible {
+    outline: 1px solid #3b82f6;
+    outline-offset: 3px;
+  }
+</style>

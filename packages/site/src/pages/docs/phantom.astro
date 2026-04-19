@@ -1,6 +1,7 @@
 ---
 import Docs from "~/layouts/Docs.astro";
 import { Code } from "astro:components";
+import PhantomBadge from "~/components/PhantomBadge.astro";
 ---
 
 <Docs
@@ -8,6 +9,34 @@ import { Code } from "astro:components";
   description="Stack is the control plane; Phantom is the vault. Understanding the split is the single most important mental model for operating Stack safely."
   eyebrow="Integrations"
 >
+  <div class="not-prose mb-8 flex items-center gap-4 p-4 panel rounded-xl" style="border-left: 2px solid #3b82f6;">
+    <img
+      src="/brand/phantom/logo.svg"
+      alt=""
+      width="48"
+      height="48"
+      style="flex-shrink: 0"
+      aria-hidden="true"
+    />
+    <div class="flex-1 min-w-0">
+      <div class="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#3b82f6] mb-1">
+        Sister product
+      </div>
+      <div class="text-[15px] text-[color:var(--color-ink-100)] leading-snug">
+        <strong class="font-semibold">Phantom Secrets</strong> — E2E-encrypted vault.
+        One command. Keys safe forever.
+      </div>
+    </div>
+    <a
+      href="https://phm.dev"
+      target="_blank"
+      rel="noopener"
+      class="mono text-[12px] tracking-[0.08em] px-3 py-2 border border-[#3b82f6]/40 text-[color:var(--color-ink-100)] hover:bg-[#3b82f6]/10 hover:border-[#3b82f6] hover:text-[#3b82f6] transition-colors rounded-md flex-shrink-0"
+    >
+      phm.dev ↗
+    </a>
+  </div>
+
   <h2>The split</h2>
   <p>
     Every secret the provider hands back — a Supabase service-role key, a
@@ -266,11 +295,6 @@ phantom status`}
   />
 
   <p>
-    For the full Phantom story, see{" "}
-    <a
-      href="https://phantom.ashlr.ai"
-      rel="noopener noreferrer"
-      target="_blank"
-    >phantom.ashlr.ai</a>.
+    For the full Phantom story, see <PhantomBadge size="md" showUrl={true} />.
   </p>
 </Docs>

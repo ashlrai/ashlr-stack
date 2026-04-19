@@ -29,6 +29,12 @@ interface TierContent {
   title: string;
   body: string;
   categories: Provider["category"][];
+  /**
+   * If set to "phantom", the overlay renders with Phantom's real brand
+   * (logo + phm.dev link) instead of a plain tier title. Stack doesn't
+   * own this tier — it composes it.
+   */
+  brand?: "phantom";
 }
 
 const TIER_CONTENT: TierContent[] = [
@@ -71,6 +77,7 @@ const TIER_CONTENT: TierContent[] = [
     title: "Phantom",
     body: "E2E-encrypted vault — every secret VALUE lives here. Stack only holds the slot names.",
     categories: [],
+    brand: "phantom",
   },
 ];
 
@@ -242,10 +249,45 @@ export default function HeroStack3D({ iconPaths = {} }: HeroStack3DProps) {
               <div>
                 <div className="mono text-[10px] tracking-[0.18em] uppercase text-[color:var(--color-blade-400)] mb-1">
                   § · tier {String(TIERS.length - activeIndex).padStart(2, "0")}
+                  {activeContent.brand === "phantom" && (
+                    <span className="ml-2 text-[color:var(--color-ink-500)]">·</span>
+                  )}
+                  {activeContent.brand === "phantom" && (
+                    <a
+                      href="https://phm.dev"
+                      target="_blank"
+                      rel="noopener"
+                      className="ml-2 underline decoration-dotted decoration-[#3b82f6]/60 underline-offset-4 hover:decoration-[#3b82f6] hover:text-[#3b82f6] transition-colors"
+                    >
+                      phm.dev ↗
+                    </a>
+                  )}
                 </div>
-                <h3 className="text-base sm:text-lg font-semibold text-[color:var(--color-ink-50)] tracking-tight">
-                  {activeContent.title}
-                </h3>
+                {activeContent.brand === "phantom" ? (
+                  <a
+                    href="https://phm.dev"
+                    target="_blank"
+                    rel="noopener"
+                    className="inline-flex items-center gap-2 group"
+                    aria-label="Phantom Secrets — phm.dev"
+                  >
+                    <img
+                      src="/brand/phantom/logo.svg"
+                      alt=""
+                      width="24"
+                      height="24"
+                      className="flex-shrink-0"
+                      aria-hidden="true"
+                    />
+                    <h3 className="text-base sm:text-lg font-semibold text-[color:var(--color-ink-50)] tracking-tight group-hover:text-[#3b82f6] transition-colors">
+                      Phantom
+                    </h3>
+                  </a>
+                ) : (
+                  <h3 className="text-base sm:text-lg font-semibold text-[color:var(--color-ink-50)] tracking-tight">
+                    {activeContent.title}
+                  </h3>
+                )}
               </div>
               {selected !== null && (
                 <button

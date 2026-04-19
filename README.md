@@ -61,11 +61,11 @@ stack init --template nextjs-supabase-posthog-sentry
 
 ## How it relates to the rest of Ashlr
 
-- **Phantom Secrets** — the vault. Real secret values never leave your machine. Stack writes every credential through Phantom.
+- **[Phantom Secrets](https://phm.dev)** — the vault. Real secret values never leave your machine. Stack writes every credential through Phantom.
 - **ashlr-plugin** — token-efficiency layer for Claude Code. Orthogonal to Stack.
 - **ashlrcode** — multi-provider AI coding CLI. Orthogonal.
 
-Stack is the *control plane*. Phantom is the *vault*. ashlr-plugin is the *context compressor*. They compose.
+Stack is the *control plane*. [Phantom](https://phm.dev) is the *vault*. ashlr-plugin is the *context compressor*. They compose.
 
 ## Curated v1 provider catalog
 

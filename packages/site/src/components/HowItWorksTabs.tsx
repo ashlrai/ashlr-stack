@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { usePrefersReducedMotion } from "~/lib/use-prefers-reduced-motion";
+import { linkifyPhantom } from "~/lib/phantom-link";
 
 /**
  * HowItWorksTabs — interactive three-step explainer.
@@ -129,7 +130,7 @@ export default function HowItWorksTabs() {
                 </span>
               </div>
               <p className="text-[11px] text-[color:var(--color-ink-400)] leading-[1.5]">
-                {t.blurb}
+                {linkifyPhantom(t.blurb)}
               </p>
             </button>
           );
@@ -203,7 +204,7 @@ export default function HowItWorksTabs() {
             guarantee
           </span>
           <span className="text-[12px] text-[color:var(--color-ink-200)] leading-[1.5]">
-            {current.guarantee}
+            {linkifyPhantom(current.guarantee)}
           </span>
         </div>
       </div>
