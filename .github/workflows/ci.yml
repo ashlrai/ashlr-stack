@@ -40,6 +40,18 @@ jobs:
       - name: Smoke test providers list
         run: bun run packages/cli/src/index.ts providers
 
+      - name: Smoke test stack recommend --json
+        run: |
+          set -e
+          OUT=$(bun run packages/cli/src/index.ts recommend "B2B SaaS with auth and payments" --json)
+          echo "$OUT" | node -e "
+            const p = JSON.parse(require('fs').readFileSync(0, 'utf-8'));
+            if (!Array.isArray(p.hits) || p.hits.length === 0) throw new Error('no hits');
+            const names = p.hits.map(h => h.name);
+            if (!names.includes('stripe')) throw new Error('stripe not in hits');
+            console.log('stack recommend smoke ok: ' + names.join(', '));
+          "
+
   site:
     name: Site build (astro check + build)
     runs-on: ubuntu-latest

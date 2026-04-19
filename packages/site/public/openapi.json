@@ -37,6 +37,10 @@
     {
       "name": "meta",
       "description": "Discovery, upgrades, and cross-project registry."
+    },
+    {
+      "name": "ai",
+      "description": "AI-assisted composition: free-text → curated providers (recommend) and recipe replay (apply)."
     }
   ],
   "paths": {
@@ -300,6 +304,41 @@
         ],
         "responses": { "200": { "description": "Workflow file written." } }
       }
+    },
+    "/cli/recommend": {
+      "get": {
+        "tags": ["ai"],
+        "operationId": "stack_recommend",
+        "summary": "Pick the right providers for a free-text project description.",
+        "description": "Takes a natural-language description of what the user is building (e.g. 'B2B SaaS with auth, AI, and payments') and returns a scored, per-category ranking of curated providers. Default path is pure BM25 retrieval — instant, zero-IO, no LLM. Pass `--save` to freeze the result as a Recipe at `.stack/recipes/<id>.toml` so you can follow up with `stack apply`. Pass `--synth` to route candidates through the local SLM (LM Studio / Ollama) for model-authored rationales. `--json` emits the same `RecommendOutput` shape the `stack_recommend` MCP tool returns.",
+        "parameters": [
+          { "name": "query", "in": "query", "schema": { "type": "string" }, "description": "Free-text description (positional in the CLI; omit for usage hint)." },
+          { "name": "k", "in": "query", "schema": { "type": "integer", "default": 6 }, "description": "Max top-level hits to return." },
+          { "name": "category", "in": "query", "schema": { "type": "string", "enum": ["Database", "Deploy", "Cloud", "AI", "Analytics", "Errors", "Payments", "Code", "Tickets", "Email", "Auth"] }, "description": "Restrict to a single category." },
+          { "name": "json", "in": "query", "schema": { "type": "boolean", "default": false }, "description": "Machine-readable JSON output." },
+          { "name": "save", "in": "query", "schema": { "type": "boolean", "default": false }, "description": "Freeze the result to .stack/recipes/<id>.toml for later `stack apply`." },
+          { "name": "synth", "in": "query", "schema": { "type": "boolean", "default": false }, "description": "Call a local SLM to synthesize rationales. Falls back to retrieval-only if no endpoint is reachable." }
+        ],
+        "responses": {
+          "200": {
+            "description": "Recommendation payload.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RecommendOutput" } } }
+          }
+        }
+      }
+    },
+    "/cli/apply": {
+      "get": {
+        "tags": ["management"],
+        "operationId": "stack_apply",
+        "summary": "Apply a saved recipe: replay `stack add` per provider + pre-wire Phantom rotation.",
+        "description": "Replays a frozen Recipe (authored by `stack recommend --save` or synthesized by an agent) through the add pipeline, then pre-wires Phantom envelopes + webhook stubs so provider-specific flows land real credentials into already-rotating slots. Pass `--noWire` to skip the Phantom-wire layer and stay pure-provisioning. Requires a `.stack.toml` (run `stack init` first).",
+        "parameters": [
+          { "name": "recipeId", "in": "query", "schema": { "type": "string" }, "description": "Recipe id (filename stem in .stack/recipes/). Omit for an interactive picker." },
+          { "name": "noWire", "in": "query", "schema": { "type": "boolean", "default": false }, "description": "Skip Phantom envelope + webhook pre-wiring." }
+        ],
+        "responses": { "200": { "description": "Apply summary (each provider's add result + phantom-wire counts)." } }
+      }
     }
   },
   "components": {
@@ -340,6 +379,69 @@
           },
           "mcp": { "type": "string", "description": "MCP server id wired into .mcp.json, if any." },
           "region": { "type": "string", "description": "Region for region-scoped providers." }
+        }
+      },
+      "RecommendOutput": {
+        "type": "object",
+        "title": "RecommendOutput",
+        "description": "JSON shape returned by `stack recommend --json` (and the `stack_recommend` MCP tool).",
+        "required": ["query", "hits", "byCategory", "guidance"],
+        "properties": {
+          "query": { "type": "string", "description": "The exact free-text query that was scored." },
+          "hits": {
+            "type": "array",
+            "description": "Top-k scored providers (ranked across all categories).",
+            "items": {
+              "type": "object",
+              "required": ["name", "displayName", "category", "authKind", "secrets", "blurb", "score", "matched"],
+              "properties": {
+                "name": { "type": "string", "description": "CLI-facing name (what you type after `stack add`)." },
+                "displayName": { "type": "string" },
+                "category": { "type": "string", "enum": ["Database", "Deploy", "Cloud", "AI", "Analytics", "Errors", "Payments", "Code", "Tickets", "Email", "Auth"] },
+                "authKind": { "type": "string", "enum": ["oauth_pkce", "oauth_device", "pat", "api_key"] },
+                "secrets": { "type": "array", "items": { "type": "string" } },
+                "blurb": { "type": "string" },
+                "score": { "type": "number", "description": "BM25 score, rounded to 3 decimals." },
+                "matched": { "type": "array", "items": { "type": "string" }, "description": "Terms from the query that matched this provider." },
+                "rationale": { "type": "string", "description": "Optional synth-authored rationale (present only with --synth)." }
+              }
+            }
+          },
+          "byCategory": {
+            "type": "object",
+            "description": "Per-category ranking (top candidates per category, for agents that want a structured plan).",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["name", "score"],
+                "properties": {
+                  "name": { "type": "string" },
+                  "score": { "type": "number" }
+                }
+              }
+            }
+          },
+          "guidance": { "type": "string", "description": "One-paragraph next-step guidance for the user / agent." },
+          "recipe": {
+            "type": "object",
+            "description": "Present only when `--save` is used.",
+            "required": ["id", "path"],
+            "properties": {
+              "id": { "type": "string", "description": "Recipe id (filename stem in .stack/recipes/)." },
+              "path": { "type": "string", "description": "Absolute path to the written recipe TOML." }
+            }
+          },
+          "inference": {
+            "type": "object",
+            "description": "Present only when `--synth` succeeded.",
+            "required": ["mode", "backend"],
+            "properties": {
+              "mode": { "type": "string", "enum": ["synth", "mcp-delegated"] },
+              "backend": { "type": "string", "description": "Backend name (e.g. lmstudio, ollama)." },
+              "note": { "type": "string" }
+            }
+          }
         }
       },
       "ProviderEntry": {

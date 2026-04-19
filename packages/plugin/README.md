@@ -6,6 +6,8 @@ Thin Claude Code plugin that registers the `ashlr-stack` MCP server and a handfu
 - `/stack:list` — show configured services
 - `/stack:status` — health + Phantom + services at a glance
 - `/stack:doctor` — verify every service is reachable
+- `/stack:recommend <query>` — AI picks providers for a goal and saves a reusable recipe
+- `/stack:apply <recipe-id>` — provision every provider in a recipe and wire secrets
 
 The plugin wraps the `ashlr-stack-mcp` server, which in turn shells out to the `stack` CLI. The CLI is the canonical implementation.
 

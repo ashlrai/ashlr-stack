@@ -39,6 +39,12 @@ export const DOCS_NAV: DocsNavGroup[] = [
         href: "/docs/quickstart/",
         blurb: "From zero to `stack add supabase` in five minutes.",
       },
+      {
+        label: "AI recommend + apply",
+        href: "/docs/recommend/",
+        blurb:
+          "Describe what you're building — Stack picks providers and pre-wires Phantom rotation.",
+      },
     ],
   },
   {

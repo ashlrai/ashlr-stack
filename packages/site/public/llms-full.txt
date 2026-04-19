@@ -207,6 +207,31 @@ Emits shell completions. Typical use:
 stack completion zsh > ~/.zfunc/_stack
 ```
 
+### `stack recommend "<brief>" [--k N] [--category <name>] [--save] [--synth] [--json]`
+
+Free-text → curated providers. The query is a natural-language description of what the user is building; Stack runs BM25 retrieval over the 23-provider catalog and returns a ranked list plus a per-category breakdown.
+
+- Default: pure retrieval — instant, zero-IO, no LLM.
+- `--save` freezes the result to `.stack/recipes/<id>.toml` so `stack apply <id>` can replay it end-to-end.
+- `--synth` pipes the top candidates into a local SLM (LM Studio / Ollama via OpenAI-compatible HTTP) and swaps the retrieval-only rationales for model-authored ones. Falls back silently if no endpoint is reachable.
+- `--json` emits the machine-readable `RecommendOutput` shape — same blob the `stack_recommend` MCP tool returns.
+
+```bash
+stack recommend "B2B SaaS with auth, AI, and payments"
+stack recommend "edge-first dashboard with analytics" --save --synth
+stack recommend "postgres database" --category Database --json
+```
+
+### `stack apply [recipe-id] [--noWire]`
+
+Replay a saved Recipe: for each provider in the recipe, re-runs `stack add`, then (unless `--noWire`) pre-wires Phantom rotation envelopes and webhook stubs so provider-specific flows drop real credentials into already-rotating slots. This is the `stack recommend --save` follow-up. Requires a `.stack.toml` — run `stack init` first.
+
+```bash
+stack apply saas-auth-ai-payments        # replay + phantom-wire
+stack apply saas-auth-ai-payments --noWire   # pure provisioning, no rotation wiring
+stack apply                               # interactive picker
+```
+
 ---
 
 ## 4. Config files
@@ -377,6 +402,8 @@ One per CLI command. Each tool accepts the same flags as the CLI:
 - `stack_projects` — `{}`
 - `stack_deps` — `{}`
 - `stack_ci` — `{}`
+- `stack_recommend` — `{ query: string, k?: number, category?: string, save?: boolean }` — free-text → curated providers with scores + per-category ranking. Set `save: true` to freeze as a Recipe in `.stack/recipes/<id>.toml`.
+- `stack_apply` — `{ recipe_id: string, no_wire?: boolean }` — replay a saved Recipe through `stack_add` per provider + pre-wire Phantom rotation envelopes and webhook stubs.
 
 All tools return structured JSON; errors include a machine-readable `code` and a human-readable `message`.
 
@@ -450,6 +477,29 @@ stack doctor --fix              # re-runs OAuth for you; creates per-clone resou
 ```bash
 stack ci                        # emits .github/workflows/stack.yml
 # The workflow pulls from Phantom Cloud (if configured) for deployment secrets.
+```
+
+### AI-assisted composition (recommend → apply)
+
+When the user describes *what they're building* rather than *which providers to use*:
+
+```bash
+# 1. Pick providers from a brief and freeze as a Recipe
+stack recommend "B2B SaaS with auth, AI, and payments" --save
+# → .stack/recipes/saas-auth-ai-payments.toml
+
+# 2. Replay the Recipe end-to-end (stack add per provider + phantom-wire)
+stack apply saas-auth-ai-payments
+```
+
+Same flow from an agent over MCP:
+
+```
+User: I'm building a SaaS — help me pick and wire the stack.
+Agent: [calls stack_recommend { query: "B2B SaaS with auth, AI, and payments", save: true }]
+       → recipe id: saas-auth-ai-payments
+       [calls stack_apply { recipe_id: "saas-auth-ai-payments" }]
+       → providers provisioned; Phantom envelopes + webhook stubs pre-wired.
 ```
 
 ### Agentic (Claude Code)

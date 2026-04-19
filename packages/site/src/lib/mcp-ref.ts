@@ -175,6 +175,56 @@ export const MCP_TOOLS: McpTool[] = [
     inputs: [],
     cli: "stack upgrade",
   },
+  {
+    name: "stack_recommend",
+    description:
+      "Free-text → curated providers. Given a natural-language brief (e.g. 'B2B SaaS with auth, AI, and payments'), returns scored hits + a per-category ranking. Pass save:true to freeze as a Recipe and follow up with stack_apply.",
+    inputs: [
+      {
+        name: "query",
+        type: "string",
+        required: true,
+        description: "Natural-language description of the project / stack need.",
+      },
+      {
+        name: "k",
+        type: "string",
+        description: "Max top-level hits to return (default 6).",
+      },
+      {
+        name: "category",
+        type: "string",
+        description:
+          "Optional filter to a single category (Database, Deploy, Cloud, AI, Analytics, Errors, Payments, Code, Tickets, Email, Auth).",
+      },
+      {
+        name: "save",
+        type: "boolean",
+        description:
+          "Freeze the result to .stack/recipes/<id>.toml so you can run stack_apply.",
+      },
+    ],
+    cli: "stack recommend \"<query>\" --json [--k <n>] [--category <name>] [--save]",
+  },
+  {
+    name: "stack_apply",
+    description:
+      "Replay a saved Recipe: run stack_add per provider, then pre-wire Phantom rotation envelopes + webhook stubs. Opt out of the wire step with no_wire:true.",
+    inputs: [
+      {
+        name: "recipe_id",
+        type: "string",
+        required: true,
+        description: "Recipe id (filename stem in .stack/recipes/).",
+      },
+      {
+        name: "no_wire",
+        type: "boolean",
+        description: "Skip Phantom envelope + webhook pre-wiring.",
+      },
+    ],
+    cli: "stack apply <recipe_id> [--noWire]",
+  },
 ];
 
 export interface McpResource {

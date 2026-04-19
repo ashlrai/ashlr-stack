@@ -1,8 +1,8 @@
 {
   "$schema": "https://raw.githubusercontent.com/modelcontextprotocol/specification/main/schema/schema.json",
   "name": "ashlr-stack",
-  "description": "Ashlr Stack as an MCP server. Exposes the `stack` CLI as callable tools for any MCP-capable LLM editor (Claude Code, Cursor, Windsurf, Zed). Install: `bunx ashlr-stack-mcp` (or `npx ashlr-stack-mcp`).",
-  "version": "0.1.0",
+  "description": "Ashlr Stack as an MCP server. Exposes the `stack` CLI as callable tools for any MCP-capable LLM editor (Claude Code, Cursor, Windsurf, Zed). Includes an AI-assisted composition layer: `stack_recommend` picks providers from a free-text brief, `stack_apply` replays a saved recipe end-to-end with Phantom rotation pre-wired. Install: `bunx ashlr-stack-mcp` (or `npx ashlr-stack-mcp`).",
+  "version": "0.2.0",
   "homepage": "https://stack.ashlr.ai",
   "repository": "https://github.com/ashlrai/ashlr-stack",
   "license": "MIT",
@@ -175,6 +175,52 @@
       "description": "Check npm for a newer @ashlr/stack release.",
       "cli": "stack upgrade",
       "inputSchema": { "type": "object", "properties": {}, "required": [] }
+    },
+    {
+      "name": "stack_recommend",
+      "description": "Given a free-text description of what the user is building (e.g. 'B2B SaaS with auth, AI, and payments'), return a structured list of the most relevant curated providers with scores, matched terms, and per-category ranking. Pass save:true to also persist a Recipe to .stack/recipes/<id>.toml so you (Claude) can follow up with stack_apply. Retrieval-only — no LLM inference happens here.",
+      "cli": "stack recommend \"<query>\" --json [--k <n>] [--category <name>] [--save]",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Natural-language description of the project / stack need."
+          },
+          "k": {
+            "type": "number",
+            "description": "Max top-level hits to return (default 6)."
+          },
+          "category": {
+            "type": "string",
+            "description": "Optional filter to a single category: Database, Deploy, Cloud, AI, Analytics, Errors, Payments, Code, Tickets, Email, Auth."
+          },
+          "save": {
+            "type": "boolean",
+            "description": "When true, also freeze the result to .stack/recipes/<id>.toml so you can run stack_apply. Returns the recipe id in the response."
+          }
+        },
+        "required": ["query"]
+      }
+    },
+    {
+      "name": "stack_apply",
+      "description": "Apply a saved Recipe: replay `stack add` for each provider, then pre-wire Phantom rotation envelopes + webhook stubs. Set `no_wire: true` to opt out of the Phantom-wire layer (stays pure-provisioning).",
+      "cli": "stack apply <recipe_id> [--noWire]",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "recipe_id": {
+            "type": "string",
+            "description": "Recipe id (filename stem in .stack/recipes/)."
+          },
+          "no_wire": {
+            "type": "boolean",
+            "description": "Skip Phantom envelope + webhook pre-wiring."
+          }
+        },
+        "required": ["recipe_id"]
+      }
     }
   ],
   "resources": [

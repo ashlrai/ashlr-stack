@@ -13,6 +13,10 @@ dist/
 # Stack's per-developer instance data. The committed shape lives in .stack.toml.
 .stack.local.toml
 
+# Stack recipe artifacts — `stack recommend --save` writes TOML into .stack/.
+# These are scratch / reproducibility artifacts, not source of truth.
+.stack/
+
 # Deploy caches
 .vercel/
 .wrangler/

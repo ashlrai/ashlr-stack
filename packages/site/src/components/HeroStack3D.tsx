@@ -5,6 +5,11 @@ import StackRig, { TIERS, restYFor } from "./hero-stack/StackRig";
 import OrbitCluster from "./hero-stack/OrbitCluster";
 import { PROVIDERS, type Provider } from "~/lib/providers";
 
+interface HeroStack3DProps {
+  /** Precomputed simple-icons path data, keyed by provider slug. Built server-side in Hero.astro. */
+  iconPaths?: Record<string, string | null>;
+}
+
 /**
  * Hero 3D scene — eight-plate stack representing Stack's tier architecture.
  *
@@ -69,7 +74,7 @@ const TIER_CONTENT: TierContent[] = [
   },
 ];
 
-export default function HeroStack3D() {
+export default function HeroStack3D({ iconPaths = {} }: HeroStack3DProps) {
   const [reduced, setReduced] = useState(
     () =>
       typeof window !== "undefined" &&
@@ -246,20 +251,36 @@ export default function HeroStack3D() {
             </p>
             {activeProviders.length > 0 ? (
               <div className="flex flex-wrap gap-1.5">
-                {activeProviders.map((p) => (
-                  <a
-                    key={p.name}
-                    href="#providers"
-                    className="inline-flex items-center gap-1.5 mono text-[10px] tracking-[0.08em] px-2 py-1 border border-[color:var(--color-ink-600)] text-[color:var(--color-ink-200)] hover:border-[color:var(--color-blade-400)] hover:text-[color:var(--color-blade-400)] transition-colors"
-                    title={`Jump to ${p.name} — ${p.blurb}`}
-                  >
-                    <span
-                      className="w-1.5 h-1.5 rounded-full"
-                      style={{ backgroundColor: `#${p.color}` }}
-                    />
-                    {p.name}
-                  </a>
-                ))}
+                {activeProviders.map((p) => {
+                  const path = iconPaths[p.slug];
+                  return (
+                    <a
+                      key={p.name}
+                      href="#providers"
+                      className="inline-flex items-center gap-1.5 mono text-[10px] tracking-[0.08em] px-2 py-1 border border-[color:var(--color-ink-600)] text-[color:var(--color-ink-200)] hover:border-[color:var(--color-blade-400)] hover:text-[color:var(--color-blade-400)] transition-colors"
+                      title={`Jump to ${p.name} — ${p.blurb}`}
+                    >
+                      {path ? (
+                        <svg
+                          viewBox="0 0 24 24"
+                          width="12"
+                          height="12"
+                          fill={`#${p.color}`}
+                          aria-hidden="true"
+                          style={{ flexShrink: 0 }}
+                        >
+                          <path d={path} />
+                        </svg>
+                      ) : (
+                        <span
+                          className="w-1.5 h-1.5 rounded-full"
+                          style={{ backgroundColor: `#${p.color}` }}
+                        />
+                      )}
+                      {p.name}
+                    </a>
+                  );
+                })}
               </div>
             ) : (
               <div className="mono text-[10px] tracking-[0.12em] uppercase text-[color:var(--color-ink-500)]">

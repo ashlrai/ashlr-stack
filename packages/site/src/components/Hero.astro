@@ -4,6 +4,12 @@ import HeroStack3D from "./HeroStack3D";
 import HeroIntroOverlay from "./HeroIntroOverlay";
 import StackFallback from "./hero-stack/StackFallback.astro";
 import { PROVIDERS } from "~/lib/providers";
+import { getIconPath } from "~/lib/icons";
+
+const iconPaths: Record<string, string | null> = Object.fromEntries(
+  PROVIDERS.map((p) => [p.slug, getIconPath(p.slug)]),
+);
+const CLAUDE_PROMPT = 'Use Stack to set up a B2B SaaS with auth, AI, and payments.';
 ---
 
 <section id="hero" class="relative overflow-hidden">
@@ -31,42 +37,67 @@ import { PROVIDERS } from "~/lib/providers";
           </span>
         </div>
 
+        <div class="eyebrow mb-4 load-in" style="--load-delay: 100ms; color: var(--color-blade-400);">
+          the only line you tell claude code
+        </div>
+
         <h1
           class="display text-[color:var(--color-ink-50)]"
           style="font-size: clamp(42px, 5.6vw, 78px);"
         >
-          <span class="block load-in" style="--load-delay: 120ms">
-            Tell Stack
+          <span class="block load-in" style="--load-delay: 160ms">
+            <span class="display-accent">&ldquo;</span>Stack my
           </span>
-          <span class="block load-in" style="--load-delay: 200ms">
-            what you're <span class="display-accent">building</span>.
-          </span>
-          <span class="block load-in" style="--load-delay: 280ms">
-            It wires the rest.
+          <span class="block load-in" style="--load-delay: 240ms">
+            backend.<span class="display-accent">&rdquo;</span>
           </span>
         </h1>
 
         <p
           class="mt-8 max-w-[540px] text-[15px] leading-[1.6] text-[color:var(--color-ink-300)] load-in"
-          style="--load-delay: 380ms"
+          style="--load-delay: 340ms"
         >
-          Describe your project in one sentence. Stack picks the providers, creates
-          the accounts, and vaults every key in Phantom — then wires
-          <span class="text-[color:var(--color-ink-100)]">.env</span> +
-          <span class="text-[color:var(--color-ink-100)]">.mcp.json</span> so your
-          dev server and your Claude Code session see an identical stack.
+          You describe the project. Claude picks the providers via
+          <span class="mono text-[color:var(--color-ink-100)]">stack_recommend</span>.
+          Stack creates real accounts through each provider's Management API, vaults every key in
+          <span class="text-[color:var(--color-ink-100)]">Phantom</span>, and wires
+          <span class="mono text-[color:var(--color-ink-100)]">.env</span> +
+          <span class="mono text-[color:var(--color-ink-100)]">.mcp.json</span> so your dev
+          server and your Claude session see an identical stack.
+          {PROVIDERS.length} providers. 11 categories. One prompt.
         </p>
 
-        <!-- install one-liner -->
+        <!-- the actual prompt — copy-pasteable -->
         <div
-          class="mt-10 panel-steel flex items-center justify-between gap-3 max-w-[580px] load-in"
-          style="--load-delay: 480ms; border-left: 2px solid var(--color-blade-500);"
+          class="mt-10 panel-steel flex items-center justify-between gap-3 max-w-[620px] load-in"
+          style="--load-delay: 460ms; border-left: 2px solid var(--color-blade-500);"
         >
           <div class="mono text-[13px] text-[color:var(--color-ink-100)] pl-4 pr-3 py-3 truncate">
-            <span class="ansi-blade select-none">›</span> curl -fsSL stack.ashlr.ai/install.sh | bash
+            <span class="ansi-blade select-none">you</span>
+            <span class="text-[color:var(--color-ink-500)]">›</span>
+            {CLAUDE_PROMPT}
           </div>
           <button
             class="copy-btn mr-2 my-1.5 px-3 py-1.5 border border-[color:var(--color-steel-500)] text-[11px] tracking-[0.12em] uppercase hover:border-[color:var(--color-steel-300)] transition-colors"
+            data-copy={CLAUDE_PROMPT}
+            aria-label="Copy Claude Code prompt"
+          >
+            <span class="copy-label">Copy</span>
+          </button>
+        </div>
+
+        <!-- install one-liner, smaller -->
+        <div
+          class="mt-3 flex items-center gap-3 max-w-[620px] load-in"
+          style="--load-delay: 540ms"
+        >
+          <div class="flex-1 mono text-[11px] text-[color:var(--color-ink-400)] truncate">
+            <span class="text-[color:var(--color-ink-500)]">install</span>
+            <span class="text-[color:var(--color-ink-600)]">›</span>
+            <span class="text-[color:var(--color-ink-200)]">curl -fsSL stack.ashlr.ai/install.sh | bash</span>
+          </div>
+          <button
+            class="copy-btn px-2 py-1 border border-[color:var(--color-ink-700)] text-[10px] tracking-[0.12em] uppercase text-[color:var(--color-ink-400)] hover:border-[color:var(--color-steel-500)] hover:text-[color:var(--color-ink-200)] transition-colors"
             data-copy="curl -fsSL stack.ashlr.ai/install.sh | bash"
             aria-label="Copy install command"
           >
@@ -134,7 +165,7 @@ import { PROVIDERS } from "~/lib/providers";
 
           <!-- R3F scene, lazy-hydrated -->
           <div class="absolute inset-0">
-            <HeroStack3D client:visible />
+            <HeroStack3D iconPaths={iconPaths} client:visible />
           </div>
 
           <!-- Cinematic intro overlay — plays once per session, fades to 3D -->

@@ -1,0 +1,635 @@
+---
+import Docs from "~/layouts/Docs.astro";
+import { Code } from "astro:components";
+import { faqPageSchema, howToSchema } from "~/lib/structured-data";
+import { SITE_URL } from "~/lib/og";
+
+const pageUrl = `${SITE_URL}/docs/recommend/`;
+
+const howTo = howToSchema({
+  name: "Recommend and apply a Stack recipe",
+  description:
+    "Describe what you're building, freeze the result as a Recipe, and apply it — provisioning providers and wiring Phantom rotation in one shot.",
+  totalTime: "PT3M",
+  url: pageUrl,
+  steps: [
+    {
+      name: "Describe what you're building",
+      text: "Run `stack recommend \"<query>\" --save` to rank providers and freeze a recipe to .stack/recipes/<id>.toml.",
+      url: `${pageUrl}#quick-start`,
+    },
+    {
+      name: "Apply the recipe",
+      text: "Run `stack apply <recipe-id>` to replay `stack add` for each provider and pre-wire Phantom rotation envelopes + webhook stubs.",
+      url: `${pageUrl}#stack-apply`,
+    },
+  ],
+});
+
+const faq = faqPageSchema(
+  [
+    {
+      question: "Can I use my own LLM?",
+      answer:
+        "Yes. Set STACK_LM_URL to any OpenAI-compatible endpoint. Stack talks HTTP to LM Studio (localhost:1234) and Ollama (localhost:11434) out of the box.",
+    },
+    {
+      question: "Does anything call Anthropic or OpenAI?",
+      answer:
+        "No. All synthesis is local, or delegated to Claude Code via MCP. Stack's repo has zero remote-LLM SDKs.",
+    },
+    {
+      question: "What if the SLM isn't running?",
+      answer:
+        "`--synth` silently falls back to retrieval-only output. BM25 scoring and recipe freezing still work with no LLM at all.",
+    },
+  ],
+  pageUrl,
+);
+---
+
+<Docs
+  title="AI recommend + apply"
+  description="Describe what you're building. Stack picks the providers, freezes a Recipe, and wires Phantom rotation + webhook stubs when you apply it."
+  eyebrow="Getting started"
+  extraSchemas={[howTo, faq]}
+>
+  <h2>Why this exists</h2>
+  <p>
+    Picking the right providers is the first friction point in a new project.
+    Stack's catalog has <strong>23 curated providers</strong> across 11
+    categories — too many to hold in your head, too few to outsource to a
+    generic LLM. <code>stack recommend</code> closes the gap: free-text in,
+    ranked providers out, frozen to a reproducible Recipe that{" "}
+    <code>stack apply</code> can replay.
+  </p>
+
+  <div class="callout callout-info">
+    <strong>Retrieval-first, not LLM-first.</strong> Ranking runs through a
+    zero-dep BM25 + IDF scorer over the curated catalog. Claude Code (via MCP)
+    or a local SLM can rewrite rationales — but the shortlist is deterministic
+    and offline.
+  </div>
+
+  <h2 id="quick-start">Quick start</h2>
+  <p>Three lines from a blank repo to a provisioned stack:</p>
+
+  <Code
+    code={`stack recommend "B2B SaaS with auth, AI, and payments" --save
+# → .stack/recipes/b2b-saas-with-auth-ai-and-paymen.toml
+
+stack apply b2b-saas-with-auth-ai-and-paymen`}
+    lang="bash"
+    theme="github-dark-dimmed"
+  />
+
+  <h2>Two modes</h2>
+  <p>
+    Stack runs in whichever mode matches where you're typing. Neither mode ever
+    calls a remote LLM from Stack itself.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 28%">Mode</th>
+        <th style="width: 32%">When it fires</th>
+        <th>What does the reasoning</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Claude Code (MCP)</strong></td>
+        <td>
+          You're in a Claude / Cursor / Windsurf session and the agent calls{" "}
+          <code>stack_recommend</code>.
+        </td>
+        <td>
+          Claude consumes Stack's retrieval output as grounded context and
+          writes the rationale itself. Stack never calls an LLM.
+        </td>
+      </tr>
+      <tr>
+        <td><strong>Standalone CLI (local SLM)</strong></td>
+        <td>
+          You run <code>stack recommend --synth</code> in a terminal, no agent
+          attached.
+        </td>
+        <td>
+          Stack speaks OpenAI-compatible HTTP to LM Studio (<code>:1234</code>){" "}
+          or Ollama (<code>:11434</code>). Missing endpoint? Falls back to
+          retrieval-only output — command still exits 0.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>
+    <code>stack recommend</code>
+  </h2>
+  <p>Rank providers against a free-text description. Flags compose.</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 20%">Flag</th>
+        <th style="width: 12%">Type</th>
+        <th>What it does</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>--save</code></td>
+        <td class="text-ink-400 mono text-[12px]">boolean</td>
+        <td>
+          Freeze the result as <code>.stack/recipes/&lt;id&gt;.toml</code>. The
+          id is slugified from the query. Feed it to <code>stack apply</code>.
+        </td>
+      </tr>
+      <tr>
+        <td><code>--synth</code></td>
+        <td class="text-ink-400 mono text-[12px]">boolean</td>
+        <td>
+          Call the local SLM for model-authored rationales. Silently degrades
+          to retrieval-only when neither LM Studio nor Ollama is reachable.
+        </td>
+      </tr>
+      <tr>
+        <td><code>--json</code></td>
+        <td class="text-ink-400 mono text-[12px]">boolean</td>
+        <td>
+          Machine-readable output. Same shape the MCP server returns to Claude.
+        </td>
+      </tr>
+      <tr>
+        <td><code>--k</code></td>
+        <td class="text-ink-400 mono text-[12px]">number</td>
+        <td>
+          Max hits to return. Default <code>6</code>.
+        </td>
+      </tr>
+      <tr>
+        <td><code>--category</code></td>
+        <td class="text-ink-400 mono text-[12px]">string</td>
+        <td>
+          Restrict to one category: <code>Database</code>, <code>Deploy</code>,{" "}
+          <code>Cloud</code>, <code>AI</code>, <code>Analytics</code>,{" "}
+          <code>Errors</code>, <code>Payments</code>, <code>Code</code>,{" "}
+          <code>Tickets</code>, <code>Email</code>, <code>Auth</code>.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Default output</h3>
+  <Code
+    code={`$ stack recommend "B2B SaaS with auth, AI, and payments"
+
+┌   stack recommend
+  query: B2B SaaS with auth, AI, and payments
+
+  ● Clerk  Auth  (4.13)
+    Drop-in auth + users. Secret key stored in Phantom.
+    add with: stack add clerk
+
+  ● Stripe  Payments  (3.70)
+    Billing, subscriptions, tax. Restricted / test-mode secret key stored in Phantom.
+    add with: stack add stripe
+
+  ● xAI  AI  (2.90)
+    Grok + tool use. Key verified on paste.
+    add with: stack add xai
+
+  ● Sentry  Errors  (2.48)
+    Error + performance tracking. Creates a project and fetches its DSN.
+    add with: stack add sentry
+
+  ● OpenAI  AI  (2.23)
+    GPT, Realtime, embeddings. Key verified against /v1/models on paste.
+    add with: stack add openai
+
+  ● Anthropic  AI  (2.23)
+    Claude models + MCP. Key verified against the Messages API on paste.
+    add with: stack add anthropic
+
+  Top pick per category: Auth→clerk, Payments→stripe, AI→xai, Errors→sentry.
+  No matches surfaced for: Database, Deploy, Cloud, Analytics, Code, Tickets, Email.
+  Apply a chosen set with: stack add clerk stripe xai (or supply your own list).
+
+  Tip: rerun with \`--save\` to freeze as a recipe for \`stack apply\`.
+│
+└  Tell Claude or run \`stack add <name>\` to continue.`}
+    lang="text"
+    theme="github-dark-dimmed"
+  />
+
+  <h3><code>--save</code> — freeze to a Recipe</h3>
+  <Code
+    code={`$ stack recommend "B2B SaaS with auth" --save
+
+  ● Clerk  Auth  (4.13)
+  ● Sentry  Errors  (2.48)
+  ● Supabase  Database  (2.16)
+  ● Firebase  Database  (2.16)
+  ● Turso  Database  (0.79)
+
+  Saved recipe: b2b-saas-with-auth   (/path/to/.stack/recipes/b2b-saas-with-auth.toml)
+  Apply with:  stack apply b2b-saas-with-auth`}
+    lang="text"
+    theme="github-dark-dimmed"
+  />
+
+  <h3><code>--synth</code> — local-SLM rationales</h3>
+  <p>
+    With LM Studio or Ollama running, each hit gains a{" "}
+    <code>why:</code> line authored by the model. Without either, the command
+    behaves exactly like the default — no prompts, no failures:
+  </p>
+  <Code
+    code={`$ stack recommend "analytics + error tracking for a Next.js app" --synth
+
+  ● PostHog  Analytics  (5.01)
+    Product analytics + session replay. Personal API key stored in Phantom.
+    why: PostHog gives you funnels, flags, and replay for a Next.js app in one SDK.
+    add with: stack add posthog
+
+  ● Sentry  Errors  (4.77)
+    Error + performance tracking. Creates a project and fetches its DSN.
+    why: Sentry captures unhandled exceptions and Web Vitals without extra glue.
+    add with: stack add sentry`}
+    lang="text"
+    theme="github-dark-dimmed"
+  />
+
+  <h3><code>--json</code> — machine-readable</h3>
+  <p>
+    Same shape the MCP server emits back to Claude. Good for scripts, CI, and
+    your own tooling:
+  </p>
+  <Code
+    code={`$ stack recommend "B2B SaaS with auth and payments" --json
+{
+  "query": "B2B SaaS with auth and payments",
+  "hits": [
+    {
+      "name": "clerk",
+      "displayName": "Clerk",
+      "category": "Auth",
+      "authKind": "api_key",
+      "secrets": ["CLERK_SECRET_KEY"],
+      "blurb": "Drop-in auth + users. Secret key stored in Phantom.",
+      "score": 4.125,
+      "matched": ["auth"]
+    },
+    {
+      "name": "stripe",
+      "displayName": "Stripe",
+      "category": "Payments",
+      "authKind": "api_key",
+      "secrets": ["STRIPE_SECRET_KEY"],
+      "blurb": "Billing, subscriptions, tax. …",
+      "score": 3.697,
+      "matched": ["payments"]
+    }
+  ],
+  "byCategory": { "Auth": [{ "name": "clerk", "score": 4.125 }], "…": [] },
+  "guidance": "Top pick per category: Auth→clerk, Payments→stripe. …"
+}`}
+    lang="json"
+    theme="github-dark-dimmed"
+  />
+
+  <h3><code>--k</code> — cap the hits</h3>
+  <Code
+    code={`$ stack recommend "postgres database" --k 3
+
+  ● Neon  Database  (5.76)
+    Serverless Postgres. Creates a project and pools the connection string.
+  ● Supabase  Database  (5.49)
+    Postgres + Auth + Storage. Full upstream provisioning via the Management API.
+  ● Turso  Database  (4.35)
+    Edge SQLite (libSQL). Creates a database in your default org.`}
+    lang="text"
+    theme="github-dark-dimmed"
+  />
+
+  <h3><code>--category</code> — restrict to one category</h3>
+  <Code
+    code={`$ stack recommend "serverless" --category Database
+
+  ● Neon  Database  (5.76)
+    Serverless Postgres. Creates a project and pools the connection string.
+  ● Turso  Database  (2.18)
+    Edge SQLite (libSQL). Creates a database in your default org.`}
+    lang="text"
+    theme="github-dark-dimmed"
+  />
+
+  <h2 id="stack-apply">
+    <code>stack apply</code>
+  </h2>
+  <p>
+    Replay a saved Recipe through the existing <code>stack add</code> pipeline,
+    then pre-wire Phantom rotation so the first provisioned credential lands
+    into an already-rotating envelope.
+  </p>
+
+  <Code
+    code={`$ stack apply b2b-saas-with-auth
+
+  recipe   b2b-saas-with-auth
+  query    B2B SaaS with auth
+  providers clerk, sentry, supabase
+
+  › stack add clerk
+  › stack add sentry
+  › stack add supabase
+
+  envelopes 3 · webhooks 2
+
+  › stack doctor
+  ✓ b2b-saas-with-auth applied.`}
+    lang="text"
+    theme="github-dark-dimmed"
+  />
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 20%">Flag</th>
+        <th>What it does</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>--noWire</code></td>
+        <td>
+          Skip the Phantom-wire layer — pure <code>stack add</code> replay, no
+          envelopes, no webhook stubs. Use when you want to opt out of the
+          rotation-from-the-first-call moat.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>What gets wired</h3>
+  <p>With the default flow (no <code>--noWire</code>) apply also writes:</p>
+  <ul>
+    <li>
+      <strong>Phantom rotation envelopes</strong> — one per secret slot the
+      recipe's providers declare. The envelope rotates on a cadence from day
+      one, so the credential you just fetched is never the credential that
+      ships to prod a week later.
+    </li>
+    <li>
+      <strong>Webhook stubs</strong> — scaffolded verification + handler files
+      for any provider the recipe includes with a known rotation/webhook
+      contract: <code>stripe</code>, <code>clerk</code>, <code>supabase</code>,{" "}
+      <code>github</code>. Drop them into your app; they're ready to verify
+      signatures against Phantom-held secrets.
+    </li>
+    <li>
+      <strong>Inline <code>stack doctor</code></strong> — runs at the end so
+      you see any red dots before <code>apply</code> exits.
+    </li>
+  </ul>
+
+  <div class="callout">
+    <strong>Idempotent.</strong> Re-running <code>stack apply</code> against
+    the same recipe is safe — providers already present short-circuit, and the
+    Phantom-wire pass de-duplicates envelopes by slot name.
+  </div>
+
+  <h2>MCP tools</h2>
+  <p>
+    Both commands are exposed as MCP tools so Claude Code (and any MCP-speaking
+    editor) can drive the full loop from a coding session. See the full{" "}
+    <a href="/docs/mcp/">MCP integration docs</a> for setup.
+  </p>
+
+  <div class="not-prose mt-4 panel rounded-xl p-5">
+    <div class="flex items-baseline justify-between gap-3 flex-wrap mb-2">
+      <code class="mono text-magenta-200 text-[14px] font-semibold">stack_recommend</code>
+      <code class="mono text-[11.5px] text-ink-500">stack recommend …</code>
+    </div>
+    <p class="text-[13px] text-ink-300 leading-relaxed mb-3">
+      Retrieval-only. Returns ranked providers with scores, matched terms, and
+      per-category top picks. Pass <code>save: true</code> to also freeze a
+      Recipe to disk so you can follow up with <code>stack_apply</code>.
+    </p>
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 22%">Input</th>
+          <th style="width: 14%">Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>
+            <code class="mono text-[12px]">query</code>
+            <span class="ml-1.5 text-[10px] uppercase tracking-wider text-magenta-400 font-semibold">req</span>
+          </td>
+          <td class="text-ink-400 mono text-[12px]">string</td>
+          <td class="text-[13px]">Free-text description of the project.</td>
+        </tr>
+        <tr>
+          <td><code class="mono text-[12px]">k</code></td>
+          <td class="text-ink-400 mono text-[12px]">number</td>
+          <td class="text-[13px]">Max results (default 6).</td>
+        </tr>
+        <tr>
+          <td><code class="mono text-[12px]">category</code></td>
+          <td class="text-ink-400 mono text-[12px]">string</td>
+          <td class="text-[13px]">Restrict to one category.</td>
+        </tr>
+        <tr>
+          <td><code class="mono text-[12px]">save</code></td>
+          <td class="text-ink-400 mono text-[12px]">boolean</td>
+          <td class="text-[13px]">
+            Freeze to <code>.stack/recipes/&lt;id&gt;.toml</code>; returns the
+            recipe id.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="not-prose mt-4 panel rounded-xl p-5">
+    <div class="flex items-baseline justify-between gap-3 flex-wrap mb-2">
+      <code class="mono text-magenta-200 text-[14px] font-semibold">stack_apply</code>
+      <code class="mono text-[11.5px] text-ink-500">stack apply …</code>
+    </div>
+    <p class="text-[13px] text-ink-300 leading-relaxed mb-3">
+      Replay a saved Recipe. Runs <code>stack add</code> for each provider,
+      then pre-wires Phantom rotation envelopes + webhook stubs.
+    </p>
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 22%">Input</th>
+          <th style="width: 14%">Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>
+            <code class="mono text-[12px]">recipe_id</code>
+            <span class="ml-1.5 text-[10px] uppercase tracking-wider text-magenta-400 font-semibold">req</span>
+          </td>
+          <td class="text-ink-400 mono text-[12px]">string</td>
+          <td class="text-[13px]">
+            Recipe id (filename stem in <code>.stack/recipes/</code>).
+          </td>
+        </tr>
+        <tr>
+          <td><code class="mono text-[12px]">no_wire</code></td>
+          <td class="text-ink-400 mono text-[12px]">boolean</td>
+          <td class="text-[13px]">Skip Phantom envelope + webhook wiring.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>In-session example</h3>
+  <p>
+    A real back-and-forth once Stack's MCP server is installed in Claude Code:
+  </p>
+
+  <Code
+    code={`You > Build me a SaaS — auth, payments, error tracking, Postgres.
+
+Claude > I'll pick the providers first and freeze a recipe so you can
+         replay this.
+         (calls stack_recommend { query: "SaaS with auth, payments,
+          error tracking, and Postgres", save: true })
+
+         Top picks: clerk (Auth), stripe (Payments), sentry (Errors),
+         neon (Database). Saved as recipe "saas-with-auth-payments-error".
+
+         Want me to apply it now? This runs \`stack add\` for each and
+         pre-wires Phantom rotation + webhook stubs.
+
+You > Yes.
+
+Claude > (calls stack_apply { recipe_id: "saas-with-auth-payments-error" })
+
+         ✓ 4 providers provisioned · 7 rotation envelopes · 3 webhook stubs
+         All services healthy (stack doctor).`}
+    lang="text"
+    theme="github-dark-dimmed"
+  />
+
+  <h2>Recipe file format</h2>
+  <p>
+    Recipes are plain TOML under <code>.stack/recipes/&lt;id&gt;.toml</code>.
+    Safe to commit — provider names are stable, the file contains no secrets
+    (credentials live in <a href="/docs/phantom/">Phantom</a>).
+  </p>
+
+  <Code
+    code={`id = "b2b-saas-with-auth"
+query = "B2B SaaS with auth"
+createdAt = "2026-04-19T02:22:44.810Z"
+guidance = "Top pick per category: Auth→clerk, Errors→sentry, Database→supabase."
+
+[[providers]]
+name = "clerk"
+rationale = "auth"
+
+[[providers]]
+name = "sentry"
+rationale = "auth"
+
+[[providers]]
+name = "supabase"
+rationale = "auth"`}
+    lang="toml"
+    theme="github-dark-dimmed"
+  />
+
+  <p>
+    The <code>id</code> is the first ~40 chars of the query, slugified. The{" "}
+    <code>rationale</code> starts as the matched terms from retrieval and gets
+    overwritten when you re-run with <code>--synth</code> or when Claude
+    synthesizes via MCP.
+  </p>
+
+  <h2>How retrieval works</h2>
+  <p>
+    Zero-dep BM25 + IDF scorer over the curated provider catalog, with a small
+    table of hand-authored synonyms (<code>db</code> → <code>database</code>,{" "}
+    <code>billing</code> → <code>payments</code>, <code>auth</code> →{" "}
+    <code>users</code>, …) so natural-language queries map to the terms we
+    actually index. Scoring is deterministic — same query, same ranking. The
+    catalog itself lives in <code>packages/core/src/catalog.ts</code> and is
+    the same source <a href="/docs/providers/">the providers page</a> renders
+    from.
+  </p>
+
+  <h2>FAQ</h2>
+
+  <h3>Can I use my own LLM?</h3>
+  <p>
+    Yes. Set <code>STACK_LM_URL</code> to any OpenAI-compatible endpoint. Stack
+    talks plain HTTP to LM Studio (<code>localhost:1234</code>) and Ollama
+    (<code>localhost:11434</code>) out of the box — no SDKs, no API keys in the
+    Stack process.
+  </p>
+
+  <h3>Does anything call Anthropic or OpenAI?</h3>
+  <p>
+    No. All synthesis is either <strong>local</strong> (your SLM) or{" "}
+    <strong>delegated to Claude Code</strong> via MCP. Stack's repo has zero
+    remote-LLM SDKs. The user's LLM keys belong to Claude, not to us.
+  </p>
+
+  <h3>What if the SLM isn't running?</h3>
+  <p>
+    <code>--synth</code> silently falls back to retrieval-only output. The
+    command still exits <code>0</code>, the ranking is unchanged, and{" "}
+    <code>--save</code> writes the same Recipe shape. No prompts, no errors —
+    retrieval alone is the floor, synthesis is the bonus.
+  </p>
+
+  <h2>What now?</h2>
+
+  <div class="not-prose mt-6 grid gap-3 sm:grid-cols-2">
+    <a href="/docs/providers/" class="docs-card group">
+      <h3 class="text-base font-semibold text-white mb-1 group-hover:text-magenta-200 transition-colors">
+        Browse every provider
+      </h3>
+      <p class="text-[13px] text-ink-400 leading-relaxed">
+        The full catalog retrieval runs against — 23 providers across 11
+        categories.
+      </p>
+    </a>
+    <a href="/docs/mcp/" class="docs-card group">
+      <h3 class="text-base font-semibold text-white mb-1 group-hover:text-magenta-200 transition-colors">
+        MCP integration
+      </h3>
+      <p class="text-[13px] text-ink-400 leading-relaxed">
+        Wire Stack's MCP server into Claude Code, Cursor, Windsurf, or Zed.
+      </p>
+    </a>
+    <a href="/docs/cli/" class="docs-card group">
+      <h3 class="text-base font-semibold text-white mb-1 group-hover:text-magenta-200 transition-colors">
+        CLI reference
+      </h3>
+      <p class="text-[13px] text-ink-400 leading-relaxed">
+        Every <code class="mono text-ink-200">stack</code> subcommand with
+        flags and defaults.
+      </p>
+    </a>
+    <a href="/docs/phantom/" class="docs-card group">
+      <h3 class="text-base font-semibold text-white mb-1 group-hover:text-magenta-200 transition-colors">
+        Phantom Secrets
+      </h3>
+      <p class="text-[13px] text-ink-400 leading-relaxed">
+        Where the rotation envelopes <code class="mono text-ink-200">stack apply</code> wires actually live.
+      </p>
+    </a>
+  </div>
+</Docs>

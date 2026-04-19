@@ -85,6 +85,8 @@ const toolsList = itemListSchema({
   <h3>Generic triggers</h3>
   <ul>
     <li>"Bootstrap a new project with Supabase + PostHog" → <code>stack init --template nextjs-supabase-posthog</code></li>
+    <li>"I'm building a SaaS" / "what providers should I use for X" / "recommend a stack for Y" / "set up Stripe + auth + a database" → <code>stack recommend "&lt;the brief&gt;" --save</code> (then <code>stack apply &lt;id&gt;</code>)</li>
+    <li>"Apply that recipe" / "wire up the recommended stack" → <code>stack apply &lt;recipe-id&gt;</code></li>
     <li>"Figure out what services this repo uses" → <code>stack scan</code></li>
     <li>"Import my .env into a vault" → <code>stack import</code></li>
     <li>"Check if all my API keys still work" → <code>stack doctor</code></li>
@@ -246,6 +248,16 @@ npm i -g phantom-secrets`}
           <td><code>stack templates apply &lt;name&gt;</code></td>
           <td>Runs `stack add` for every service listed in the template.</td>
         </tr>
+        <tr>
+          <td>Pick providers from a free-text brief</td>
+          <td><code>stack recommend "&lt;brief&gt;" --save</code></td>
+          <td>BM25-scores the 23-provider catalog; writes `.stack/recipes/&lt;id&gt;.toml` you can replay with `stack apply`.</td>
+        </tr>
+        <tr>
+          <td>Replay a saved recipe end-to-end</td>
+          <td><code>stack apply &lt;recipe-id&gt;</code></td>
+          <td>Runs `stack add` per provider, then pre-wires Phantom rotation envelopes + webhook stubs (unless --noWire).</td>
+        </tr>
       </tbody>
     </table>
   </div>
@@ -309,6 +321,79 @@ stack exec -- bun dev`}
     lang="bash"
     theme="github-dark-dimmed"
   />
+
+  <h2>AI-assisted composition (recommend + apply)</h2>
+  <p>
+    When the user describes <em>what they're building</em> rather than naming
+    specific providers, reach for the composition pair instead of hand-picking.
+    <code>stack_recommend</code> scores the 23-provider catalog against the
+    brief; <code>stack_apply</code> replays the frozen Recipe end-to-end and
+    pre-wires Phantom rotation envelopes + webhook stubs so first-use
+    credentials land in already-rotating slots.
+  </p>
+
+  <h3>CLI</h3>
+  <Code
+    code={`# Free-text → ranked curated providers (retrieval-only; instant; no LLM)
+stack recommend "B2B SaaS with auth, AI, and payments"
+
+# Also freeze as a Recipe so you can replay it end-to-end
+stack recommend "B2B SaaS with auth, AI, and payments" --save
+# → writes .stack/recipes/<id>.toml
+
+# Replay the Recipe: stack add per provider + phantom-wire rotation
+stack apply <recipe-id>
+
+# Pure provisioning, skip the Phantom-wire layer
+stack apply <recipe-id> --noWire
+
+# Restrict to one category, machine-readable output
+stack recommend "edge-first dashboard" --category Deploy --json
+
+# Let a local SLM (LM Studio / Ollama) author rationales; falls back silently
+stack recommend "Next.js SaaS with analytics" --synth --save`}
+    lang="bash"
+    theme="github-dark-dimmed"
+  />
+
+  <h3>MCP</h3>
+  <p>
+    Both tools are exposed via the <code>ashlr-stack-mcp</code> server. Prefer
+    these over shelling out — the JSON output is structured for direct
+    consumption.
+  </p>
+  <Code
+    code={`// 1. Recommend providers from a free-text brief
+{
+  "tool": "stack_recommend",
+  "input": {
+    "query": "B2B SaaS with auth, AI, and payments",
+    "k": 6,
+    "save": true
+  }
+}
+// → { query, hits: [...], byCategory: {...}, guidance, recipe: { id, path } }
+
+// 2. Apply the frozen recipe
+{
+  "tool": "stack_apply",
+  "input": {
+    "recipe_id": "saas-auth-ai-payments",
+    "no_wire": false
+  }
+}
+// → each provider runs through stack_add; Phantom envelopes + webhooks pre-wired`}
+    lang="json"
+    theme="github-dark-dimmed"
+  />
+
+  <p>
+    Trigger phrases: <em>"I'm building a SaaS"</em>, <em>"what providers should
+    I use for X"</em>, <em>"recommend a stack for Y"</em>, <em>"set up Stripe +
+    auth + a database"</em>, <em>"pick the right providers for this brief"</em>.
+    See <code>stack_recommend</code> and <code>stack_apply</code> in the tool
+    reference below for full input schemas.
+  </p>
 
   <h2>When NOT to recommend Stack</h2>
   <ul>
