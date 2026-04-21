@@ -1,6 +1,7 @@
 ---
 import Base from "~/layouts/Base.astro";
 import Hero from "~/components/Hero.astro";
+import LogoMarquee from "~/components/LogoMarquee";
 import OneCommand from "~/components/OneCommand";
 import ProvidersGrid from "~/components/ProvidersGrid.astro";
 import HowItWorks from "~/components/HowItWorks.astro";
@@ -12,10 +13,54 @@ import StackREPL from "~/components/StackREPL";
 import McpClients from "~/components/McpClients.astro";
 import FAQSection from "~/components/FAQSection.astro";
 import Footer from "~/components/Footer.astro";
+import { PROVIDERS_REF } from "~/lib/providers-ref";
+import { PROVIDERS } from "~/lib/providers";
+import { getIconPath } from "~/lib/icons";
+
+// Build the marquee payload from the canonical catalog (29 providers). Pull
+// color + icon slug from the display catalog by name, so every logo renders
+// in its real brand color via the existing simple-icons pipeline.
+const marqueeProviders = PROVIDERS_REF.map((p) => {
+  const display = PROVIDERS.find((q) => q.name === p.displayName) ??
+    PROVIDERS.find((q) => q.slug === p.name);
+  return {
+    slug: display?.slug ?? p.name,
+    name: p.name,
+    displayName: p.displayName,
+    color: display?.color ?? "e96b2a",
+  };
+});
+const marqueeIconPaths: Record<string, string | null> = Object.fromEntries(
+  marqueeProviders.map((p) => [p.slug, getIconPath(p.slug)]),
+);
+
+const STATS = [
+  { n: String(PROVIDERS_REF.length), l: "providers" },
+  { n: "19", l: "mcp tools" },
+  { n: "11", l: "categories" },
+  { n: "05", l: "templates" },
+  { n: "MIT", l: "license" },
+];
 ---
 
 <Base>
   <Hero />
+
+  <!-- § 01a · Supported providers — full-width marquee of all 29 logos.
+       Answers "what does Stack actually integrate?" in one glance. -->
+  <LogoMarquee providers={marqueeProviders} iconPaths={marqueeIconPaths} client:visible />
+
+  <!-- Stat strip — relocated from inside the hero so the hero can breathe. -->
+  <section class="relative mx-auto max-w-[1240px] px-6 sm:px-10 pt-10 pb-2">
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-0 border-l border-t border-[color:var(--color-ink-600)]">
+      {STATS.map((stat) => (
+        <div class="border-r border-b border-[color:var(--color-ink-600)] px-4 py-3">
+          <div class="display text-[color:var(--color-ink-50)]" style="font-size: 22px; font-weight: 600;">{stat.n}</div>
+          <div class="eyebrow mt-1 text-[9px]">{stat.l}</div>
+        </div>
+      ))}
+    </div>
+  </section>
 
   <!-- § 02 · Before / After — the "one command" moment -->
   <section id="one-command" class="relative mx-auto max-w-[1240px] px-6 sm:px-10 pt-20 sm:pt-24 pb-16 sm:pb-20">

@@ -4,7 +4,6 @@ import HeroStack3D from "./HeroStack3D";
 import HeroIntroOverlay from "./HeroIntroOverlay";
 import GenerateStackDemo from "./GenerateStackDemo";
 import StackFallback from "./hero-stack/StackFallback.astro";
-import PhantomBadge from "./PhantomBadge.astro";
 import { PROVIDERS } from "~/lib/providers";
 import { PROVIDERS_REF } from "~/lib/providers-ref";
 import { getIconPath } from "~/lib/icons";
@@ -12,7 +11,6 @@ import { getIconPath } from "~/lib/icons";
 const iconPaths: Record<string, string | null> = Object.fromEntries(
   PROVIDERS.map((p) => [p.slug, getIconPath(p.slug)]),
 );
-const CLAUDE_PROMPT = 'Use Stack to set up a B2B SaaS with auth, AI, and payments.';
 ---
 
 <section id="hero" class="relative overflow-hidden">
@@ -21,11 +19,14 @@ const CLAUDE_PROMPT = 'Use Stack to set up a B2B SaaS with auth, AI, and payment
 
   <Nav />
 
-  <div class="relative mx-auto max-w-[1240px] px-6 sm:px-10 pt-16 sm:pt-20 lg:pt-24 pb-20 lg:pb-24">
+  <div class="relative mx-auto max-w-[1240px] px-6 sm:px-10 pt-16 sm:pt-20 lg:pt-24 pb-16 lg:pb-20">
 
     <div class="grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] gap-10 lg:gap-16 items-start">
 
-      <!-- LEFT — copy -->
+      <!-- LEFT — copy + demo. Simplified: one eyebrow, headline, one-line subhead,
+           the demo (primary CTA), and a small install + source line. No
+           stat strip (moved below the logo marquee), no duplicate copy-paste
+           prompt (the demo IS the prompt surface). -->
       <div class="relative">
         <!-- tiny technical eyebrow -->
         <div class="eyebrow flex items-center gap-3 mb-7 load-in" style="--load-delay: 40ms">
@@ -33,10 +34,10 @@ const CLAUDE_PROMPT = 'Use Stack to set up a B2B SaaS with auth, AI, and payment
           <span class="text-[color:var(--color-ink-600)]">/</span>
           <span>CONTROL PLANE</span>
           <span class="text-[color:var(--color-ink-600)]">/</span>
-          <span>v0.1</span>
+          <span>v0.1.1</span>
           <span class="ml-2 inline-flex items-center gap-1.5">
             <span class="w-1.5 h-1.5 bg-[color:var(--color-blade-500)]" style="animation: pulse 1800ms ease-in-out infinite;"></span>
-            <span class="text-[color:var(--color-blade-400)]">LIVE</span>
+            <span class="text-[color:var(--color-blade-400)]">LIVE ON NPM</span>
           </span>
         </div>
 
@@ -56,50 +57,25 @@ const CLAUDE_PROMPT = 'Use Stack to set up a B2B SaaS with auth, AI, and payment
           </span>
         </h1>
 
+        <!-- Single crisp line — no 5-line paragraph of digging. -->
         <p
-          class="mt-8 max-w-[540px] text-[15px] leading-[1.6] text-[color:var(--color-ink-300)] load-in"
-          style="--load-delay: 340ms"
+          class="mt-6 text-[17px] leading-[1.5] text-[color:var(--color-ink-200)] load-in max-w-[560px]"
+          style="--load-delay: 320ms"
         >
-          You describe the project. Claude picks the providers via
-          <span class="mono text-[color:var(--color-ink-100)]">stack_recommend</span>.
-          Stack creates real accounts through each provider's Management API, vaults every key in
-          <PhantomBadge size="sm" />, and wires
-          <span class="mono text-[color:var(--color-ink-100)]">.env</span> +
-          <span class="mono text-[color:var(--color-ink-100)]">.mcp.json</span> so your dev
-          server and your Claude session see an identical stack.
-          {PROVIDERS_REF.length} providers. 11 categories. One prompt.
+          One prompt. <strong class="text-[color:var(--color-ink-50)] font-semibold">{PROVIDERS_REF.length} providers</strong>, real accounts, every key vaulted, <span class="mono text-[color:var(--color-ink-100)]">.env</span> + <span class="mono text-[color:var(--color-ink-100)]">.mcp.json</span> wired. In under a minute.
         </p>
 
-        <!-- the actual prompt — copy-pasteable -->
-        <div
-          class="mt-10 panel-steel flex items-center justify-between gap-3 max-w-[620px] load-in"
-          style="--load-delay: 460ms; border-left: 2px solid var(--color-blade-500);"
-        >
-          <div class="mono text-[13px] text-[color:var(--color-ink-100)] pl-4 pr-3 py-3 truncate">
-            <span class="ansi-blade select-none">you</span>
-            <span class="text-[color:var(--color-ink-500)]">›</span>
-            {CLAUDE_PROMPT}
-          </div>
-          <button
-            class="copy-btn mr-2 my-1.5 px-3 py-1.5 border border-[color:var(--color-steel-500)] text-[11px] tracking-[0.12em] uppercase hover:border-[color:var(--color-steel-300)] transition-colors"
-            data-copy={CLAUDE_PROMPT}
-            aria-label="Copy Claude Code prompt"
-          >
-            <span class="copy-label">Copy</span>
-          </button>
-        </div>
-
-        <!-- Live demo — click to watch a real recipe materialize -->
-        <div class="max-w-[620px] load-in" style="--load-delay: 500ms">
+        <!-- THE DEMO — primary CTA. Click to watch a real recipe materialize. -->
+        <div class="mt-8 max-w-[620px] load-in" style="--load-delay: 420ms">
           <GenerateStackDemo iconPaths={iconPaths} client:visible />
         </div>
 
-        <!-- install one-liner, smaller -->
+        <!-- Install + source, small and unobtrusive. -->
         <div
-          class="mt-3 flex items-center gap-3 max-w-[620px] load-in"
+          class="mt-4 flex flex-wrap items-center gap-3 max-w-[620px] load-in"
           style="--load-delay: 540ms"
         >
-          <div class="flex-1 mono text-[11px] text-[color:var(--color-ink-400)] truncate">
+          <div class="flex-1 min-w-0 mono text-[11px] text-[color:var(--color-ink-400)] truncate">
             <span class="text-[color:var(--color-ink-500)]">install</span>
             <span class="text-[color:var(--color-ink-600)]">›</span>
             <span class="text-[color:var(--color-ink-200)]">curl -fsSL stack.ashlr.ai/install.sh | bash</span>
@@ -111,45 +87,18 @@ const CLAUDE_PROMPT = 'Use Stack to set up a B2B SaaS with auth, AI, and payment
           >
             <span class="copy-label">Copy</span>
           </button>
-        </div>
-
-        <!-- CTAs -->
-        <div class="mt-8 flex flex-wrap items-center gap-4 load-in" style="--load-delay: 560ms">
-          <a href="/docs/quickstart" class="btn btn-primary">
-            Get started
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-              <path d="M1 5h8M6 1l3 4-3 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="square" stroke-linejoin="miter"/>
-            </svg>
-          </a>
           <a
             href="https://github.com/ashlrai/ashlr-stack"
-            class="btn btn-ghost"
+            class="mono text-[11px] tracking-[0.12em] uppercase text-[color:var(--color-ink-400)] hover:text-[color:var(--color-ink-100)] transition-colors flex items-center gap-1.5"
             rel="noopener"
             target="_blank"
+            aria-label="View source on GitHub"
           >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M12 .5A11.5 11.5 0 0 0 .5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.56 0-.28-.01-1.02-.02-2.01-3.2.7-3.87-1.54-3.87-1.54-.52-1.33-1.28-1.69-1.28-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.2 1.77 1.2 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.56-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.44-2.29 1.17-3.1-.12-.29-.51-1.46.11-3.04 0 0 .96-.31 3.15 1.18a10.9 10.9 0 0 1 5.74 0c2.19-1.49 3.15-1.18 3.15-1.18.62 1.58.23 2.75.11 3.04.73.81 1.17 1.84 1.17 3.1 0 4.42-2.69 5.39-5.25 5.68.41.36.78 1.07.78 2.16 0 1.56-.01 2.82-.01 3.2 0 .31.2.68.8.56A11.5 11.5 0 0 0 23.5 12 11.5 11.5 0 0 0 12 .5z"></path>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 .5A11.5 11.5 0 0 0 .5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.56 0-.28-.01-1.02-.02-2.01-3.2.7-3.87-1.54-3.87-1.54-.52-1.33-1.28-1.69-1.28-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.2 1.77 1.2 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.56-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.44-2.29 1.17-3.1-.12-.29-.51-1.46.11-3.04 0 0 .96-.31 3.15 1.18a10.9 10.9 0 0 1 5.74 0c2.19-1.49 3.15-1.18 3.15-1.18.62 1.58.23 2.75.11 3.04.73.81 1.17 1.84 1.17 3.1 0 4.42-2.69 5.39-5.25 5.68.41.36.78 1.07.78 2.16 0 1.56-.01 2.82-.01 3.2 0 .31.2.68.8.56A11.5 11.5 0 0 0 23.5 12 11.5 11.5 0 0 0 12 .5z"/>
             </svg>
-            GitHub
+            Source
           </a>
-        </div>
-
-        <!-- stat strip -->
-        <div
-          class="mt-14 grid grid-cols-2 sm:grid-cols-4 gap-0 border-l border-t border-[color:var(--color-ink-600)] max-w-[580px] load-in"
-          style="--load-delay: 660ms"
-        >
-          {[
-            { n: String(PROVIDERS_REF.length), l: "providers" },
-            { n: "17", l: "mcp tools" },
-            { n: "05", l: "templates" },
-            { n: "MIT", l: "license" },
-          ].map((stat) => (
-            <div class="border-r border-b border-[color:var(--color-ink-600)] px-4 py-3">
-              <div class="display text-[color:var(--color-ink-50)]" style="font-size: 22px; font-weight: 600;">{stat.n}</div>
-              <div class="eyebrow mt-1 text-[9px]">{stat.l}</div>
-            </div>
-          ))}
         </div>
       </div>
 
