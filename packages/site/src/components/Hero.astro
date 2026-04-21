@@ -1,15 +1,32 @@
 ---
 import Nav from "./Nav.astro";
-import HeroStack3D from "./HeroStack3D";
+import StackOrbit from "./StackOrbit";
 import HeroIntroOverlay from "./HeroIntroOverlay";
 import GenerateStackDemo from "./GenerateStackDemo";
-import StackFallback from "./hero-stack/StackFallback.astro";
 import { PROVIDERS } from "~/lib/providers";
 import { PROVIDERS_REF } from "~/lib/providers-ref";
 import { getIconPath } from "~/lib/icons";
 
 const iconPaths: Record<string, string | null> = Object.fromEntries(
   PROVIDERS.map((p) => [p.slug, getIconPath(p.slug)]),
+);
+
+// Build the orbit payload from the canonical catalog (29 entries). Join against
+// the display catalog for brand color + icon slug — catalog.ts doesn't carry
+// either and we want every logo in its real brand color.
+const orbitProviders = PROVIDERS_REF.map((p) => {
+  const d = PROVIDERS.find((q) => q.name === p.displayName) ??
+    PROVIDERS.find((q) => q.slug === p.name);
+  return {
+    slug: d?.slug ?? p.name,
+    name: p.name,
+    displayName: p.displayName,
+    color: d?.color ?? "e96b2a",
+    category: p.category,
+  };
+});
+const orbitIconPaths: Record<string, string | null> = Object.fromEntries(
+  orbitProviders.map((p) => [p.slug, getIconPath(p.slug)]),
 );
 ---
 
@@ -102,45 +119,33 @@ const iconPaths: Record<string, string | null> = Object.fromEntries(
         </div>
       </div>
 
-      <!-- RIGHT — 3D stack -->
+      <!-- RIGHT — orbital provider constellation -->
       <div class="relative load-in" style="--load-delay: 300ms">
         <!-- FIG label above -->
         <div class="eyebrow flex items-center justify-between mb-3 text-[color:var(--color-steel-300)]">
-          <span>FIG. 01 — STACK ARCHITECTURE</span>
-          <span>08 TIERS</span>
+          <span>FIG. 01 — PROVIDER CONSTELLATION</span>
+          <span>{PROVIDERS_REF.length} PROVIDERS</span>
         </div>
 
-        <!-- 3D canvas container with tick-corner frame -->
-        <div class="tick-corners relative panel-steel aspect-[4/5] lg:aspect-[5/6] w-full">
+        <!-- Orbital canvas with tick-corner frame -->
+        <div class="tick-corners relative panel-steel aspect-square w-full overflow-hidden">
           <span class="tick-tr"></span>
           <span class="tick-bl"></span>
 
-          <!-- SVG fallback shown during hydration; Canvas paints over it -->
-          <div class="absolute inset-0 flex items-center justify-center">
-            <StackFallback />
-          </div>
-
-          <!-- R3F scene, lazy-hydrated -->
+          <!-- All 29 providers orbit the Stack core with periodic
+               "stack apply" pulse waves. Pure SVG + CSS, no R3F. -->
           <div class="absolute inset-0">
-            <HeroStack3D iconPaths={iconPaths} client:visible />
+            <StackOrbit providers={orbitProviders} iconPaths={orbitIconPaths} client:visible />
           </div>
 
-          <!-- Cinematic intro overlay — plays once per session, fades to 3D -->
+          <!-- Cinematic intro overlay — plays once per session -->
           <HeroIntroOverlay client:idle />
-
-          <!-- subtle label overlays -->
-          <div class="absolute left-3 bottom-3 caption text-[color:var(--color-steel-300)]">
-            STK-01 · COMPOSITE
-          </div>
-          <div class="absolute right-3 bottom-3 caption text-[color:var(--color-steel-300)]">
-            SCALE 1:1
-          </div>
         </div>
 
         <!-- caption below -->
         <div class="mt-3 flex items-center justify-between text-[color:var(--color-steel-300)] mono text-[11px]">
-          <span>8-tier composition · human → phantom</span>
-          <span class="text-[color:var(--color-blade-400)]">↓ drag to rotate</span>
+          <span>3 orbits · headline → core → long-tail</span>
+          <span class="text-[color:var(--color-blade-400)]">hover any logo</span>
         </div>
       </div>
     </div>
