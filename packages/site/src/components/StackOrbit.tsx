@@ -300,6 +300,11 @@ export default function StackOrbit({ providers, iconPaths = {} }: Props) {
           </g>
           <polygon className="orbit-core-crisp" points="0,-9 9,7 -9,7" fill="none" stroke="#f5883e" strokeWidth="0.9" strokeLinejoin="miter" />
           <text x="0" y="24" textAnchor="middle" fill="#f5883e" fontSize="4.5" fontFamily="ui-monospace, 'SF Mono', Menlo, monospace" letterSpacing="0.4">STACK</text>
+          {/* SVG-native focus ring — CSS `outline` on <g> is unreliable
+               (Firefox ignores it, Chrome/Safari misalign under transform).
+               This circle renders in SVG coord space so it survives the
+               focus-state scale(1.15) correctly. */}
+          <circle className="orbit-core-focus-ring" cx="0" cy="0" r="17" fill="none" stroke="#f5883e" strokeWidth="1" strokeDasharray="2 1.5" />
         </g>
       </svg>
 
@@ -372,11 +377,12 @@ export default function StackOrbit({ providers, iconPaths = {} }: Props) {
           transform: scale(1.15);
           filter: drop-shadow(0 0 3px rgba(233, 107, 42, 0.55));
         }
-        .stack-orbit .orbit-core-group:focus-visible {
-          outline: 2px solid #f5883e;
-          outline-offset: 4px;
-          border-radius: 4px;
+        .stack-orbit .orbit-core-focus-ring {
+          opacity: 0;
+          pointer-events: none;
+          transition: opacity 120ms ease;
         }
+        .stack-orbit .orbit-core-group:focus-visible .orbit-core-focus-ring { opacity: 1; }
         .stack-orbit .orbit-core-group:focus-visible .orbit-core-crisp { stroke: #fff; }
         .stack-orbit.orbit-core-flash .orbit-core-crisp { animation: coreFlash 600ms ease-out; }
         @keyframes coreFlash {
