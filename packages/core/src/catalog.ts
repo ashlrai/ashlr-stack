@@ -81,6 +81,12 @@ export const PROVIDERS_REF: ProviderRef[] = [
     authKind: "pat",
     secrets: ["NEON_API_KEY", "DATABASE_URL"],
     blurb: "Serverless Postgres. Creates a project and pools the connection string.",
+    mcp: {
+      name: "neon",
+      preview: true,
+      detail:
+        "@neondatabase/mcp-server-neon with NEON_API_KEY piped from Phantom — branch, migrate, and query from the agent.",
+    },
     dashboard: "https://console.neon.tech",
     docs: "https://neon.tech/docs/reference/api-reference",
     howTo: "Paste a personal API key from https://console.neon.tech/app/settings/api-keys.",
@@ -150,6 +156,12 @@ export const PROVIDERS_REF: ProviderRef[] = [
     authKind: "pat",
     secrets: ["VERCEL_TOKEN"],
     blurb: "Frontend platform. Stores a scoped access token for deploys + env sync.",
+    mcp: {
+      name: "vercel",
+      preview: true,
+      detail:
+        "Vercel MCP server with VERCEL_TOKEN piped from Phantom — list deployments, tail logs, sync env.",
+    },
     dashboard: "https://vercel.com/dashboard",
     docs: "https://vercel.com/docs/rest-api",
     howTo: "Paste a personal access token from https://vercel.com/account/tokens.",
@@ -183,6 +195,12 @@ export const PROVIDERS_REF: ProviderRef[] = [
     authKind: "pat",
     secrets: ["CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID"],
     blurb: "Workers, R2, D1. Account id inferred from the token's scope.",
+    mcp: {
+      name: "cloudflare",
+      preview: true,
+      detail:
+        "Cloudflare MCP (Workers Bindings + R2 + D1) with CLOUDFLARE_API_TOKEN piped from Phantom.",
+    },
     dashboard: "https://dash.cloudflare.com",
     docs: "https://developers.cloudflare.com/api",
     howTo: "Create a scoped API token at https://dash.cloudflare.com/profile/api-tokens.",
@@ -326,6 +344,12 @@ export const PROVIDERS_REF: ProviderRef[] = [
     authKind: "api_key",
     secrets: ["STRIPE_SECRET_KEY"],
     blurb: "Billing, subscriptions, tax. Restricted / test-mode secret key stored in Phantom.",
+    mcp: {
+      name: "stripe",
+      preview: true,
+      detail:
+        "@stripe/mcp with STRIPE_SECRET_KEY piped from Phantom — create products, prices, and inspect events from the agent.",
+    },
     dashboard: "https://dashboard.stripe.com",
     docs: "https://docs.stripe.com/api",
     howTo:

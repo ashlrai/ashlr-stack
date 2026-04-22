@@ -1,6 +1,7 @@
 ---
 import Base from "~/layouts/Base.astro";
 import Hero from "~/components/Hero.astro";
+import InstallForClaude from "~/components/InstallForClaude.astro";
 import LogoMarquee from "~/components/LogoMarquee";
 import OneCommand from "~/components/OneCommand";
 import ProvidersGrid from "~/components/ProvidersGrid.astro";
@@ -45,6 +46,11 @@ const STATS = [
 
 <Base>
   <Hero />
+
+  <!-- § 01b · Super-clear install CTA. Above the fold on long screens,
+       one scroll on short screens. The single most-important block for
+       agent discovery + human install. -->
+  <InstallForClaude />
 
   <!-- § 01a · Supported providers — full-width marquee of all 29 logos.
        Answers "what does Stack actually integrate?" in one glance. -->

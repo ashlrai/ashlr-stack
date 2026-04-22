@@ -1,0 +1,196 @@
+---
+/**
+ * InstallForClaude — the "super-clear" install CTA band.
+ *
+ * Purpose: when a human or an AI agent lands on the page, they should see
+ * exactly *how to make Claude Code install + run Stack itself* above the fold.
+ * Three paste-ready options, numbered in order of autonomy:
+ *
+ *   1. Ask Claude directly (zero-config, works if the agent reads llms.txt / ai-plugin.json)
+ *   2. Install the Claude Code plugin (/plugin install ashlrai/stack-plugin)
+ *   3. Wire the MCP server manually (.mcp.json stanza for any MCP client)
+ *
+ * Each block has an instant copy button. The emphasis is on the first path —
+ * Stack is designed to be *discovered by the agent* and *operated by the agent*,
+ * not driven by humans.
+ */
+---
+
+<section
+  id="install-for-claude"
+  aria-label="Install Ashlr Stack in Claude Code"
+  class="relative mx-auto max-w-[1240px] px-6 sm:px-10 pt-14 sm:pt-16 pb-6"
+>
+  <div class="section-rule mb-8">
+    <span>§ 01b · Install in Claude Code</span>
+  </div>
+
+  <header class="max-w-[760px] mb-10" data-reveal>
+    <div class="eyebrow mb-3 text-[color:var(--color-blade-400)]">
+      THREE PATHS · ONE OUTCOME
+    </div>
+    <h2
+      class="display text-[color:var(--color-ink-50)]"
+      style="font-size: clamp(30px, 4vw, 48px);"
+    >
+      Get Stack into Claude.
+      <span class="display-accent">Then never leave chat again.</span>
+    </h2>
+    <p class="mt-5 text-[15px] leading-[1.6] text-[color:var(--color-ink-300)] max-w-[620px]">
+      Pick the path that matches where you are. Each one ends with Claude able to
+      call <span class="mono text-[color:var(--color-ink-100)]">/stack:add</span>,
+      provision upstream services, vault every key in Phantom, and write
+      <span class="mono text-[color:var(--color-ink-100)]">.env</span> +
+      <span class="mono text-[color:var(--color-ink-100)]">.mcp.json</span>
+      — without you touching a terminal.
+    </p>
+  </header>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-5">
+    <!-- PATH 1 · Just ask Claude -->
+    <div
+      class="install-card relative panel-steel p-5 sm:p-6 flex flex-col"
+      style="border-left: 2px solid var(--color-blade-500);"
+      data-reveal
+    >
+      <div class="flex items-start justify-between gap-3 mb-3">
+        <span class="mono text-[11px] tracking-[0.14em] uppercase text-[color:var(--color-blade-400)]">
+          Path 01 · Zero-config
+        </span>
+        <span class="mono text-[10px] tracking-[0.14em] uppercase px-1.5 py-0.5 border border-[color:var(--color-blade-500)]/50 text-[color:var(--color-blade-300)]">
+          Recommended
+        </span>
+      </div>
+
+      <h3 class="text-[color:var(--color-ink-50)] display" style="font-size: 20px; font-weight: 600; letter-spacing: -0.01em;">
+        Just tell Claude.
+      </h3>
+      <p class="mt-2 text-[13px] leading-[1.55] text-[color:var(--color-ink-400)]">
+        Paste this into any Claude Code session. The agent reads
+        <a href="/llms.txt" class="underline decoration-white/20 underline-offset-2 hover:text-[color:var(--color-ink-200)]">/llms.txt</a>
+        + <a href="/.well-known/ai-plugin.json" class="underline decoration-white/20 underline-offset-2 hover:text-[color:var(--color-ink-200)]">ai-plugin.json</a>,
+        discovers Stack, and installs itself.
+      </p>
+
+      <div class="mt-4 flex-1 panel p-3 mono text-[12.5px]" style="border-left: 2px solid var(--color-blade-500); background: rgba(0,0,0,0.35);">
+        <div class="text-[color:var(--color-ink-500)] text-[10px] tracking-[0.14em] uppercase mb-2">Paste to claude</div>
+        <div class="text-[color:var(--color-ink-100)] leading-[1.6]">
+          Install <span class="text-[color:var(--color-blade-400)]">Ashlr Stack</span> (stack.ashlr.ai), then use it to wire up the services for this project.
+        </div>
+      </div>
+
+      <button
+        class="copy-btn mt-3 self-start px-3 py-1.5 border border-[color:var(--color-ink-700)] text-[11px] tracking-[0.14em] uppercase text-[color:var(--color-ink-200)] hover:border-[color:var(--color-blade-500)] hover:text-[color:var(--color-blade-400)] transition-colors mono"
+        data-copy="Install Ashlr Stack (https://stack.ashlr.ai), then use it to wire up every third-party service for this project. It ships as a CLI, an MCP server (ashlr-stack-mcp), and a Claude Code plugin (ashlrai/stack-plugin). After install, run the MCP tool stack_recommend with a one-line description of what I'm building, then stack_apply for each provider."
+        aria-label="Copy prompt"
+      >
+        <span class="copy-label">Copy prompt</span>
+      </button>
+    </div>
+
+    <!-- PATH 2 · Plugin -->
+    <div
+      class="install-card relative panel-steel p-5 sm:p-6 flex flex-col"
+      data-reveal
+      style="--load-delay: 80ms"
+    >
+      <div class="flex items-start justify-between gap-3 mb-3">
+        <span class="mono text-[11px] tracking-[0.14em] uppercase text-[color:var(--color-steel-300)]">
+          Path 02 · One command
+        </span>
+        <span class="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--color-ink-500)]">
+          Claude Code
+        </span>
+      </div>
+
+      <h3 class="text-[color:var(--color-ink-50)] display" style="font-size: 20px; font-weight: 600; letter-spacing: -0.01em;">
+        Install the plugin.
+      </h3>
+      <p class="mt-2 text-[13px] leading-[1.55] text-[color:var(--color-ink-400)]">
+        Adds <code class="mono text-[color:var(--color-ink-200)]">/stack:add</code>,
+        <code class="mono text-[color:var(--color-ink-200)]">/stack:doctor</code>,
+        <code class="mono text-[color:var(--color-ink-200)]">/stack:list</code>,
+        <code class="mono text-[color:var(--color-ink-200)]">/stack:status</code>
+        — first-class slash commands.
+      </p>
+
+      <div class="mt-4 flex-1 panel p-3 mono text-[12.5px]" style="background: rgba(0,0,0,0.35);">
+        <div class="text-[color:var(--color-ink-500)] text-[10px] tracking-[0.14em] uppercase mb-2">Run in claude code</div>
+        <div class="leading-[1.6] break-all">
+          <span class="text-[color:var(--color-blade-400)]">/plugin</span>
+          <span class="text-[color:var(--color-ink-100)]"> install</span>
+          <span class="text-[color:var(--color-ink-50)]"> ashlrai/stack-plugin</span>
+        </div>
+      </div>
+
+      <button
+        class="copy-btn mt-3 self-start px-3 py-1.5 border border-[color:var(--color-ink-700)] text-[11px] tracking-[0.14em] uppercase text-[color:var(--color-ink-200)] hover:border-[color:var(--color-blade-500)] hover:text-[color:var(--color-blade-400)] transition-colors mono"
+        data-copy="/plugin install ashlrai/stack-plugin"
+        aria-label="Copy plugin command"
+      >
+        <span class="copy-label">Copy command</span>
+      </button>
+    </div>
+
+    <!-- PATH 3 · MCP server -->
+    <div
+      class="install-card relative panel-steel p-5 sm:p-6 flex flex-col"
+      data-reveal
+      style="--load-delay: 160ms"
+    >
+      <div class="flex items-start justify-between gap-3 mb-3">
+        <span class="mono text-[11px] tracking-[0.14em] uppercase text-[color:var(--color-steel-300)]">
+          Path 03 · Any MCP client
+        </span>
+        <span class="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--color-ink-500)]">
+          Cursor · Windsurf · Zed
+        </span>
+      </div>
+
+      <h3 class="text-[color:var(--color-ink-50)] display" style="font-size: 20px; font-weight: 600; letter-spacing: -0.01em;">
+        Wire the MCP server.
+      </h3>
+      <p class="mt-2 text-[13px] leading-[1.55] text-[color:var(--color-ink-400)]">
+        Drop this into
+        <code class="mono text-[color:var(--color-ink-200)]">.mcp.json</code>
+        (or your editor's MCP settings). Exposes all 19 Stack tools to any agent.
+      </p>
+
+      <div class="mt-4 flex-1 panel p-3 mono text-[11.5px]" style="background: rgba(0,0,0,0.35); overflow: auto;">
+        <div class="text-[color:var(--color-ink-500)] text-[10px] tracking-[0.14em] uppercase mb-2">.mcp.json</div>
+<pre class="text-[color:var(--color-ink-100)] leading-[1.55]" style="margin: 0; white-space: pre;">{`{
+  "mcpServers": {
+    "ashlr-stack": {
+      "command": "npx",
+      "args": ["-y", "ashlr-stack-mcp"]
+    }
+  }
+}`}</pre>
+      </div>
+
+      <button
+        class="copy-btn mt-3 self-start px-3 py-1.5 border border-[color:var(--color-ink-700)] text-[11px] tracking-[0.14em] uppercase text-[color:var(--color-ink-200)] hover:border-[color:var(--color-blade-500)] hover:text-[color:var(--color-blade-400)] transition-colors mono"
+        data-copy={'{"mcpServers":{"ashlr-stack":{"command":"npx","args":["-y","ashlr-stack-mcp"]}}}'}
+        aria-label="Copy MCP config"
+      >
+        <span class="copy-label">Copy config</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Sub-caption: what happens after any of the three paths -->
+  <div class="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-[12px] text-[color:var(--color-ink-500)]">
+    <span>→ Claude now has access to <strong class="text-[color:var(--color-ink-300)]">19 MCP tools</strong> across <strong class="text-[color:var(--color-ink-300)]">29 providers</strong></span>
+    <span>→ Secrets land in <a href="https://phm.dev" target="_blank" rel="noopener" class="underline decoration-white/20 underline-offset-2 hover:text-[color:var(--color-ink-200)]">Phantom</a>, never in chat</span>
+    <span>→ MIT · <a href="https://github.com/ashlrai/ashlr-stack" target="_blank" rel="noopener" class="underline decoration-white/20 underline-offset-2 hover:text-[color:var(--color-ink-200)]">source</a></span>
+  </div>
+</section>
+
+<style>
+  .install-card {
+    transition: transform 220ms ease, border-color 220ms ease;
+  }
+  .install-card:hover {
+    transform: translateY(-2px);
+  }
+</style>
