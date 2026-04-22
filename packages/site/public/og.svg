@@ -1,5 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="Ashlr Stack — the control plane for your entire dev stack.">
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="Ashlr Stack — one prompt, 29 providers wired.">
   <defs>
+    <!-- Ambient glows -->
     <radialGradient id="glowTop" cx="78%" cy="0%" r="80%">
       <stop offset="0%" stop-color="#e96b2a" stop-opacity="0.32"/>
       <stop offset="60%" stop-color="#e96b2a" stop-opacity="0"/>
@@ -8,57 +9,69 @@
       <stop offset="0%" stop-color="#c2521c" stop-opacity="0.22"/>
       <stop offset="70%" stop-color="#c2521c" stop-opacity="0"/>
     </radialGradient>
-    <linearGradient id="steel" x1="0" x2="0" y1="0" y2="1">
-      <stop offset="0%" stop-color="#2a3340"/>
-      <stop offset="60%" stop-color="#1a1f26"/>
-      <stop offset="100%" stop-color="#0f1419"/>
+
+    <!-- Orbit & Spire mark gradients (scaled to OG card) -->
+    <linearGradient id="ogRing" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0%" stop-color="#39556f" stop-opacity="0.55"/>
+      <stop offset="55%" stop-color="#6b8097" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#f5883e"/>
     </linearGradient>
-    <linearGradient id="phantom" x1="0" x2="0" y1="0" y2="1">
-      <stop offset="0%" stop-color="#3a2212"/>
-      <stop offset="100%" stop-color="#1a0e08"/>
+    <linearGradient id="ogFacet" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f5883e"/>
+      <stop offset="100%" stop-color="#c2521c"/>
     </linearGradient>
-    <radialGradient id="triGlow" cx="50%" cy="100%" r="55%">
+    <linearGradient id="ogShadow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1a1f26"/>
+      <stop offset="100%" stop-color="#2a1a10"/>
+    </linearGradient>
+    <radialGradient id="ogGlow" cx="50%" cy="85%" r="55%">
       <stop offset="0%" stop-color="#e96b2a" stop-opacity="0.55"/>
       <stop offset="70%" stop-color="#e96b2a" stop-opacity="0"/>
     </radialGradient>
+    <radialGradient id="ogSat" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fbe1cf"/>
+      <stop offset="35%" stop-color="#f5883e"/>
+      <stop offset="100%" stop-color="#e96b2a"/>
+    </radialGradient>
+
     <pattern id="grid" width="96" height="96" patternUnits="userSpaceOnUse">
       <path d="M96 0H0V96" fill="none" stroke="#ffffff" stroke-opacity="0.03" stroke-width="1"/>
     </pattern>
-    <clipPath id="tri">
-      <path d="M96 340 L226 88 L356 340 Z"/>
-    </clipPath>
   </defs>
 
-  <!-- Base -->
+  <!-- Base + glows -->
   <rect width="1200" height="630" fill="#05070a"/>
   <rect width="1200" height="630" fill="url(#grid)"/>
   <rect width="1200" height="630" fill="url(#glowTop)"/>
   <rect width="1200" height="630" fill="url(#glowBottom)"/>
 
-  <!-- Eyebrow + Mark -->
-  <text x="96" y="96" font-family="ui-monospace, 'SF Mono', Menlo, monospace" font-size="20" fill="#e96b2a" letter-spacing="3">STACK · CONTROL PLANE · V0.1</text>
+  <!-- Eyebrow -->
+  <text x="96" y="92" font-family="ui-monospace, 'SF Mono', Menlo, monospace" font-size="20" fill="#e96b2a" letter-spacing="3">STACK · THE ONLY LINE YOU TELL CLAUDE · V0.1.1</text>
 
-  <!-- Logo mark (nested stacked triangle) -->
-  <ellipse cx="226" cy="350" rx="120" ry="18" fill="url(#triGlow)"/>
-  <g clip-path="url(#tri)">
-    <rect x="0" y="88" width="1200" height="220" fill="url(#steel)"/>
-    <rect x="0" y="316" width="1200" height="24" fill="url(#phantom)"/>
-    <line x1="96" x2="356" y1="120" y2="120" stroke="#e96b2a" stroke-width="1.6" stroke-opacity="0.22"/>
-    <line x1="96" x2="356" y1="152" y2="152" stroke="#e96b2a" stroke-width="1.6" stroke-opacity="0.22"/>
-    <line x1="96" x2="356" y1="184" y2="184" stroke="#e96b2a" stroke-width="1.6" stroke-opacity="0.22"/>
-    <line x1="96" x2="356" y1="216" y2="216" stroke="#e96b2a" stroke-width="1.6" stroke-opacity="0.22"/>
-    <line x1="96" x2="356" y1="248" y2="248" stroke="#e96b2a" stroke-width="1.6" stroke-opacity="0.22"/>
-    <line x1="96" x2="356" y1="280" y2="280" stroke="#e96b2a" stroke-width="1.6" stroke-opacity="0.22"/>
-    <line x1="96" x2="356" y1="316" y2="316" stroke="#e96b2a" stroke-width="2.2" stroke-opacity="0.9"/>
+  <!-- Orbit & Spire mark, scaled 1:8 of the Logo.astro 32px viewBox into ~256x256 area centered at (226, 216) -->
+  <g transform="translate(226 216) scale(8)">
+    <!-- Base glow -->
+    <ellipse cx="0" cy="11" rx="10" ry="2.25" fill="url(#ogGlow)"/>
+    <!-- Orbital ring (two arc segments that together complete a near-full circle) -->
+    <path d="M 0 -12.5 A 12.5 12.5 0 0 1 10.25 6.75" stroke="url(#ogRing)" stroke-width="1.4" stroke-linecap="round" fill="none"/>
+    <path d="M -7.7 10.65 A 12.5 12.5 0 0 1 -11.92 -3.65" stroke="url(#ogRing)" stroke-width="1.4" stroke-linecap="round" fill="none"/>
+    <path d="M -11.92 -3.65 A 12.5 12.5 0 0 1 -7.7 10.65" stroke="#f5883e" stroke-opacity="0.45" stroke-width="0.7" stroke-dasharray="0.6 1.8" stroke-linecap="round" fill="none"/>
+    <!-- Spire: two facets -->
+    <path d="M 0 -8.5 L 0 6.5 L -6 6.5 Z" fill="url(#ogShadow)"/>
+    <path d="M 0 -8.5 L 6 6.5 L 0 6.5 Z" fill="url(#ogFacet)"/>
+    <path d="M 0 -8.5 L 6 6.5 L -6 6.5 Z" fill="none" stroke="#f5883e" stroke-width="1.05" stroke-linejoin="miter"/>
+    <line x1="0" y1="-8.5" x2="0" y2="6.5" stroke="#fbe1cf" stroke-opacity="0.18" stroke-width="0.4"/>
+    <!-- Satellite node -->
+    <circle cx="6.25" cy="-10.82" r="2" fill="url(#ogSat)"/>
+    <circle cx="6.25" cy="-10.82" r="0.7" fill="#fbe1cf"/>
   </g>
-  <path d="M96 340 L226 88 L356 340 Z" fill="none" stroke="#e96b2a" stroke-width="3.8" stroke-linejoin="miter"/>
 
-  <!-- Title -->
-  <text x="96" y="440" font-family="'PP Monument Grotesk', ui-sans-serif, system-ui, sans-serif" font-size="64" font-weight="600" fill="#f4f5f7" letter-spacing="-2.2">
-    Wire your entire dev stack.
+  <!-- Title — matches hero -->
+  <text x="96" y="440" font-family="'PP Monument Grotesk', ui-sans-serif, system-ui, sans-serif" font-size="72" font-weight="600" fill="#f4f5f7" letter-spacing="-2.4">
+    <tspan fill="#e96b2a">“</tspan>Stack my
   </text>
-  <text x="96" y="510" font-family="'PP Monument Grotesk', ui-sans-serif, system-ui, sans-serif" font-style="italic" font-size="64" font-weight="600" fill="#e96b2a" letter-spacing="-2.2">
-    In one command.
+  <text x="96" y="520" font-family="'PP Monument Grotesk', ui-sans-serif, system-ui, sans-serif" font-size="72" font-weight="600" fill="#f4f5f7" letter-spacing="-2.4">
+    backend.<tspan fill="#e96b2a">”</tspan>
   </text>
 
   <!-- Terminal snippet -->
@@ -66,24 +79,25 @@
     <rect x="0" y="0" width="670" height="172" fill="#0a0c10" stroke="#39556f" stroke-width="1"/>
     <rect x="0" y="0" width="3" height="172" fill="#e96b2a"/>
     <text x="24" y="42" font-family="ui-monospace, 'SF Mono', Menlo, monospace" font-size="18" fill="#6b8097" letter-spacing="2">STK-01 · STACK · TTY</text>
-    <text x="24" y="92" font-family="ui-monospace, 'SF Mono', Menlo, monospace" font-size="22" fill="#f5883e">›</text>
-    <text x="48" y="92" font-family="ui-monospace, 'SF Mono', Menlo, monospace" font-size="22" fill="#f4f5f7">stack add supabase posthog sentry</text>
-    <text x="24" y="126" font-family="ui-monospace, 'SF Mono', Menlo, monospace" font-size="18" fill="#6fe8a7">✓ 3 providers · 10 env vars · 2 MCP servers · 4.2s</text>
-    <text x="24" y="154" font-family="ui-monospace, 'SF Mono', Menlo, monospace" font-size="16" fill="#6b7480">Phantom: 10 secrets E2E-encrypted · .mcp.json wired</text>
+    <text x="24" y="92" font-family="ui-monospace, 'SF Mono', Menlo, monospace" font-size="20" fill="#f5883e">you</text>
+    <text x="62" y="92" font-family="ui-monospace, 'SF Mono', Menlo, monospace" font-size="20" fill="#6b8097">›</text>
+    <text x="82" y="92" font-family="ui-monospace, 'SF Mono', Menlo, monospace" font-size="20" fill="#f4f5f7">Use Stack to set up a B2B SaaS with auth, AI, payments.</text>
+    <text x="24" y="126" font-family="ui-monospace, 'SF Mono', Menlo, monospace" font-size="18" fill="#6fe8a7">✓ 6 providers wired · 11 secrets in Phantom · 4.2s</text>
+    <text x="24" y="154" font-family="ui-monospace, 'SF Mono', Menlo, monospace" font-size="16" fill="#6b7480">.env + .mcp.json written · every key E2E-encrypted</text>
   </g>
 
-  <!-- Stats strip -->
+  <!-- Stats strip — reflects current catalog -->
   <g transform="translate(440, 300)">
     <g font-family="'PP Monument Grotesk', ui-sans-serif, system-ui, sans-serif" font-size="40" font-weight="600" fill="#f4f5f7" letter-spacing="-1">
-      <text x="0" y="40">39</text>
-      <text x="160" y="40">17</text>
-      <text x="320" y="40">08</text>
+      <text x="0" y="40">29</text>
+      <text x="160" y="40">19</text>
+      <text x="320" y="40">11</text>
       <text x="480" y="40">MIT</text>
     </g>
     <g font-family="ui-monospace, 'SF Mono', Menlo, monospace" font-size="14" fill="#6b8097" letter-spacing="2">
       <text x="0"   y="72">PROVIDERS</text>
       <text x="160" y="72">MCP TOOLS</text>
-      <text x="320" y="72">TIERS</text>
+      <text x="320" y="72">CATEGORIES</text>
       <text x="480" y="72">LICENSE</text>
     </g>
   </g>
