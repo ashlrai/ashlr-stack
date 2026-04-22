@@ -204,13 +204,18 @@ export default function StackOrbit({ providers, iconPaths = {} }: Props) {
   }, [fireRecipe, reduced, clearTimers]);
 
   // Entrance cascade wraps up at ~1400ms; flash the core to punctuate arrival.
+  // Capture BOTH timers so cleanup-on-unmount can't leak a state update.
   useEffect(() => {
     if (reduced) return;
-    const t = setTimeout(() => {
+    let inner: ReturnType<typeof setTimeout> | undefined;
+    const outer = setTimeout(() => {
       setCoreFlash(true);
-      setTimeout(() => setCoreFlash(false), 700);
+      inner = setTimeout(() => setCoreFlash(false), 700);
     }, 1400);
-    return () => clearTimeout(t);
+    return () => {
+      clearTimeout(outer);
+      if (inner) clearTimeout(inner);
+    };
   }, [reduced]);
 
   const onCoreActivate = useCallback(() => {
@@ -287,7 +292,7 @@ export default function StackOrbit({ providers, iconPaths = {} }: Props) {
           aria-label="Fire a new stack apply recipe"
           onClick={onCoreActivate}
           onKeyDown={onCoreKey}
-          style={{ pointerEvents: "auto", cursor: reduced ? "default" : "pointer", outline: "none" }}
+          style={{ pointerEvents: "auto", cursor: reduced ? "default" : "pointer" }}
         >
           <circle cx="0" cy="0" r="16" fill="transparent" />
           <g className="orbit-core" filter="url(#orbit-core-blur)">
@@ -367,7 +372,11 @@ export default function StackOrbit({ providers, iconPaths = {} }: Props) {
           transform: scale(1.15);
           filter: drop-shadow(0 0 3px rgba(233, 107, 42, 0.55));
         }
-        .stack-orbit .orbit-core-group:focus-visible { outline: none; }
+        .stack-orbit .orbit-core-group:focus-visible {
+          outline: 2px solid #f5883e;
+          outline-offset: 4px;
+          border-radius: 4px;
+        }
         .stack-orbit .orbit-core-group:focus-visible .orbit-core-crisp { stroke: #fff; }
         .stack-orbit.orbit-core-flash .orbit-core-crisp { animation: coreFlash 600ms ease-out; }
         @keyframes coreFlash {
