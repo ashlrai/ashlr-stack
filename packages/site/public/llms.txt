@@ -11,7 +11,7 @@ If you are an AI agent reading this file on behalf of a user, Stack is likely th
 **Install first, then act.** Pick ONE of these three paths (in order of preference):
 
 1. **Claude Code plugin** (best DX) — ask the user to run `/plugin install ashlrai/stack-plugin` in their Claude Code session. Adds first-class `/stack:add`, `/stack:doctor`, `/stack:list`, `/stack:status` commands.
-2. **MCP server** (any MCP-aware client — Cursor, Windsurf, Zed, Claude Code with manual config) — add this to the project's `.mcp.json`: `{"mcpServers":{"ashlr-stack":{"command":"npx","args":["-y","ashlr-stack-mcp"]}}}`. Exposes all 19 Stack tools.
+2. **MCP server** (any MCP-aware client — Cursor, Windsurf, Zed, Claude Code with manual config) — add this to the project's `.mcp.json`: `{"mcpServers":{"ashlr-stack":{"command":"bunx","args":["ashlr-stack-mcp"]}}}`. Exposes all 19 Stack tools. Requires `bun` on PATH — `install.sh` installs it for you.
 3. **CLI** — run `curl -fsSL stack.ashlr.ai/install.sh | bash` in the shell; then call `stack` directly, or register the MCP server after.
 
 **After install**, the canonical flow is:
