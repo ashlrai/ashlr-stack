@@ -1,77 +1,56 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 /**
  * StackOrbit — the hero's right-side visual.
  *
- * Replaces the abstract 3D tier diagram with something that actually answers
- * "what does Stack integrate?" at a glance: all 29 providers in their real
- * brand colors, orbiting a glowing Stack core. Gentle rotation keeps the eye
- * moving without screaming for attention. Every ~15s a scripted "stack apply"
- * pulse fires through a random 6-provider recipe — amber flashes run around
- * the orbits in sequence, simulating the product working live.
+ * 29 real provider logos orbiting a glowing Stack core in 3 rings. Every ~15s
+ * (and on demand when the core is clicked) a scripted "stack apply" pulse
+ * fires: rings freeze, 6 random chips pulse amber in sequence, and thin amber
+ * lines draw from the core out to each pulsing chip. A mono recipe label
+ * ("▶ stack apply supabase-vercel-anthropic-b2b") fades in at the top.
  *
- * Hover any logo → orbit pauses, chip pops, tooltip shows `stack add <name>`.
- * Click → navigates to /providers/<slug> (the programmatic pages).
- * prefers-reduced-motion → static snapshot, no rotation, no pulse.
+ * First render kicks off an entrance cascade — outer → middle → inner ring
+ * chips zoom in from outside the panel over ~1500ms, with the Stack ▲ lighting
+ * up last as everything settles.
  *
- * Pure SVG + CSS — no WebGL, no R3F. Ships in ~8kb vs the old R3F bundle's
- * ~200kb first paint, and honest-renders on server-side for instant SEO
- * visibility of every provider logo.
+ * prefers-reduced-motion → static snapshot, no cascade/pulse/lines/label.
+ * Pure SVG + CSS — no WebGL, no Canvas, no framer-motion.
  */
 
 interface OrbitProvider {
-  slug: string; // simple-icons slug (matches iconPaths key)
-  name: string; // CLI name → /providers/[name]
+  slug: string;
+  name: string;
   displayName: string;
-  color: string; // hex w/o #
+  color: string;
   category: string;
 }
-
 interface Props {
   providers: OrbitProvider[];
   iconPaths?: Record<string, string | null>;
 }
-
-/** Positioned chip on a ring, with base angle + radius. */
 interface PlacedChip extends OrbitProvider {
-  radius: number; // % of container half-size (0..50-ish)
-  baseAngle: number; // radians
+  radius: number;
+  baseAngle: number;
   ring: 0 | 1 | 2;
 }
 
 const RING_CONFIG = {
-  0: { radius: 27, duration: 160, direction: 1 }, // inner, forward
-  1: { radius: 38, duration: 240, direction: -1 }, // middle, backward
-  2: { radius: 48, duration: 320, direction: 1 }, // outer, forward
+  0: { radius: 27, duration: 160, direction: 1 },
+  1: { radius: 38, duration: 240, direction: -1 },
+  2: { radius: 48, duration: 320, direction: 1 },
 } as const;
 
-/**
- * Distribute the 29 providers across 3 rings so the most recognizable names
- * (Supabase, Stripe, Vercel, Anthropic, GitHub…) land on the inner ring where
- * the eye naturally falls first.
- */
 const HEADLINER_PRIORITY: Record<string, number> = {
-  supabase: 100,
-  vercel: 99,
-  anthropic: 98,
-  stripe: 97,
-  openai: 96,
-  github: 95,
-  clerk: 90,
-  sentry: 89,
-  posthog: 88,
-  neon: 87,
-  cloudflare: 86,
-  turso: 80,
+  supabase: 100, vercel: 99, anthropic: 98, stripe: 97, openai: 96, github: 95,
+  clerk: 90, sentry: 89, posthog: 88, neon: 87, cloudflare: 86, turso: 80,
 };
 
 function place(providers: OrbitProvider[]): PlacedChip[] {
   const sorted = [...providers].sort(
-    (a, b) =>
-      (HEADLINER_PRIORITY[b.name] ?? 0) - (HEADLINER_PRIORITY[a.name] ?? 0),
+    (a, b) => (HEADLINER_PRIORITY[b.name] ?? 0) - (HEADLINER_PRIORITY[a.name] ?? 0),
   );
   const rings: OrbitProvider[][] = [[], [], []];
-  const caps = [6, 10, providers.length - 16]; // 6 + 10 + 13 for 29
+  const caps = [6, 10, providers.length - 16];
   let ring = 0;
   for (const p of sorted) {
     while (rings[ring]!.length >= caps[ring]!) ring++;
@@ -80,25 +59,57 @@ function place(providers: OrbitProvider[]): PlacedChip[] {
   const placed: PlacedChip[] = [];
   for (let r = 0; r < 3; r++) {
     const count = rings[r]!.length;
-    const offset = r * (Math.PI / count); // stagger each ring slightly
+    const offset = r * (Math.PI / count);
     for (let i = 0; i < count; i++) {
-      const baseAngle = (i / count) * Math.PI * 2 + offset;
       placed.push({
         ...rings[r]![i]!,
         ring: r as 0 | 1 | 2,
         radius: RING_CONFIG[r as 0 | 1 | 2].radius,
-        baseAngle,
+        baseAngle: (i / count) * Math.PI * 2 + offset,
       });
     }
   }
   return placed;
 }
 
+const RECIPE_TAGS = ["b2b", "saas", "ai", "consumer", "mvp", "edge", "ssr", "internal"];
+function slugifyRecipe(names: string[]): string {
+  const head = names.slice(0, 3).join("-");
+  const tag = RECIPE_TAGS[Math.floor(Math.random() * RECIPE_TAGS.length)]!;
+  return `${head}-${tag}`;
+}
+
+/**
+ * Read a ring's current visible rotation (radians) by parsing its computed
+ * transform matrix. Works whether the ring is animating or just-paused: the
+ * browser reports the frame it most recently painted, which is exactly what
+ * we need to draw lines to the chips' on-screen positions.
+ */
+function readRingRotation(el: HTMLElement | null): number {
+  if (!el) return 0;
+  const t = getComputedStyle(el).transform;
+  if (!t || t === "none") return 0;
+  const m = t.match(/matrix\(([^)]+)\)/);
+  if (!m) return 0;
+  const parts = m[1]!.split(",").map((s) => parseFloat(s.trim()));
+  return Math.atan2(parts[1] ?? 0, parts[0] ?? 1);
+}
+
 export default function StackOrbit({ providers, iconPaths = {} }: Props) {
   const [reduced, setReduced] = useState(false);
   const [pulsing, setPulsing] = useState<Set<string>>(new Set());
   const [recipe, setRecipe] = useState<string[]>([]);
+  const [recipeSlug, setRecipeSlug] = useState("");
+  const [recipeActive, setRecipeActive] = useState(false);
+  const [recipeFrozen, setRecipeFrozen] = useState(false);
+  const [coreFlash, setCoreFlash] = useState(false);
+  // SVG-coord line endpoints keyed by chip.name. `active` flips per pulse
+  // stagger so each line draws/fades with its chip.
+  const [lineTargets, setLineTargets] = useState<
+    Record<string, { x: number; y: number; active: boolean }>
+  >({});
   const pulseTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const ringRefs = useRef<(HTMLDivElement | null)[]>([null, null, null]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -111,62 +122,130 @@ export default function StackOrbit({ providers, iconPaths = {} }: Props) {
 
   const placed = useMemo(() => place(providers), [providers]);
 
-  // Periodic "stack apply" pulse — fires a random 6-provider recipe every ~15s.
-  // Each provider lights up amber for ~600ms, staggered 200ms apart so the
-  // pulse reads as a sequential flow.
-  useEffect(() => {
-    if (reduced) return;
-    let cancelled = false;
+  const clearTimers = useCallback(() => {
+    for (const t of pulseTimers.current) clearTimeout(t);
+    pulseTimers.current = [];
+  }, []);
 
-    function fireRecipe(): void {
-      if (cancelled) return;
-      const pool = [...placed].sort(() => Math.random() - 0.5).slice(0, 6);
-      const names = pool.map((p) => p.name);
-      setRecipe(names);
+  /**
+   * Fire one recipe: freeze rings, snapshot each ring's current rotation,
+   * stagger-pulse 6 random chips while drawing lines from core → chip, then
+   * unfreeze and schedule the next recipe in ~15s.
+   */
+  const fireRecipe = useCallback((opts?: { fromClick?: boolean }) => {
+    if (reduced) return;
+    clearTimers();
+
+    const pool = [...placed].sort(() => Math.random() - 0.5).slice(0, 6);
+    const names = pool.map((p) => p.name);
+    setRecipeFrozen(true);
+    setRecipeActive(true);
+    setRecipe(names);
+    setRecipeSlug(slugifyRecipe(names));
+    if (opts?.fromClick) {
+      setCoreFlash(true);
+      pulseTimers.current.push(setTimeout(() => setCoreFlash(false), 600));
+    }
+
+    // rAF so the paused rings have committed their stable matrix before we
+    // measure — otherwise we'd read pre-freeze rotation and the lines would
+    // miss the chips by a few degrees.
+    requestAnimationFrame(() => {
+      const rot: [number, number, number] = [
+        readRingRotation(ringRefs.current[0]),
+        readRingRotation(ringRefs.current[1]),
+        readRingRotation(ringRefs.current[2]),
+      ];
+      const targets: Record<string, { x: number; y: number; active: boolean }> = {};
+      for (const p of pool) {
+        const a = p.baseAngle + rot[p.ring];
+        targets[p.name] = { x: p.radius * Math.cos(a), y: p.radius * Math.sin(a), active: false };
+      }
+      setLineTargets(targets);
+
       for (let i = 0; i < pool.length; i++) {
         const target = pool[i]!.name;
-        const t1 = setTimeout(() => {
-          setPulsing((prev) => new Set(prev).add(target));
-        }, i * 220);
-        const t2 = setTimeout(
-          () => {
+        pulseTimers.current.push(
+          setTimeout(() => {
+            setPulsing((prev) => new Set(prev).add(target));
+            setLineTargets((prev) =>
+              prev[target] ? { ...prev, [target]: { ...prev[target]!, active: true } } : prev,
+            );
+          }, i * 220),
+          setTimeout(() => {
             setPulsing((prev) => {
               const next = new Set(prev);
               next.delete(target);
               return next;
             });
-          },
-          i * 220 + 900,
+            setLineTargets((prev) =>
+              prev[target] ? { ...prev, [target]: { ...prev[target]!, active: false } } : prev,
+            );
+          }, i * 220 + 900),
         );
-        pulseTimers.current.push(t1, t2);
       }
-      const nextT = setTimeout(fireRecipe, 15000);
-      pulseTimers.current.push(nextT);
+
+      const totalMs = pool.length * 220 + 900;
+      pulseTimers.current.push(
+        setTimeout(() => {
+          setRecipeFrozen(false);
+          setLineTargets({});
+          setRecipeActive(false);
+        }, totalMs + 1000),
+        setTimeout(() => fireRecipe(), totalMs + 15000),
+      );
+    });
+  }, [placed, reduced, clearTimers]);
+
+  useEffect(() => {
+    if (reduced) return;
+    pulseTimers.current.push(setTimeout(() => fireRecipe(), 4500));
+    return () => clearTimers();
+  }, [fireRecipe, reduced, clearTimers]);
+
+  // Entrance cascade wraps up at ~1400ms; flash the core to punctuate arrival.
+  useEffect(() => {
+    if (reduced) return;
+    const t = setTimeout(() => {
+      setCoreFlash(true);
+      setTimeout(() => setCoreFlash(false), 700);
+    }, 1400);
+    return () => clearTimeout(t);
+  }, [reduced]);
+
+  const onCoreActivate = useCallback(() => {
+    if (!reduced) fireRecipe({ fromClick: true });
+  }, [fireRecipe, reduced]);
+  const onCoreKey = useCallback((e: React.KeyboardEvent) => {
+    if (reduced) return;
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      fireRecipe({ fromClick: true });
     }
-
-    // Kick off after a small initial delay so the first pulse isn't simultaneous
-    // with the hero's load-in cascade.
-    const kickoff = setTimeout(fireRecipe, 4500);
-    pulseTimers.current.push(kickoff);
-
-    return () => {
-      cancelled = true;
-      for (const t of pulseTimers.current) clearTimeout(t);
-      pulseTimers.current = [];
-    };
-  }, [placed, reduced]);
+  }, [fireRecipe, reduced]);
 
   return (
     <div
-      className="stack-orbit relative w-full h-full"
+      className={[
+        "stack-orbit relative w-full h-full",
+        reduced ? "" : "orbit-cascade",
+        recipeFrozen ? "orbit-frozen" : "",
+        coreFlash ? "orbit-core-flash" : "",
+      ].filter(Boolean).join(" ")}
       aria-label="Orbital visualization of the 29 providers Stack integrates"
     >
-      {/* Faint orbital guides (SVG circles). */}
-      <svg
-        viewBox="-100 -100 200 200"
-        className="absolute inset-0 w-full h-full"
-        aria-hidden="true"
-      >
+      {!reduced && (
+        <div
+          className={`orbit-recipe-label absolute top-2 left-1/2 -translate-x-1/2 pointer-events-none mono text-[10px] px-2 py-1 tracking-[0.08em] ${recipeActive ? "is-visible" : ""}`}
+          aria-hidden="true"
+        >
+          <span className="text-[color:var(--color-blade-400)]">▶</span>{" "}
+          <span className="text-[color:var(--color-ink-400)]">stack apply</span>{" "}
+          <span className="text-[color:var(--color-blade-300)]">{recipeSlug || "…"}</span>
+        </div>
+      )}
+
+      <svg viewBox="-100 -100 200 200" className="absolute inset-0 w-full h-full" aria-hidden="true">
         <defs>
           <radialGradient id="orbit-core-glow" cx="50%" cy="50%" r="50%">
             <stop offset="0%" stopColor="#e96b2a" stopOpacity="0.45" />
@@ -177,76 +256,86 @@ export default function StackOrbit({ providers, iconPaths = {} }: Props) {
             <feGaussianBlur stdDeviation="1.5" />
           </filter>
         </defs>
-
-        {/* Ambient center glow */}
         <circle cx="0" cy="0" r="22" fill="url(#orbit-core-glow)" />
-
-        {/* Orbital rings */}
         <circle cx="0" cy="0" r={RING_CONFIG[0].radius} fill="none" stroke="rgba(245,136,62,0.10)" strokeWidth="0.3" strokeDasharray="1 1.5" />
         <circle cx="0" cy="0" r={RING_CONFIG[1].radius} fill="none" stroke="rgba(245,136,62,0.08)" strokeWidth="0.3" strokeDasharray="1 2" />
         <circle cx="0" cy="0" r={RING_CONFIG[2].radius} fill="none" stroke="rgba(245,136,62,0.06)" strokeWidth="0.3" strokeDasharray="1 2.5" />
 
-        {/* Stack ▲ in the center */}
-        <g className="orbit-core" filter="url(#orbit-core-blur)">
-          <polygon points="0,-9 9,7 -9,7" fill="none" stroke="#e96b2a" strokeWidth="1.2" strokeLinejoin="miter" />
-        </g>
-        <polygon points="0,-9 9,7 -9,7" fill="none" stroke="#f5883e" strokeWidth="0.9" strokeLinejoin="miter" />
-        <text
-          x="0"
-          y="24"
-          textAnchor="middle"
-          fill="#f5883e"
-          fontSize="4.5"
-          fontFamily="ui-monospace, 'SF Mono', Menlo, monospace"
-          letterSpacing="0.4"
+        {/* Recipe lines — stroke-dashoffset paints each line from core
+            outward when `active` flips true during the pulse stagger. */}
+        {!reduced && Object.entries(lineTargets).map(([name, t]) => {
+          const len = Math.hypot(t.x, t.y);
+          return (
+            <line
+              key={`line-${name}`}
+              x1="0" y1="0" x2={t.x} y2={t.y}
+              stroke="#f5883e" strokeWidth={0.5} strokeLinecap="round"
+              opacity={t.active ? 0.75 : 0}
+              style={{
+                strokeDasharray: `${len} ${len}`,
+                strokeDashoffset: t.active ? 0 : len,
+                transition: "stroke-dashoffset 420ms cubic-bezier(0.2, 0.9, 0.3, 1), opacity 280ms ease",
+              }}
+            />
+          );
+        })}
+
+        <g
+          className="orbit-core-group"
+          role="button"
+          tabIndex={reduced ? -1 : 0}
+          aria-label="Fire a new stack apply recipe"
+          onClick={onCoreActivate}
+          onKeyDown={onCoreKey}
+          style={{ pointerEvents: "auto", cursor: reduced ? "default" : "pointer", outline: "none" }}
         >
-          STACK
-        </text>
+          <circle cx="0" cy="0" r="16" fill="transparent" />
+          <g className="orbit-core" filter="url(#orbit-core-blur)">
+            <polygon points="0,-9 9,7 -9,7" fill="none" stroke="#e96b2a" strokeWidth="1.2" strokeLinejoin="miter" />
+          </g>
+          <polygon className="orbit-core-crisp" points="0,-9 9,7 -9,7" fill="none" stroke="#f5883e" strokeWidth="0.9" strokeLinejoin="miter" />
+          <text x="0" y="24" textAnchor="middle" fill="#f5883e" fontSize="4.5" fontFamily="ui-monospace, 'SF Mono', Menlo, monospace" letterSpacing="0.4">STACK</text>
+        </g>
       </svg>
 
-      {/* Orbiting logo chips — one group per ring, counter-rotation keeps logos upright. */}
       {[0, 1, 2].map((ringIdx) => {
         const cfg = RING_CONFIG[ringIdx as 0 | 1 | 2];
         const chips = placed.filter((c) => c.ring === ringIdx);
         return (
           <div
             key={ringIdx}
+            ref={(el) => { ringRefs.current[ringIdx] = el; }}
             className={`orbit-ring ring-${ringIdx} absolute inset-0 pointer-events-none`}
             style={{
-              animation: reduced
-                ? "none"
-                : `orbitSpin${cfg.direction > 0 ? "Fwd" : "Rev"} ${cfg.duration}s linear infinite`,
+              animation: reduced ? "none" : `orbitSpin${cfg.direction > 0 ? "Fwd" : "Rev"} ${cfg.duration}s linear infinite`,
+              animationPlayState: recipeFrozen ? "paused" : "running",
             }}
           >
-            {chips.map((chip) => {
+            {chips.map((chip, chipIdx) => {
               const x = 50 + chip.radius * Math.cos(chip.baseAngle);
               const y = 50 + chip.radius * Math.sin(chip.baseAngle);
               const isPulsing = pulsing.has(chip.name);
               const inCurrentRecipe = recipe.includes(chip.name);
+              // Outer (2) lands first at 0ms, middle (1) at ~350ms, inner (0)
+              // at ~700ms; within each ring chips stagger by 40ms.
+              const cascadeDelay = (2 - chip.ring) * 350 + chipIdx * 40;
               return (
                 <a
                   key={chip.name}
                   href={`/providers/${chip.name}/`}
-                  className={`orbit-chip pointer-events-auto absolute group ${isPulsing ? "pulsing" : ""}`}
+                  className={`orbit-chip pointer-events-auto absolute group ${isPulsing ? "pulsing" : ""} ${inCurrentRecipe ? "in-recipe" : ""}`}
                   style={{
                     left: `${x}%`,
                     top: `${y}%`,
-                    // Counter-rotate so the logo stays upright while the ring spins.
-                    animation: reduced
-                      ? "none"
-                      : `orbitSpin${cfg.direction > 0 ? "Rev" : "Fwd"} ${cfg.duration}s linear infinite`,
-                    // anchor the logo at its center
+                    animation: reduced ? "none" : `orbitSpin${cfg.direction > 0 ? "Rev" : "Fwd"} ${cfg.duration}s linear infinite`,
+                    animationPlayState: recipeFrozen ? "paused" : "running",
                     transform: "translate(-50%, -50%)",
+                    ["--cascade-delay" as string]: `${cascadeDelay}ms`,
                   }}
                   title={`stack add ${chip.name}`}
                   aria-label={`${chip.displayName} — stack add ${chip.name}`}
                 >
-                  <OrbitChip
-                    chip={chip}
-                    iconPaths={iconPaths}
-                    isPulsing={isPulsing}
-                    isInRecipe={inCurrentRecipe}
-                  />
+                  <OrbitChip chip={chip} iconPaths={iconPaths} isPulsing={isPulsing} isInRecipe={inCurrentRecipe} />
                 </a>
               );
             })}
@@ -254,7 +343,6 @@ export default function StackOrbit({ providers, iconPaths = {} }: Props) {
         );
       })}
 
-      {/* Caption below the orbit */}
       <div className="absolute left-3 bottom-3 caption text-[color:var(--color-steel-300)] pointer-events-none">
         29 PROVIDERS · 3 ORBITS
       </div>
@@ -264,30 +352,29 @@ export default function StackOrbit({ providers, iconPaths = {} }: Props) {
       </div>
 
       <style>{`
-        @keyframes orbitSpinFwd {
-          from { transform: rotate(0deg); }
-          to   { transform: rotate(360deg); }
+        @keyframes orbitSpinFwd { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes orbitSpinRev { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
+        @keyframes orbitCorePulse { 0%,100% { opacity: 0.45; transform: scale(1); } 50% { opacity: 1; transform: scale(1.15); } }
+        @keyframes orbitCoreBreathe { 0%,100% { opacity: 0.7; } 50% { opacity: 1; } }
+        .stack-orbit .orbit-core { animation: orbitCoreBreathe 3.6s ease-in-out infinite; transform-origin: center; }
+        .stack-orbit .orbit-core-group {
+          transform-origin: 0 0;
+          transition: transform 220ms cubic-bezier(0.2, 0.9, 0.3, 1), filter 220ms ease;
+          filter: drop-shadow(0 0 0 rgba(233, 107, 42, 0));
         }
-        @keyframes orbitSpinRev {
-          from { transform: rotate(0deg); }
-          to   { transform: rotate(-360deg); }
+        .stack-orbit .orbit-core-group:hover,
+        .stack-orbit .orbit-core-group:focus-visible {
+          transform: scale(1.15);
+          filter: drop-shadow(0 0 3px rgba(233, 107, 42, 0.55));
         }
-        @keyframes orbitCorePulse {
-          0%, 100% { opacity: 0.45; transform: scale(1); }
-          50%      { opacity: 1;    transform: scale(1.15); }
+        .stack-orbit .orbit-core-group:focus-visible { outline: none; }
+        .stack-orbit .orbit-core-group:focus-visible .orbit-core-crisp { stroke: #fff; }
+        .stack-orbit.orbit-core-flash .orbit-core-crisp { animation: coreFlash 600ms ease-out; }
+        @keyframes coreFlash {
+          0%   { stroke: #fff;    stroke-width: 1.6; filter: drop-shadow(0 0 4px rgba(245,136,62,0.9)); }
+          100% { stroke: #f5883e; stroke-width: 0.9; filter: drop-shadow(0 0 0 rgba(245,136,62,0)); }
         }
-        .stack-orbit .orbit-core {
-          animation: orbitCoreBreathe 3.6s ease-in-out infinite;
-          transform-origin: center;
-        }
-        @keyframes orbitCoreBreathe {
-          0%, 100% { opacity: 0.7; }
-          50%      { opacity: 1; }
-        }
-        .stack-orbit .orbit-chip {
-          transition: transform 220ms ease;
-          will-change: transform;
-        }
+        .stack-orbit .orbit-chip { transition: transform 220ms ease; will-change: transform; }
         .stack-orbit .orbit-chip:hover .chip-body,
         .stack-orbit .orbit-chip:focus-visible .chip-body {
           transform: scale(1.18);
@@ -295,24 +382,52 @@ export default function StackOrbit({ providers, iconPaths = {} }: Props) {
           background: rgba(233, 107, 42, 0.14);
           box-shadow: 0 6px 24px -4px rgba(233, 107, 42, 0.4);
         }
-        .stack-orbit .orbit-ring:hover {
-          animation-play-state: paused;
-        }
-        .stack-orbit .orbit-ring:hover .orbit-chip {
-          animation-play-state: paused;
-        }
-        .stack-orbit .orbit-chip.pulsing .chip-body {
-          animation: chipPulse 900ms ease-out;
-        }
+        .stack-orbit .orbit-ring:hover { animation-play-state: paused; }
+        .stack-orbit .orbit-ring:hover .orbit-chip { animation-play-state: paused; }
+        .stack-orbit .orbit-chip.pulsing .chip-body { animation: chipPulse 900ms ease-out; }
         @keyframes chipPulse {
-          0%   { transform: scale(1);    box-shadow: 0 0 0   0     rgba(233,107,42,0.6); border-color: var(--color-blade-500); }
-          40%  { transform: scale(1.22); box-shadow: 0 0 0   14px  rgba(233,107,42,0);   border-color: var(--color-blade-400); }
-          100% { transform: scale(1);    box-shadow: 0 0 0   0     rgba(233,107,42,0);   border-color: var(--color-ink-700); }
+          0%   { transform: scale(1);    box-shadow: 0 0 0 0    rgba(233,107,42,0.6); border-color: var(--color-blade-500); }
+          40%  { transform: scale(1.22); box-shadow: 0 0 0 14px rgba(233,107,42,0);   border-color: var(--color-blade-400); }
+          100% { transform: scale(1);    box-shadow: 0 0 0 0    rgba(233,107,42,0);   border-color: var(--color-ink-700); }
         }
+        /* Entrance cascade — runs once on first mount, outer ring → inner.
+           Per-chip --cascade-delay is injected inline on the anchor. */
+        .stack-orbit.orbit-cascade .chip-body {
+          animation: chipCascade 680ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
+          animation-delay: var(--cascade-delay, 0ms);
+        }
+        @keyframes chipCascade {
+          0%   { opacity: 0; transform: scale(0.4) translateY(-10px); filter: blur(3px); }
+          70%  { opacity: 1; transform: scale(1.08); filter: blur(0); }
+          100% { opacity: 1; transform: scale(1); filter: blur(0); }
+        }
+        .stack-orbit.orbit-cascade .orbit-core-group {
+          animation: coreReveal 900ms ease-out both;
+          animation-delay: 900ms;
+        }
+        @keyframes coreReveal {
+          0%   { opacity: 0; transform: scale(0.6); }
+          100% { opacity: 1; transform: scale(1); }
+        }
+        .stack-orbit .orbit-recipe-label {
+          opacity: 0;
+          transform: translate(-50%, -4px);
+          transition: opacity 260ms ease, transform 260ms cubic-bezier(0.2, 0.9, 0.3, 1);
+          background: rgba(233, 107, 42, 0.10);
+          border: 1px solid rgba(233, 107, 42, 0.28);
+          border-radius: 2px;
+          white-space: nowrap;
+          backdrop-filter: blur(4px);
+          z-index: 2;
+        }
+        .stack-orbit .orbit-recipe-label.is-visible { opacity: 1; transform: translate(-50%, 0); }
         @media (prefers-reduced-motion: reduce) {
           .stack-orbit .orbit-core,
           .stack-orbit .orbit-chip,
-          .stack-orbit .orbit-ring { animation: none !important; }
+          .stack-orbit .orbit-ring,
+          .stack-orbit .orbit-core-group,
+          .stack-orbit .chip-body { animation: none !important; }
+          .stack-orbit .orbit-recipe-label { display: none; }
         }
       `}</style>
     </div>
@@ -320,10 +435,7 @@ export default function StackOrbit({ providers, iconPaths = {} }: Props) {
 }
 
 function OrbitChip({
-  chip,
-  iconPaths,
-  isPulsing,
-  isInRecipe,
+  chip, iconPaths, isPulsing, isInRecipe,
 }: {
   chip: PlacedChip;
   iconPaths: Record<string, string | null>;
@@ -338,9 +450,7 @@ function OrbitChip({
       style={{
         width: size + 10,
         height: size + 10,
-        backgroundColor: isInRecipe
-          ? "rgba(233, 107, 42, 0.06)"
-          : "rgba(10, 12, 16, 0.82)",
+        backgroundColor: isInRecipe ? "rgba(233, 107, 42, 0.06)" : "rgba(10, 12, 16, 0.82)",
         borderColor: isPulsing
           ? "var(--color-blade-400)"
           : isInRecipe
@@ -363,11 +473,7 @@ function OrbitChip({
       ) : (
         <span
           className="rounded-full"
-          style={{
-            width: size * 0.5,
-            height: size * 0.5,
-            backgroundColor: `#${chip.color}`,
-          }}
+          style={{ width: size * 0.5, height: size * 0.5, backgroundColor: `#${chip.color}` }}
         />
       )}
     </div>

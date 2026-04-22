@@ -4,33 +4,44 @@
       <stop offset="0%" stop-color="#0a0c10"/>
       <stop offset="100%" stop-color="#05070a"/>
     </linearGradient>
-    <linearGradient id="steel" x1="0" x2="0" y1="0" y2="1">
-      <stop offset="0%" stop-color="#2a3340"/>
-      <stop offset="60%" stop-color="#1a1f26"/>
-      <stop offset="100%" stop-color="#0f1419"/>
+    <linearGradient id="ring" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0%" stop-color="#39556f" stop-opacity="0.55"/>
+      <stop offset="55%" stop-color="#6b8097" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#f5883e"/>
     </linearGradient>
-    <linearGradient id="phantom" x1="0" x2="0" y1="0" y2="1">
-      <stop offset="0%" stop-color="#3a2212"/>
-      <stop offset="100%" stop-color="#1a0e08"/>
+    <linearGradient id="facet" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f5883e"/>
+      <stop offset="100%" stop-color="#c2521c"/>
     </linearGradient>
-    <radialGradient id="glow" cx="50%" cy="85%" r="55%">
+    <linearGradient id="shadow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1a1f26"/>
+      <stop offset="100%" stop-color="#2a1a10"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="88%" r="55%">
       <stop offset="0%" stop-color="#e96b2a" stop-opacity="0.5"/>
       <stop offset="70%" stop-color="#e96b2a" stop-opacity="0"/>
     </radialGradient>
-    <clipPath id="tri"><path d="M256 112 L416 396 L96 396 Z"/></clipPath>
+    <radialGradient id="sat" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fbe1cf"/>
+      <stop offset="35%" stop-color="#f5883e"/>
+      <stop offset="100%" stop-color="#e96b2a"/>
+    </radialGradient>
+    <filter id="satglow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="6"/>
+    </filter>
   </defs>
   <rect width="512" height="512" rx="112" fill="url(#bg)"/>
-  <ellipse cx="256" cy="428" rx="176" ry="36" fill="url(#glow)"/>
-  <g clip-path="url(#tri)">
-    <rect x="0" y="0" width="512" height="360" fill="url(#steel)"/>
-    <rect x="0" y="361.5" width="512" height="34.5" fill="url(#phantom)"/>
-    <line x1="0" x2="512" y1="147.5" y2="147.5" stroke="#e96b2a" stroke-width="3.5" stroke-opacity="0.22"/>
-    <line x1="0" x2="512" y1="183"   y2="183"   stroke="#e96b2a" stroke-width="3.5" stroke-opacity="0.22"/>
-    <line x1="0" x2="512" y1="218.5" y2="218.5" stroke="#e96b2a" stroke-width="3.5" stroke-opacity="0.22"/>
-    <line x1="0" x2="512" y1="254"   y2="254"   stroke="#e96b2a" stroke-width="3.5" stroke-opacity="0.22"/>
-    <line x1="0" x2="512" y1="289.5" y2="289.5" stroke="#e96b2a" stroke-width="3.5" stroke-opacity="0.22"/>
-    <line x1="0" x2="512" y1="325"   y2="325"   stroke="#e96b2a" stroke-width="3.5" stroke-opacity="0.22"/>
-    <line x1="0" x2="512" y1="361.5" y2="361.5" stroke="#e96b2a" stroke-width="5"   stroke-opacity="0.85"/>
-  </g>
-  <path d="M256 112 L416 396 L96 396 Z" fill="none" stroke="#e96b2a" stroke-width="9" stroke-linejoin="miter"/>
+  <!-- Center (256,256). Ring radius 200. Spire apex (256,120), base (160,360)..(352,360). -->
+  <ellipse cx="256" cy="432" rx="160" ry="36" fill="url(#glow)"/>
+  <!-- Soft halo behind satellite for premium feel at 512 -->
+  <circle cx="356" cy="82.8" r="28" fill="#e96b2a" fill-opacity="0.28" filter="url(#satglow)"/>
+  <path d="M 256 56 A 200 200 0 0 1 420 364" stroke="url(#ring)" stroke-width="22" stroke-linecap="round" fill="none"/>
+  <path d="M 132.8 426.6 A 200 200 0 0 1 65.2 197.8" stroke="url(#ring)" stroke-width="22" stroke-linecap="round" fill="none"/>
+  <path d="M 65.2 197.8 A 200 200 0 0 1 132.8 426.6" stroke="#f5883e" stroke-opacity="0.45" stroke-width="11" stroke-dasharray="10 30" stroke-linecap="round" fill="none"/>
+  <path d="M 256 120 L 256 360 L 160 360 Z" fill="url(#shadow)"/>
+  <path d="M 256 120 L 352 360 L 256 360 Z" fill="url(#facet)"/>
+  <path d="M 256 120 L 352 360 L 160 360 Z" fill="none" stroke="#f5883e" stroke-width="16.5" stroke-linejoin="miter"/>
+  <line x1="256" y1="120" x2="256" y2="360" stroke="#fbe1cf" stroke-opacity="0.2" stroke-width="6"/>
+  <circle cx="356" cy="82.8" r="32" fill="url(#sat)"/>
+  <circle cx="356" cy="82.8" r="11" fill="#fbe1cf"/>
 </svg>

@@ -4,34 +4,40 @@
       <stop offset="0%" stop-color="#0a0c10"/>
       <stop offset="100%" stop-color="#05070a"/>
     </linearGradient>
-    <linearGradient id="steel" x1="0" x2="0" y1="0" y2="1">
-      <stop offset="0%" stop-color="#2a3340"/>
-      <stop offset="60%" stop-color="#1a1f26"/>
-      <stop offset="100%" stop-color="#0f1419"/>
+    <linearGradient id="ring" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0%" stop-color="#39556f" stop-opacity="0.55"/>
+      <stop offset="55%" stop-color="#6b8097" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#f5883e"/>
     </linearGradient>
-    <linearGradient id="phantom" x1="0" x2="0" y1="0" y2="1">
-      <stop offset="0%" stop-color="#3a2212"/>
-      <stop offset="100%" stop-color="#1a0e08"/>
+    <linearGradient id="facet" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f5883e"/>
+      <stop offset="100%" stop-color="#c2521c"/>
     </linearGradient>
-    <radialGradient id="glow" cx="50%" cy="85%" r="55%">
+    <linearGradient id="shadow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1a1f26"/>
+      <stop offset="100%" stop-color="#2a1a10"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="88%" r="55%">
       <stop offset="0%" stop-color="#e96b2a" stop-opacity="0.5"/>
       <stop offset="70%" stop-color="#e96b2a" stop-opacity="0"/>
     </radialGradient>
-    <clipPath id="tri"><path d="M90 40 L146 138 L34 138 Z"/></clipPath>
+    <radialGradient id="sat" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fbe1cf"/>
+      <stop offset="35%" stop-color="#f5883e"/>
+      <stop offset="100%" stop-color="#e96b2a"/>
+    </radialGradient>
   </defs>
   <!-- Apple wants no rounded corners — iOS masks automatically. -->
   <rect width="180" height="180" fill="url(#bg)"/>
-  <ellipse cx="90" cy="150" rx="60" ry="14" fill="url(#glow)"/>
-  <g clip-path="url(#tri)">
-    <rect x="0" y="0" width="180" height="125" fill="url(#steel)"/>
-    <rect x="0" y="125.75" width="180" height="13" fill="url(#phantom)"/>
-    <line x1="0" x2="180" y1="52.25" y2="52.25" stroke="#e96b2a" stroke-width="1.4" stroke-opacity="0.22"/>
-    <line x1="0" x2="180" y1="64.5"  y2="64.5"  stroke="#e96b2a" stroke-width="1.4" stroke-opacity="0.22"/>
-    <line x1="0" x2="180" y1="76.75" y2="76.75" stroke="#e96b2a" stroke-width="1.4" stroke-opacity="0.22"/>
-    <line x1="0" x2="180" y1="89"    y2="89"    stroke="#e96b2a" stroke-width="1.4" stroke-opacity="0.22"/>
-    <line x1="0" x2="180" y1="101.25" y2="101.25" stroke="#e96b2a" stroke-width="1.4" stroke-opacity="0.22"/>
-    <line x1="0" x2="180" y1="113.5" y2="113.5" stroke="#e96b2a" stroke-width="1.4" stroke-opacity="0.22"/>
-    <line x1="0" x2="180" y1="125.75" y2="125.75" stroke="#e96b2a" stroke-width="1.8" stroke-opacity="0.85"/>
-  </g>
-  <path d="M90 40 L146 138 L34 138 Z" fill="none" stroke="#e96b2a" stroke-width="3.4" stroke-linejoin="miter"/>
+  <!-- Center (90,90). Ring radius 70. Spire apex (90,42), base (56,126)..(124,126). -->
+  <ellipse cx="90" cy="152" rx="56" ry="12.6" fill="url(#glow)"/>
+  <path d="M 90 20 A 70 70 0 0 1 147.5 127.4" stroke="url(#ring)" stroke-width="7.8" stroke-linecap="round" fill="none"/>
+  <path d="M 46.8 149.2 A 70 70 0 0 1 22.85 69.2" stroke="url(#ring)" stroke-width="7.8" stroke-linecap="round" fill="none"/>
+  <path d="M 22.85 69.2 A 70 70 0 0 1 46.8 149.2" stroke="#f5883e" stroke-opacity="0.45" stroke-width="3.9" stroke-dasharray="3.4 10.2" stroke-linecap="round" fill="none"/>
+  <path d="M 90 42 L 90 126 L 56 126 Z" fill="url(#shadow)"/>
+  <path d="M 90 42 L 124 126 L 90 126 Z" fill="url(#facet)"/>
+  <path d="M 90 42 L 124 126 L 56 126 Z" fill="none" stroke="#f5883e" stroke-width="5.9" stroke-linejoin="miter"/>
+  <line x1="90" y1="42" x2="90" y2="126" stroke="#fbe1cf" stroke-opacity="0.2" stroke-width="2.2"/>
+  <circle cx="125" cy="29" r="11.2" fill="url(#sat)"/>
+  <circle cx="125" cy="29" r="3.9" fill="#fbe1cf"/>
 </svg>

@@ -1,15 +1,30 @@
 ---
 /**
- * ▲ stack — the mark is a triangular silhouette of the 8-tier stack.
+ * Ashlr Stack — "Orbit & Spire" mark.
  *
- * Outer amber outline, steel gradient fill, 7 hairline stripes inside
- * evoking the plate boundaries. The bottom slice (Phantom tier) glows
- * warmer amber.
+ * Two elements, deliberately minimal:
+ *   1. A steel → amber orbital ring with a single bright satellite node at
+ *      ~30 deg (top-right) and a dashed micro-arc opposite it. Echoes the
+ *      concentric orbits + dashed guides in <StackOrbit /> without copying.
+ *   2. A central amber spire — a faceted triangular prism. The right facet
+ *      catches light (blade-500 → blade-600 gradient); the left facet sits in
+ *      ink shadow with an amber keyline. A soft amber base glow grounds it.
+ *
+ * Reads at 16 px (favicon: ring + dot + triangle silhouette), scales cleanly
+ * to 512 px (facets, gradient, glow, dashed arc all activate).
+ *
+ * Amber-first but not amber-only — steel carries the ring, ink carries the
+ * shadow facet, amber carries the satellite, keyline, and lit facet. Preserves
+ * the Anduril-industrial feel.
  *
  * Variants:
- *   mark     — just the glyph (favicons, app icons, corner marks)
- *   chip     — glyph + "stack" wordmark inline (nav + footer)
- *   wordmark — large hero/OG use, Monument Grotesk
+ *   mark     — icon only, square (favicons, corner marks)
+ *   chip     — icon + "stack" wordmark inline (nav + footer)
+ *   wordmark — large hero/OG use, Monument Grotesk display
+ *
+ * idSuffix is load-bearing: every <linearGradient|radialGradient|clipPath>
+ * id is namespaced so multiple <Logo /> instances on one page (Nav + Footer +
+ * DocsHeader) don't collide.
  */
 export interface Props {
   variant?: "chip" | "mark" | "wordmark";
@@ -21,20 +36,21 @@ export interface Props {
 const { variant = "chip", size = 28, class: className = "", idSuffix = "" } = Astro.props;
 const sid = `logo${idSuffix}`;
 
-/** [y-position, stroke-opacity] for each of the 7 plate boundaries. The last
- * line is the Phantom-tier boundary and carries the full amber glow. */
-const STRIPES: Array<[y: number, opacity: number]> = [
-  [6.875, 0.25],
-  [9.75, 0.25],
-  [12.625, 0.25],
-  [15.5, 0.25],
-  [18.375, 0.25],
-  [21.25, 0.25],
-  [24.125, 0.85],
-];
+/**
+ * Shared <defs> + glyph drawing. The SVG uses a 32×32 viewBox; center at
+ * (16, 16). Ring radius 12.5, spire inscribed inside ring (apex at y=7.5,
+ * base at y=22.5, half-width 6).
+ *
+ * Every id is suffixed with `_<variant>` so the three variant SVGs can safely
+ * coexist in one DOM (e.g. wordmark + chip on the same page).
+ */
+const spire = {
+  apexX: 16, apexY: 7.5,
+  baseLX: 10, baseRX: 22, baseY: 22.5,
+};
 ---
 
-{(variant === "mark") && (
+{variant === "mark" && (
   <svg
     viewBox="0 0 32 32"
     width={size}
@@ -45,32 +61,109 @@ const STRIPES: Array<[y: number, opacity: number]> = [
     role="img"
   >
     <defs>
-      <linearGradient id={`${sid}-steel`} x1="0" x2="0" y1="0" y2="1">
-        <stop offset="0%" stop-color="#2a3340" />
-        <stop offset="60%" stop-color="#1a1f26" />
-        <stop offset="100%" stop-color="#0f1419" />
+      {/* Ring: steel at the bottom fading up to amber at the top — suggests
+          the ring is "lit" from the satellite's angle. */}
+      <linearGradient id={`${sid}-ring-m`} x1="0" y1="1" x2="1" y2="0">
+        <stop offset="0%" stop-color="#39556f" stop-opacity="0.55" />
+        <stop offset="55%" stop-color="#6b8097" stop-opacity="0.9" />
+        <stop offset="100%" stop-color="#f5883e" />
       </linearGradient>
-      <linearGradient id={`${sid}-phantom`} x1="0" x2="0" y1="0" y2="1">
-        <stop offset="0%" stop-color="#3a2212" />
-        <stop offset="100%" stop-color="#1a0e08" />
+      {/* Lit facet of the spire: bright amber → deeper amber. */}
+      <linearGradient id={`${sid}-facet-m`} x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#f5883e" />
+        <stop offset="100%" stop-color="#c2521c" />
       </linearGradient>
-      <radialGradient id={`${sid}-glow`} cx="50%" cy="100%" r="55%">
-        <stop offset="0%" stop-color="#e96b2a" stop-opacity="0.7" />
+      {/* Shadow facet: deep ink with a hint of warm phantom at the base. */}
+      <linearGradient id={`${sid}-shadow-m`} x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#1a1f26" />
+        <stop offset="100%" stop-color="#2a1a10" />
+      </linearGradient>
+      {/* Ambient base glow under the spire. */}
+      <radialGradient id={`${sid}-glow-m`} cx="50%" cy="90%" r="60%">
+        <stop offset="0%" stop-color="#e96b2a" stop-opacity="0.55" />
         <stop offset="70%" stop-color="#e96b2a" stop-opacity="0" />
       </radialGradient>
-      <clipPath id={`${sid}-clip`}>
-        <path d="M16 4 L28 27 L4 27 Z" />
-      </clipPath>
+      {/* Satellite node halo. */}
+      <radialGradient id={`${sid}-sat-m`} cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="#fbe1cf" />
+        <stop offset="35%" stop-color="#f5883e" />
+        <stop offset="100%" stop-color="#e96b2a" />
+      </radialGradient>
     </defs>
-    <ellipse cx="16" cy="30" rx="12" ry="3" fill={`url(#${sid}-glow)`} />
-    <g clip-path={`url(#${sid}-clip)`}>
-      <rect x="0" y="0" width="32" height="23" fill={`url(#${sid}-steel)`} />
-      <rect x="0" y="24.125" width="32" height="2.875" fill={`url(#${sid}-phantom)`} />
-      {STRIPES.map(([y, op]) => (
-        <line x1="0" x2="32" y1={y} y2={y} stroke="#e96b2a" stroke-width="0.35" stroke-opacity={op} />
-      ))}
+
+    {/* Soft ground glow */}
+    <ellipse cx="16" cy="27" rx="10" ry="2.25" fill={`url(#${sid}-glow-m)`} />
+
+    {/* Orbital ring — not a perfect circle stroke; it's a pair of arcs so we
+        can break it with the dashed micro-arc opposite the satellite. The
+        satellite sits at polar (r=12.5, theta = -60deg from center); the
+        dashed arc sits on the lower-left (~150deg → 210deg). */}
+    <g>
+      {/* Main ring (solid, two arcs skipping the lower-left dashed segment) */}
+      <path
+        d="M 16 3.5 A 12.5 12.5 0 0 1 26.25 22.75"
+        stroke={`url(#${sid}-ring-m)`}
+        stroke-width="1.4"
+        stroke-linecap="round"
+        fill="none"
+      />
+      <path
+        d="M 8.3 26.65 A 12.5 12.5 0 0 1 4.08 12.35"
+        stroke={`url(#${sid}-ring-m)`}
+        stroke-width="1.4"
+        stroke-linecap="round"
+        fill="none"
+      />
+      {/* Dashed lower arc — the "orbit" trail, echoing StackOrbit guides */}
+      <path
+        d="M 4.08 12.35 A 12.5 12.5 0 0 1 8.3 26.65"
+        stroke="#f5883e"
+        stroke-opacity="0.45"
+        stroke-width="0.7"
+        stroke-dasharray="0.6 1.8"
+        stroke-linecap="round"
+        fill="none"
+      />
     </g>
-    <path d="M16 4 L28 27 L4 27 Z" fill="none" stroke="#e96b2a" stroke-width="1.3" stroke-linejoin="miter" />
+
+    {/* Spire — drawn as two facets sharing the apex→base-center seam */}
+    <g>
+      {/* Shadow (left) facet */}
+      <path
+        d={`M ${spire.apexX} ${spire.apexY} L 16 ${spire.baseY} L ${spire.baseLX} ${spire.baseY} Z`}
+        fill={`url(#${sid}-shadow-m)`}
+      />
+      {/* Lit (right) facet */}
+      <path
+        d={`M ${spire.apexX} ${spire.apexY} L ${spire.baseRX} ${spire.baseY} L 16 ${spire.baseY} Z`}
+        fill={`url(#${sid}-facet-m)`}
+      />
+      {/* Amber keyline around the full silhouette */}
+      <path
+        d={`M ${spire.apexX} ${spire.apexY} L ${spire.baseRX} ${spire.baseY} L ${spire.baseLX} ${spire.baseY} Z`}
+        fill="none"
+        stroke="#f5883e"
+        stroke-width="1.05"
+        stroke-linejoin="miter"
+      />
+      {/* Center seam (apex → base midpoint) — a hair of amber to catch the
+          eye at large sizes; invisible at 16 px because of antialiasing. */}
+      <line
+        x1={spire.apexX}
+        y1={spire.apexY}
+        x2="16"
+        y2={spire.baseY}
+        stroke="#fbe1cf"
+        stroke-opacity="0.18"
+        stroke-width="0.4"
+      />
+    </g>
+
+    {/* Satellite node on the ring at polar (-60deg from +x axis), i.e.
+        top-right. Position: cx = 16 + 12.5*cos(-60deg) ≈ 22.25,
+        cy = 16 + 12.5*sin(-60deg) ≈ 5.18. Rounded to clean increments. */}
+    <circle cx="22.25" cy="5.18" r="2" fill={`url(#${sid}-sat-m)`} />
+    <circle cx="22.25" cy="5.18" r="0.7" fill="#fbe1cf" />
   </svg>
 )}
 
@@ -78,27 +171,38 @@ const STRIPES: Array<[y: number, opacity: number]> = [
   <span class={`inline-flex items-center gap-2.5 ${className}`} aria-label="Ashlr Stack">
     <svg viewBox="0 0 32 32" width={size} height={size} fill="none" aria-hidden="true" role="img">
       <defs>
-        <linearGradient id={`${sid}-steel-c`} x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0%" stop-color="#2a3340" />
-          <stop offset="60%" stop-color="#1a1f26" />
-          <stop offset="100%" stop-color="#0f1419" />
+        <linearGradient id={`${sid}-ring-c`} x1="0" y1="1" x2="1" y2="0">
+          <stop offset="0%" stop-color="#39556f" stop-opacity="0.55" />
+          <stop offset="55%" stop-color="#6b8097" stop-opacity="0.9" />
+          <stop offset="100%" stop-color="#f5883e" />
         </linearGradient>
-        <linearGradient id={`${sid}-phantom-c`} x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0%" stop-color="#3a2212" />
-          <stop offset="100%" stop-color="#1a0e08" />
+        <linearGradient id={`${sid}-facet-c`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#f5883e" />
+          <stop offset="100%" stop-color="#c2521c" />
         </linearGradient>
-        <clipPath id={`${sid}-clip-c`}>
-          <path d="M16 4 L28 27 L4 27 Z" />
-        </clipPath>
+        <linearGradient id={`${sid}-shadow-c`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#1a1f26" />
+          <stop offset="100%" stop-color="#2a1a10" />
+        </linearGradient>
+        <radialGradient id={`${sid}-glow-c`} cx="50%" cy="90%" r="60%">
+          <stop offset="0%" stop-color="#e96b2a" stop-opacity="0.5" />
+          <stop offset="70%" stop-color="#e96b2a" stop-opacity="0" />
+        </radialGradient>
+        <radialGradient id={`${sid}-sat-c`} cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#fbe1cf" />
+          <stop offset="35%" stop-color="#f5883e" />
+          <stop offset="100%" stop-color="#e96b2a" />
+        </radialGradient>
       </defs>
-      <g clip-path={`url(#${sid}-clip-c)`}>
-        <rect x="0" y="0" width="32" height="23" fill={`url(#${sid}-steel-c)`} />
-        <rect x="0" y="24.125" width="32" height="2.875" fill={`url(#${sid}-phantom-c)`} />
-        {STRIPES.map(([y, op]) => (
-          <line x1="0" x2="32" y1={y} y2={y} stroke="#e96b2a" stroke-width="0.35" stroke-opacity={op} />
-        ))}
-      </g>
-      <path d="M16 4 L28 27 L4 27 Z" fill="none" stroke="#e96b2a" stroke-width="1.3" stroke-linejoin="miter" />
+      <ellipse cx="16" cy="27" rx="10" ry="2.25" fill={`url(#${sid}-glow-c)`} />
+      <path d="M 16 3.5 A 12.5 12.5 0 0 1 26.25 22.75" stroke={`url(#${sid}-ring-c)`} stroke-width="1.4" stroke-linecap="round" fill="none" />
+      <path d="M 8.3 26.65 A 12.5 12.5 0 0 1 4.08 12.35" stroke={`url(#${sid}-ring-c)`} stroke-width="1.4" stroke-linecap="round" fill="none" />
+      <path d="M 4.08 12.35 A 12.5 12.5 0 0 1 8.3 26.65" stroke="#f5883e" stroke-opacity="0.45" stroke-width="0.7" stroke-dasharray="0.6 1.8" stroke-linecap="round" fill="none" />
+      <path d={`M ${spire.apexX} ${spire.apexY} L 16 ${spire.baseY} L ${spire.baseLX} ${spire.baseY} Z`} fill={`url(#${sid}-shadow-c)`} />
+      <path d={`M ${spire.apexX} ${spire.apexY} L ${spire.baseRX} ${spire.baseY} L 16 ${spire.baseY} Z`} fill={`url(#${sid}-facet-c)`} />
+      <path d={`M ${spire.apexX} ${spire.apexY} L ${spire.baseRX} ${spire.baseY} L ${spire.baseLX} ${spire.baseY} Z`} fill="none" stroke="#f5883e" stroke-width="1.05" stroke-linejoin="miter" />
+      <circle cx="22.25" cy="5.18" r="2" fill={`url(#${sid}-sat-c)`} />
+      <circle cx="22.25" cy="5.18" r="0.7" fill="#fbe1cf" />
     </svg>
     <span
       class="text-[14px] font-medium tracking-[0.14em] uppercase text-[color:var(--color-ink-50)]"
@@ -122,27 +226,38 @@ const STRIPES: Array<[y: number, opacity: number]> = [
       aria-hidden="true"
     >
       <defs>
-        <linearGradient id={`${sid}-steel-w`} x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0%" stop-color="#2a3340" />
-          <stop offset="60%" stop-color="#1a1f26" />
-          <stop offset="100%" stop-color="#0f1419" />
+        <linearGradient id={`${sid}-ring-w`} x1="0" y1="1" x2="1" y2="0">
+          <stop offset="0%" stop-color="#39556f" stop-opacity="0.55" />
+          <stop offset="55%" stop-color="#6b8097" stop-opacity="0.9" />
+          <stop offset="100%" stop-color="#f5883e" />
         </linearGradient>
-        <linearGradient id={`${sid}-phantom-w`} x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0%" stop-color="#3a2212" />
-          <stop offset="100%" stop-color="#1a0e08" />
+        <linearGradient id={`${sid}-facet-w`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#f5883e" />
+          <stop offset="100%" stop-color="#c2521c" />
         </linearGradient>
-        <clipPath id={`${sid}-clip-w`}>
-          <path d="M16 4 L28 27 L4 27 Z" />
-        </clipPath>
+        <linearGradient id={`${sid}-shadow-w`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#1a1f26" />
+          <stop offset="100%" stop-color="#2a1a10" />
+        </linearGradient>
+        <radialGradient id={`${sid}-glow-w`} cx="50%" cy="90%" r="60%">
+          <stop offset="0%" stop-color="#e96b2a" stop-opacity="0.5" />
+          <stop offset="70%" stop-color="#e96b2a" stop-opacity="0" />
+        </radialGradient>
+        <radialGradient id={`${sid}-sat-w`} cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#fbe1cf" />
+          <stop offset="35%" stop-color="#f5883e" />
+          <stop offset="100%" stop-color="#e96b2a" />
+        </radialGradient>
       </defs>
-      <g clip-path={`url(#${sid}-clip-w)`}>
-        <rect x="0" y="0" width="32" height="23" fill={`url(#${sid}-steel-w)`} />
-        <rect x="0" y="24.125" width="32" height="2.875" fill={`url(#${sid}-phantom-w)`} />
-        {STRIPES.map(([y, op]) => (
-          <line x1="0" x2="32" y1={y} y2={y} stroke="#e96b2a" stroke-width="0.35" stroke-opacity={op} />
-        ))}
-      </g>
-      <path d="M16 4 L28 27 L4 27 Z" fill="none" stroke="#e96b2a" stroke-width="1.3" stroke-linejoin="miter" />
+      <ellipse cx="16" cy="27" rx="10" ry="2.25" fill={`url(#${sid}-glow-w)`} />
+      <path d="M 16 3.5 A 12.5 12.5 0 0 1 26.25 22.75" stroke={`url(#${sid}-ring-w)`} stroke-width="1.4" stroke-linecap="round" fill="none" />
+      <path d="M 8.3 26.65 A 12.5 12.5 0 0 1 4.08 12.35" stroke={`url(#${sid}-ring-w)`} stroke-width="1.4" stroke-linecap="round" fill="none" />
+      <path d="M 4.08 12.35 A 12.5 12.5 0 0 1 8.3 26.65" stroke="#f5883e" stroke-opacity="0.45" stroke-width="0.7" stroke-dasharray="0.6 1.8" stroke-linecap="round" fill="none" />
+      <path d={`M ${spire.apexX} ${spire.apexY} L 16 ${spire.baseY} L ${spire.baseLX} ${spire.baseY} Z`} fill={`url(#${sid}-shadow-w)`} />
+      <path d={`M ${spire.apexX} ${spire.apexY} L ${spire.baseRX} ${spire.baseY} L 16 ${spire.baseY} Z`} fill={`url(#${sid}-facet-w)`} />
+      <path d={`M ${spire.apexX} ${spire.apexY} L ${spire.baseRX} ${spire.baseY} L ${spire.baseLX} ${spire.baseY} Z`} fill="none" stroke="#f5883e" stroke-width="1.05" stroke-linejoin="miter" />
+      <circle cx="22.25" cy="5.18" r="2" fill={`url(#${sid}-sat-w)`} />
+      <circle cx="22.25" cy="5.18" r="0.7" fill="#fbe1cf" />
     </svg>
     <span>stack</span>
   </span>

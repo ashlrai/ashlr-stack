@@ -28,8 +28,7 @@ export interface ProviderRef {
     | "Code"
     | "Tickets"
     | "Email"
-    | "Auth"
-    | "Features";
+    | "Auth";
   authKind: CatalogAuthKind;
   /** Canonical .env names this provider writes into Phantom. */
   secrets: string[];
@@ -444,6 +443,7 @@ export const PROVIDER_CATEGORIES = [
   "Email",
   "Auth",
 ] as const;
+// If you see "Features" anywhere, it's stale — no provider currently maps to it.
 
 export function groupByCategory(): Record<string, ProviderRef[]> {
   const out: Record<string, ProviderRef[]> = {};
