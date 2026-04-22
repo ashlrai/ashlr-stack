@@ -1,5 +1,5 @@
 {
-  "name": "ashlr-stack",
+  "name": "stack",
   "version": "0.1.0",
   "description": "Provision, wire, and operate every service in your dev stack from Claude Code. Supabase, Neon, Vercel, Sentry, PostHog, OpenAI, Anthropic, GitHub, and more — one command each.",
   "author": {

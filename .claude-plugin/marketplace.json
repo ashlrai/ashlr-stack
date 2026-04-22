@@ -1,0 +1,19 @@
+{
+  "$schema": "https://raw.githubusercontent.com/anthropics/claude-code/main/schemas/marketplace.schema.json",
+  "name": "ashlr",
+  "description": "Ashlr tools for Claude Code — Stack (the dev-stack control plane) and friends.",
+  "owner": {
+    "name": "Ashlr",
+    "url": "https://ashlr.ai"
+  },
+  "plugins": [
+    {
+      "name": "stack",
+      "source": "./packages/plugin",
+      "description": "Provision, wire, and operate every third-party service in a project from Claude Code. 29 providers, 19 MCP tools, secrets vaulted in Phantom.",
+      "version": "0.1.0",
+      "homepage": "https://stack.ashlr.ai",
+      "keywords": ["stack", "mcp", "scaffolding", "oauth", "secrets", "phantom"]
+    }
+  ]
+}

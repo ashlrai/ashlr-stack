@@ -116,17 +116,24 @@
 
       <div class="mt-4 flex-1 panel p-3 mono text-[12.5px]" style="background: rgba(0,0,0,0.35);">
         <div class="text-[color:var(--color-ink-500)] text-[10px] tracking-[0.14em] uppercase mb-2">Run in claude code</div>
-        <div class="leading-[1.6] break-all">
-          <span class="text-[color:var(--color-blade-400)]">/plugin</span>
-          <span class="text-[color:var(--color-ink-100)]"> install</span>
-          <span class="text-[color:var(--color-ink-50)]"> ashlrai/stack-plugin</span>
+        <div class="leading-[1.7] break-all space-y-1">
+          <div>
+            <span class="text-[color:var(--color-blade-400)]">/plugin</span>
+            <span class="text-[color:var(--color-ink-100)]"> marketplace add</span>
+            <span class="text-[color:var(--color-ink-50)]"> ashlrai/ashlr-stack</span>
+          </div>
+          <div>
+            <span class="text-[color:var(--color-blade-400)]">/plugin</span>
+            <span class="text-[color:var(--color-ink-100)]"> install</span>
+            <span class="text-[color:var(--color-ink-50)]"> stack@ashlr</span>
+          </div>
         </div>
       </div>
 
       <button
         class="copy-btn mt-3 self-start px-3 py-1.5 border border-[color:var(--color-ink-700)] text-[11px] tracking-[0.14em] uppercase text-[color:var(--color-ink-200)] hover:border-[color:var(--color-blade-500)] hover:text-[color:var(--color-blade-400)] transition-colors mono"
-        data-copy="/plugin install ashlrai/stack-plugin"
-        aria-label="Copy plugin command"
+        data-copy={`/plugin marketplace add ashlrai/ashlr-stack\n/plugin install stack@ashlr`}
+        aria-label="Copy plugin commands"
       >
         <span class="copy-label">Copy command</span>
       </button>
@@ -161,8 +168,8 @@
 <pre class="text-[color:var(--color-ink-100)] leading-[1.55]" style="margin: 0; white-space: pre;">{`{
   "mcpServers": {
     "ashlr-stack": {
-      "command": "bunx",
-      "args": ["ashlr-stack-mcp"]
+      "command": "npx",
+      "args": ["-y", "ashlr-stack-mcp"]
     }
   }
 }`}</pre>
@@ -170,7 +177,7 @@
 
       <button
         class="copy-btn mt-3 self-start px-3 py-1.5 border border-[color:var(--color-ink-700)] text-[11px] tracking-[0.14em] uppercase text-[color:var(--color-ink-200)] hover:border-[color:var(--color-blade-500)] hover:text-[color:var(--color-blade-400)] transition-colors mono"
-        data-copy={'{"mcpServers":{"ashlr-stack":{"command":"bunx","args":["ashlr-stack-mcp"]}}}'}
+        data-copy={'{"mcpServers":{"ashlr-stack":{"command":"npx","args":["-y","ashlr-stack-mcp"]}}}'}
         aria-label="Copy MCP config"
       >
         <span class="copy-label">Copy config</span>
