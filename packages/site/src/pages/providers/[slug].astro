@@ -175,8 +175,15 @@ const breadcrumbs = breadcrumbSchema([
       </svg>
     )}
     <div class="flex-1 min-w-0">
-      <div class="text-[11px] font-semibold uppercase tracking-[0.14em] text-magenta-400 mb-1">
-        {p.category} · {authLabel}
+      <div class="flex items-center gap-2 flex-wrap mb-1">
+        <span class="text-[11px] font-semibold uppercase tracking-[0.14em] text-magenta-400">
+          {p.category} · {authLabel}
+        </span>
+        {p.keyOnly && (
+          <span class="text-[9px] font-semibold uppercase tracking-[0.1em] px-1.5 py-0.5 rounded border border-ink-600 bg-ink-800/60 text-ink-500">
+            KEY-ONLY · v0.2 adds provisioning
+          </span>
+        )}
       </div>
       <div class="text-[15px] text-ink-100 leading-snug">
         <strong class="font-semibold">{p.displayName}</strong> — {p.blurb}

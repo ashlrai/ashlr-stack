@@ -41,6 +41,13 @@ export interface ProviderRef {
     preview?: boolean;
     detail: string;
   };
+  /**
+   * When true, the adapter only validates and stores the key — no upstream
+   * resource is created or configured. Absence of this flag means the adapter
+   * performs real provisioning (project/database/repo creation, token minting,
+   * etc.). v0.2 will bring provisioning to key-only providers over time.
+   */
+  keyOnly?: boolean;
   /** Dashboard URL `stack open <name>` lands on. */
   dashboard: string;
   /** Upstream reference docs URL for when something goes wrong. */
@@ -109,6 +116,7 @@ export const PROVIDERS_REF: ProviderRef[] = [
     authKind: "api_key",
     secrets: ["CONVEX_DEPLOY_KEY"],
     blurb: "Reactive backend-as-a-service. Deploy key stored in Phantom.",
+    keyOnly: true,
     dashboard: "https://dashboard.convex.dev",
     docs: "https://docs.convex.dev",
     howTo: "Create a deploy key in the Convex dashboard and paste it.",
@@ -120,6 +128,7 @@ export const PROVIDERS_REF: ProviderRef[] = [
     authKind: "api_key",
     secrets: ["UPSTASH_MANAGEMENT_TOKEN"],
     blurb: "Serverless Redis + Kafka. Management token stored in Phantom.",
+    keyOnly: true,
     dashboard: "https://console.upstash.com",
     docs: "https://upstash.com/docs/devops/developer-api",
     howTo: "Generate a management token from the Upstash console.",
@@ -131,6 +140,7 @@ export const PROVIDERS_REF: ProviderRef[] = [
     authKind: "api_key",
     secrets: ["FIREBASE_SERVICE_ACCOUNT_JSON"],
     blurb: "Realtime DB + Auth. Service-account JSON stored verbatim in Phantom.",
+    keyOnly: true,
     dashboard: "https://console.firebase.google.com",
     docs: "https://firebase.google.com/docs/admin/setup",
     howTo:
@@ -145,6 +155,7 @@ export const PROVIDERS_REF: ProviderRef[] = [
     authKind: "api_key",
     secrets: ["MODAL_TOKEN"],
     blurb: "Serverless compute for AI + data. Token stored in Phantom.",
+    keyOnly: true,
     dashboard: "https://modal.com",
     docs: "https://modal.com/docs",
     howTo: "Create a token in the Modal dashboard and paste it.",
@@ -173,6 +184,7 @@ export const PROVIDERS_REF: ProviderRef[] = [
     authKind: "api_key",
     secrets: ["RAILWAY_TOKEN"],
     blurb: "Infra from a repo. Project-level token stored in Phantom.",
+    keyOnly: true,
     dashboard: "https://railway.app/dashboard",
     docs: "https://docs.railway.app/reference/public-api",
     howTo: "Paste an API token from https://railway.app/account/tokens.",
@@ -184,6 +196,7 @@ export const PROVIDERS_REF: ProviderRef[] = [
     authKind: "api_key",
     secrets: ["FLY_API_TOKEN"],
     blurb: "VMs at the edge. Machines API token stored in Phantom.",
+    keyOnly: true,
     dashboard: "https://fly.io/dashboard",
     docs: "https://fly.io/docs/machines/api",
     howTo: "Paste an API token from https://fly.io/user/personal_access_tokens.",
@@ -212,6 +225,7 @@ export const PROVIDERS_REF: ProviderRef[] = [
     authKind: "api_key",
     secrets: ["RENDER_API_KEY"],
     blurb: "Zero-config hosting. API key stored in Phantom.",
+    keyOnly: true,
     dashboard: "https://dashboard.render.com",
     docs: "https://api-docs.render.com",
     howTo: "Generate a key at https://dashboard.render.com/u/settings#api-keys.",
@@ -225,6 +239,7 @@ export const PROVIDERS_REF: ProviderRef[] = [
     authKind: "api_key",
     secrets: ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_REGION"],
     blurb: "S3, Lambda, RDS. IAM access keys stored in Phantom.",
+    keyOnly: true,
     dashboard: "https://console.aws.amazon.com",
     docs: "https://docs.aws.amazon.com/iam/",
     howTo: "Create an IAM access key pair in the AWS console and paste both halves.",
@@ -239,6 +254,7 @@ export const PROVIDERS_REF: ProviderRef[] = [
     authKind: "api_key",
     secrets: ["OPENAI_API_KEY"],
     blurb: "GPT, Realtime, embeddings. Key verified against /v1/models on paste.",
+    keyOnly: true,
     dashboard: "https://platform.openai.com",
     docs: "https://platform.openai.com/docs/api-reference",
     howTo: "Paste a secret key from https://platform.openai.com/api-keys.",
@@ -250,6 +266,7 @@ export const PROVIDERS_REF: ProviderRef[] = [
     authKind: "api_key",
     secrets: ["ANTHROPIC_API_KEY"],
     blurb: "Claude models + MCP. Key verified against the Messages API on paste.",
+    keyOnly: true,
     dashboard: "https://console.anthropic.com",
     docs: "https://docs.anthropic.com/en/api",
     howTo: "Paste a secret key from https://console.anthropic.com/settings/keys.",
@@ -261,6 +278,7 @@ export const PROVIDERS_REF: ProviderRef[] = [
     authKind: "api_key",
     secrets: ["XAI_API_KEY"],
     blurb: "Grok + tool use. Key verified on paste.",
+    keyOnly: true,
     dashboard: "https://console.x.ai",
     docs: "https://docs.x.ai/api",
     howTo: "Paste a key from https://console.x.ai.",
@@ -272,6 +290,7 @@ export const PROVIDERS_REF: ProviderRef[] = [
     authKind: "api_key",
     secrets: ["DEEPSEEK_API_KEY"],
     blurb: "Open-weight models. Key verified on paste.",
+    keyOnly: true,
     dashboard: "https://platform.deepseek.com",
     docs: "https://api-docs.deepseek.com",
     howTo: "Paste a key from https://platform.deepseek.com/api_keys.",
@@ -283,6 +302,7 @@ export const PROVIDERS_REF: ProviderRef[] = [
     authKind: "pat",
     secrets: ["REPLICATE_API_TOKEN"],
     blurb: "Open-source model inference with per-second billing. API token stored in Phantom.",
+    keyOnly: true,
     dashboard: "https://replicate.com",
     docs: "https://replicate.com/docs/reference/http",
     howTo: "Create a token at https://replicate.com/account/api-tokens.",
@@ -294,6 +314,7 @@ export const PROVIDERS_REF: ProviderRef[] = [
     authKind: "api_key",
     secrets: ["BRAINTRUST_API_KEY"],
     blurb: "LLM evals + observability + prompt playground. Verified against /v1/organization on paste.",
+    keyOnly: true,
     dashboard: "https://www.braintrust.dev/app",
     docs: "https://www.braintrust.dev/docs",
     howTo: "Create a key at https://www.braintrust.dev/app/settings/api-keys.",
@@ -307,6 +328,7 @@ export const PROVIDERS_REF: ProviderRef[] = [
     authKind: "api_key",
     secrets: ["POSTHOG_PERSONAL_API_KEY"],
     blurb: "Product analytics + flags. Personal API key stored in Phantom.",
+    keyOnly: true,
     mcp: {
       name: "posthog",
       detail:
@@ -344,6 +366,7 @@ export const PROVIDERS_REF: ProviderRef[] = [
     authKind: "api_key",
     secrets: ["STRIPE_SECRET_KEY"],
     blurb: "Billing, subscriptions, tax. Restricted / test-mode secret key stored in Phantom.",
+    keyOnly: true,
     mcp: {
       name: "stripe",
       preview: true,
@@ -384,6 +407,7 @@ export const PROVIDERS_REF: ProviderRef[] = [
     authKind: "api_key",
     secrets: ["LINEAR_API_KEY"],
     blurb: "Issues, projects, cycles. Personal API key stored in Phantom.",
+    keyOnly: true,
     mcp: {
       name: "linear",
       detail: "mcp-linear with LINEAR_API_KEY piped from Phantom.",
@@ -401,6 +425,7 @@ export const PROVIDERS_REF: ProviderRef[] = [
     authKind: "api_key",
     secrets: ["RESEND_API_KEY"],
     blurb: "Transactional + React Email. API key stored in Phantom.",
+    keyOnly: true,
     dashboard: "https://resend.com",
     docs: "https://resend.com/docs",
     howTo: "Paste an API key from https://resend.com/api-keys.",
@@ -412,6 +437,7 @@ export const PROVIDERS_REF: ProviderRef[] = [
     authKind: "api_key",
     secrets: ["SENDGRID_API_KEY"],
     blurb: "High-volume transactional mail. API key verified against /v3/scopes on paste.",
+    keyOnly: true,
     dashboard: "https://app.sendgrid.com",
     docs: "https://docs.sendgrid.com/api-reference",
     howTo: "Paste an API key from https://app.sendgrid.com/settings/api_keys.",
@@ -423,6 +449,7 @@ export const PROVIDERS_REF: ProviderRef[] = [
     authKind: "api_key",
     secrets: ["MAILGUN_API_KEY"],
     blurb: "API-first email + routing. Key verified against /v3/domains on paste (HTTP Basic).",
+    keyOnly: true,
     dashboard: "https://app.mailgun.com",
     docs: "https://documentation.mailgun.com/docs/mailgun/api-reference/",
     howTo: "Paste an API key from https://app.mailgun.com/settings/api_security.",
@@ -435,6 +462,7 @@ export const PROVIDERS_REF: ProviderRef[] = [
     secrets: ["POSTMARK_ACCOUNT_TOKEN"],
     blurb:
       "Deliverability-focused transactional. Account token verified against /servers on paste.",
+    keyOnly: true,
     dashboard: "https://account.postmarkapp.com",
     docs: "https://postmarkapp.com/developer/api/overview",
     howTo: "Paste an account token from https://account.postmarkapp.com/api_tokens.",
@@ -448,6 +476,7 @@ export const PROVIDERS_REF: ProviderRef[] = [
     authKind: "api_key",
     secrets: ["CLERK_SECRET_KEY"],
     blurb: "Drop-in auth + users. Secret key stored in Phantom.",
+    keyOnly: true,
     dashboard: "https://dashboard.clerk.com",
     docs: "https://clerk.com/docs",
     howTo: "Paste a secret key from https://dashboard.clerk.com (API Keys).",

@@ -184,6 +184,14 @@ const providerList = itemListSchema({
                       MCP
                     </span>
                   )}
+                  {p.keyOnly && (
+                    <span
+                      class="inline-flex items-center text-[9px] font-semibold uppercase tracking-[0.08em] px-1.5 py-0.5 rounded border border-ink-600 bg-ink-800/60 text-ink-500"
+                      title="This adapter validates and stores the key only — no upstream resource is created. v0.2 adds provisioning."
+                    >
+                      KEY-ONLY · v0.2
+                    </span>
+                  )}
                 </div>
                 <p class="text-[14px] text-ink-300 leading-relaxed">
                   {p.blurb}

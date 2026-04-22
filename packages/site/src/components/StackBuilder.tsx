@@ -178,6 +178,11 @@ function ProviderCard({ m, selected, expanded, onToggle, onExpand }: CardProps) 
               MCP
             </span>
           )}
+          {m.display.keyOnly && (
+            <span className="text-[9px] mono tracking-[0.08em] uppercase px-1.5 py-0.5 border border-[color:var(--color-ink-600)] text-[color:var(--color-ink-500)]" title="Key-only · v0.2 adds provisioning">
+              key
+            </span>
+          )}
         </div>
       </div>
       <div className="relative mt-3 pointer-events-none">
