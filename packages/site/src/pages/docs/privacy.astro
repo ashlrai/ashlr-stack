@@ -1,0 +1,177 @@
+---
+import Docs from "~/layouts/Docs.astro";
+import { Code } from "astro:components";
+---
+
+<Docs
+  title="Privacy Policy"
+  description="Stack's privacy policy — telemetry data collected, data not collected, opt-out options, and retention schedule."
+  eyebrow="Meta"
+>
+  <p class="text-ink-400 text-sm">
+    Document version: 1.0.0 &nbsp;·&nbsp; Effective date: 2026-04-23 &nbsp;·&nbsp;
+    Contact: <a href="mailto:privacy@ashlr.ai">privacy@ashlr.ai</a> or{" "}
+    <a href="https://github.com/ashlrai/stack/issues" target="_blank" rel="noopener">open a GitHub issue</a>.
+  </p>
+
+  <h2>Telemetry is opt-in</h2>
+  <p>
+    Stack never sends telemetry without explicit consent. On first run in an
+    interactive terminal you are asked:
+  </p>
+
+  <Code
+    code={`Share anonymous usage telemetry (command + duration, no paths/secrets)? [y/N]`}
+    lang="text"
+    theme="github-dark-dimmed"
+  />
+
+  <p>
+    The default answer is <strong>N</strong>. Nothing is transmitted until you answer <code>y</code>.
+  </p>
+
+  <h2>What we collect</h2>
+  <p>
+    When you opt in, each CLI invocation may send one event containing
+    <strong>only</strong> the following fields:
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 24%">Field</th>
+        <th style="width: 18%">Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>type</code></td>
+        <td><code>"command"</code> or <code>"error"</code></td>
+        <td>Whether the run completed normally or exited with an error.</td>
+      </tr>
+      <tr>
+        <td><code>command</code></td>
+        <td>string</td>
+        <td>Top-level subcommand name (e.g. <code>"add"</code>, <code>"scan"</code>). Never includes arguments or flag values.</td>
+      </tr>
+      <tr>
+        <td><code>exitCode</code></td>
+        <td>number</td>
+        <td>Process exit code (0 = success).</td>
+      </tr>
+      <tr>
+        <td><code>durationMs</code></td>
+        <td>number</td>
+        <td>Wall-clock milliseconds from CLI start to exit.</td>
+      </tr>
+      <tr>
+        <td><code>runId</code></td>
+        <td>UUID</td>
+        <td>A random UUID generated fresh each time Stack runs. Not stored anywhere; not linkable across runs.</td>
+      </tr>
+      <tr>
+        <td><code>installId</code></td>
+        <td>UUID</td>
+        <td>A random UUID generated once on your machine and stored in <code>~/.ashlr/stack/config.json</code>. Used only to count distinct installations, not to identify you.</td>
+      </tr>
+      <tr>
+        <td><code>stackVersion</code></td>
+        <td>string</td>
+        <td>The installed version of Stack (e.g. <code>"0.1.0"</code>).</td>
+      </tr>
+      <tr>
+        <td><code>platform</code></td>
+        <td>string</td>
+        <td>Operating system platform: <code>"darwin"</code>, <code>"linux"</code>, or <code>"win32"</code>.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    That is the complete payload. No additional fields are ever added without a
+    corresponding update to this document.
+  </p>
+
+  <h2>What we do NOT collect</h2>
+  <ul>
+    <li>Current working directory (<code>cwd</code>) or any filesystem path.</li>
+    <li>Project names, directory names, or repository names.</li>
+    <li>Provider names or choices made for any specific project or stack.</li>
+    <li>Secret values, API keys, tokens, or anything stored in Phantom.</li>
+    <li>Environment variable names or values.</li>
+    <li>Contents of <code>.stack.toml</code> or <code>.stack.local.toml</code>.</li>
+    <li>Your email address or any account identifier.</li>
+    <li>Stack command arguments or flag values (only the subcommand name is sent).</li>
+  </ul>
+
+  <p>
+    <strong>Your IP address</strong> is visible to our telemetry endpoint at the
+    HTTP layer, as with any web request. We do not store it beyond <strong>48 hours</strong>,
+    and it is used solely for abuse mitigation (rate-limiting and bot filtering).
+    It is never written to our analytics database or associated with event records.
+  </p>
+
+  <h2>How to opt out</h2>
+  <p>There are four ways to disable telemetry permanently:</p>
+  <ol>
+    <li><strong>Decline the first-run prompt</strong> — answer <code>N</code> (or press Enter) when asked.</li>
+    <li><strong>CLI command:</strong> <code>stack telemetry disable</code></li>
+    <li>
+      <strong>Environment variable:</strong> set <code>STACK_TELEMETRY=0</code> in your
+      shell or CI environment. This overrides any stored opt-in for the lifetime of that process.
+    </li>
+    <li>
+      <strong>Delete the config file:</strong> <code>rm ~/.ashlr/stack/config.json</code>.
+      Stack behaves as if never prompted; no data is sent until you opt in again.
+    </li>
+  </ol>
+
+  <p>Once opted out, no data is sent — not even a "user opted out" ping.</p>
+
+  <h2>Data retention</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Data</th>
+        <th>Retention</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Raw event records</td>
+        <td>Purged after <strong>30 days</strong>.</td>
+      </tr>
+      <tr>
+        <td>Aggregated daily statistics (counts, p50/p95 durations, error rates)</td>
+        <td>Retained for <strong>90 days</strong>.</td>
+      </tr>
+      <tr>
+        <td>IP addresses</td>
+        <td>Purged after <strong>48 hours</strong>.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>Aggregates contain no per-install or per-run identifiers.</p>
+
+  <h2>Changelog</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Version</th>
+        <th>Date</th>
+        <th>Change</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>1.0.0</td>
+        <td>2026-04-23</td>
+        <td>Initial document. Fields: <code>type</code>, <code>command</code>, <code>exitCode</code>, <code>durationMs</code>, <code>runId</code>, <code>installId</code>, <code>stackVersion</code>, <code>platform</code>.</td>
+      </tr>
+    </tbody>
+  </table>
+</Docs>

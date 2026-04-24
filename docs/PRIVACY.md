@@ -17,6 +17,12 @@ Share anonymous usage telemetry (command + duration, no paths/secrets)? [y/N]
 
 The default answer is **N**. Nothing is transmitted until you answer **y**.
 
+> **Note (v0.1.x):** The hosted telemetry backend has not launched yet.
+> Opting in currently does nothing — no data leaves your machine. Your
+> opt-in choice is saved and will pre-authorize collection once the backend
+> ships. You can opt out at any time before or after that point using the
+> methods described below.
+
 ---
 
 ## What we collect

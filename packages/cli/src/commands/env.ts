@@ -1,8 +1,9 @@
 import { existsSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { findProviderRef, isPhantomInstalled, listSecrets, readConfig } from "@ashlr/stack-core";
+import { findProviderRef, listSecrets, readConfig } from "@ashlr/stack-core";
 import { defineCommand } from "citty";
+import { requirePhantom } from "../lib/phantom-preflight.ts";
 import { colors, intro, outro, outroError } from "../ui.ts";
 
 /**
@@ -24,11 +25,7 @@ export const envCommand = defineCommand({
       },
       async run({ args }) {
         intro(`stack env show (${args.env})`);
-        const phantomOk = await isPhantomInstalled();
-        if (!phantomOk) {
-          outroError("Phantom not installed.");
-          return;
-        }
+        await requirePhantom();
         const config = await readConfig();
         const vaultKeys = new Set(await listSecrets());
         console.log();
@@ -120,10 +117,7 @@ export const envCommand = defineCommand({
       meta: { name: "diff", description: "Which declared secrets are missing from the vault?" },
       async run() {
         intro("stack env diff");
-        if (!(await isPhantomInstalled())) {
-          outroError("Phantom not installed.");
-          return;
-        }
+        await requirePhantom();
         const config = await readConfig();
         const vaultKeys = new Set(await listSecrets());
         const missing: string[] = [];

@@ -1,6 +1,7 @@
 import { readConfig, removeSecret, scanSource, writeConfig } from "@ashlr/stack-core";
 import { removeMcpEntry } from "@ashlr/stack-core/mcp-writer";
 import { defineCommand } from "citty";
+import { requirePhantom } from "../lib/phantom-preflight.ts";
 import { colors, intro, outro, outroError, prompts } from "../ui.ts";
 
 export const removeCommand = defineCommand({
@@ -91,6 +92,11 @@ async function runRemoveAllOrphans(keepRemote: boolean): Promise<void> {
     return;
   }
 
+  const totalOrphanSecrets = orphans.reduce(
+    (n, name) => n + config.services[name].secrets.length,
+    0,
+  );
+  if (totalOrphanSecrets > 0) await requirePhantom();
   let totalSecrets = 0;
   for (const name of orphans) {
     const entry = config.services[name];
@@ -130,6 +136,7 @@ async function runRemoveOne(serviceName: string, keepRemote: boolean): Promise<v
     return;
   }
 
+  if (entry.secrets.length > 0) await requirePhantom();
   for (const secret of entry.secrets) {
     await removeSecret(secret);
   }
@@ -183,6 +190,7 @@ async function runRemoveAll(keepRemote: boolean): Promise<void> {
     }
   }
 
+  if (totalSecrets > 0) await requirePhantom();
   for (const name of serviceNames) {
     const entry = config.services[name];
     for (const secret of entry.secrets) await removeSecret(secret);

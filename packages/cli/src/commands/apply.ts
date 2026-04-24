@@ -6,6 +6,7 @@ import {
   wirePhantomForRecipe,
 } from "@ashlr/stack-core";
 import { defineCommand } from "citty";
+import { requirePhantom } from "../lib/phantom-preflight.ts";
 import { provisionProviders } from "../lib/provision-loop.ts";
 import { colors, intro, outro, outroError, prompts } from "../ui.ts";
 import { doctorCommand } from "./doctor.ts";
@@ -76,6 +77,8 @@ export const applyCommand = defineCommand({
 
     const recipe = await pickRecipe(args.recipeId ? String(args.recipeId) : undefined);
     if (!recipe) return; // pickRecipe already surfaced the error.
+
+    await requirePhantom();
 
     console.log();
     console.log(`  ${colors.bold("recipe")}   ${recipe.id}`);

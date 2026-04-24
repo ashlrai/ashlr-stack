@@ -51,11 +51,13 @@ beforeEach(async () => {
   await deleteCfg();
   globalThis.fetch = realFetch;
   process.env.STACK_TELEMETRY = undefined;
+  process.env.STACK_TELEMETRY_ENDPOINT = undefined;
 });
 
 afterEach(() => {
   globalThis.fetch = realFetch;
   process.env.STACK_TELEMETRY = undefined;
+  process.env.STACK_TELEMETRY_ENDPOINT = undefined;
 });
 
 // ---------------------------------------------------------------------------
@@ -95,8 +97,9 @@ describe("emit when disabled", () => {
 // ---------------------------------------------------------------------------
 
 describe("emit when enabled", () => {
-  test("POSTs JSON with correct shape to the default endpoint", async () => {
+  test("POSTs JSON with correct shape when STACK_TELEMETRY_ENDPOINT is set", async () => {
     await writeCfg({ enabled: true, installId: "fixed-install-id" });
+    process.env.STACK_TELEMETRY_ENDPOINT = "https://example.com/v1/events";
 
     let capturedBody: unknown;
     let capturedUrl: string | undefined;
@@ -109,7 +112,7 @@ describe("emit when enabled", () => {
     await emit({ type: "command", command: "add", exitCode: 0, durationMs: 42 });
     await new Promise((r) => setTimeout(r, 100));
 
-    expect(capturedUrl).toBe("https://telemetry.stack.ashlr.ai/v1/events");
+    expect(capturedUrl).toBe("https://example.com/v1/events");
     const body = capturedBody as Record<string, unknown>;
     expect(body.type).toBe("command");
     expect(body.command).toBe("add");
@@ -119,6 +122,39 @@ describe("emit when enabled", () => {
     expect(typeof body.runId).toBe("string");
     expect(body.platform).toBeDefined();
     expect(body.stackVersion).toBeDefined();
+  });
+
+  test("fetch is never called when enabled but no endpoint configured", async () => {
+    await writeCfg({ enabled: true, installId: "no-endpoint-id" });
+    // Neither STACK_TELEMETRY_ENDPOINT nor config.endpoint is set.
+
+    let fetchCalled = false;
+    globalThis.fetch = (async () => {
+      fetchCalled = true;
+      return new Response("ok", { status: 200 });
+    }) as unknown as typeof fetch;
+
+    await emit({ type: "command", command: "add", exitCode: 0, durationMs: 10 });
+    await new Promise((r) => setTimeout(r, 50));
+    expect(fetchCalled).toBe(false);
+  });
+
+  test("config.endpoint is used when STACK_TELEMETRY_ENDPOINT is not set", async () => {
+    await writeCfg({
+      enabled: true,
+      installId: "cfg-endpoint-id",
+      endpoint: "https://self-hosted.example.com/events",
+    });
+
+    let capturedUrl: string | undefined;
+    globalThis.fetch = (async (url: string) => {
+      capturedUrl = url as string;
+      return new Response("ok", { status: 200 });
+    }) as unknown as typeof fetch;
+
+    await emit({ type: "command", command: "scan" });
+    await new Promise((r) => setTimeout(r, 100));
+    expect(capturedUrl).toBe("https://self-hosted.example.com/events");
   });
 });
 
@@ -172,6 +208,7 @@ describe("STACK_TELEMETRY env var", () => {
 describe("emit error swallowing", () => {
   test("network error does not propagate to the caller", async () => {
     await writeCfg({ enabled: true, installId: "throw-test-id" });
+    process.env.STACK_TELEMETRY_ENDPOINT = "https://example.com/v1/events";
     globalThis.fetch = (async () => {
       throw new Error("network failure");
     }) as unknown as typeof fetch;
@@ -191,6 +228,7 @@ describe("emit error swallowing", () => {
 describe("installId persistence", () => {
   test("same installId is emitted on every call", async () => {
     await writeCfg({ enabled: true, installId: "persisted-id-123" });
+    process.env.STACK_TELEMETRY_ENDPOINT = "https://example.com/v1/events";
 
     const ids: string[] = [];
     globalThis.fetch = (async (_url: string, init?: RequestInit) => {
@@ -233,6 +271,7 @@ describe("privacy: banned fields absent from payload", () => {
 
   test("emitted payload contains none of the banned keys", async () => {
     await writeCfg({ enabled: true, installId: "privacy-test-id" });
+    process.env.STACK_TELEMETRY_ENDPOINT = "https://example.com/v1/events";
 
     let capturedBody: Record<string, unknown> = {};
     globalThis.fetch = (async (_url: string, init?: RequestInit) => {
@@ -250,6 +289,7 @@ describe("privacy: banned fields absent from payload", () => {
 
   test("installId is a UUID (no path segments)", async () => {
     await writeCfg({ enabled: true, installId: crypto.randomUUID() });
+    process.env.STACK_TELEMETRY_ENDPOINT = "https://example.com/v1/events";
 
     let capturedBody: Record<string, unknown> = {};
     globalThis.fetch = (async (_url: string, init?: RequestInit) => {

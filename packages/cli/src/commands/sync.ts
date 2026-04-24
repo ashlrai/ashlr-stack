@@ -1,5 +1,6 @@
 import { readConfig, syncToPlatform } from "@ashlr/stack-core";
 import { defineCommand } from "citty";
+import { requirePhantom } from "../lib/phantom-preflight.ts";
 import { colors, intro, outro, outroError } from "../ui.ts";
 
 const SUPPORTED = ["vercel", "railway", "fly"] as const;
@@ -19,6 +20,7 @@ export const syncCommand = defineCommand({
   },
   async run({ args }) {
     intro(`stack sync ${args.platform}`);
+    await requirePhantom();
     if (!SUPPORTED.includes(args.platform as Platform)) {
       outroError(`Unsupported platform. Use: ${SUPPORTED.join(", ")}`);
       return;

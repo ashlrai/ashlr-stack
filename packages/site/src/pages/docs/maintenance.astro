@@ -1,0 +1,84 @@
+---
+import Docs from "~/layouts/Docs.astro";
+import { Code } from "astro:components";
+---
+
+<Docs
+  title="Maintenance"
+  description="Keep .stack.toml in sync with the actual codebase using stack doctor --reconcile and stack remove --all-orphans."
+  eyebrow="Reference"
+>
+  <h2>The drift problem</h2>
+  <p>
+    Over time, <code>.stack.toml</code> and your source code can fall out of
+    sync. Someone removes a Supabase import but forgets to run{" "}
+    <code>stack remove</code>. Or a service gets added to the config but the SDK
+    was never used. <code>stack doctor --reconcile</code> and{" "}
+    <code>stack remove --all-orphans</code> catch and fix this drift.
+  </p>
+
+  <h2 id="reconcile"><code>stack doctor --reconcile</code></h2>
+  <p>
+    Scans your source files for imports that match known provider patterns, then
+    compares the findings against <code>.stack.toml</code>. Reports three
+    categories:
+  </p>
+
+  <Code
+    code={`stack doctor --reconcile`}
+    lang="bash"
+    theme="github-dark-dimmed"
+  />
+
+  <Code
+    code={`┌  stack doctor --reconcile
+│
+◇  Scan complete
+│
+│  ✓ In sync:    supabase, resend
+│  ⚠ Orphaned:  posthog     (in .stack.toml but no import found in src/)
+│  ⚠ Untracked: clerk       (imported in src/ but not in .stack.toml)
+│
+└  Run \`stack remove --all-orphans\` to clean up, or \`stack add clerk\` to track.`}
+    lang="text"
+    theme="github-dark-dimmed"
+  />
+
+  <p>
+    The command is read-only — it reports but does not modify anything. Pair it
+    with <code>stack scan --json</code> in CI to gate on drift.
+  </p>
+
+  <h2 id="remove-orphans"><code>stack remove --all-orphans</code></h2>
+  <p>
+    Removes every service that <code>doctor --reconcile</code> classified as
+    orphaned: deprovisions the upstream resource (if supported), deletes its
+    Phantom secrets, and removes the entry from <code>.stack.toml</code>.
+  </p>
+
+  <Code
+    code={`# Preview first
+stack doctor --reconcile
+
+# Then remove orphans
+stack remove --all-orphans`}
+    lang="bash"
+    theme="github-dark-dimmed"
+  />
+
+  <div class="callout callout-warn">
+    <code>stack remove --all-orphans</code> calls <code>deprovision</code> for
+    each orphan. For providers that implement it (Supabase, Neon, Turso, Vercel),
+    this <strong>deletes the upstream project</strong>. Run{" "}
+    <code>doctor --reconcile</code> first and confirm the orphan list before
+    proceeding.
+  </div>
+
+  <h2>Using both in CI</h2>
+  <p>
+    Combine <code>doctor --reconcile</code> with <code>scan --json</code> for a
+    full drift check on every push. See{" "}
+    <a href="/docs/ci/#scan-in-ci">CI integration → scan in CI</a> for an
+    example workflow.
+  </p>
+</Docs>

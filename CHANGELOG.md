@@ -29,6 +29,39 @@
   - `packages/site/src/components/GenerateStackDemo.tsx` (new, 220 lines, zero new deps)
   - Wired into `Hero.astro` under the copy-pasteable prompt block so the value prop ladder reads: *one line you tell Claude → what happens when you click play*.
 
+## [0.2.0] — 2026-04-23
+
+### Added
+
+- Compiled node-compatible CLI bin (`dist/index.js`); `npm install -g @ashlr/stack` now works without bun on the host.
+- `stack init --template` runs the full provisioning pipeline for every template service via a shared `lib/provision-loop.ts` helper; `--noProvision` preserves shape-only behavior.
+- `stack add` detects the project's package manager and prompts to install the provider's SDKs after persist; `--install={ask,always,never}` overrides.
+- 10 new provider adapters: Auth0, WorkOS, Mixpanel, Plausible, Datadog, Grafana, GCP, DigitalOcean, Hetzner, LaunchDarkly. Adds Observability and FeatureFlags categories. Catalog now 39 providers.
+- `stack scan --yes --json --confidence` flags for headless CI adoption.
+- `stack doctor --reconcile` flags configured services no longer referenced in source.
+- `stack remove --all-orphans` cleans up services present in config but absent from source.
+- Transactional rollback on `stack add` failure; optional `Provider.deprovision` implemented for supabase, neon, turso, vercel.
+- `stack env export --example` writes a committable `.env.example` from catalog secret keys (never values).
+- `stack swap <from> <to>` with 38 preset pairs across six categories; env-key aliases preserve variable names across equivalent providers (e.g. `DATABASE_URL` on supabase↔neon).
+- `stack telemetry {status,enable,disable}` — opt-in anonymous usage telemetry, default off; `STACK_TELEMETRY=0` always honored.
+- Update notifier checks npm once per 24 h (`~/.ashlr/stack/update-check.json`); respects `STACK_NO_UPDATE_CHECK` and `CI`.
+- MCP server smoke tests: spawn `dist/server.js`, send `tools/list`, assert schemas.
+- Pre-commit hook via `bun run setup-hooks`; CI lint flipped from advisory to blocking after a biome `--write` pass.
+- Site CLI reference auto-generated at prebuild from citty metadata (`scripts/gen-cli-ref.ts`), removing 581 lines of hand-synced mirror.
+- `SECURITY.md` with GitHub Security Advisory disclosure path and 7-day triage commitment.
+- `CODE_OF_CONDUCT.md` in plain language with confidential enforcement channel.
+- `docs/PRIVACY.md` documenting every telemetry field collected, three opt-out paths, and retention policy.
+
+### Changed
+
+- Tests: 186 → 315 passing, 0 failing.
+- Typecheck clean across core, cli, mcp; biome clean on 177 files.
+
+### Fixed
+
+- Rollback error now surfaces both the original failure and any teardown failure when `Provider.deprovision` throws, so callers know whether a dangling upstream resource was left behind.
+- `stack swap X X` rejected up front with a clear message instead of falling through to `SERVICE_ALREADY_ADDED`.
+
 ## 0.1.1 — 2026-04-19
 
 First fully-published release: binaries on GitHub Releases, npm scope claimed, all three packages live.

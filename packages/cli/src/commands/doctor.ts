@@ -8,6 +8,7 @@ import {
   scanSource,
 } from "@ashlr/stack-core";
 import { defineCommand } from "citty";
+import { requirePhantom } from "../lib/phantom-preflight.ts";
 import { colors, intro, logEvent, outro, outroError, prompts } from "../ui.ts";
 
 interface DoctorReport {
@@ -73,14 +74,14 @@ export const doctorCommand = defineCommand({
     if (!json) intro("stack doctor");
 
     if (!(await isPhantomInstalled())) {
-      const msg = "Phantom is not installed. Stack cannot verify secrets without it.";
       if (json) {
-        process.stdout.write(`${JSON.stringify({ error: msg })}\n`);
+        process.stdout.write(
+          `${JSON.stringify({ error: "Phantom is not installed. Stack cannot verify secrets without it." })}\n`,
+        );
         process.exitCode = 1;
         return;
       }
-      outroError(msg);
-      return;
+      await requirePhantom();
     }
 
     const scope: Array<{ path: string; name: string }> = args.all

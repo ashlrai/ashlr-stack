@@ -1,0 +1,138 @@
+---
+import Docs from "~/layouts/Docs.astro";
+import { Code } from "astro:components";
+---
+
+<Docs
+  title="Provider swap"
+  description="Migrate a project from one provider to an equivalent in the same category — auth, database, email, analytics, and more — in a single command."
+  eyebrow="CLI"
+>
+  <h2>What it does</h2>
+  <p>
+    <code>stack swap &lt;from&gt; &lt;to&gt;</code> replaces one provider with
+    another in the same category. It runs the full deprovision → provision
+    sequence atomically: if any step fails, Stack rolls back and your project is
+    left in its original state.
+  </p>
+
+  <p>38 preset pairs are built in across six categories:</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Category</th>
+        <th>Supported pairs (bidirectional)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Auth</td>
+        <td>clerk ↔ auth0, clerk ↔ workos, auth0 ↔ workos</td>
+      </tr>
+      <tr>
+        <td>Database</td>
+        <td>supabase ↔ neon, supabase ↔ turso, neon ↔ turso</td>
+      </tr>
+      <tr>
+        <td>Email</td>
+        <td>resend ↔ sendgrid, resend ↔ mailgun, resend ↔ postmark, sendgrid ↔ mailgun, sendgrid ↔ postmark, mailgun ↔ postmark</td>
+      </tr>
+      <tr>
+        <td>Analytics</td>
+        <td>posthog ↔ mixpanel, posthog ↔ plausible, mixpanel ↔ plausible</td>
+      </tr>
+      <tr>
+        <td>Observability</td>
+        <td>datadog ↔ grafana</td>
+      </tr>
+      <tr>
+        <td>Deploy</td>
+        <td>vercel ↔ netlify, vercel ↔ cloudflare, netlify ↔ cloudflare</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Basic usage</h2>
+
+  <Code
+    code={`# Migrate from Clerk to Auth0
+stack swap clerk auth0
+
+# Preview the plan without executing
+stack swap clerk auth0 --dry-run`}
+    lang="bash"
+    theme="github-dark-dimmed"
+  />
+
+  <p>What happens under the hood:</p>
+
+  <ol>
+    <li>Stack checks that <code>from</code> is configured in <code>.stack.toml</code>.</li>
+    <li>Stack provisions <code>to</code> (OAuth, API calls, secrets into Phantom).</li>
+    <li>Stack removes the <code>from</code> service — deprovisioning upstream resources and deleting its Phantom secrets.</li>
+    <li><code>.stack.toml</code> and <code>.mcp.json</code> are rewritten.</li>
+  </ol>
+
+  <h2>Env-key aliases</h2>
+  <p>
+    Some pairs use different env variable names for the same concept. For
+    example, Supabase writes <code>SUPABASE_URL</code> while Neon writes
+    <code>DATABASE_URL</code>. After a <code>supabase → neon</code> swap, Stack
+    automatically aliases <code>DATABASE_URL</code> back to
+    <code>SUPABASE_URL</code> in Phantom so existing code references keep
+    working without a source change.
+  </p>
+
+  <div class="callout callout-warn">
+    Aliases are a compatibility shim, not a permanent solution. Update your code
+    to reference the new provider's canonical key when you have a moment.
+  </div>
+
+  <h2>Flags</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 30%">Flag</th>
+        <th>Behaviour</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>--dry-run</code></td>
+        <td>Print every step that would run without making any upstream API calls or writing any files.</td>
+      </tr>
+      <tr>
+        <td><code>--keep-from</code></td>
+        <td>Provision <code>to</code> without removing <code>from</code>. Useful for a side-by-side migration where you want to validate the new provider before cutting over.</td>
+      </tr>
+      <tr>
+        <td><code>--no-rollback</code></td>
+        <td>On failure, leave partial state in place instead of rolling back. Use only when debugging a broken provisioner — the default rollback is almost always what you want.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Rollback on failure</h2>
+  <p>
+    If provisioning <code>to</code> fails partway through, Stack calls
+    <code>deprovision</code> on the partially-created upstream resource and
+    removes any Phantom secrets that were written. Your original
+    <code>from</code> service is left intact. See{" "}
+    <a href="/docs/add/#transactional-rollback">Transactional rollback</a> for
+    the full failure-handling model.
+  </p>
+
+  <h2>Discover available swaps</h2>
+
+  <Code
+    code={`# See which providers your current project can swap to
+stack swap --suggest
+
+# Or list all 38 built-in pairs
+stack swap --list`}
+    lang="bash"
+    theme="github-dark-dimmed"
+  />
+</Docs>

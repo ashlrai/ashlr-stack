@@ -75,6 +75,28 @@ export const DOCS_NAV: DocsNavGroup[] = [
     ],
   },
   {
+    title: "Guides",
+    items: [
+      {
+        label: "stack add",
+        href: "/docs/add/",
+        blurb: "SDK auto-install, transactional rollback, and generating .env.example.",
+      },
+      {
+        label: "Provider swap",
+        href: "/docs/swap/",
+        blurb:
+          "Migrate between providers in the same category — Clerk → Auth0, Supabase → Neon, and 36 more pairs.",
+      },
+      {
+        label: "Maintenance",
+        href: "/docs/maintenance/",
+        blurb:
+          "Keep .stack.toml in sync with your codebase using doctor --reconcile and remove --all-orphans.",
+      },
+    ],
+  },
+  {
     title: "Integrations",
     items: [
       {
@@ -144,6 +166,16 @@ export const DOCS_NAV: DocsNavGroup[] = [
         label: "Roadmap",
         href: "/docs/roadmap/",
         blurb: "What's shipped, in-progress, considered, and explicitly off the table.",
+      },
+      {
+        label: "Telemetry",
+        href: "/docs/telemetry/",
+        blurb: "What's collected, what isn't, and three ways to opt out.",
+      },
+      {
+        label: "Privacy Policy",
+        href: "/docs/privacy/",
+        blurb: "Full data policy — fields collected, retention schedule, and changelog.",
       },
     ],
   },

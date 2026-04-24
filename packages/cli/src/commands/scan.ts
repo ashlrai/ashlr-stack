@@ -1,6 +1,5 @@
 import {
   addService,
-  assertPhantomInstalled,
   emptyConfig,
   hasConfig,
   listProviderNames,
@@ -9,6 +8,7 @@ import {
   writeConfig,
 } from "@ashlr/stack-core";
 import { defineCommand } from "citty";
+import { requirePhantom } from "../lib/phantom-preflight.ts";
 import { colors, intro, logEvent, outro, outroError, prompts } from "../ui.ts";
 
 /**
@@ -136,12 +136,7 @@ export const scanCommand = defineCommand({
     }
 
     // ── --auto / --yes path ────────────────────────────────────────────────
-    try {
-      await assertPhantomInstalled();
-    } catch (err) {
-      outroError((err as Error).message);
-      return;
-    }
+    await requirePhantom();
 
     if (!hasConfig(cwd)) {
       await writeConfig(emptyConfig("from-scan"), cwd);

@@ -12,6 +12,7 @@ import {
 } from "@ashlr/stack-core";
 import { removeMcpEntry } from "@ashlr/stack-core/mcp-writer";
 import { defineCommand } from "citty";
+import { requirePhantom } from "../lib/phantom-preflight.ts";
 import { colors, intro, outro, outroError, prompts } from "../ui.ts";
 
 export const swapCommand = defineCommand({
@@ -51,6 +52,8 @@ export const swapCommand = defineCommand({
     const to = String(args.to);
 
     intro(`stack swap ${from} → ${to}${args.dryRun ? colors.dim(" (dry-run)") : ""}`);
+
+    if (!args.dryRun) await requirePhantom();
 
     // ── 0. No-op guard ────────────────────────────────────────────────────
     if (from === to) {

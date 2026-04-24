@@ -1,7 +1,6 @@
 import { spawnSync } from "node:child_process";
 import {
   addService,
-  assertPhantomInstalled,
   detectPackageManager,
   findProviderRef,
   getProvider,
@@ -10,6 +9,7 @@ import {
   listProviderNames,
 } from "@ashlr/stack-core";
 import { defineCommand } from "citty";
+import { requirePhantom } from "../lib/phantom-preflight.ts";
 import { colors, intro, logEvent, outro, outroError, prompts } from "../ui.ts";
 
 export const addCommand = defineCommand({
@@ -75,12 +75,7 @@ export const addCommand = defineCommand({
     intro(`stack add ${service}${args.dryRun ? colors.dim(" (dry-run)") : ""}`);
 
     if (!args.dryRun) {
-      try {
-        await assertPhantomInstalled();
-      } catch (err) {
-        outroError((err as Error).message);
-        return;
-      }
+      await requirePhantom();
     }
 
     if (!available.includes(service)) {

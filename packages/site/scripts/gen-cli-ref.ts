@@ -12,6 +12,7 @@
  *   bun run scripts/gen-cli-ref.ts
  */
 
+import { spawnSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
@@ -553,6 +554,11 @@ async function main() {
   lines.push("];", "");
 
   writeFileSync(OUT_PATH, lines.join("\n"), "utf-8");
+
+  // Biome's line-wrap rules require multi-line breaks on long strings; run
+  // the formatter over the output so the generated file always lands biome-clean.
+  spawnSync("bunx", ["biome", "format", "--write", OUT_PATH], { stdio: "ignore" });
+
   console.log(`\n  wrote ${OUT_PATH}`);
   console.log(`  ${commands.length} commands extracted.`);
 }

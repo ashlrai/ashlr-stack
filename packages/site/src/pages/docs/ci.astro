@@ -211,6 +211,62 @@ stack doctor --json > stack-doctor.json`}
     >GitHub</a> if you want yours prioritised.
   </p>
 
+  <h2 id="scan-in-ci"><code>stack scan</code> in CI — existing repos</h2>
+  <p>
+    If you're adopting Stack in a repo that already has services wired up
+    manually (environment variables set, packages installed), use{" "}
+    <code>stack scan</code> to detect them without interactive prompts:
+  </p>
+
+  <Code
+    code={`# Detect services, emit JSON, exit 0 even if drift is found
+stack scan --json --yes`}
+    lang="bash"
+    theme="github-dark-dimmed"
+  />
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 28%">Flag</th>
+        <th>Behaviour</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>--json</code></td>
+        <td>Emit a machine-readable JSON report instead of interactive output. Suitable for parsing in downstream steps.</td>
+      </tr>
+      <tr>
+        <td><code>--yes</code></td>
+        <td>Accept all detected services without prompting. Required in headless/CI environments.</td>
+      </tr>
+      <tr>
+        <td><code>--confidence &lt;0–1&gt;</code></td>
+        <td>Only report detections above this confidence threshold (default: <code>0.6</code>). Raise to <code>0.8</code> to reduce false positives in large repos.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>Example JSON output shape:</p>
+
+  <Code
+    code={`{
+  "detections": [
+    { "provider": "supabase", "confidence": 0.95, "evidence": ["@supabase/supabase-js"] },
+    { "provider": "resend",   "confidence": 0.82, "evidence": ["resend"] }
+  ]
+}`}
+    lang="json"
+    theme="github-dark-dimmed"
+  />
+
+  <p>
+    Combine with <code>stack doctor --reconcile</code> to also detect drift
+    between <code>.stack.toml</code> and source imports. See{" "}
+    <a href="/docs/maintenance/">Maintenance</a> for details.
+  </p>
+
   <h2>Rotating secrets from CI</h2>
   <div class="callout callout-warn">
     <strong>Don't</strong> run <code>stack add &lt;service&gt; --force</code>

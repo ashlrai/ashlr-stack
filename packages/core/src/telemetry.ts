@@ -50,7 +50,6 @@ export interface TelemetryConfig {
 // Constants
 // ---------------------------------------------------------------------------
 
-const DEFAULT_ENDPOINT = "https://telemetry.stack.ashlr.ai/v1/events";
 const STACK_VERSION = "0.1.0";
 const EMIT_TIMEOUT_MS = 1_000;
 
@@ -156,7 +155,9 @@ export async function promptFirstRun(): Promise<boolean> {
 
   const answer = await new Promise<string>((resolve) => {
     rl.question(
-      "\nShare anonymous usage telemetry (command + duration, no paths/secrets)? [y/N] ",
+      "\nShare anonymous usage telemetry (command + duration, no paths/secrets)?\n" +
+        "Note: the telemetry backend is not yet live — opting in now pre-authorizes\n" +
+        "collection when it launches. No data is sent until then. [y/N] ",
       (ans) => {
         rl.close();
         resolve(ans.trim().toLowerCase());
@@ -194,8 +195,13 @@ export async function emit(
   // No config or not opted-in: no-op. STACK_TELEMETRY=1 alone never enables.
   if (!config?.enabled) return;
 
+  // Resolve endpoint: env override → persisted config → no-op.
+  // The hosted backend is not yet live; emit is a no-op until an endpoint is
+  // configured. This prevents fire-and-forget POSTs to a non-existent domain.
+  const endpoint = process.env.STACK_TELEMETRY_ENDPOINT?.trim() || config.endpoint?.trim() || null;
+  if (!endpoint) return;
+
   const installId = await ensureInstallId(config);
-  const endpoint = config.endpoint ?? DEFAULT_ENDPOINT;
 
   const payload: TelemetryEvent = {
     type: event.type,

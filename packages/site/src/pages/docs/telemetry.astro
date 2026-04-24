@@ -1,0 +1,126 @@
+---
+import Docs from "~/layouts/Docs.astro";
+import { Code } from "astro:components";
+---
+
+<Docs
+  title="Telemetry"
+  description="Stack's opt-in anonymous usage telemetry — what's collected, what isn't, and how to opt out permanently."
+  eyebrow="Reference"
+>
+  <h2>Default: off</h2>
+  <p>
+    Stack never sends telemetry without explicit consent. On first run in an
+    interactive terminal you are asked once:
+  </p>
+
+  <Code
+    code={`Share anonymous usage telemetry (command + duration, no paths/secrets)? [y/N]`}
+    lang="text"
+    theme="github-dark-dimmed"
+  />
+
+  <p>
+    The default answer is <strong>N</strong>. Pressing Enter without typing
+    anything leaves telemetry disabled. Nothing is transmitted until you
+    answer <code>y</code>.
+  </p>
+
+  <h2>What's collected</h2>
+  <p>When you opt in, each CLI invocation may send one event with these fields only:</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 28%">Field</th>
+        <th>Value</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>command</code></td>
+        <td>Top-level subcommand name (e.g. <code>"add"</code>, <code>"scan"</code>). Never includes arguments or flag values.</td>
+      </tr>
+      <tr>
+        <td><code>exitCode</code></td>
+        <td>Process exit code. <code>0</code> = success.</td>
+      </tr>
+      <tr>
+        <td><code>durationMs</code></td>
+        <td>Wall-clock milliseconds from CLI start to exit.</td>
+      </tr>
+      <tr>
+        <td><code>installId</code></td>
+        <td>A random UUID stored in <code>~/.ashlr/stack/config.json</code>. Used only to count distinct installations. Not you — just a machine count.</td>
+      </tr>
+      <tr>
+        <td><code>runId</code></td>
+        <td>A fresh UUID per invocation. Not stored anywhere and not linkable across runs.</td>
+      </tr>
+      <tr>
+        <td><code>stackVersion</code>, <code>platform</code></td>
+        <td>Installed version string and OS platform (<code>darwin</code> / <code>linux</code> / <code>win32</code>).</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>What's never collected</h2>
+  <ul>
+    <li>Working directory, filesystem paths, or project names.</li>
+    <li>Provider names or which services you use.</li>
+    <li>Secret values, API keys, or anything stored in Phantom.</li>
+    <li>Command arguments or flag values.</li>
+    <li>Email address or any account identifier.</li>
+    <li>Contents of <code>.stack.toml</code> or <code>.stack.local.toml</code>.</li>
+  </ul>
+
+  <p>
+    Your IP address is visible to the telemetry endpoint at the HTTP layer.
+    It is purged within 48 hours and never written to the analytics database.
+  </p>
+
+  <h2>How to opt out</h2>
+
+  <Code
+    code={`# Disable via CLI (persisted to ~/.ashlr/stack/config.json)
+stack telemetry disable
+
+# Or set an env var — overrides any stored opt-in for this process only
+STACK_TELEMETRY=0 stack add supabase
+
+# Or add it permanently to your shell profile
+echo 'export STACK_TELEMETRY=0' >> ~/.zshrc`}
+    lang="bash"
+    theme="github-dark-dimmed"
+  />
+
+  <p>
+    You can also check the current status or re-enable from the CLI:
+  </p>
+
+  <Code
+    code={`stack telemetry status   # shows enabled/disabled + installId
+stack telemetry enable   # opt back in
+stack telemetry disable  # opt out`}
+    lang="bash"
+    theme="github-dark-dimmed"
+  />
+
+  <p>
+    Once opted out, no data is sent — not even a "user opted out" ping.
+  </p>
+
+  <h2>CI environments</h2>
+  <p>
+    Stack automatically detects <code>CI=true</code> and skips the first-run
+    prompt. Telemetry defaults to <strong>disabled</strong> in CI unless you
+    explicitly set <code>STACK_TELEMETRY=1</code>. The update-check banner is
+    also suppressed in CI and when <code>STACK_NO_UPDATE_CHECK=1</code> is set.
+  </p>
+
+  <div class="callout">
+    For the full legal document — data retention schedules, the complete field
+    list, and the changelog — see the{" "}
+    <a href="/docs/privacy/">Privacy Policy</a>.
+  </div>
+</Docs>
