@@ -1,6 +1,6 @@
 {
   "name": "ashlr-stack-mcp",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "MCP server for Ashlr Stack. Exposes 19 tools and 3 resources so Claude Code / Cursor / Windsurf / Codex can provision every third-party service in a project with one call.",
   "license": "MIT",
   "author": {

@@ -1,6 +1,6 @@
 {
   "name": "@ashlr/stack-core",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Ashlr Stack core — provider adapters, .stack.toml config, Phantom integration. Shared logic behind the Stack CLI and MCP server.",
   "license": "MIT",
   "author": {

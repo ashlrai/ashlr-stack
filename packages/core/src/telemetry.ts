@@ -50,7 +50,7 @@ export interface TelemetryConfig {
 // Constants
 // ---------------------------------------------------------------------------
 
-const STACK_VERSION = "0.1.0";
+const STACK_VERSION = "0.2.0";
 const EMIT_TIMEOUT_MS = 1_000;
 
 // Per-process anonymous run ID — generated once, never persisted.
