@@ -6,6 +6,14 @@ import { platform } from "node:os";
 import { StackError } from "./errors.ts";
 
 /**
+ * The deterministic loopback port Stack tries first for OAuth callbacks.
+ * Register `http://127.0.0.1:8787/callback` as the redirect URI in your
+ * OAuth app (Supabase, GitHub, etc.) so no wildcard matching is needed.
+ * Stack falls back to a random OS-assigned port only when 8787 is in use.
+ */
+export const STACK_OAUTH_PORT = 8787;
+
+/**
  * Minimal OAuth PKCE helper suitable for CLI/desktop OAuth flows. Spins up a
  * localhost loopback server, opens the browser to the provider auth URL,
  * catches the callback, then exchanges the code for an access token.
@@ -102,62 +110,80 @@ async function captureCallback(args: CaptureArgs): Promise<{ code: string; redir
     }, args.timeoutMs);
     server.on("close", () => clearTimeout(timer));
 
-    server.listen(0, "127.0.0.1", () => {
-      const { port } = server.address() as AddressInfo;
-      const redirectUri = `http://127.0.0.1:${port}/callback`;
+    function startListening(preferredPort: number) {
+      server.listen(preferredPort, "127.0.0.1", () => {
+        const { port } = server.address() as AddressInfo;
+        const redirectUri = `http://127.0.0.1:${port}/callback`;
 
-      server.on("request", (req, res) => {
-        if (!req.url) {
-          res.writeHead(400).end();
-          return;
-        }
-        const url = new URL(req.url, "http://127.0.0.1");
-        if (url.pathname !== "/callback") {
-          res.writeHead(404).end();
-          return;
-        }
-        const receivedState = url.searchParams.get("state");
-        const code = url.searchParams.get("code");
-        const error = url.searchParams.get("error");
-        if (error) {
+        server.on("request", (req, res) => {
+          if (!req.url) {
+            res.writeHead(400).end();
+            return;
+          }
+          const url = new URL(req.url, "http://127.0.0.1");
+          if (url.pathname !== "/callback") {
+            res.writeHead(404).end();
+            return;
+          }
+          const receivedState = url.searchParams.get("state");
+          const code = url.searchParams.get("code");
+          const error = url.searchParams.get("error");
+          if (error) {
+            res
+              .writeHead(400, { "content-type": "text/html" })
+              .end(htmlPage("error", args.providerName, error));
+            server.close();
+            reject(new StackError("OAUTH_DENIED", `${args.providerName} auth denied: ${error}`));
+            return;
+          }
+          if (!code || receivedState !== args.state) {
+            res
+              .writeHead(400, { "content-type": "text/html" })
+              .end(htmlPage("error", args.providerName, "state mismatch"));
+            server.close();
+            reject(
+              new StackError("OAUTH_STATE_MISMATCH", "Auth callback state did not match request."),
+            );
+            return;
+          }
           res
-            .writeHead(400, { "content-type": "text/html" })
-            .end(htmlPage("error", args.providerName, error));
+            .writeHead(200, { "content-type": "text/html" })
+            .end(htmlPage("ok", args.providerName));
           server.close();
-          reject(new StackError("OAUTH_DENIED", `${args.providerName} auth denied: ${error}`));
-          return;
-        }
-        if (!code || receivedState !== args.state) {
-          res
-            .writeHead(400, { "content-type": "text/html" })
-            .end(htmlPage("error", args.providerName, "state mismatch"));
-          server.close();
-          reject(
-            new StackError("OAUTH_STATE_MISMATCH", "Auth callback state did not match request."),
-          );
-          return;
-        }
-        res.writeHead(200, { "content-type": "text/html" }).end(htmlPage("ok", args.providerName));
-        server.close();
-        resolve({ code, redirectUri });
-      });
+          resolve({ code, redirectUri });
+        });
 
-      const params = new URLSearchParams({
-        response_type: "code",
-        client_id: args.clientId,
-        redirect_uri: redirectUri,
-        state: args.state,
-        code_challenge: args.challenge,
-        code_challenge_method: "S256",
-        ...(args.scope ? { scope: args.scope } : {}),
-        ...(args.extraAuthParams ?? {}),
-      });
-      const authorizeUrl = `${args.authUrl}?${params.toString()}`;
+        const params = new URLSearchParams({
+          response_type: "code",
+          client_id: args.clientId,
+          redirect_uri: redirectUri,
+          state: args.state,
+          code_challenge: args.challenge,
+          code_challenge_method: "S256",
+          ...(args.scope ? { scope: args.scope } : {}),
+          ...(args.extraAuthParams ?? {}),
+        });
+        const authorizeUrl = `${args.authUrl}?${params.toString()}`;
 
-      console.log(`\n  Opening ${args.providerName} in your browser…`);
-      console.log(`  If nothing happens, visit:\n    ${authorizeUrl}\n`);
-      openBrowser(authorizeUrl);
+        console.log(`\n  Opening ${args.providerName} in your browser…`);
+        console.log(`  If nothing happens, visit:\n    ${authorizeUrl}\n`);
+        openBrowser(authorizeUrl);
+      });
+    }
+
+    server.once("error", (err: NodeJS.ErrnoException) => {
+      if (err.code === "EADDRINUSE") {
+        console.warn(
+          `  [stack] Port ${STACK_OAUTH_PORT} in use, falling back to OS-assigned port.`,
+        );
+        server.removeAllListeners("error");
+        startListening(0);
+      } else {
+        reject(new StackError("OAUTH_SERVER_ERROR", `OAuth server error: ${err.message}`));
+      }
     });
+
+    startListening(STACK_OAUTH_PORT);
   });
 }
 

@@ -1,0 +1,62 @@
+---
+import Docs from "~/layouts/Docs.astro";
+---
+
+<Docs title="Recipe Marketplace" description="Curated provider stacks you can apply in one command.">
+  <h1>Recipe Marketplace</h1>
+
+  <p>
+    Recipes are curated provider stacks — a named, versioned answer to "what should I use for X?"
+    The marketplace lives in Supabase and is served read-only via an Edge Function.
+  </p>
+
+  <h2>Endpoint</h2>
+
+  <pre><code>GET https://rjowfztlxxstcrwjdaet.supabase.co/functions/v1/list-recipes</code></pre>
+
+  <p>Query parameters:</p>
+  <ul>
+    <li><code>slug</code> — return a single recipe by slug, e.g. <code>?slug=saas-starter</code></li>
+  </ul>
+
+  <p>Response shape:</p>
+  <pre><code>{`// all recipes
+{ "recipes": [...], "count": 5 }
+
+// single recipe
+{ "recipe": { "slug": "saas-starter", "name": "...", "providers": [...], ... } }`}</code></pre>
+
+  <p>Cache-Control: <code>public, max-age=60</code>. CORS open.</p>
+
+  <h2>Schema</h2>
+
+  <pre><code>{`slug         text          -- url-safe identifier, e.g. "saas-starter"
+name         text          -- human-readable title
+description  text          -- one-sentence summary
+query        text          -- canonical semantic query
+providers    jsonb[]       -- [{ name, role, rationale }]
+categories   text[]        -- e.g. ["database","auth","payments"]
+author       text          -- "ashlr" for curated; GitHub handle for community
+curated      boolean       -- true = staff-curated`}</code></pre>
+
+  <h2>Curated recipes</h2>
+
+  <ul>
+    <li><strong>saas-starter</strong> — Next.js + Supabase + Clerk + Stripe + Resend + PostHog + Sentry</li>
+    <li><strong>ai-app</strong> — Vercel + Anthropic + Supabase + Upstash + PostHog</li>
+    <li><strong>side-project</strong> — Vercel + Neon + Resend + Plausible</li>
+    <li><strong>data-pipeline</strong> — Fly.io + Supabase + Sentry + Datadog</li>
+    <li><strong>internal-tool</strong> — Railway + Supabase + GitHub + Linear</li>
+  </ul>
+
+  <h2>Submitting a community recipe</h2>
+
+  <p>
+    Community recipes are accepted via pull request to the
+    <a href="https://github.com/ashlrco/stack">ashlrco/stack</a> repo.
+    Open a PR that adds a row to <code>supabase/seeds/recipes.sql</code> with
+    <code>author</code> set to your GitHub handle and <code>curated = false</code>.
+    The stack team reviews for provider accuracy and rationale quality before merging.
+    Write access to the Supabase project is service-role only — no public inserts.
+  </p>
+</Docs>

@@ -8,6 +8,10 @@ on:
       version:
         description: 'Version to release (no leading v, e.g. 0.1.0)'
         required: true
+      npm_otp:
+        description: 'npm OTP (6-digit, optional — only needed when 2FA is required)'
+        required: false
+        default: ''
 
 permissions:
   contents: write   # create GitHub Releases + upload assets
@@ -147,11 +151,23 @@ jobs:
 
       - if: steps.gate.outputs.enabled == 'true'
         name: Publish @ashlr/stack-core + @ashlr/stack-mcp + @ashlr/stack
+        id: npm_publish
+        continue-on-error: true
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: 'true'
+          NPM_OTP: ${{ github.event.inputs.npm_otp }}
         run: |
-          bash scripts/publish.sh --version ${{ steps.ver.outputs.version }} --yes
+          OTP_FLAG=''
+          if [ -n "$NPM_OTP" ]; then
+            OTP_FLAG="--otp=$NPM_OTP"
+          fi
+          bash scripts/publish.sh --version ${{ steps.ver.outputs.version }} --yes $OTP_FLAG
+
+      - if: steps.gate.outputs.enabled == 'true' && steps.npm_publish.outcome == 'failure'
+        name: Warn — npm publish failed (likely EOTP)
+        run: |
+          echo '::warning title=npm publish failed::npm publish step failed — this is often an OTP/EOTP error. Rotate to an Automation token (no 2FA required) at https://docs.npmjs.com/creating-and-viewing-access-tokens or re-run this workflow with a fresh OTP via the npm_otp input.'
 
       - if: always() && steps.gate.outputs.enabled == 'true'
         name: Restore env.ts (never commit injected client IDs)
@@ -234,3 +250,78 @@ jobs:
           fail_on_unmatched_files: true
           draft: false
           prerelease: ${{ contains(steps.ver.outputs.version, '-') }}
+
+  update-homebrew-tap:
+    name: Update Homebrew tap
+    needs: create-release
+    # Only run on v*.*.* tag pushes (not workflow_dispatch version bumps)
+    if: |
+      !cancelled() &&
+      needs.create-release.result == 'success' &&
+      startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for deploy key secret
+        id: key_check
+        run: |
+          if [ -z "${{ secrets.HOMEBREW_TAP_DEPLOY_KEY }}" ]; then
+            echo "::warning title=Homebrew tap not updated::HOMEBREW_TAP_DEPLOY_KEY secret is not set — skipping formula update. See .github/homebrew-formula.template.rb for setup instructions."
+            echo "has_key=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_key=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - if: steps.key_check.outputs.has_key == 'true'
+        uses: actions/checkout@v4
+        with:
+          path: stack-repo
+
+      - if: steps.key_check.outputs.has_key == 'true'
+        name: Download SHA-256 files from release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          mkdir -p sha256s
+          gh release download "${TAG}" -R ashlrai/ashlr-stack -p "*.sha256" -D sha256s/
+
+      - if: steps.key_check.outputs.has_key == 'true'
+        name: Checkout homebrew tap
+        uses: actions/checkout@v4
+        with:
+          repository: ashlrai/homebrew-ashlr
+          ssh-key: ${{ secrets.HOMEBREW_TAP_DEPLOY_KEY }}
+          path: homebrew-tap
+
+      - if: steps.key_check.outputs.has_key == 'true'
+        name: Generate Formula/stack.rb from template
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          SHA_DARWIN_ARM64=$(awk '{print $1}' sha256s/stack-darwin-arm64.sha256)
+          SHA_DARWIN_X64=$(awk  '{print $1}' sha256s/stack-darwin-x64.sha256)
+          SHA_LINUX_ARM64=$(awk '{print $1}' sha256s/stack-linux-arm64.sha256)
+          SHA_LINUX_X64=$(awk   '{print $1}' sha256s/stack-linux-x64.sha256)
+
+          sed \
+            -e "s/\$VERSION\$/${VERSION}/g" \
+            -e "s/\$SHA_DARWIN_ARM64\$/${SHA_DARWIN_ARM64}/g" \
+            -e "s/\$SHA_DARWIN_X64\$/${SHA_DARWIN_X64}/g" \
+            -e "s/\$SHA_LINUX_ARM64\$/${SHA_LINUX_ARM64}/g" \
+            -e "s/\$SHA_LINUX_X64\$/${SHA_LINUX_X64}/g" \
+            stack-repo/.github/homebrew-formula.template.rb \
+            > homebrew-tap/Formula/stack.rb
+
+      - if: steps.key_check.outputs.has_key == 'true'
+        name: Commit and push updated formula
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          cd homebrew-tap
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/stack.rb
+          git diff --cached --quiet && echo "No formula changes — already up to date." && exit 0
+          git commit -m "feat: stack v${VERSION}
+
+Assisted-By: ashlr-plugin <https://plugin.ashlr.ai>"
+          git push
+

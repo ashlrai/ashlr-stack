@@ -138,7 +138,9 @@ import PhantomBadge from "~/components/PhantomBadge.astro";
       You run <code>stack add supabase</code>.
     </li>
     <li>
-      Stack opens Supabase OAuth in a browser; you click Authorise.
+      Stack opens Supabase OAuth in a browser; you click Authorise. Stack listens on
+      <code>http://127.0.0.1:8787/callback</code> — register that exact URI as the
+      allowed redirect in your OAuth app so no wildcard matching is needed.
     </li>
     <li>
       Stack creates a new project via the Management API. The project is

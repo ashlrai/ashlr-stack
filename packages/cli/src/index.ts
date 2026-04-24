@@ -47,10 +47,31 @@ const main = defineCommand({
       alias: "v",
       description: "Print the CLI version and exit.",
     },
+    json: {
+      type: "boolean",
+      description: "Emit machine-readable JSON (used with --version).",
+    },
   },
   run({ args }) {
     if (args.version) {
-      console.log(VERSION);
+      const platform = `${process.platform}-${process.arch}`;
+      const node = process.versions.node ? `v${process.versions.node}` : undefined;
+      const bun =
+        typeof (globalThis as Record<string, unknown>).Bun !== "undefined"
+          ? (globalThis as { Bun?: { version?: string } }).Bun?.version
+          : undefined;
+
+      if (process.argv.includes("--json")) {
+        const obj: Record<string, string> = { version: VERSION, platform };
+        if (bun !== undefined) obj.bun = bun;
+        if (node !== undefined) obj.node = node;
+        console.log(JSON.stringify(obj));
+      } else {
+        console.log(`stack ${VERSION}`);
+        console.log(`platform: ${platform}`);
+        if (bun !== undefined) console.log(`bun: ${bun}`);
+        if (node !== undefined) console.log(`node: ${node}`);
+      }
       return;
     }
     // citty 0.1.6 calls the root `run` even when a subcommand matched. Detect

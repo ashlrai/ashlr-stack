@@ -69,7 +69,7 @@ stack swap clerk auth0 --dry-run`}
 
   <ol>
     <li>Stack checks that <code>from</code> is configured in <code>.stack.toml</code>.</li>
-    <li>Stack provisions <code>to</code> (OAuth, API calls, secrets into Phantom).</li>
+    <li>Stack provisions <code>to</code> (OAuth, API calls, secrets into Phantom). The OAuth callback listens on <code>http://127.0.0.1:8787/callback</code> — register that URI in your provider app for a clean single redirect URI.</li>
     <li>Stack removes the <code>from</code> service — deprovisioning upstream resources and deleting its Phantom secrets.</li>
     <li><code>.stack.toml</code> and <code>.mcp.json</code> are rewritten.</li>
   </ol>

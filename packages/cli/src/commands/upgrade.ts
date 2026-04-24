@@ -16,7 +16,14 @@ export const upgradeCommand = defineCommand({
     name: "upgrade",
     description: "Check npm for a newer @ashlr/stack release.",
   },
-  async run() {
+  args: {
+    dryRun: {
+      type: "boolean",
+      alias: "n",
+      description: "Print what would be installed without running the install command.",
+    },
+  },
+  async run({ args }) {
     intro("stack upgrade");
     try {
       const res = await fetch(`https://registry.npmjs.org/${encodeURIComponent(PKG)}/latest`);
@@ -40,10 +47,19 @@ export const upgradeCommand = defineCommand({
           `  ${colors.bold(CURRENT_VERSION)} ${colors.dim("→")} ${colors.bold(colors.green(latest))}`,
         );
         console.log();
-        console.log(colors.dim("  Install:"));
-        console.log(colors.dim(`    bun add -g ${PKG}   # or: npm i -g ${PKG}`));
-        console.log();
-        outro(colors.yellow("A newer version is available."));
+        if (args.dryRun) {
+          console.log(colors.dim("  (dry-run) would run:"));
+          console.log(
+            colors.dim(`    bun add -g ${PKG}@${latest}   # or: npm i -g ${PKG}@${latest}`),
+          );
+          console.log();
+          outro(colors.yellow("Dry run — nothing installed."));
+        } else {
+          console.log(colors.dim("  Install:"));
+          console.log(colors.dim(`    bun add -g ${PKG}   # or: npm i -g ${PKG}`));
+          console.log();
+          outro(colors.yellow("A newer version is available."));
+        }
       } else {
         outro(colors.dim(`Local version (${CURRENT_VERSION}) is ahead of npm (${latest}).`));
       }

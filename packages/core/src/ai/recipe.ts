@@ -176,3 +176,72 @@ function coerceRecipe(raw: Record<string, unknown>, fallbackId: string): Recipe 
   }
   return recipe;
 }
+
+/**
+ * Remote recipe marketplace.
+ *
+ * Opt-in via env var — local recipes always take precedence.
+ * Set STACK_RECIPE_BASE_URL to enable remote fallback, e.g.:
+ *   STACK_RECIPE_BASE_URL=https://rjowfztlxxstcrwjdaet.supabase.co/functions/v1/list-recipes
+ */
+const REMOTE_BASE_URL = process.env.STACK_RECIPE_BASE_URL;
+
+/** Fetch all recipes from the remote marketplace (opt-in). Returns [] if disabled or unreachable. */
+export async function listRemoteRecipes(): Promise<Recipe[]> {
+  if (!REMOTE_BASE_URL) return [];
+  try {
+    const res = await fetch(REMOTE_BASE_URL, {
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) return [];
+    const json = (await res.json()) as { recipes?: unknown[] };
+    const rows = Array.isArray(json.recipes) ? json.recipes : [];
+    return rows.map((row) => {
+      const r = row as Record<string, unknown>;
+      return coerceRecipe(
+        {
+          id: r.slug,
+          query: r.query,
+          createdAt: r.created_at,
+          providers: r.providers,
+          guidance: undefined,
+        },
+        String(r.slug ?? ""),
+      );
+    });
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Fetch a single recipe by slug from the remote marketplace (opt-in).
+ * Returns undefined if disabled, not found, or unreachable.
+ */
+export async function getRemoteRecipe(slug: string): Promise<Recipe | undefined> {
+  if (!REMOTE_BASE_URL) return undefined;
+  try {
+    const url = `${REMOTE_BASE_URL}?slug=${encodeURIComponent(slug)}`;
+    const res = await fetch(url, {
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) return undefined;
+    const json = (await res.json()) as { recipe?: unknown };
+    if (!json.recipe || typeof json.recipe !== "object") return undefined;
+    const r = json.recipe as Record<string, unknown>;
+    return coerceRecipe(
+      {
+        id: r.slug,
+        query: r.query,
+        createdAt: r.created_at,
+        providers: r.providers,
+        guidance: undefined,
+      },
+      String(r.slug ?? ""),
+    );
+  } catch {
+    return undefined;
+  }
+}
