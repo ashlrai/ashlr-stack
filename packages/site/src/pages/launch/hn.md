@@ -29,7 +29,7 @@ Honest caveats:
 
 - v0.1, pre-alpha. We use it daily; wouldn't bet a team-of-50 on it yet.
 - Phantom is required — Stack refuses to write raw secrets to disk.
-- 5 of 29 providers are full OAuth; the rest still use PAT paste while we
+- 5 of 39 providers are full OAuth; the rest still use PAT paste while we
   get OAuth apps registered (takes a week to a month per provider).
 - ~97 tests, not "battle-tested in production" — we're still pairing each
   provider with end-to-end recorded sandbox tests.

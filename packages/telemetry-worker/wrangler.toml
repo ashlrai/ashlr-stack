@@ -3,14 +3,12 @@ main = "src/worker.ts"
 compatibility_date = "2026-01-01"
 compatibility_flags = ["nodejs_compat"]
 
-# Daily request budget — generous for v0.1 usage but caps spend if abused.
-# Cloudflare Workers free tier allows 100k req/day; set this well below.
-[limits]
-cpu_ms = 50
-
-# Observability via Workers Logs. Cheap.
+# Observability via Workers Logs — free on Workers Free plan.
 [observability]
 enabled = true
+
+# NOTE: [limits] cpu_ms / request budgets require a paid plan. Free plan
+# gets 100k requests/day + 10ms CPU default, which is plenty for v0.1.
 
 # --- Custom domain (commented until DNS is pointed) -----------------------
 # [[routes]]

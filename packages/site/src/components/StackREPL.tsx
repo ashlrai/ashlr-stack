@@ -14,7 +14,7 @@ import { retrieve } from "../../../core/src/ai/catalog-index";
  * Supported:
  *   stack help                     — list commands
  *   stack init                     — fake init
- *   stack ls                       — show 29 providers
+ *   stack ls                       — show 39 providers
  *   stack add <name> [<name>...]   — simulate provider adds
  *   stack mcp list                 — show MCP servers
  *   stack doctor                   — fake health check

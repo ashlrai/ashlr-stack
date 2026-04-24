@@ -251,7 +251,7 @@ npm i -g phantom-secrets`}
         <tr>
           <td>Pick providers from a free-text brief</td>
           <td><code>stack recommend "&lt;brief&gt;" --save</code></td>
-          <td>BM25-scores the 23-provider catalog; writes `.stack/recipes/&lt;id&gt;.toml` you can replay with `stack apply`.</td>
+          <td>BM25-scores the 39-provider catalog; writes `.stack/recipes/&lt;id&gt;.toml` you can replay with `stack apply`.</td>
         </tr>
         <tr>
           <td>Replay a saved recipe end-to-end</td>
@@ -326,7 +326,7 @@ stack exec -- bun dev`}
   <p>
     When the user describes <em>what they're building</em> rather than naming
     specific providers, reach for the composition pair instead of hand-picking.
-    <code>stack_recommend</code> scores the 23-provider catalog against the
+    <code>stack_recommend</code> scores the 39-provider catalog against the
     brief; <code>stack_apply</code> replays the frozen Recipe end-to-end and
     pre-wires Phantom rotation envelopes + webhook stubs so first-use
     credentials land in already-rotating slots.

@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 /**
  * StackOrbit — the hero's right-side visual.
  *
- * 29 real provider logos orbiting a glowing Stack core in 3 rings. Every ~15s
+ * 39 real provider logos orbiting a glowing Stack core in 3 rings. Every ~15s
  * (and on demand when the core is clicked) a scripted "stack apply" pulse
  * fires: rings freeze, 6 random chips pulse amber in sequence, and thin amber
  * lines draw from the core out to each pulsing chip. A mono recipe label
@@ -60,7 +60,9 @@ function place(providers: OrbitProvider[]): PlacedChip[] {
     (a, b) => (HEADLINER_PRIORITY[b.name] ?? 0) - (HEADLINER_PRIORITY[a.name] ?? 0),
   );
   const rings: OrbitProvider[][] = [[], [], []];
-  const caps = [6, 10, providers.length - 16];
+  const inner = Math.round(providers.length * 0.18);
+  const middle = Math.round(providers.length * 0.33);
+  const caps = [inner, middle, providers.length - inner - middle];
   let ring = 0;
   for (const p of sorted) {
     while ((rings[ring]?.length ?? 0) >= (caps[ring] ?? 0)) ring++;
@@ -260,7 +262,7 @@ export default function StackOrbit({ providers, iconPaths = {} }: Props) {
       ]
         .filter(Boolean)
         .join(" ")}
-      aria-label="Orbital visualization of the 29 providers Stack integrates"
+      aria-label={`Orbital visualization of the ${providers.length} providers Stack integrates`}
     >
       {!reduced && (
         <div
@@ -455,7 +457,7 @@ export default function StackOrbit({ providers, iconPaths = {} }: Props) {
       })}
 
       <div className="absolute left-3 bottom-3 caption text-[color:var(--color-steel-300)] pointer-events-none">
-        29 PROVIDERS · 3 ORBITS
+        {providers.length} PROVIDERS · 3 ORBITS
       </div>
       <div className="absolute right-3 bottom-3 caption text-[color:var(--color-blade-400)] mono text-[10px] pointer-events-none">
         <span

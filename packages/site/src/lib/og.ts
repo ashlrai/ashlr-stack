@@ -22,7 +22,7 @@ export const DEFAULT_TWITTER_IMAGE = "/twitter-card.svg";
 
 export const DEFAULT_TITLE = "Ashlr Stack — The control plane for your entire dev stack";
 export const DEFAULT_DESCRIPTION =
-  "One command to provision, wire, and operate every third-party service in your project. 29 providers. CLI + MCP + Claude Code plugin.";
+  "One command to provision, wire, and operate every third-party service in your project. 39 providers. CLI + MCP + Claude Code plugin.";
 
 export interface OgMetaInput {
   title?: string;

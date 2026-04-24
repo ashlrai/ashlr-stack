@@ -18,7 +18,7 @@ import { PROVIDERS_REF } from "~/lib/providers-ref";
 import { PROVIDERS } from "~/lib/providers";
 import { getIconPath } from "~/lib/icons";
 
-// Build the marquee payload from the canonical catalog (29 providers). Pull
+// Build the marquee payload from the canonical catalog (39 providers). Pull
 // color + icon slug from the display catalog by name, so every logo renders
 // in its real brand color via the existing simple-icons pipeline.
 const marqueeProviders = PROVIDERS_REF.map((p) => {
@@ -47,7 +47,7 @@ const STATS = [
 <Base>
   <Hero />
 
-  <!-- § 01a · Supported providers — full-width marquee of all 29 logos.
+  <!-- § 01a · Supported providers — full-width marquee of all 39 logos.
        Sits directly under the hero so the "what does Stack integrate?"
        question is answered before the install CTA. -->
   <LogoMarquee providers={marqueeProviders} iconPaths={marqueeIconPaths} client:visible />

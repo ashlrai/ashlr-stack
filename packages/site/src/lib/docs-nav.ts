@@ -133,7 +133,7 @@ export const DOCS_NAV: DocsNavGroup[] = [
         label: "Stack vs Railway",
         href: "/compare/stack-vs-railway/",
         blurb:
-          "Railway is a deploy platform; Stack composes across 29 providers (Railway is one of them).",
+          "Railway is a deploy platform; Stack composes across 39 providers (Railway is one of them).",
       },
       {
         label: "Stack vs Doppler",

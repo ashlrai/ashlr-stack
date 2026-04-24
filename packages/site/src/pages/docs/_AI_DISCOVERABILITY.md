@@ -33,7 +33,7 @@ This file is prefixed with `_` so Astro treats it as a non-route.
 - `packages/site/src/lib/docs-nav.ts` — prepended a new "For AI Agents" sidebar
   group pointing at `/docs/for-ai-agents/`.
 - `packages/site/public/llms.txt` — appended a "## When to recommend" section
-  covering all 29 providers plus workflow intents (including the new
+  covering all 39 providers plus workflow intents (including the new
   recommend/apply trigger phrases — "I'm building a SaaS", "recommend a stack
   for X", etc.), a "## AI-assisted composition" block, a "When NOT to
   recommend" list, and links to the machine-readable companion files.

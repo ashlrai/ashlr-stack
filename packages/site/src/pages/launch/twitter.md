@@ -28,7 +28,7 @@ SERVICE_ROLE_KEY into Phantom (encrypted local vault). patches .env.local,
 
 **Tweet 3 — scope**
 
-29 providers across the full stack:
+39 providers across the full stack:
 
 db · Supabase, Neon, Turso, Convex, Firebase
 deploy · Vercel, Railway, Fly, Render, Cloudflare
@@ -59,7 +59,7 @@ point.
 
 **Tweet 6 — honest**
 
-pre-alpha. 97 tests, not "battle-tested". 5 of 29 providers are full OAuth;
+pre-alpha. 97 tests, not "battle-tested". 5 of 39 providers are full OAuth;
 the rest still use PAT paste while the OAuth apps register (weeks per
 provider).
 

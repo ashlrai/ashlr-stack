@@ -13,12 +13,14 @@ export type ProviderCategory =
   | "Cloud"
   | "AI"
   | "Analytics"
+  | "Observability"
   | "Errors"
   | "Payments"
   | "Code"
   | "Tickets"
   | "Email"
-  | "Auth";
+  | "Auth"
+  | "FeatureFlags";
 
 export interface Provider {
   name: string;
@@ -151,13 +153,40 @@ export const PROVIDERS: Provider[] = [
     keyOnly: true,
   },
 
-  // Cloud (1)
+  // Cloud (4)
   {
     name: "AWS",
     slug: "amazonwebservices",
     category: "Cloud",
     color: "FF9900",
     blurb: "S3, Lambda, RDS",
+    auth: "API key",
+    keyOnly: true,
+  },
+  {
+    name: "GCP",
+    slug: "googlecloud",
+    category: "Cloud",
+    color: "4285F4",
+    blurb: "Google Cloud Platform",
+    auth: "API key",
+    keyOnly: true,
+  },
+  {
+    name: "DigitalOcean",
+    slug: "digitalocean",
+    category: "Cloud",
+    color: "0080FF",
+    blurb: "Droplets, Kubernetes, managed DBs",
+    auth: "PAT",
+    keyOnly: true,
+  },
+  {
+    name: "Hetzner",
+    slug: "hetzner",
+    category: "Cloud",
+    color: "D50C2D",
+    blurb: "Affordable European cloud servers",
     auth: "API key",
     keyOnly: true,
   },
@@ -218,7 +247,7 @@ export const PROVIDERS: Provider[] = [
     keyOnly: true,
   },
 
-  // Analytics (1)
+  // Analytics (3)
   {
     name: "PostHog",
     slug: "posthog",
@@ -227,6 +256,44 @@ export const PROVIDERS: Provider[] = [
     blurb: "Product analytics + flags",
     mcp: true,
     auth: "API key",
+    keyOnly: true,
+  },
+  {
+    name: "Mixpanel",
+    slug: "mixpanel",
+    category: "Analytics",
+    color: "7856FF",
+    blurb: "Product analytics",
+    auth: "API key",
+    keyOnly: true,
+  },
+  {
+    name: "Plausible",
+    slug: "plausible",
+    category: "Analytics",
+    color: "5850EC",
+    blurb: "Privacy-friendly web analytics",
+    auth: "API key",
+    keyOnly: true,
+  },
+
+  // Observability (2)
+  {
+    name: "Datadog",
+    slug: "datadog",
+    category: "Observability",
+    color: "632CA6",
+    blurb: "Metrics, traces, logs",
+    auth: "API key",
+    keyOnly: true,
+  },
+  {
+    name: "Grafana",
+    slug: "grafana",
+    category: "Observability",
+    color: "F46800",
+    blurb: "Dashboards + alerting",
+    auth: "PAT",
     keyOnly: true,
   },
 
@@ -314,13 +381,42 @@ export const PROVIDERS: Provider[] = [
     keyOnly: true,
   },
 
-  // Auth (1)
+  // Auth (3)
   {
     name: "Clerk",
     slug: "clerk",
     category: "Auth",
     color: "6C47FF",
     blurb: "Drop-in auth + users",
+    auth: "API key",
+    keyOnly: true,
+  },
+  {
+    name: "Auth0",
+    slug: "auth0",
+    category: "Auth",
+    color: "EB5424",
+    blurb: "Identity platform",
+    auth: "API key",
+    keyOnly: true,
+  },
+  {
+    name: "WorkOS",
+    slug: "workos",
+    category: "Auth",
+    color: "6363F1",
+    blurb: "Enterprise SSO + Directory Sync",
+    auth: "API key",
+    keyOnly: true,
+  },
+
+  // FeatureFlags (1)
+  {
+    name: "LaunchDarkly",
+    slug: "launchdarkly",
+    category: "FeatureFlags",
+    color: "405BFF",
+    blurb: "Feature flags + experimentation",
     auth: "API key",
     keyOnly: true,
   },
@@ -332,10 +428,12 @@ export const CATEGORIES: ProviderCategory[] = [
   "Cloud",
   "AI",
   "Analytics",
+  "Observability",
   "Errors",
   "Payments",
   "Code",
   "Tickets",
   "Email",
   "Auth",
+  "FeatureFlags",
 ];
