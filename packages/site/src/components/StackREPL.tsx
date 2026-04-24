@@ -280,7 +280,7 @@ export default function StackREPL() {
           push(
             mkLine(
               "out",
-              `  ${r.mcp?.name.padEnd(14)} ${r.mcp?.detail.slice(0, 62)}${r.mcp?.detail.length > 62 ? "…" : ""}`,
+              `  ${r.mcp?.name.padEnd(14)} ${r.mcp?.detail.slice(0, 62)}${(r.mcp?.detail.length ?? 0) > 62 ? "…" : ""}`,
             ),
           );
         }

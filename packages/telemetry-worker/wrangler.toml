@@ -1,0 +1,19 @@
+name = "ashlr-stack-telemetry"
+main = "src/worker.ts"
+compatibility_date = "2026-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Daily request budget — generous for v0.1 usage but caps spend if abused.
+# Cloudflare Workers free tier allows 100k req/day; set this well below.
+[limits]
+cpu_ms = 50
+
+# Observability via Workers Logs. Cheap.
+[observability]
+enabled = true
+
+# --- Custom domain (commented until DNS is pointed) -----------------------
+# [[routes]]
+# pattern = "telemetry.stack.ashlr.ai/*"
+# zone_name = "ashlr.ai"
+# custom_domain = true

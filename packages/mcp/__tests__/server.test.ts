@@ -7,7 +7,8 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { spawn, type ChildProcess } from "node:child_process";
+import { spawn, spawnSync, type ChildProcess } from "node:child_process";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
@@ -42,6 +43,17 @@ let transport: StdioClientTransport;
 let serverProcess: ChildProcess | undefined;
 
 beforeAll(async () => {
+  // CI (and a fresh clone) may not have run `bun run build` yet, so the
+  // compiled server.js is missing. Build on demand so the test is self
+  // contained.
+  if (!existsSync(SERVER_PATH)) {
+    const pkgDir = join(import.meta.dir, "..");
+    const build = spawnSync("bun", ["run", "build"], { cwd: pkgDir, stdio: "inherit" });
+    if (build.status !== 0) {
+      throw new Error(`MCP server build failed (exit ${build.status}) — cannot run tests.`);
+    }
+  }
+
   transport = new StdioClientTransport({
     command: "node",
     args: [SERVER_PATH],

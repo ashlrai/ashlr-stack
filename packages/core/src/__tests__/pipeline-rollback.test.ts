@@ -77,7 +77,7 @@ describe("addService rollback", () => {
     const config = await readConfig(cwd);
     expect(config.services.rollbacksvc).toBeUndefined();
 
-    (providers as Record<string, unknown>).rollbacksvc = undefined;
+    Reflect.deleteProperty(providers, "rollbacksvc");
   });
 
   test("secrets written before failure are removed from Phantom vault", async () => {
@@ -142,7 +142,7 @@ describe("addService rollback", () => {
     const config = await readConfig(cwd);
     expect(config.services.secretrollback).toBeUndefined();
 
-    (providers as Record<string, unknown>).secretrollback = undefined;
+    Reflect.deleteProperty(providers, "secretrollback");
   });
 
   test("deprovision failure is logged but does not mask original error", async () => {
@@ -189,7 +189,7 @@ describe("addService rollback", () => {
     const config = await readConfig(cwd);
     expect(config.services.deprovisionfail).toBeUndefined();
 
-    (providers as Record<string, unknown>).deprovisionfail = undefined;
+    Reflect.deleteProperty(providers, "deprovisionfail");
   });
 
   test("provider without deprovision — warning logged with resourceId, .stack.toml unchanged", async () => {
@@ -236,7 +236,7 @@ describe("addService rollback", () => {
     const config = await readConfig(cwd);
     expect(config.services.nodeprov).toBeUndefined();
 
-    (providers as Record<string, unknown>).nodeprov = undefined;
+    Reflect.deleteProperty(providers, "nodeprov");
   });
 
   test("successful flow still works end-to-end unchanged", async () => {
@@ -278,6 +278,6 @@ describe("addService rollback", () => {
     const vault = await readVault(h.dir);
     expect(vault.HAPPY_KEY).toBe("happy-val");
 
-    (providers as Record<string, unknown>).happysvc = undefined;
+    Reflect.deleteProperty(providers, "happysvc");
   });
 });

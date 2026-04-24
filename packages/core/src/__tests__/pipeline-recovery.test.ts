@@ -66,7 +66,7 @@ describe("addService partial-failure breadcrumb", () => {
     const config = await readConfig(cwd);
     expect(config.services.partialsvc).toBeUndefined();
 
-    (providers as Record<string, unknown>).partialsvc = undefined;
+    Reflect.deleteProperty(providers, "partialsvc");
   });
 
   test("non-persist runs do NOT leave a breadcrumb (dry-run / preview)", async () => {
@@ -102,6 +102,6 @@ describe("addService partial-failure breadcrumb", () => {
     const config = await readConfig(cwd);
     expect(config.services.drypartialsvc).toBeUndefined();
 
-    (providers as Record<string, unknown>).drypartialsvc = undefined;
+    Reflect.deleteProperty(providers, "drypartialsvc");
   });
 });

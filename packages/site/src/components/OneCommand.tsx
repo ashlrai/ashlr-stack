@@ -136,8 +136,9 @@ export default function OneCommand() {
                     <h4 className="text-[13px] font-medium text-ink-100">{step.title}</h4>
                   </div>
                   <div className="mono text-[12px] leading-[1.65] space-y-0.5">
-                    {step.lines.map((l) => (
-                      <AnsiLine key={l} line={l} />
+                    {step.lines.map((l, i) => (
+                      // biome-ignore lint/suspicious/noArrayIndexKey: StepLine has no stable id; lines are static and never reorder.
+                      <AnsiLine key={i} line={l} />
                     ))}
                   </div>
                 </div>
@@ -198,8 +199,9 @@ export default function OneCommand() {
                   }}
                 />
                 <div className="relative mono text-[13px] leading-[1.75] space-y-0">
-                  {WITH_LINES.map((l) => (
-                    <AnsiLine key={l} line={l} big />
+                  {WITH_LINES.map((l, i) => (
+                    // biome-ignore lint/suspicious/noArrayIndexKey: WITH_LINES is a static demo transcript; lines never reorder.
+                    <AnsiLine key={i} line={l} big />
                   ))}
                 </div>
               </div>

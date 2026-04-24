@@ -90,6 +90,6 @@ describe("addService full loop", () => {
     const mcp = JSON.parse(mcpRaw) as { mcpServers: Record<string, unknown> };
     expect(mcp.mcpServers.stubsvc).toBeDefined();
 
-    (providers as Record<string, unknown>).stubsvc = undefined;
+    Reflect.deleteProperty(providers, "stubsvc");
   });
 });

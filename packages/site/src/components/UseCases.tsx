@@ -324,8 +324,9 @@ export default function UseCases() {
             chat transcript
           </div>
           <div className="space-y-0">
-            {c.turns.map((t) => (
-              <Turn key={t} line={t} />
+            {c.turns.map((t, i) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: TurnLine has no id; turns are static case-study transcripts.
+              <Turn key={i} line={t} />
             ))}
           </div>
         </div>
