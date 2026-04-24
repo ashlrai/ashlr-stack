@@ -18,10 +18,19 @@ export interface CopyBtnProps {
 
 export async function copyToClipboard(text: string): Promise<void> {
   if (!text) return;
-  try { await navigator.clipboard.writeText(text); } catch { /* noop */ }
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    /* noop */
+  }
 }
 
-export default function CopyBtn({ text, label = "Copy", compact = false, className = "" }: CopyBtnProps) {
+export default function CopyBtn({
+  text,
+  label = "Copy",
+  compact = false,
+  className = "",
+}: CopyBtnProps) {
   const [done, setDone] = useState(false);
   const sizing = compact ? "px-2 py-1 text-[10px]" : "px-3 py-1.5 text-[11px]";
   const state = done

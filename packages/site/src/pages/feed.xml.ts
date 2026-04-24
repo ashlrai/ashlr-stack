@@ -1,5 +1,5 @@
 import type { APIContext } from "astro";
-import { SITE_NAME, SITE_URL, DEFAULT_DESCRIPTION } from "~/lib/og";
+import { DEFAULT_DESCRIPTION, SITE_NAME, SITE_URL } from "~/lib/og";
 
 /**
  * Minimal RSS 2.0 feed for stack.ashlr.ai.
@@ -15,7 +15,7 @@ interface Entry {
   title: string;
   slug: string;
   description: string;
-  pubDate: string;    // RFC 822
+  pubDate: string; // RFC 822
 }
 
 const ENTRIES: Entry[] = [
@@ -40,7 +40,7 @@ const ENTRIES: Entry[] = [
   },
 ];
 
-function escape(s: string): string {
+function escapeXml(s: string): string {
   return s
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -53,20 +53,20 @@ export async function GET(_: APIContext): Promise<Response> {
     const link = `${SITE_URL}/${e.slug}/`;
     return `
     <item>
-      <title>${escape(e.title)}</title>
+      <title>${escapeXml(e.title)}</title>
       <link>${link}</link>
       <guid isPermaLink="true">${link}</guid>
       <pubDate>${e.pubDate}</pubDate>
-      <description>${escape(e.description)}</description>
+      <description>${escapeXml(e.description)}</description>
     </item>`;
   }).join("");
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>${escape(SITE_NAME)}</title>
+    <title>${escapeXml(SITE_NAME)}</title>
     <link>${SITE_URL}</link>
-    <description>${escape(DEFAULT_DESCRIPTION)}</description>
+    <description>${escapeXml(DEFAULT_DESCRIPTION)}</description>
     <language>en-us</language>
     <atom:link href="${SITE_URL}/feed.xml" rel="self" type="application/rss+xml" />${items}
   </channel>

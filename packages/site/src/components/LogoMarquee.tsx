@@ -75,27 +75,29 @@ export default function LogoMarquee({ providers, iconPaths = {} }: Props) {
         aria-hidden="true"
         className="pointer-events-none absolute inset-y-0 left-0 w-24 z-10"
         style={{
-          background:
-            "linear-gradient(to right, var(--color-ink-900), transparent)",
+          background: "linear-gradient(to right, var(--color-ink-900), transparent)",
         }}
       />
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-y-0 right-0 w-24 z-10"
         style={{
-          background:
-            "linear-gradient(to left, var(--color-ink-900), transparent)",
+          background: "linear-gradient(to left, var(--color-ink-900), transparent)",
         }}
       />
 
       <div className="mx-auto max-w-[1240px] px-6 mb-6 flex items-end justify-between gap-4">
         <div>
-          <div className="eyebrow text-[color:var(--color-blade-400)]">
-            Supported providers
-          </div>
+          <div className="eyebrow text-[color:var(--color-blade-400)]">Supported providers</div>
           <div className="text-[14px] text-[color:var(--color-ink-200)] mt-1">
-            <span className="text-[color:var(--color-ink-50)] font-semibold">{providers.length} providers</span>
-            , wired the same way. <span className="text-[color:var(--color-ink-400)]">Click any logo to see what <code className="mono text-[color:var(--color-ink-100)]">stack add</code> does for it.</span>
+            <span className="text-[color:var(--color-ink-50)] font-semibold">
+              {providers.length} providers
+            </span>
+            , wired the same way.{" "}
+            <span className="text-[color:var(--color-ink-400)]">
+              Click any logo to see what{" "}
+              <code className="mono text-[color:var(--color-ink-100)]">stack add</code> does for it.
+            </span>
           </div>
         </div>
         <a

@@ -20,12 +20,12 @@ describe("cross-project registry", () => {
   });
 
   afterEach(() => {
-    if (previousDir === undefined) delete process.env.STACK_REGISTRY_DIR;
+    if (previousDir === undefined) process.env.STACK_REGISTRY_DIR = undefined;
     else process.env.STACK_REGISTRY_DIR = previousDir;
   });
 
   test("registryPath honors STACK_REGISTRY_DIR override", () => {
-    expect(registryPath().startsWith(process.env.STACK_REGISTRY_DIR!)).toBe(true);
+    expect(registryPath().startsWith(process.env.STACK_REGISTRY_DIR ?? "")).toBe(true);
   });
 
   test("writeConfig auto-registers the cwd", async () => {

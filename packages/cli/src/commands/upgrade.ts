@@ -54,8 +54,8 @@ export const upgradeCommand = defineCommand({
 });
 
 function isNewer(a: string, b: string): boolean {
-  const pa = a.split(".").map((x) => parseInt(x, 10));
-  const pb = b.split(".").map((x) => parseInt(x, 10));
+  const pa = a.split(".").map((x) => Number.parseInt(x, 10));
+  const pb = b.split(".").map((x) => Number.parseInt(x, 10));
   for (let i = 0; i < Math.max(pa.length, pb.length); i += 1) {
     const av = pa[i] ?? 0;
     const bv = pb[i] ?? 0;

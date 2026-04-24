@@ -83,7 +83,7 @@ export const TEMPLATES_REF: TemplateRef[] = [
   {
     name: "supabase-posthog-sentry-resend",
     displayName: "Supabase · PostHog · Sentry · Resend · Stripe",
-    tagline: "The \"SaaS in a box\" template.",
+    tagline: 'The "SaaS in a box" template.',
     blurb:
       "The maximal SaaS starter — DB/auth, analytics, errors, transactional email, and billing all wired in one command. Three MCP servers (Supabase, PostHog, Sentry) come online alongside.",
     services: [

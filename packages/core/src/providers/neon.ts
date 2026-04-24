@@ -1,8 +1,7 @@
 import type { ServiceEntry } from "../config.ts";
 import { StackError } from "../errors.ts";
-import { addSecret } from "../phantom.ts";
 import { fetchWithRetry } from "../http.ts";
-import { readLine, tryRevealSecret } from "./_helpers.ts";
+import { addSecret } from "../phantom.ts";
 import type {
   AuthHandle,
   HealthStatus,
@@ -12,6 +11,7 @@ import type {
   ProvisionOpts,
   Resource,
 } from "./_base.ts";
+import { readLine, tryRevealSecret } from "./_helpers.ts";
 
 /**
  * Neon — serverless Postgres. v1 uses a Neon API key (users create one at
@@ -39,7 +39,8 @@ const neon: Provider = {
       if (identity) return { token: cached, identity };
       ctx.log({ level: "warn", msg: "Cached Neon key invalid; re-entering." });
     }
-    if (!ctx.interactive) throw new StackError("NEON_AUTH_REQUIRED", "No valid Neon API key in vault.");
+    if (!ctx.interactive)
+      throw new StackError("NEON_AUTH_REQUIRED", "No valid Neon API key in vault.");
     process.stderr.write(
       "\n  Create a Neon API key at https://console.neon.tech/app/settings/api-keys\n  Paste it here: ",
     );
@@ -54,7 +55,10 @@ const neon: Provider = {
     if (opts.existingResourceId) {
       const project = await fetchProject(auth.token, opts.existingResourceId);
       if (!project)
-        throw new StackError("NEON_PROJECT_NOT_FOUND", `No Neon project ${opts.existingResourceId}.`);
+        throw new StackError(
+          "NEON_PROJECT_NOT_FOUND",
+          `No Neon project ${opts.existingResourceId}.`,
+        );
       return toResource(project);
     }
     const name = `stack-${Date.now().toString(36)}`;
@@ -69,7 +73,10 @@ const neon: Provider = {
         "NEON_CREATE_FAILED",
         `Neon project creation failed (${res.status}): ${await res.text()}`,
       );
-    const body = (await res.json()) as { project: NeonProject; connection_uris?: Array<{ connection_uri: string }> };
+    const body = (await res.json()) as {
+      project: NeonProject;
+      connection_uris?: Array<{ connection_uri: string }>;
+    };
     // Stash the fresh connection URI keyed by project id so it isn't confused
     // with another project's DATABASE_URL. Also write the canonical slot (the
     // current project's materialize call will overwrite it).
@@ -114,6 +121,27 @@ const neon: Provider = {
     return entry.resource_id
       ? `https://console.neon.tech/app/projects/${entry.resource_id}`
       : "https://console.neon.tech";
+  },
+
+  async deprovision(ctx: ProviderContext, auth: AuthHandle, resourceId: string): Promise<void> {
+    try {
+      const res = await fetch(`${API}/projects/${resourceId}`, {
+        method: "DELETE",
+        headers: authHeaders(auth.token),
+      });
+      if (res.status === 404) return; // already gone
+      if (!res.ok) {
+        ctx.log({
+          level: "warn",
+          msg: `Neon deprovision returned ${res.status} for project ${resourceId}; resource may need manual cleanup.`,
+        });
+      }
+    } catch (err) {
+      ctx.log({
+        level: "warn",
+        msg: `Neon deprovision failed for ${resourceId}: ${(err as Error).message}. Resource may need manual cleanup.`,
+      });
+    }
   },
 };
 
@@ -171,5 +199,3 @@ async function fetchConnectionUri(token: string, projectId: string): Promise<str
 function toResource(project: NeonProject): Resource {
   return { id: project.id, displayName: project.name, region: project.region_id };
 }
-
-

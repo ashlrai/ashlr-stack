@@ -1,15 +1,15 @@
-import { defineCommand } from "citty";
 import {
-  PROVIDER_CATEGORIES,
-  getInferenceBackend,
   NoInferenceBackendError,
+  PROVIDER_CATEGORIES,
+  type Recipe,
+  type RetrievalHit,
+  getInferenceBackend,
   recipeFromRetrieval,
   retrieve,
   retrieveByCategory,
   writeRecipe,
-  type Recipe,
-  type RetrievalHit,
 } from "@ashlr/stack-core";
+import { defineCommand } from "citty";
 import { colors, intro, outro } from "../ui.ts";
 
 /**
@@ -51,10 +51,7 @@ interface RecommendOutput {
   inference?: { mode: "synth" | "mcp-delegated"; backend: string; note?: string };
 }
 
-function toOutputHit(
-  hit: RetrievalHit,
-  rationale?: string,
-): RecommendOutputHit {
+function toOutputHit(hit: RetrievalHit, rationale?: string): RecommendOutputHit {
   return {
     name: hit.provider.name,
     displayName: hit.provider.displayName,
@@ -73,9 +70,7 @@ function buildGuidance(hits: RetrievalHit[], categories: string[]): string {
     return "No strong matches. Try describing the concrete capability you need (e.g. 'postgres database', 'stripe subscriptions', 'deploy frontend').";
   }
   const covered = new Set(hits.map((h) => h.provider.category));
-  const missing = categories.filter(
-    (c) => !covered.has(c as (typeof PROVIDER_CATEGORIES)[number]),
-  );
+  const missing = categories.filter((c) => !covered.has(c as (typeof PROVIDER_CATEGORIES)[number]));
   const topByCat = Object.entries(
     hits.reduce<Record<string, RetrievalHit>>((acc, h) => {
       if (!acc[h.provider.category] || acc[h.provider.category].score < h.score) {
@@ -93,7 +88,10 @@ function buildGuidance(hits: RetrievalHit[], categories: string[]): string {
     );
   }
   parts.push(
-    `Apply a chosen set with: stack add ${hits.slice(0, 3).map((h) => h.provider.name).join(" ")} (or supply your own list).`,
+    `Apply a chosen set with: stack add ${hits
+      .slice(0, 3)
+      .map((h) => h.provider.name)
+      .join(" ")} (or supply your own list).`,
   );
   return parts.join(" ");
 }
@@ -110,7 +108,12 @@ function buildCatalogContext(hits: RetrievalHit[]): string {
 async function trySynth(
   query: string,
   hits: RetrievalHit[],
-): Promise<{ rationales: Map<string, string>; note?: string; backend: string; mode: "synth" | "mcp-delegated" } | null> {
+): Promise<{
+  rationales: Map<string, string>;
+  note?: string;
+  backend: string;
+  mode: "synth" | "mcp-delegated";
+} | null> {
   try {
     const backend = await getInferenceBackend({ preferLocal: true });
     const result = await backend.infer({
@@ -182,7 +185,7 @@ export const recommendCommand = defineCommand({
               query: "",
               hits: [],
               byCategory: {},
-              guidance: "Provide a query: stack recommend \"what you're building\".",
+              guidance: 'Provide a query: stack recommend "what you\'re building".',
             } satisfies RecommendOutput,
             null,
             2,
@@ -191,11 +194,7 @@ export const recommendCommand = defineCommand({
         return;
       }
       intro("stack recommend");
-      console.log(
-        colors.dim(
-          "  Usage: stack recommend \"B2B SaaS with auth, AI, and payments\"\n",
-        ),
-      );
+      console.log(colors.dim('  Usage: stack recommend "B2B SaaS with auth, AI, and payments"\n'));
       outro("No query — nothing to recommend.");
       return;
     }
@@ -224,7 +223,7 @@ export const recommendCommand = defineCommand({
       if (synthOutcome) {
         recipe.providers = recipe.providers.map((p) => ({
           ...p,
-          rationale: synthOutcome!.rationales.get(p.name) ?? p.rationale,
+          rationale: synthOutcome?.rationales.get(p.name) ?? p.rationale,
         }));
       }
       const path = await writeRecipe(recipe);
@@ -258,7 +257,7 @@ export const recommendCommand = defineCommand({
     intro("stack recommend");
     console.log(colors.dim(`  query: ${query}\n`));
     if (hits.length === 0) {
-      console.log(colors.yellow("  No strong matches.") + "\n");
+      console.log(`${colors.yellow("  No strong matches.")}\n`);
       console.log(colors.dim(`  ${payload.guidance}\n`));
       outro("Try a more specific query.");
       return;
@@ -272,9 +271,7 @@ export const recommendCommand = defineCommand({
       if (hit.rationale) {
         console.log(`    ${colors.dim("why:")} ${hit.rationale}`);
       }
-      console.log(
-        `    ${colors.dim("add with:")} ${colors.reset("stack add ")}${hit.name}`,
-      );
+      console.log(`    ${colors.dim("add with:")} ${colors.reset("stack add ")}${hit.name}`);
       console.log();
     }
     if (synthOutcome?.note) {
@@ -284,13 +281,9 @@ export const recommendCommand = defineCommand({
     if (recipeInfo) {
       console.log();
       console.log(
-        colors.dim("  Saved recipe:") +
-          ` ${colors.bold(recipeInfo.id)}   ` +
-          colors.dim(`(${recipeInfo.path})`),
+        `${colors.dim("  Saved recipe:")} ${colors.bold(recipeInfo.id)}   ${colors.dim(`(${recipeInfo.path})`)}`,
       );
-      console.log(
-        colors.dim("  Apply with:  ") + colors.reset(`stack apply ${recipeInfo.id}`),
-      );
+      console.log(colors.dim("  Apply with:  ") + colors.reset(`stack apply ${recipeInfo.id}`));
     } else if (!args.json) {
       console.log();
       console.log(

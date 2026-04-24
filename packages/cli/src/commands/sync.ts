@@ -1,5 +1,5 @@
-import { defineCommand } from "citty";
 import { readConfig, syncToPlatform } from "@ashlr/stack-core";
+import { defineCommand } from "citty";
 import { colors, intro, outro, outroError } from "../ui.ts";
 
 const SUPPORTED = ["vercel", "railway", "fly"] as const;

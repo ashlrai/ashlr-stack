@@ -213,7 +213,7 @@ export default function Terminal() {
           <span className="w-2.5 h-2.5 rounded-full bg-[#28c840]" />
         </div>
         <div className="flex-1 text-center text-xs text-ink-400 mono tracking-wide select-none">
-          ~ / projects / raven  —  stack
+          ~ / projects / raven — stack
         </div>
         <div className="text-[10px] text-ink-500 mono uppercase tracking-widest hidden sm:block">
           bash
@@ -257,11 +257,7 @@ function Line({ line }: { line: RenderedStep }) {
   }
 
   if (line.kind === "out") {
-    return (
-      <div className={`whitespace-pre ${line.className ?? "ansi-white"}`}>
-        {line.text}
-      </div>
-    );
+    return <div className={`whitespace-pre ${line.className ?? "ansi-white"}`}>{line.text}</div>;
   }
 
   // work
@@ -307,9 +303,7 @@ function Line({ line }: { line: RenderedStep }) {
         )}
       </span>
       <div className="flex-1 min-w-0">
-        <div className={line.done ? "ansi-white" : "ansi-white"}>
-          {line.text}
-        </div>
+        <div className={line.done ? "ansi-white" : "ansi-white"}>{line.text}</div>
         {line.detail && line.done && (
           <div className="ansi-dim text-[12px] truncate">{line.detail}</div>
         )}

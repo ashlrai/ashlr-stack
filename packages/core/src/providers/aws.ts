@@ -1,8 +1,7 @@
-import type { ServiceEntry } from "../config.ts";
 import { createHash, createHmac } from "node:crypto";
+import type { ServiceEntry } from "../config.ts";
 import { StackError } from "../errors.ts";
 import { addSecret } from "../phantom.ts";
-import { readLine, tryRevealSecret } from "./_helpers.ts";
 import type {
   AuthHandle,
   HealthStatus,
@@ -11,6 +10,7 @@ import type {
   ProviderContext,
   Resource,
 } from "./_base.ts";
+import { readLine, tryRevealSecret } from "./_helpers.ts";
 
 /**
  * AWS — v1 accepts an IAM access key pair (access key id + secret access key).
@@ -127,19 +127,11 @@ async function callStsIdentity(
   const payload = "Action=GetCallerIdentity&Version=2011-06-15";
   const payloadHash = createHash("sha256").update(payload).digest("hex");
 
-  const canonicalHeaders =
-    `content-type:application/x-www-form-urlencoded\n` +
-    `host:${host}\n` +
-    `x-amz-date:${amzDate}\n`;
+  const canonicalHeaders = `content-type:application/x-www-form-urlencoded\nhost:${host}\nx-amz-date:${amzDate}\n`;
   const signedHeaders = "content-type;host;x-amz-date";
-  const canonicalRequest = [
-    method,
-    "/",
-    "",
-    canonicalHeaders,
-    signedHeaders,
-    payloadHash,
-  ].join("\n");
+  const canonicalRequest = [method, "/", "", canonicalHeaders, signedHeaders, payloadHash].join(
+    "\n",
+  );
   const scope = `${datestamp}/${region}/${service}/aws4_request`;
   const stringToSign = [
     "AWS4-HMAC-SHA256",
@@ -189,7 +181,10 @@ function hmac(key: string | Buffer, value: string): Buffer {
 }
 
 function toAmzDate(d: Date): string {
-  return d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  return d
+    .toISOString()
+    .replace(/[-:]/g, "")
+    .replace(/\.\d{3}/, "");
 }
 
 function matchXml(xml: string, tag: string): string | undefined {

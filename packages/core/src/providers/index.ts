@@ -1,5 +1,5 @@
-import type { Provider } from "./_base.ts";
 import { ProviderNotFoundError } from "../errors.ts";
+import type { Provider } from "./_base.ts";
 
 /**
  * Registry of curated providers. Entries are added in Waves 2–3 as each
@@ -44,6 +44,18 @@ const registry: Record<string, () => Promise<Provider>> = {
   postmark: async () => (await import("./postmark.ts")).default,
   clerk: async () => (await import("./clerk.ts")).default,
   aws: async () => (await import("./aws.ts")).default,
+
+  // Wave 4 — key-only adapters (coming-soon catalog entries shipped as adapters).
+  auth0: async () => (await import("./auth0.ts")).default,
+  datadog: async () => (await import("./datadog.ts")).default,
+  digitalocean: async () => (await import("./digitalocean.ts")).default,
+  gcp: async () => (await import("./gcp.ts")).default,
+  grafana: async () => (await import("./grafana.ts")).default,
+  hetzner: async () => (await import("./hetzner.ts")).default,
+  launchdarkly: async () => (await import("./launchdarkly.ts")).default,
+  mixpanel: async () => (await import("./mixpanel.ts")).default,
+  plausible: async () => (await import("./plausible.ts")).default,
+  workos: async () => (await import("./workos.ts")).default,
 };
 
 export const providers = registry;

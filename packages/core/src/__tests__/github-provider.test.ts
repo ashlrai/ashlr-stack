@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import github from "../providers/github.ts";
 import type { ProviderContext } from "../providers/_base.ts";
+import github from "../providers/github.ts";
 import { type Harness, readVault, setupFakePhantom } from "./_harness.ts";
 
 describe("github provider (mocked fetch)", () => {

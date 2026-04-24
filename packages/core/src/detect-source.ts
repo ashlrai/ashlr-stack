@@ -37,7 +37,8 @@ const JS_RULES: DepRule[] = [
   { provider: "neon", matches: (d) => d.startsWith("@neondatabase/"), confidence: "high" },
   {
     provider: "vercel",
-    matches: (d) => d === "@vercel/analytics" || d === "@vercel/speed-insights" || d === "@vercel/kv",
+    matches: (d) =>
+      d === "@vercel/analytics" || d === "@vercel/speed-insights" || d === "@vercel/kv",
     confidence: "medium",
   },
   { provider: "sentry", matches: (d) => d.startsWith("@sentry/"), confidence: "high" },
@@ -48,7 +49,11 @@ const JS_RULES: DepRule[] = [
   },
   { provider: "openai", matches: (d) => d === "openai", confidence: "high" },
   { provider: "anthropic", matches: (d) => d === "@anthropic-ai/sdk", confidence: "high" },
-  { provider: "stripe", matches: (d) => d === "stripe" || d === "@stripe/stripe-js", confidence: "high" },
+  {
+    provider: "stripe",
+    matches: (d) => d === "stripe" || d === "@stripe/stripe-js",
+    confidence: "high",
+  },
   { provider: "clerk", matches: (d) => d.startsWith("@clerk/"), confidence: "high" },
   { provider: "resend", matches: (d) => d === "resend", confidence: "high" },
   {
@@ -102,7 +107,11 @@ const JS_RULES: DepRule[] = [
 ];
 
 const PY_RULES: DepRule[] = [
-  { provider: "supabase", matches: (d) => d === "supabase" || d === "supabase-py", confidence: "high" },
+  {
+    provider: "supabase",
+    matches: (d) => d === "supabase" || d === "supabase-py",
+    confidence: "high",
+  },
   { provider: "openai", matches: (d) => d === "openai", confidence: "high" },
   { provider: "anthropic", matches: (d) => d === "anthropic", confidence: "high" },
   { provider: "sentry", matches: (d) => d === "sentry-sdk", confidence: "high" },
@@ -120,18 +129,34 @@ const GO_RULES: DepRule[] = [
     matches: (d) => d.startsWith("github.com/supabase-community/"),
     confidence: "high",
   },
-  { provider: "openai", matches: (d) => d === "github.com/sashabaranov/go-openai", confidence: "high" },
+  {
+    provider: "openai",
+    matches: (d) => d === "github.com/sashabaranov/go-openai",
+    confidence: "high",
+  },
   {
     provider: "anthropic",
     matches: (d) => d.startsWith("github.com/liushuangls/go-anthropic"),
     confidence: "medium",
   },
-  { provider: "sentry", matches: (d) => d === "github.com/getsentry/sentry-go", confidence: "high" },
-  { provider: "stripe", matches: (d) => d.startsWith("github.com/stripe/stripe-go"), confidence: "high" },
+  {
+    provider: "sentry",
+    matches: (d) => d === "github.com/getsentry/sentry-go",
+    confidence: "high",
+  },
+  {
+    provider: "stripe",
+    matches: (d) => d.startsWith("github.com/stripe/stripe-go"),
+    confidence: "high",
+  },
 ];
 
 const RUST_RULES: DepRule[] = [
-  { provider: "openai", matches: (d) => d === "async-openai" || d === "openai", confidence: "high" },
+  {
+    provider: "openai",
+    matches: (d) => d === "async-openai" || d === "openai",
+    confidence: "high",
+  },
   { provider: "sentry", matches: (d) => d === "sentry", confidence: "high" },
   { provider: "stripe", matches: (d) => d === "async-stripe", confidence: "high" },
 ];
@@ -202,7 +227,10 @@ async function scanPython(
   if (existsSync(reqPath)) {
     const text = await readFile(reqPath, "utf-8");
     for (const line of text.split(/\r?\n/)) {
-      const pkg = line.split(/[=<>!~\[]/)[0].trim().toLowerCase();
+      const pkg = line
+        .split(/[=<>!~\[]/)[0]
+        .trim()
+        .toLowerCase();
       if (!pkg || pkg.startsWith("#")) continue;
       for (const rule of PY_RULES) {
         if (rule.matches(pkg)) add(rule.provider, `requirements.txt:${pkg}`, rule.confidence);

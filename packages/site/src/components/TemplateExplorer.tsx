@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
-import { PROVIDERS_REF, type ProviderRef } from "~/lib/providers-ref";
 import CopyBtn from "~/components/primitives/CopyBtn";
+import { PROVIDERS_REF, type ProviderRef } from "~/lib/providers-ref";
 
 /**
  * TemplateExplorer — click a template card to see the real recipe it
@@ -28,14 +28,20 @@ export interface Template {
   iconColors: string[];
 }
 
-interface Props { templates: Template[] }
+interface Props {
+  templates: Template[];
+}
 
 function formatAuthKind(kind: ProviderRef["authKind"]): string {
   switch (kind) {
-    case "oauth_pkce": return "OAuth (PKCE)";
-    case "oauth_device": return "OAuth (device)";
-    case "pat": return "Personal access token";
-    case "api_key": return "API key";
+    case "oauth_pkce":
+      return "OAuth (PKCE)";
+    case "oauth_device":
+      return "OAuth (device)";
+    case "pat":
+      return "Personal access token";
+    case "api_key":
+      return "API key";
   }
 }
 
@@ -48,10 +54,12 @@ function buildRecipe(refs: ProviderRef[]): {
 } {
   const cmd = `stack add ${refs.map((r) => r.name).join(" ")}`;
   const env = refs
-    .map((r) => [
-      `# ${r.displayName} — ${formatAuthKind(r.authKind)}`,
-      ...r.secrets.map((s) => `${s}=<phantom://${r.name}/${s}>`),
-    ].join("\n"))
+    .map((r) =>
+      [
+        `# ${r.displayName} — ${formatAuthKind(r.authKind)}`,
+        ...r.secrets.map((s) => `${s}=<phantom://${r.name}/${s}>`),
+      ].join("\n"),
+    )
     .join("\n\n");
 
   const mcpRefs = refs.filter((r) => r.mcp);
@@ -77,14 +85,11 @@ function buildRecipe(refs: ProviderRef[]): {
 
 export default function TemplateExplorer({ templates }: Props) {
   const [activeId, setActiveId] = useState<string>(templates[0]?.id ?? "");
-  const refByName = useMemo(
-    () => new Map(PROVIDERS_REF.map((r) => [r.name, r])),
-    [],
-  );
+  const refByName = useMemo(() => new Map(PROVIDERS_REF.map((r) => [r.name, r])), []);
 
   const active = templates.find((t) => t.id === activeId) ?? templates[0];
   const refs = active
-    ? active.refNames.map((n) => refByName.get(n)).filter(Boolean) as ProviderRef[]
+    ? (active.refNames.map((n) => refByName.get(n)).filter(Boolean) as ProviderRef[])
     : [];
   const recipe = buildRecipe(refs);
 
@@ -105,7 +110,9 @@ export default function TemplateExplorer({ templates }: Props) {
                     : "opacity-80 hover:opacity-100"
                 }`}
                 style={{
-                  borderLeft: isActive ? "2px solid var(--color-blade-500)" : "2px solid transparent",
+                  borderLeft: isActive
+                    ? "2px solid var(--color-blade-500)"
+                    : "2px solid transparent",
                 }}
               >
                 <div className="flex items-center gap-2 mb-2">
@@ -117,7 +124,16 @@ export default function TemplateExplorer({ templates }: Props) {
                       style={{ ["--brand" as string]: `#${t.iconColors[i]}` }}
                     >
                       {path ? (
-                        <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" className="text-[color:var(--color-ink-200)]">
+                        <svg
+                          viewBox="0 0 24 24"
+                          width="13"
+                          height="13"
+                          fill="currentColor"
+                          className="text-[color:var(--color-ink-200)]"
+                          role="img"
+                          aria-label={t.iconNames[i]}
+                        >
+                          <title>{t.iconNames[i]}</title>
                           <path d={path} />
                         </svg>
                       ) : (
@@ -128,7 +144,9 @@ export default function TemplateExplorer({ templates }: Props) {
                     </span>
                   ))}
                 </div>
-                <h3 className={`text-sm font-medium tracking-tight ${isActive ? "text-[color:var(--color-ink-50)]" : "text-[color:var(--color-ink-100)]"}`}>
+                <h3
+                  className={`text-sm font-medium tracking-tight ${isActive ? "text-[color:var(--color-ink-50)]" : "text-[color:var(--color-ink-100)]"}`}
+                >
                   {t.title}
                 </h3>
                 <p className="mt-1 text-[11px] text-[color:var(--color-ink-400)] leading-[1.5]">
@@ -141,9 +159,14 @@ export default function TemplateExplorer({ templates }: Props) {
       </ul>
 
       {/* Recipe panel (right) */}
-      <div className="panel-steel p-5 sm:p-6" style={{ borderLeft: "3px solid var(--color-blade-500)" }}>
+      <div
+        className="panel-steel p-5 sm:p-6"
+        style={{ borderLeft: "3px solid var(--color-blade-500)" }}
+      >
         {!active ? (
-          <div className="mono text-[12px] text-[color:var(--color-ink-400)]">select a template</div>
+          <div className="mono text-[12px] text-[color:var(--color-ink-400)]">
+            select a template
+          </div>
         ) : (
           <>
             <div className="flex items-start justify-between gap-4 mb-5">
@@ -159,8 +182,18 @@ export default function TemplateExplorer({ templates }: Props) {
                 </p>
               </div>
               <div className="flex flex-col items-end gap-1 mono text-[10px] uppercase tracking-[0.14em] text-[color:var(--color-ink-500)]">
-                <span><span className="text-[color:var(--color-ink-100)] tabular-nums">{refs.length}</span> providers</span>
-                <span><span className="text-[color:var(--color-ink-100)] tabular-nums">{recipe.totalSecrets}</span> env vars</span>
+                <span>
+                  <span className="text-[color:var(--color-ink-100)] tabular-nums">
+                    {refs.length}
+                  </span>{" "}
+                  providers
+                </span>
+                <span>
+                  <span className="text-[color:var(--color-ink-100)] tabular-nums">
+                    {recipe.totalSecrets}
+                  </span>{" "}
+                  env vars
+                </span>
                 {recipe.mcpCount > 0 && (
                   <span className="text-[color:var(--color-blade-400)]">
                     <span className="tabular-nums">{recipe.mcpCount}</span> MCP servers
@@ -173,18 +206,23 @@ export default function TemplateExplorer({ templates }: Props) {
               {/* Init command */}
               <div className="panel p-3" style={{ borderLeft: "2px solid var(--color-blade-500)" }}>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--color-ink-500)]">template init</span>
+                  <span className="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--color-ink-500)]">
+                    template init
+                  </span>
                   <CopyBtn text={`stack init --template ${active.id}`} compact />
                 </div>
                 <div className="mono text-[13px] text-[color:var(--color-ink-100)] break-all">
-                  <span className="text-[color:var(--color-blade-400)]">›</span> stack init --template {active.id}
+                  <span className="text-[color:var(--color-blade-400)]">›</span> stack init
+                  --template {active.id}
                 </div>
               </div>
 
               {/* Equivalent batch add */}
               <div className="panel p-3">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--color-ink-500)]">which runs</span>
+                  <span className="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--color-ink-500)]">
+                    which runs
+                  </span>
                   <CopyBtn text={recipe.cmd} compact />
                 </div>
                 <div className="mono text-[13px] text-[color:var(--color-ink-100)] break-all">
@@ -195,7 +233,9 @@ export default function TemplateExplorer({ templates }: Props) {
               {/* Env block */}
               <div className="panel p-3">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--color-ink-500)]">.env written</span>
+                  <span className="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--color-ink-500)]">
+                    .env written
+                  </span>
                   <CopyBtn text={recipe.env} compact />
                 </div>
                 <pre className="mono text-[12px] text-[color:var(--color-ink-200)] leading-[1.5] whitespace-pre-wrap break-all max-h-[280px] overflow-y-auto">
@@ -207,7 +247,9 @@ export default function TemplateExplorer({ templates }: Props) {
               {recipe.mcp && (
                 <div className="panel p-3">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--color-ink-500)]">.mcp.json written</span>
+                    <span className="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--color-ink-500)]">
+                      .mcp.json written
+                    </span>
                     <CopyBtn text={recipe.mcp} compact />
                   </div>
                   <pre className="mono text-[12px] text-[color:var(--color-ink-200)] leading-[1.5] overflow-x-auto max-h-[280px] overflow-y-auto">

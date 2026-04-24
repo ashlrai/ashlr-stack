@@ -1,5 +1,5 @@
-import { defineCommand } from "citty";
 import { type ProviderContext, getProvider } from "@ashlr/stack-core";
+import { defineCommand } from "citty";
 import { colors, intro, logEvent, outro, outroError } from "../ui.ts";
 
 export const loginCommand = defineCommand({

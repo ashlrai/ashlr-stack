@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import cloudflare from "../providers/cloudflare.ts";
 import type { ProviderContext } from "../providers/_base.ts";
+import cloudflare from "../providers/cloudflare.ts";
 import { type Harness, readVault, setupFakePhantom } from "./_harness.ts";
 
 describe("cloudflare provider (mocked fetch)", () => {
@@ -24,10 +24,9 @@ describe("cloudflare provider (mocked fetch)", () => {
     globalThis.fetch = (async (url: string | URL | Request) => {
       const u = String(url);
       if (u.endsWith("/user/tokens/verify")) {
-        return new Response(
-          JSON.stringify({ result: { id: "tok1", status: "active" } }),
-          { status: 200 },
-        );
+        return new Response(JSON.stringify({ result: { id: "tok1", status: "active" } }), {
+          status: 200,
+        });
       }
       if (u.endsWith("/accounts")) {
         return new Response(JSON.stringify({ result: accounts }), { status: 200 });
@@ -54,10 +53,9 @@ describe("cloudflare provider (mocked fetch)", () => {
       const headers = init?.headers as Record<string, string> | undefined;
       if (headers?.Authorization) seenAuth = headers.Authorization;
       if (String(url).endsWith("/user/tokens/verify")) {
-        return new Response(
-          JSON.stringify({ result: { id: "tok1", status: "active" } }),
-          { status: 200 },
-        );
+        return new Response(JSON.stringify({ result: { id: "tok1", status: "active" } }), {
+          status: 200,
+        });
       }
       throw new Error(`unexpected ${url}`);
     }) as unknown as typeof fetch;

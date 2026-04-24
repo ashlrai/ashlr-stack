@@ -1,9 +1,8 @@
 import type { ServiceEntry } from "../config.ts";
-import { StackError } from "../errors.ts";
-import { addSecret } from "../phantom.ts";
-import { fetchWithRetry } from "../http.ts";
-import { readLine, tryRevealSecret } from "./_helpers.ts";
 import { resolveOAuthClientId } from "../env.ts";
+import { StackError } from "../errors.ts";
+import { fetchWithRetry } from "../http.ts";
+import { addSecret } from "../phantom.ts";
 import type {
   AuthHandle,
   HealthStatus,
@@ -12,6 +11,7 @@ import type {
   ProviderContext,
   Resource,
 } from "./_base.ts";
+import { readLine, tryRevealSecret } from "./_helpers.ts";
 
 /**
  * GitHub — OAuth device flow (no local redirect needed, works in SSH/remote
@@ -44,7 +44,10 @@ const github: Provider = {
       const token = await runDeviceFlow(clientId);
       const identity = await fetchUser(token);
       if (!identity)
-        throw new StackError("GITHUB_AUTH_INVALID", "GitHub accepted the code but rejected the token.");
+        throw new StackError(
+          "GITHUB_AUTH_INVALID",
+          "GitHub accepted the code but rejected the token.",
+        );
       await addSecret(TOKEN_SECRET, token);
       return { token, identity };
     }
@@ -132,19 +135,14 @@ async function runDeviceFlow(clientId: string): Promise<string> {
   });
   if (!startRes.ok)
     throw new StackError("GITHUB_DEVICE_START_FAILED", `device/code ${startRes.status}`);
-  const {
-    device_code,
-    user_code,
-    verification_uri,
-    interval,
-    expires_in,
-  } = (await startRes.json()) as {
-    device_code: string;
-    user_code: string;
-    verification_uri: string;
-    interval: number;
-    expires_in: number;
-  };
+  const { device_code, user_code, verification_uri, interval, expires_in } =
+    (await startRes.json()) as {
+      device_code: string;
+      user_code: string;
+      verification_uri: string;
+      interval: number;
+      expires_in: number;
+    };
 
   process.stderr.write(
     `\n  Visit ${verification_uri} and enter this code: ${user_code}\n  (waiting for approval…)\n`,
@@ -176,5 +174,3 @@ async function runDeviceFlow(clientId: string): Promise<string> {
   }
   throw new StackError("GITHUB_DEVICE_TIMEOUT", "Device flow timed out.");
 }
-
-

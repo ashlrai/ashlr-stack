@@ -36,7 +36,9 @@ export default function StickyInstall() {
       await navigator.clipboard.writeText(INSTALL_CMD);
       setCopied(true);
       setTimeout(() => setCopied(false), 1400);
-    } catch { /* noop */ }
+    } catch {
+      /* noop */
+    }
   };
 
   const dismiss = () => {

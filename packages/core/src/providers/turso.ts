@@ -1,7 +1,7 @@
 import type { ServiceEntry } from "../config.ts";
 import { StackError } from "../errors.ts";
-import { addSecret, revealSecret } from "../phantom.ts";
 import { fetchWithRetry } from "../http.ts";
+import { addSecret, revealSecret } from "../phantom.ts";
 import type {
   AuthHandle,
   HealthStatus,
@@ -37,7 +37,8 @@ const turso: Provider = {
       if (identity) return { token: cached, identity };
       ctx.log({ level: "warn", msg: "Cached Turso token invalid." });
     }
-    if (!ctx.interactive) throw new StackError("TURSO_AUTH_REQUIRED", "No valid Turso token in vault.");
+    if (!ctx.interactive)
+      throw new StackError("TURSO_AUTH_REQUIRED", "No valid Turso token in vault.");
     process.stderr.write(
       "\n  Create a Platform API token at https://app.turso.tech/settings/api-tokens\n  Paste it here: ",
     );
@@ -50,7 +51,8 @@ const turso: Provider = {
 
   async provision(ctx, auth, opts: ProvisionOpts): Promise<Resource> {
     const orgs = await fetchOrganizations(auth.token);
-    if (orgs.length === 0) throw new StackError("TURSO_NO_ORGS", "Turso returned no organizations.");
+    if (orgs.length === 0)
+      throw new StackError("TURSO_NO_ORGS", "Turso returned no organizations.");
     const orgSlug = (opts.hints?.orgSlug as string | undefined) ?? orgs[0].slug;
     if (opts.existingResourceId) {
       const [existingOrg, dbName] = opts.existingResourceId.split("/");
@@ -122,6 +124,36 @@ const turso: Provider = {
     if (!entry.resource_id) return "https://app.turso.tech";
     const [orgSlug, dbName] = entry.resource_id.split("/");
     return `https://app.turso.tech/${orgSlug}/databases/${dbName}`;
+  },
+
+  async deprovision(ctx: ProviderContext, auth: AuthHandle, resourceId: string): Promise<void> {
+    // resourceId is "orgSlug/dbName"
+    const [orgSlug, dbName] = resourceId.split("/");
+    if (!orgSlug || !dbName) {
+      ctx.log({
+        level: "warn",
+        msg: `Turso deprovision: invalid resourceId format "${resourceId}". Expected "orgSlug/dbName".`,
+      });
+      return;
+    }
+    try {
+      const res = await fetch(`${API}/organizations/${orgSlug}/databases/${dbName}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${auth.token}` },
+      });
+      if (res.status === 404) return; // already gone
+      if (!res.ok) {
+        ctx.log({
+          level: "warn",
+          msg: `Turso deprovision returned ${res.status} for ${resourceId}; resource may need manual cleanup.`,
+        });
+      }
+    } catch (err) {
+      ctx.log({
+        level: "warn",
+        msg: `Turso deprovision failed for ${resourceId}: ${(err as Error).message}. Resource may need manual cleanup.`,
+      });
+    }
   },
 };
 

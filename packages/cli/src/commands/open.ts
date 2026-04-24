@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import { platform } from "node:os";
-import { defineCommand } from "citty";
 import { getProvider, readConfig } from "@ashlr/stack-core";
+import { defineCommand } from "citty";
 import { colors, intro, outro, outroError } from "../ui.ts";
 
 export const openCommand = defineCommand({
@@ -24,8 +24,7 @@ export const openCommand = defineCommand({
       return;
     }
 
-    const opener =
-      platform() === "darwin" ? "open" : platform() === "win32" ? "start" : "xdg-open";
+    const opener = platform() === "darwin" ? "open" : platform() === "win32" ? "start" : "xdg-open";
     spawn(opener, [url], { stdio: "ignore", detached: true }).unref();
     outro(colors.green(`Opening ${url}`));
   },

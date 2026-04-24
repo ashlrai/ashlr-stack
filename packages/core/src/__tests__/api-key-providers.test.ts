@@ -219,7 +219,10 @@ describe("api-key providers — verify + materialize", () => {
     const convex = (await import("../providers/convex.ts")).default;
     const validKey = "prod:my-team:my-project|encoded-token-bytes";
     const ctx: ProviderContext = { cwd: process.cwd(), interactive: false, log: () => {} };
-    const auth = { token: validKey, identity: { environment: "prod", team: "my-team", project: "my-project" } };
+    const auth = {
+      token: validKey,
+      identity: { environment: "prod", team: "my-team", project: "my-project" },
+    };
     const resource = await convex.provision(ctx, auth, {});
     const materialized = await convex.materialize(ctx, resource, auth);
     expect(materialized.secrets.CONVEX_DEPLOY_KEY).toBe(validKey);

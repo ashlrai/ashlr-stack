@@ -23,8 +23,7 @@ export default makeApiKeyProvider({
       if (!res.ok) return undefined;
       const body = (await res.json()) as Record<string, unknown>;
       const out: Record<string, string> = {};
-      for (const [k, v] of Object.entries(body))
-        if (typeof v === "string") out[k] = v;
+      for (const [k, v] of Object.entries(body)) if (typeof v === "string") out[k] = v;
       return out;
     } catch {
       return undefined;

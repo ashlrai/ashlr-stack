@@ -37,11 +37,17 @@ const SEQUENCE = {
   fade: 7500,
 } as const;
 
-interface PlateStub { y: number; w: number; accent?: boolean; glyph: string; label: string }
+interface PlateStub {
+  y: number;
+  w: number;
+  accent?: boolean;
+  glyph: string;
+  label: string;
+}
 const PLATES: PlateStub[] = [
-  { y:   0, w: 62, glyph: "◇", label: "HUMAN / AGENT" },
-  { y:  36, w: 68, glyph: "⊞", label: "CLI / MCP" },
-  { y:  72, w: 74, glyph: "∴", label: "AI APIS" },
+  { y: 0, w: 62, glyph: "◇", label: "HUMAN / AGENT" },
+  { y: 36, w: 68, glyph: "⊞", label: "CLI / MCP" },
+  { y: 72, w: 74, glyph: "∴", label: "AI APIS" },
   { y: 108, w: 78, glyph: "◉", label: "OBSERVABILITY" },
   { y: 144, w: 80, glyph: "▲", label: "DEPLOY" },
   { y: 180, w: 78, glyph: "▦", label: "DATABASES" },
@@ -50,11 +56,11 @@ const PLATES: PlateStub[] = [
 ];
 
 const ORBITS = [
-  { brand: "#3ECF8E", label: "supabase",  theta:  -60 },
-  { brand: "#00E699", label: "neon",      theta:   60 },
+  { brand: "#3ECF8E", label: "supabase", theta: -60 },
+  { brand: "#00E699", label: "neon", theta: 60 },
   { brand: "#D97757", label: "anthropic", theta: -140 },
-  { brand: "#F54E00", label: "posthog",   theta:  140 },
-  { brand: "#FFFFFF", label: "vercel",    theta:  180 },
+  { brand: "#F54E00", label: "posthog", theta: 140 },
+  { brand: "#FFFFFF", label: "vercel", theta: 180 },
 ];
 
 export default function HeroIntroOverlay() {
@@ -70,7 +76,9 @@ export default function HeroIntroOverlay() {
     }
     setPhase("playing");
     let cancelled = false;
-    const fadeT = setTimeout(() => { if (!cancelled) setPhase("fading"); }, SEQUENCE.fade);
+    const fadeT = setTimeout(() => {
+      if (!cancelled) setPhase("fading");
+    }, SEQUENCE.fade);
     const doneT = setTimeout(() => {
       if (cancelled) return;
       sessionStorage.setItem(STORAGE_KEY, "1");
@@ -104,14 +112,20 @@ export default function HeroIntroOverlay() {
       }}
     >
       {/* Grid backdrop */}
-      <div className="absolute inset-0 cad-grid opacity-40 pointer-events-none" aria-hidden="true" />
+      <div
+        className="absolute inset-0 cad-grid opacity-40 pointer-events-none"
+        aria-hidden="true"
+      />
 
       {/* CENTERED STAGE */}
       <svg
         viewBox="0 0 600 720"
         preserveAspectRatio="xMidYMid meet"
         className="absolute inset-0 w-full h-full"
+        role="img"
+        aria-label="Intro animation"
       >
+        <title>Intro animation</title>
         <defs>
           <radialGradient id="spark-grad">
             <stop offset="0%" stopColor="#fbe1cf" stopOpacity="1" />
@@ -143,11 +157,7 @@ export default function HeroIntroOverlay() {
             const px = 300 - p.w * 2;
             const py = 216 + p.y;
             return (
-              <g
-                key={i}
-                className="intro-plate"
-                style={{ animationDelay: `${1300 + i * 55}ms` }}
-              >
+              <g key={p.y} className="intro-plate" style={{ animationDelay: `${1300 + i * 55}ms` }}>
                 <rect
                   x={px}
                   y={py}
@@ -157,13 +167,7 @@ export default function HeroIntroOverlay() {
                   stroke={p.accent ? "#f5883e" : "#39556f"}
                   strokeWidth="1"
                 />
-                <rect
-                  x={px}
-                  y={py}
-                  width="3"
-                  height="28"
-                  fill={p.accent ? "#f5883e" : "#6b8097"}
-                />
+                <rect x={px} y={py} width="3" height="28" fill={p.accent ? "#f5883e" : "#6b8097"} />
                 <text
                   x={px + 14}
                   y={py + 18}
@@ -191,17 +195,37 @@ export default function HeroIntroOverlay() {
         </g>
 
         {/* Amber pool glow under Phantom */}
-        <ellipse className="intro-pool" cx="300" cy="528" rx="180" ry="14" fill="#e96b2a" opacity="0.2" />
+        <ellipse
+          className="intro-pool"
+          cx="300"
+          cy="528"
+          rx="180"
+          ry="14"
+          fill="#e96b2a"
+          opacity="0.2"
+        />
 
         {/* Orbit ring + provider dots */}
         <g className="intro-orbits">
-          <circle cx="300" cy="416" r="180" fill="none" stroke="#f5883e" strokeOpacity="0.2" strokeWidth="1" />
+          <circle
+            cx="300"
+            cy="416"
+            r="180"
+            fill="none"
+            stroke="#f5883e"
+            strokeOpacity="0.2"
+            strokeWidth="1"
+          />
           {ORBITS.map((o, i) => {
             const rad = (o.theta * Math.PI) / 180;
             const ox = 300 + Math.cos(rad) * 180;
             const oy = 416 + Math.sin(rad) * 80;
             return (
-              <g key={o.label} className="intro-orbit-dot" style={{ animationDelay: `${4300 + i * 130}ms` }}>
+              <g
+                key={o.label}
+                className="intro-orbit-dot"
+                style={{ animationDelay: `${4300 + i * 130}ms` }}
+              >
                 <circle cx={ox} cy={oy} r="7" fill={o.brand} opacity="0.9" />
                 <circle cx={ox} cy={oy} r="13" fill={o.brand} opacity="0.15" />
                 <text
@@ -253,7 +277,15 @@ export default function HeroIntroOverlay() {
 
         {/* CLI line */}
         <g className="intro-cli">
-          <rect x="130" y="610" width="340" height="44" fill="rgba(10,12,16,0.9)" stroke="#e96b2a" strokeWidth="1" />
+          <rect
+            x="130"
+            y="610"
+            width="340"
+            height="44"
+            fill="rgba(10,12,16,0.9)"
+            stroke="#e96b2a"
+            strokeWidth="1"
+          />
           <text
             x="148"
             y="638"
@@ -278,7 +310,11 @@ export default function HeroIntroOverlay() {
         {/* Green checkmarks */}
         <g className="intro-checks">
           {["provision", "auth PKCE", "secrets → phantom", "mcp wired"].map((label, i) => (
-            <g key={label} className="intro-check" style={{ animationDelay: `${6300 + i * 180}ms` }}>
+            <g
+              key={label}
+              className="intro-check"
+              style={{ animationDelay: `${6300 + i * 180}ms` }}
+            >
               <text
                 x="148"
                 y={684 + i * 8}

@@ -94,7 +94,7 @@ describe("source scanner — config files", () => {
 
   test("wrangler.toml picks up Cloudflare", async () => {
     const cwd = makeProject({
-      "wrangler.toml": "name = \"my-worker\"\nmain = \"src/index.ts\"",
+      "wrangler.toml": 'name = "my-worker"\nmain = "src/index.ts"',
     });
     const hits = await scanSource(cwd);
     expect(hits.some((h) => h.provider === "cloudflare")).toBe(true);

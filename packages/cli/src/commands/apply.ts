@@ -2,16 +2,12 @@ import {
   type Recipe,
   hasConfig,
   listRecipes,
-  readConfig,
   readRecipe,
-  removeSecret,
   wirePhantomForRecipe,
-  writeConfig,
 } from "@ashlr/stack-core";
-import { removeMcpEntry } from "@ashlr/stack-core/mcp-writer";
 import { defineCommand } from "citty";
+import { provisionProviders } from "../lib/provision-loop.ts";
 import { colors, intro, outro, outroError, prompts } from "../ui.ts";
-import { addCommand } from "./add.ts";
 import { doctorCommand } from "./doctor.ts";
 import { initCommand } from "./init.ts";
 
@@ -56,9 +52,16 @@ export const applyCommand = defineCommand({
       console.log(colors.dim("  ○ no .stack.toml — auto-running `stack init --noInteractive`"));
       try {
         await initCommand.run?.({
-          args: { noInteractive: true, force: false, _: [] },
+          args: {
+            noInteractive: true,
+            force: false,
+            noProvision: true,
+            dryRun: false,
+            noRollback: false,
+            _: [],
+          },
           cmd: initCommand,
-          rawArgs: ["--noInteractive"],
+          rawArgs: ["--noInteractive", "--noProvision"],
           data: undefined,
         } as unknown as Parameters<NonNullable<typeof initCommand.run>>[0]);
       } catch (err) {
@@ -80,48 +83,13 @@ export const applyCommand = defineCommand({
     console.log(`  ${colors.dim("providers")} ${recipe.providers.map((p) => p.name).join(", ")}`);
     console.log();
 
-    // Re-run addCommand for each provider. We intentionally do NOT parallelize:
-    // some providers (e.g. Vercel) need cwd state written by earlier steps
-    // and interactive prompts don't interleave cleanly.
-    const succeeded: string[] = [];
-    const failures: Array<{ name: string; message: string }> = [];
-    for (const { name } of recipe.providers) {
-      try {
-        console.log(colors.dim(`  › stack add ${name}`));
-        // citty's CommandContext type requires every declared arg key; we
-        // only set the ones addCommand actually reads, so cast via unknown.
-        await addCommand.run?.({
-          args: { service: name, dryRun: false, _: [] },
-          cmd: addCommand,
-          rawArgs: [name],
-          data: undefined,
-        } as unknown as Parameters<NonNullable<typeof addCommand.run>>[0]);
-        succeeded.push(name);
-      } catch (err) {
-        failures.push({ name, message: (err as Error).message });
-      }
-    }
-
-    // On partial failure, offer to roll back the successful adds so re-running
-    // `stack apply` isn't blocked by SERVICE_ALREADY_ADDED errors. Default to
-    // rolling back in non-TTY mode (CI-friendly) unless --noRollback is set.
-    if (failures.length > 0 && succeeded.length > 0 && !args.noRollback) {
-      const shouldRollback = process.stdout.isTTY
-        ? await prompts.confirm({
-            message: `Recipe partially applied (${succeeded.length} succeeded, ${failures.length} failed). Roll back the successful adds so you can re-run cleanly?`,
-            initialValue: true,
-          })
-        : true;
-      if (shouldRollback && !prompts.isCancel(shouldRollback)) {
-        await rollbackServices(succeeded);
-      } else {
-        console.log(
-          colors.dim(
-            "  Keeping partial state. Run `stack doctor --fix` or `stack remove <name>` to clean up.",
-          ),
-        );
-      }
-    }
+    // Re-run addCommand for each provider via the shared provision loop.
+    // We intentionally do NOT parallelize: some providers (e.g. Vercel) need
+    // cwd state written by earlier steps and interactive prompts don't
+    // interleave cleanly.
+    const { succeeded, failures } = await provisionProviders(recipe.providers, {
+      rollback: !args.noRollback,
+    });
 
     // Phantom-wire only runs when at least one provider made it through — no
     // point creating rotation envelopes for services that aren't in the config.
@@ -167,43 +135,6 @@ export const applyCommand = defineCommand({
     outro(`${colors.green("✓")} ${recipe.id} applied.`);
   },
 });
-
-/**
- * Undo a partial apply. Reads the config, deletes each named service's secrets
- * + MCP entry, and rewrites the config without them. Best-effort: a failure
- * removing one service should not block the others.
- */
-async function rollbackServices(names: string[]): Promise<void> {
-  if (names.length === 0) return;
-  console.log();
-  console.log(colors.dim(`  rolling back ${names.length} partial add(s)…`));
-  try {
-    const config = await readConfig();
-    for (const name of names) {
-      const entry = config.services[name];
-      if (!entry) continue;
-      for (const secret of entry.secrets) {
-        try {
-          await removeSecret(secret);
-        } catch {
-          /* secret may already be gone; keep going */
-        }
-      }
-      if (entry.mcp) {
-        try {
-          await removeMcpEntry(entry.mcp);
-        } catch {
-          /* keep going */
-        }
-      }
-      delete config.services[name];
-    }
-    await writeConfig(config);
-    console.log(colors.dim("  rollback complete — re-run `stack apply` to retry."));
-  } catch (err) {
-    console.log(colors.yellow(`  ⚠ rollback failed: ${(err as Error).message}`));
-  }
-}
 
 async function pickRecipe(id?: string): Promise<Recipe | null> {
   if (id) {

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PROVIDERS_REF, type ProviderRef } from "~/lib/providers-ref";
-import { retrieve } from "../../../core/src/ai/catalog-index";
 import { usePrefersReducedMotion } from "~/lib/use-prefers-reduced-motion";
+import { retrieve } from "../../../core/src/ai/catalog-index";
 
 /**
  * StackREPL — an in-browser pseudo-terminal that speaks `stack` commands.
@@ -33,14 +33,22 @@ interface Line {
 const INTRO_DELAY = 500;
 const LINE_DELAY = 60;
 
-function genId(): number { return Math.floor(Math.random() * 1e9); }
+function genId(): number {
+  return Math.floor(Math.random() * 1e9);
+}
 
 const HELP_SOURCE: { kind: LineKind; text: string }[] = [
   { kind: "out", text: "▲ stack · commands" },
   { kind: "dim", text: "  stack init                       initialise the current directory" },
   { kind: "dim", text: "  stack ls                          list the provider catalog" },
-  { kind: "dim", text: "  stack add <name> [<name>...]      provision + store secrets via Phantom" },
-  { kind: "dim", text: "  stack recommend \"<query>\"         AI-assisted provider picks for your project" },
+  {
+    kind: "dim",
+    text: "  stack add <name> [<name>...]      provision + store secrets via Phantom",
+  },
+  {
+    kind: "dim",
+    text: '  stack recommend "<query>"         AI-assisted provider picks for your project',
+  },
   { kind: "dim", text: "  stack mcp list                    list MCP servers Stack wires" },
   { kind: "dim", text: "  stack doctor                      check the local install" },
   { kind: "dim", text: "  stack open <name>                 open a provider dashboard" },
@@ -62,25 +70,54 @@ async function simulateAdd(
   reduced: boolean,
 ): Promise<void> {
   const authLabel =
-    ref.authKind === "oauth_pkce" ? "OAuth (PKCE) via the Ashlr Stack app"
-    : ref.authKind === "oauth_device" ? "OAuth device-code flow"
-    : ref.authKind === "pat" ? "Personal access token"
-    : "API key";
+    ref.authKind === "oauth_pkce"
+      ? "OAuth (PKCE) via the Ashlr Stack app"
+      : ref.authKind === "oauth_device"
+        ? "OAuth device-code flow"
+        : ref.authKind === "pat"
+          ? "Personal access token"
+          : "API key";
 
   push(mkLine("out", `▲ stack  adding ${ref.displayName}`));
   await sleep(reduced ? 0 : 120);
   push(mkLine("dim", `  auth · ${authLabel}`));
   await sleep(reduced ? 0 : 200);
-  push(mkLine("work", `  ${ref.authKind === "oauth_pkce" ? "OAuth browser flow" : "credential check"}`, "verified"));
+  push(
+    mkLine(
+      "work",
+      `  ${ref.authKind === "oauth_pkce" ? "OAuth browser flow" : "credential check"}`,
+      "verified",
+    ),
+  );
   await sleep(reduced ? 0 : 400);
-  push(mkLine("work", `  provisioning ${ref.displayName}`, ref.notes?.includes("stores") ? "stored only, no upstream provisioning" : "created upstream resource"));
+  push(
+    mkLine(
+      "work",
+      `  provisioning ${ref.displayName}`,
+      ref.notes?.includes("stores")
+        ? "stored only, no upstream provisioning"
+        : "created upstream resource",
+    ),
+  );
   await sleep(reduced ? 0 : 600);
-  push(mkLine("work", `  writing ${ref.secrets.length} secret${ref.secrets.length === 1 ? "" : "s"} → phantom vault`, ref.secrets.join(" · ")));
+  push(
+    mkLine(
+      "work",
+      `  writing ${ref.secrets.length} secret${ref.secrets.length === 1 ? "" : "s"} → phantom vault`,
+      ref.secrets.join(" · "),
+    ),
+  );
   await sleep(reduced ? 0 : 300);
   push(mkLine("work", `  patching .env.local · .stack.toml${ref.mcp ? " · .mcp.json" : ""}`));
   await sleep(reduced ? 0 : 280);
   if (ref.mcp) {
-    push(mkLine("work", `  registering MCP server "${ref.mcp.name}"`, ref.mcp.detail.slice(0, 84) + (ref.mcp.detail.length > 84 ? "…" : "")));
+    push(
+      mkLine(
+        "work",
+        `  registering MCP server "${ref.mcp.name}"`,
+        ref.mcp.detail.slice(0, 84) + (ref.mcp.detail.length > 84 ? "…" : ""),
+      ),
+    );
     await sleep(reduced ? 0 : 260);
   }
   push(mkLine("ok", `✓ ${ref.displayName} ready`));
@@ -126,7 +163,13 @@ export default function StackREPL() {
       await sleep(reduced ? 0 : 400);
       push(mkLine("out", "▲ stack  initialising · ~/projects/raven"));
       await sleep(reduced ? 0 : LINE_DELAY);
-      push(mkLine("work", "writing .stack.toml · .stack.local.toml", "appended .stack.local.toml to .gitignore"));
+      push(
+        mkLine(
+          "work",
+          "writing .stack.toml · .stack.local.toml",
+          "appended .stack.local.toml to .gitignore",
+        ),
+      );
       await sleep(reduced ? 0 : 500);
       push(mkLine("work", "registering project · ~/.stack/projects.json"));
       await sleep(reduced ? 0 : 300);
@@ -149,7 +192,10 @@ export default function StackREPL() {
         pushMany([
           mkLine("dim", `  ${cat.toUpperCase()}`),
           ...refs.map((r) =>
-            mkLine("out", `    ${r.name.padEnd(14)} ${r.blurb.slice(0, 44)}${r.blurb.length > 44 ? "…" : ""}`),
+            mkLine(
+              "out",
+              `    ${r.name.padEnd(14)} ${r.blurb.slice(0, 44)}${r.blurb.length > 44 ? "…" : ""}`,
+            ),
           ),
         ]);
         await sleep(reduced ? 0 : 120);
@@ -162,7 +208,9 @@ export default function StackREPL() {
       setUnlocked(true);
     })();
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [reduced]);
 
   const runCommand = async (raw: string) => {
@@ -200,7 +248,12 @@ export default function StackREPL() {
       if (sub === "ls") {
         push(mkLine("out", `▲ stack  ${PROVIDERS_REF.length} providers`));
         for (const r of PROVIDERS_REF) {
-          push(mkLine("out", `  ${r.name.padEnd(14)} ${r.blurb.slice(0, 60)}${r.blurb.length > 60 ? "…" : ""}`));
+          push(
+            mkLine(
+              "out",
+              `  ${r.name.padEnd(14)} ${r.blurb.slice(0, 60)}${r.blurb.length > 60 ? "…" : ""}`,
+            ),
+          );
         }
         return;
       }
@@ -224,7 +277,12 @@ export default function StackREPL() {
         const mcps = PROVIDERS_REF.filter((r) => r.mcp);
         push(mkLine("out", `▲ stack mcp · ${mcps.length} servers registered`));
         for (const r of mcps) {
-          push(mkLine("out", `  ${r.mcp!.name.padEnd(14)} ${r.mcp!.detail.slice(0, 62)}${r.mcp!.detail.length > 62 ? "…" : ""}`));
+          push(
+            mkLine(
+              "out",
+              `  ${r.mcp?.name.padEnd(14)} ${r.mcp?.detail.slice(0, 62)}${r.mcp?.detail.length > 62 ? "…" : ""}`,
+            ),
+          );
         }
         return;
       }
@@ -242,7 +300,9 @@ export default function StackREPL() {
       if (sub === "add") {
         const names = parts.slice(2);
         if (names.length === 0) {
-          push(mkLine("err", "usage: stack add <name> [<name>...]  (e.g. stack add supabase posthog)"));
+          push(
+            mkLine("err", "usage: stack add <name> [<name>...]  (e.g. stack add supabase posthog)"),
+          );
           return;
         }
         for (const name of names) {
@@ -263,24 +323,37 @@ export default function StackREPL() {
         const query = afterSub.replace(/^["']|["']$/g, "").trim();
         if (!query) {
           push(mkLine("out", "▲ stack recommend"));
-          push(mkLine("dim", "  Usage: stack recommend \"B2B SaaS with auth, AI, and payments\""));
+          push(mkLine("dim", '  Usage: stack recommend "B2B SaaS with auth, AI, and payments"'));
           push(mkLine("dim", "  No query — nothing to recommend."));
           return;
         }
-        push(mkLine("out", `▲ stack recommend`));
+        push(mkLine("out", "▲ stack recommend"));
         push(mkLine("dim", `  query: ${query}`));
         await sleep(reduced ? 0 : 200);
         const hits = retrieve(query, { k: 6 });
         if (hits.length === 0) {
           push(mkLine("err", "  No strong matches."));
-          push(mkLine("dim", "  Try describing the concrete capability you need (e.g. 'postgres database', 'stripe subscriptions', 'deploy frontend')."));
+          push(
+            mkLine(
+              "dim",
+              "  Try describing the concrete capability you need (e.g. 'postgres database', 'stripe subscriptions', 'deploy frontend').",
+            ),
+          );
           return;
         }
         for (const hit of hits) {
-          push(mkLine("out", `  ● ${hit.provider.displayName.padEnd(14)} ${hit.provider.category.padEnd(10)} (${hit.score.toFixed(2)})  ${hit.provider.blurb.slice(0, 52)}${hit.provider.blurb.length > 52 ? "…" : ""}`));
+          push(
+            mkLine(
+              "out",
+              `  ● ${hit.provider.displayName.padEnd(14)} ${hit.provider.category.padEnd(10)} (${hit.score.toFixed(2)})  ${hit.provider.blurb.slice(0, 52)}${hit.provider.blurb.length > 52 ? "…" : ""}`,
+            ),
+          );
           push(mkLine("dim", `      add with: stack add ${hit.provider.name}`));
         }
-        const topNames = hits.slice(0, 3).map((h) => h.provider.name).join(" ");
+        const topNames = hits
+          .slice(0, 3)
+          .map((h) => h.provider.name)
+          .join(" ");
         push(mkLine("ok", `✓ try: stack add ${topNames}`));
         return;
       }
@@ -311,7 +384,7 @@ export default function StackREPL() {
       e.preventDefault();
       const next = Math.max(-1, historyIdx - 1);
       setHistoryIdx(next);
-      setInput(next === -1 ? "" : history[next] ?? "");
+      setInput(next === -1 ? "" : (history[next] ?? ""));
       return;
     }
     if (e.key === "Tab") {
@@ -321,13 +394,13 @@ export default function StackREPL() {
       if (m) {
         const [, head, frag] = m;
         const matches = providerNames.filter((n) => n.startsWith(frag.toLowerCase()));
-        if (matches.length === 1) setInput(head + matches[0] + " ");
+        if (matches.length === 1) setInput(`${head + matches[0]} `);
       }
     }
   };
 
   const suggestions = [
-    "stack recommend \"b2b saas with auth and payments\"",
+    'stack recommend "b2b saas with auth and payments"',
     "stack add supabase posthog sentry",
     "stack mcp list",
     "stack doctor",
@@ -336,7 +409,10 @@ export default function StackREPL() {
   ];
 
   return (
-    <div className="tick-corners panel-steel relative" style={{ borderLeft: "2px solid var(--color-blade-500)" }}>
+    <div
+      className="tick-corners panel-steel relative"
+      style={{ borderLeft: "2px solid var(--color-blade-500)" }}
+    >
       <span className="tick-tr" />
       <span className="tick-bl" />
 
@@ -371,20 +447,39 @@ export default function StackREPL() {
       >
         {lines.map((l) => (
           <div key={l.id} className="flex items-start gap-2">
-            {l.kind === "prompt" && <span className="text-[color:var(--color-blade-400)] select-none">›</span>}
-            {l.kind === "work" && <span className="text-[color:var(--color-signal-ok,#6fe8a7)] select-none">✓</span>}
-            {l.kind === "ok" && <span className="select-none" style={{ opacity: 0 }}>·</span>}
-            {(l.kind === "err") && <span className="text-[color:var(--color-signal-err,#f56868)] select-none">✕</span>}
-            {(l.kind === "out" || l.kind === "dim") && <span className="select-none" style={{ opacity: 0 }}>·</span>}
+            {l.kind === "prompt" && (
+              <span className="text-[color:var(--color-blade-400)] select-none">›</span>
+            )}
+            {l.kind === "work" && (
+              <span className="text-[color:var(--color-signal-ok,#6fe8a7)] select-none">✓</span>
+            )}
+            {l.kind === "ok" && (
+              <span className="select-none" style={{ opacity: 0 }}>
+                ·
+              </span>
+            )}
+            {l.kind === "err" && (
+              <span className="text-[color:var(--color-signal-err,#f56868)] select-none">✕</span>
+            )}
+            {(l.kind === "out" || l.kind === "dim") && (
+              <span className="select-none" style={{ opacity: 0 }}>
+                ·
+              </span>
+            )}
             <div className="flex-1 min-w-0 break-words">
               <span
                 className={
-                  l.kind === "prompt"   ? "text-[color:var(--color-ink-50)]"
-                  : l.kind === "err"    ? "text-[color:var(--color-signal-err,#f56868)]"
-                  : l.kind === "ok"     ? "text-[color:var(--color-signal-ok,#6fe8a7)]"
-                  : l.kind === "dim"    ? "text-[color:var(--color-ink-400)]"
-                  : l.kind === "work"   ? "text-[color:var(--color-ink-100)]"
-                  : "text-[color:var(--color-ink-100)]"
+                  l.kind === "prompt"
+                    ? "text-[color:var(--color-ink-50)]"
+                    : l.kind === "err"
+                      ? "text-[color:var(--color-signal-err,#f56868)]"
+                      : l.kind === "ok"
+                        ? "text-[color:var(--color-signal-ok,#6fe8a7)]"
+                        : l.kind === "dim"
+                          ? "text-[color:var(--color-ink-400)]"
+                          : l.kind === "work"
+                            ? "text-[color:var(--color-ink-100)]"
+                            : "text-[color:var(--color-ink-100)]"
                 }
               >
                 {l.text}
@@ -421,13 +516,21 @@ export default function StackREPL() {
 
       {/* Suggestion chips */}
       {unlocked && (
-        <div className="flex flex-wrap gap-2 px-4 py-3 border-t border-[color:var(--color-ink-600)]" style={{ backgroundColor: "rgba(10, 12, 16, 0.4)" }}>
-          <span className="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--color-ink-500)] mr-2 self-center">try</span>
+        <div
+          className="flex flex-wrap gap-2 px-4 py-3 border-t border-[color:var(--color-ink-600)]"
+          style={{ backgroundColor: "rgba(10, 12, 16, 0.4)" }}
+        >
+          <span className="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--color-ink-500)] mr-2 self-center">
+            try
+          </span>
           {suggestions.map((s) => (
             <button
               key={s}
               type="button"
-              onClick={() => { setInput(s); inputRef.current?.focus(); }}
+              onClick={() => {
+                setInput(s);
+                inputRef.current?.focus();
+              }}
               className="mono text-[10px] tracking-[0.1em] px-2 py-1 border border-[color:var(--color-ink-600)] text-[color:var(--color-ink-300)] hover:border-[color:var(--color-blade-400)] hover:text-[color:var(--color-blade-400)] transition-colors"
             >
               {s}

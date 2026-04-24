@@ -33,10 +33,10 @@
   ],
   "type": "module",
   "bin": {
-    "stack": "./src/index.ts"
+    "stack": "./dist/index.js"
   },
   "files": [
-    "src/**/*",
+    "dist/**/*",
     "README.md",
     "LICENSE"
   ],
@@ -45,10 +45,11 @@
     "registry": "https://registry.npmjs.org/"
   },
   "engines": {
-    "bun": ">=1.2.0",
     "node": ">=20"
   },
   "scripts": {
+    "build": "bun build src/index.ts --outdir dist --target node --format esm && node -e \"const fs=require('fs');const f='dist/index.js';let c=fs.readFileSync(f,'utf8');if(c.startsWith('#!'))c=c.slice(c.indexOf('\\n')+1);fs.writeFileSync(f,'#!/usr/bin/env node\\n'+c);fs.chmodSync(f,0o755)\"",
+    "prepublishOnly": "bun run build",
     "dev": "bun run src/index.ts",
     "typecheck": "bunx tsc --noEmit"
   },

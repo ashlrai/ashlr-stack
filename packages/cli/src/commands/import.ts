@@ -1,7 +1,6 @@
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { defineCommand } from "citty";
 import {
   addSecret,
   assertPhantomInstalled,
@@ -14,6 +13,7 @@ import {
   toServiceEntry,
   writeConfig,
 } from "@ashlr/stack-core";
+import { defineCommand } from "citty";
 import { colors, intro, outro, outroError, prompts } from "../ui.ts";
 
 /**
@@ -66,10 +66,7 @@ export const importCommand = defineCommand({
     const grouped = groupByProvider(entries.map((e) => e.key));
     const registered = new Set(listProviderNames());
     const detectedProviders = Object.keys(grouped).filter((p) => registered.has(p));
-    const detectedSecretCount = detectedProviders.reduce(
-      (acc, p) => acc + grouped[p].length,
-      0,
-    );
+    const detectedSecretCount = detectedProviders.reduce((acc, p) => acc + grouped[p].length, 0);
     const orphanSecrets = entries
       .map((e) => e.key)
       .filter((name) => !detectedProviders.some((p) => grouped[p].includes(name)));

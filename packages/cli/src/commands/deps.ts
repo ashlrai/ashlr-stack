@@ -1,5 +1,5 @@
-import { defineCommand } from "citty";
 import { getProvider, readConfig } from "@ashlr/stack-core";
+import { defineCommand } from "citty";
 import { colors, intro, outro } from "../ui.ts";
 
 /**
@@ -23,11 +23,15 @@ export const depsCommand = defineCommand({
     }
 
     // Group by category.
-    const byCategory: Record<string, Array<{ name: string; displayName: string; secrets: string[]; mcp?: string }>> = {};
+    const byCategory: Record<
+      string,
+      Array<{ name: string; displayName: string; secrets: string[]; mcp?: string }>
+    > = {};
     for (const [name, entry] of services) {
       try {
         const p = await getProvider(entry.provider);
-        (byCategory[p.category] ??= []).push({
+        if (!byCategory[p.category]) byCategory[p.category] = [];
+        byCategory[p.category].push({
           name,
           displayName: p.displayName,
           secrets: entry.secrets,
@@ -64,7 +68,7 @@ export const depsCommand = defineCommand({
           console.log(`  ${cont} ${subCont} ${colors.dim("·")} ${colors.dim(secret)}`);
         }
       }
-      if (!isLast) console.log(`  │`);
+      if (!isLast) console.log("  │");
     }
     console.log();
 

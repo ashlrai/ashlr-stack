@@ -1,4 +1,3 @@
-import { defineCommand } from "citty";
 import {
   type ProviderContext,
   addService,
@@ -6,7 +5,9 @@ import {
   isPhantomInstalled,
   listProjects,
   readConfig,
+  scanSource,
 } from "@ashlr/stack-core";
+import { defineCommand } from "citty";
 import { colors, intro, logEvent, outro, outroError, prompts } from "../ui.ts";
 
 interface DoctorReport {
@@ -18,6 +19,13 @@ interface DoctorReport {
     detail?: string;
     latencyMs?: number;
   }>;
+}
+
+export interface ReconcileReport {
+  configured: string[];
+  detected: string[];
+  orphans: string[];
+  untracked: string[];
 }
 
 export const doctorCommand = defineCommand({
@@ -41,9 +49,27 @@ export const doctorCommand = defineCommand({
       default: false,
       description: "Emit machine-readable JSON (exit 0/1 on pass/fail). CI-friendly.",
     },
+    reconcile: {
+      type: "boolean",
+      default: false,
+      description: "Check whether .stack.toml services are still present in source code.",
+    },
   },
   async run({ args }) {
     const json = Boolean(args.json);
+    const reconcile = Boolean(args.reconcile);
+
+    // --reconcile mode: source-drift check (additive — runs alongside reachability if both given)
+    if (reconcile) {
+      await runReconcile(process.cwd(), json);
+      if (!json) {
+        // If only --reconcile was requested (no reachability check), stop here
+        if (!args.fix && !args.all) return;
+      } else {
+        return;
+      }
+    }
+
     if (!json) intro("stack doctor");
 
     if (!(await isPhantomInstalled())) {
@@ -92,6 +118,68 @@ export const doctorCommand = defineCommand({
     else outro(colors.green("All services healthy."));
   },
 });
+
+export async function runReconcile(cwd: string, json: boolean): Promise<void> {
+  const config = await readConfig(cwd).catch(() => undefined);
+  const configured = config ? Object.keys(config.services) : [];
+
+  const detections = await scanSource(cwd);
+  const detected = detections.map((d) => d.provider);
+
+  const detectedSet = new Set(detected);
+  const configuredSet = new Set(configured);
+
+  const orphans = configured.filter((name) => !detectedSet.has(name));
+  const untracked = detected.filter((name) => !configuredSet.has(name));
+
+  const report: ReconcileReport = { configured, detected, orphans, untracked };
+
+  if (json) {
+    process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
+    // --json: exit 0 always, let tooling handle structured output
+    return;
+  }
+
+  // Human-readable output
+  console.log();
+  console.log(
+    `  ${colors.bold("●")} ${configured.length} service${configured.length !== 1 ? "s" : ""} configured · ${detected.length} detected in source`,
+  );
+  console.log();
+
+  if (orphans.length === 0 && untracked.length === 0) {
+    console.log(`  ${colors.green("✓")} No drift — configured services match source.`);
+    console.log();
+    return;
+  }
+
+  for (const name of orphans) {
+    console.log(
+      `  ${colors.yellow("⚠")} 1 orphan: ${colors.bold(name)} ${colors.dim(`(no longer imported — run \`stack remove ${name}\`)`)}`,
+    );
+  }
+  if (orphans.length > 1) {
+    console.log(
+      `  ${colors.dim(`  → or run \`stack remove --allOrphans\` to remove all ${orphans.length} at once`)}`,
+    );
+  }
+
+  for (const name of untracked) {
+    // Find the signal (file where it was detected)
+    const detection = detections.find((d) => d.provider === name);
+    const signal = detection?.signals[0] ?? "source";
+    console.log(
+      `  ${colors.cyan("○")} 1 untracked: ${colors.bold(name)} ${colors.dim(`(found in ${signal} — run \`stack add ${name}\`)`)}`,
+    );
+  }
+
+  console.log();
+
+  const hasIssues = orphans.length > 0 || untracked.length > 0;
+  if (hasIssues) {
+    process.exitCode = 2;
+  }
+}
 
 async function runDoctor(
   cwd: string,

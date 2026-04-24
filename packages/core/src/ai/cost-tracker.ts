@@ -43,15 +43,10 @@ export class CostTracker {
     this.rates.set(backend, rate);
   }
 
-  recordUsage(
-    backend: string,
-    inputTokens: number,
-    outputTokens: number,
-  ): UsageRecord {
+  recordUsage(backend: string, inputTokens: number, outputTokens: number): UsageRecord {
     const rate = this.rates.get(backend) ?? { inputPer1M: 0, outputPer1M: 0 };
     const costUsd =
-      (inputTokens / 1_000_000) * rate.inputPer1M +
-      (outputTokens / 1_000_000) * rate.outputPer1M;
+      (inputTokens / 1_000_000) * rate.inputPer1M + (outputTokens / 1_000_000) * rate.outputPer1M;
     const entry: UsageRecord = {
       backend,
       inputTokens,
@@ -74,14 +69,10 @@ export class CostTracker {
       summary.totalInputTokens += r.inputTokens;
       summary.totalOutputTokens += r.outputTokens;
       summary.totalCostUsd += r.costUsd;
-      const slot =
-        summary.perBackend[r.backend] ??
-        (summary.perBackend[r.backend] = {
-          inputTokens: 0,
-          outputTokens: 0,
-          costUsd: 0,
-          calls: 0,
-        });
+      if (!summary.perBackend[r.backend]) {
+        summary.perBackend[r.backend] = { inputTokens: 0, outputTokens: 0, costUsd: 0, calls: 0 };
+      }
+      const slot = summary.perBackend[r.backend];
       slot.inputTokens += r.inputTokens;
       slot.outputTokens += r.outputTokens;
       slot.costUsd += r.costUsd;

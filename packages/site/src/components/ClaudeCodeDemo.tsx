@@ -79,9 +79,7 @@ export default function ClaudeCodeDemo() {
     }
     const timers: ReturnType<typeof setTimeout>[] = [];
     TIMELINE.forEach((t, i) => {
-      timers.push(
-        setTimeout(() => setVisibleCount(i + 1), t.at),
-      );
+      timers.push(setTimeout(() => setVisibleCount(i + 1), t.at));
     });
     timers.push(setTimeout(() => setToolDone(true), 2450));
     return () => timers.forEach(clearTimeout);
@@ -114,13 +112,8 @@ export default function ClaudeCodeDemo() {
       {/* Chat body */}
       <div className="px-4 sm:px-6 py-6 min-h-[480px] sm:min-h-[520px] bg-[rgba(0,0,0,0.2)]">
         <div className="space-y-5">
-          {TIMELINE.slice(0, visibleCount).map((t, i) => (
-            <MessageBubble
-              key={i}
-              msg={t.msg}
-              toolDone={toolDone}
-              reduced={!!reduced}
-            />
+          {TIMELINE.slice(0, visibleCount).map((t) => (
+            <MessageBubble key={t.at} msg={t.msg} toolDone={toolDone} reduced={!!reduced} />
           ))}
 
           {visibleCount === TIMELINE.length && (
@@ -140,9 +133,7 @@ export default function ClaudeCodeDemo() {
       {/* Composer */}
       <div className="hairline-top px-4 sm:px-5 py-3 flex items-center gap-3 bg-[rgba(0,0,0,0.35)]">
         <span className="mono text-sm text-ink-500">›</span>
-        <div className="flex-1 text-sm text-ink-500 mono truncate">
-          Ask Claude anything…
-        </div>
+        <div className="flex-1 text-sm text-ink-500 mono truncate">Ask Claude anything…</div>
         <kbd className="mono text-[10px] text-ink-500 px-1.5 py-0.5 rounded border border-white/10 bg-white/[0.02]">
           ⌘ K
         </kbd>
@@ -233,8 +224,11 @@ function MessageBubble({
                   viewBox="0 0 14 14"
                   className="animate-spin"
                   style={{ animationDuration: "1.2s" }}
-                  aria-hidden
+                  aria-hidden="true"
+                  role="img"
+                  aria-label="Loading"
                 >
+                  <title>Loading</title>
                   <circle
                     cx="7"
                     cy="7"
@@ -252,7 +246,15 @@ function MessageBubble({
                   />
                 </svg>
               ) : (
-                <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden>
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 14 14"
+                  aria-hidden="true"
+                  role="img"
+                  aria-label="Done"
+                >
+                  <title>Done</title>
                   <path
                     d="M2.5 7.5 L5.5 10.5 L11.5 4"
                     stroke="#4ade80"
@@ -267,13 +269,8 @@ function MessageBubble({
           </div>
           {msg.detail && msg.detail.length > 0 && (
             <div className="mt-2 space-y-0.5">
-              {msg.detail.map((d, i) => (
-                <div
-                  key={i}
-                  className={
-                    done && !isUse ? "ansi-green" : "ansi-dim"
-                  }
-                >
+              {msg.detail.map((d) => (
+                <div key={d} className={done && !isUse ? "ansi-green" : "ansi-dim"}>
                   {done && !isUse ? d : `· ${d}`}
                 </div>
               ))}
@@ -296,9 +293,25 @@ function Avatar({ kind }: { kind: "user" | "assistant" | "tool" }) {
   if (kind === "assistant") {
     return (
       <div className="flex-none w-7 h-7 rounded-full bg-[#c2410c] flex items-center justify-center text-white">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          aria-hidden="true"
+          role="img"
+          aria-label="Assistant"
+        >
+          <title>Assistant</title>
           <circle cx="12" cy="12" r="10" fill="#ffffff" opacity="0.0" />
-          <path d="M6.5 17 L12 5 L17.5 17 M8.5 14 H15.5" stroke="white" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+          <path
+            d="M6.5 17 L12 5 L17.5 17 M8.5 14 H15.5"
+            stroke="white"
+            strokeWidth="1.6"
+            fill="none"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </svg>
       </div>
     );
@@ -307,12 +320,19 @@ function Avatar({ kind }: { kind: "user" | "assistant" | "tool" }) {
     <div
       className="flex-none w-7 h-7 rounded-full flex items-center justify-center"
       style={{
-        background:
-          "linear-gradient(135deg, rgba(233,107,42,0.16), rgba(233,107,42,0.04))",
+        background: "linear-gradient(135deg, rgba(233,107,42,0.16), rgba(233,107,42,0.04))",
         border: "1px solid rgba(233,107,42,0.35)",
       }}
     >
-      <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden>
+      <svg
+        width="12"
+        height="12"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+        role="img"
+        aria-label="Tool"
+      >
+        <title>Tool</title>
         <path d="M12 3 L21 20 L3 20 Z" fill="#e96b2a" />
       </svg>
     </div>

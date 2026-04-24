@@ -22,7 +22,7 @@ export function installScrollChoreo(): void {
 
   // ─── 1. Generic .reveal entries ────────────────────────────────────
   const reveals = document.querySelectorAll<HTMLElement>("[data-reveal]");
-  reveals.forEach((el) => {
+  for (const el of reveals) {
     gsap.fromTo(
       el,
       { autoAlpha: 0, y: 14 },
@@ -38,13 +38,13 @@ export function installScrollChoreo(): void {
         },
       },
     );
-  });
+  }
 
   // ─── 2. Staggered children under .reveal-stagger ──────────────────
   const staggerParents = document.querySelectorAll<HTMLElement>("[data-reveal-stagger]");
-  staggerParents.forEach((parent) => {
+  for (const parent of staggerParents) {
     const children = parent.querySelectorAll<HTMLElement>("[data-reveal-child]");
-    if (!children.length) return;
+    if (!children.length) continue;
     gsap.fromTo(
       children,
       { autoAlpha: 0, y: 10 },
@@ -61,7 +61,7 @@ export function installScrollChoreo(): void {
         },
       },
     );
-  });
+  }
 
   // ─── 3. Hero plates spread as hero leaves viewport (subtle) ───────
   // Uses a CSS-var hook picked up by optional downstream effects.
@@ -89,7 +89,7 @@ export function installScrollChoreo(): void {
     }
     return el.getTotalLength();
   };
-  lines.forEach((l) => {
+  for (const l of lines) {
     const len = lineLength(l);
     l.style.strokeDasharray = `${len}`;
     l.style.strokeDashoffset = `${len}`;
@@ -103,7 +103,7 @@ export function installScrollChoreo(): void {
         toggleActions: "play none none reverse",
       },
     });
-  });
+  }
 
   // ─── 5. Refresh on resize (Lenis triggers this naturally too) ─────
   window.addEventListener("resize", () => ScrollTrigger.refresh(), { passive: true });

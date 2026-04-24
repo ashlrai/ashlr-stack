@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { wirePhantomForRecipe } from "../ai/phantom-wire.ts";
 import type { Recipe } from "../ai/recipe.ts";
-import { setupFakePhantom, type Harness } from "./_harness.ts";
+import { type Harness, setupFakePhantom } from "./_harness.ts";
 
 describe("ai/phantom-wire", () => {
   let harness: Harness;

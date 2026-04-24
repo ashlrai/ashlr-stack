@@ -86,7 +86,7 @@ export class CircuitBreaker {
 
     this.failureTimes.push(now);
     const cutoff = now - this.windowMs;
-    while (this.failureTimes.length && this.failureTimes[0]! < cutoff) {
+    while (this.failureTimes.length && (this.failureTimes[0] ?? 0) < cutoff) {
       this.failureTimes.shift();
     }
     if (this.failureTimes.length >= this.threshold) {
@@ -96,10 +96,7 @@ export class CircuitBreaker {
 
   /** Observable state. Resolves time-based transitions lazily. */
   getState(): CircuitState {
-    if (
-      this.state === "open" &&
-      this.now() - this.lastFailureTime >= this.resetTimeMs
-    ) {
+    if (this.state === "open" && this.now() - this.lastFailureTime >= this.resetTimeMs) {
       this.state = "half-open";
     }
     return this.state;
@@ -108,7 +105,7 @@ export class CircuitBreaker {
   /** Current failure count inside the rolling window. */
   getFailureCount(): number {
     const cutoff = this.now() - this.windowMs;
-    while (this.failureTimes.length && this.failureTimes[0]! < cutoff) {
+    while (this.failureTimes.length && (this.failureTimes[0] ?? 0) < cutoff) {
       this.failureTimes.shift();
     }
     return this.failureTimes.length;

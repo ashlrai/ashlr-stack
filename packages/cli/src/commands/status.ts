@@ -1,5 +1,5 @@
-import { defineCommand } from "citty";
 import { hasConfig, isPhantomInstalled, listSecrets, readConfig } from "@ashlr/stack-core";
+import { defineCommand } from "citty";
 import { colors } from "../ui.ts";
 
 export const statusCommand = defineCommand({

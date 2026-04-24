@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import openai from "../providers/openai.ts";
 import type { ProviderContext } from "../providers/_base.ts";
+import openai from "../providers/openai.ts";
 import { type Harness, readVault, setupFakePhantom } from "./_harness.ts";
 
 describe("openai provider (mocked fetch)", () => {

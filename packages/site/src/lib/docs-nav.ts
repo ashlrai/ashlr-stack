@@ -110,12 +110,14 @@ export const DOCS_NAV: DocsNavGroup[] = [
       {
         label: "Stack vs Railway",
         href: "/compare/stack-vs-railway/",
-        blurb: "Railway is a deploy platform; Stack composes across 29 providers (Railway is one of them).",
+        blurb:
+          "Railway is a deploy platform; Stack composes across 29 providers (Railway is one of them).",
       },
       {
         label: "Stack vs Doppler",
         href: "/compare/stack-vs-doppler/",
-        blurb: "Doppler is a cloud secret manager; Stack + Phantom is local-first E2E vaulting tied to provisioning.",
+        blurb:
+          "Doppler is a cloud secret manager; Stack + Phantom is local-first E2E vaulting tied to provisioning.",
       },
     ],
   },
@@ -135,7 +137,8 @@ export const DOCS_NAV: DocsNavGroup[] = [
       {
         label: "Changelog",
         href: "/docs/changelog/",
-        blurb: "Shipped features, hardening passes, and redesigns — in reverse-chronological order.",
+        blurb:
+          "Shipped features, hardening passes, and redesigns — in reverse-chronological order.",
       },
       {
         label: "Roadmap",
@@ -154,9 +157,7 @@ export function findPageByHref(href: string): DocsNavItem | undefined {
   return DOCS_PAGES.find((p) => p.href === normalized);
 }
 
-export function neighboursOf(
-  href: string,
-): { prev?: DocsNavItem; next?: DocsNavItem } {
+export function neighboursOf(href: string): { prev?: DocsNavItem; next?: DocsNavItem } {
   const normalized = href.endsWith("/") ? href : `${href}/`;
   const idx = DOCS_PAGES.findIndex((p) => p.href === normalized);
   if (idx === -1) return {};

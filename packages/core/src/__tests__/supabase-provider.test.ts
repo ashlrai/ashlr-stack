@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import supabase from "../providers/supabase.ts";
 import type { ProviderContext } from "../providers/_base.ts";
+import supabase from "../providers/supabase.ts";
 import { type Harness, readVault, setupFakePhantom } from "./_harness.ts";
 
 /**

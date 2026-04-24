@@ -26,7 +26,7 @@ export function linkifyPhantom(text: string): ReactNode {
         key={`p-${start}`}
         href="https://phm.dev"
         target="_blank"
-        rel="noopener"
+        rel="noreferrer noopener"
         className="text-[color:var(--color-ink-100)] underline decoration-dotted decoration-[#3b82f6]/40 underline-offset-4 hover:decoration-[#3b82f6] hover:text-[#3b82f6] transition-colors"
       >
         Phantom

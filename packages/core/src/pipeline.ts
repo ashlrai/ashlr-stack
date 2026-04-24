@@ -1,14 +1,9 @@
-import {
-  type ServiceEntry,
-  type StackConfig,
-  readConfig,
-  writeConfig,
-} from "./config.ts";
+import { type ServiceEntry, type StackConfig, readConfig, writeConfig } from "./config.ts";
 import { StackError } from "./errors.ts";
-import { addSecret, assertPhantomInstalled } from "./phantom.ts";
-import { mergeMcpEntry } from "./mcp-writer.ts";
-import { getProvider } from "./providers/index.ts";
+import { mergeMcpEntry, removeMcpEntry } from "./mcp-writer.ts";
+import { addSecret, assertPhantomInstalled, removeSecret } from "./phantom.ts";
 import type { LogEvent, ProviderContext } from "./providers/_base.ts";
+import { getProvider } from "./providers/index.ts";
 
 export interface AddServiceOpts {
   providerName: string;
@@ -62,19 +57,22 @@ export async function addService(opts: AddServiceOpts): Promise<AddServiceResult
     hints: opts.hints,
   });
 
-  // Provision succeeded: from here on, any failure leaves a dangling upstream
-  // resource. Wrap the rest of the pipeline so we can persist a minimal
-  // breadcrumb entry to .stack.toml before re-throwing. This is what lets
-  // `stack doctor --fix` (or `stack remove`) clean up later — without the
-  // breadcrumb, the user has a live resource on the provider side with no
-  // local record at all.
+  // Provision succeeded: from here on, any failure must roll back atomically.
+  // Track what has been written so the catch block can undo exactly that.
+  const writtenSecrets: string[] = [];
+  let writtenMcp: string | undefined;
+
   try {
     const materialized = await provider.materialize(ctx, resource, auth);
 
     for (const [key, value] of Object.entries(materialized.secrets)) {
       await addSecret(key, value, cwd);
+      writtenSecrets.push(key);
     }
-    if (materialized.mcp) await mergeMcpEntry(materialized.mcp, cwd);
+    if (materialized.mcp) {
+      await mergeMcpEntry(materialized.mcp, cwd);
+      writtenMcp = materialized.mcp.name;
+    }
 
     const entry: ServiceEntry = {
       provider: provider.name,
@@ -101,31 +99,46 @@ export async function addService(opts: AddServiceOpts): Promise<AddServiceResult
       entry,
     };
   } catch (err) {
-    // Partial-failure breadcrumb: write just enough to .stack.toml that a
-    // later `stack doctor --fix` or `stack remove` can find the dangling
-    // upstream resource. We intentionally leave `secrets: []` — materialize
-    // didn't run to completion, so we don't know which vault keys (if any)
-    // were populated. Same goes for `mcp`: we don't know what the MCP entry
-    // would have been, so we don't claim to have wired one.
-    if (opts.persist !== false) {
-      const partial: ServiceEntry = {
-        provider: provider.name,
-        resource_id: resource.id,
-        region: resource.region,
-        secrets: [],
-        meta: resource.meta,
-        created_at: new Date().toISOString(),
-        created_by: "stack add (partial)",
-      };
+    // --- Atomic rollback ---
+    // 1. Remove any Phantom secrets already written.
+    for (const key of writtenSecrets) {
       try {
-        config.services[provider.name] = partial;
-        await writeConfig(config, cwd);
+        await removeSecret(key, cwd);
       } catch {
-        // If even writing the breadcrumb fails, swallow — the original
-        // error below is the user-visible signal; we don't want to mask it
-        // with a disk-write failure.
+        /* best-effort */
       }
     }
-    throw err;
+    // 2. Remove the MCP entry if it was written.
+    if (writtenMcp) {
+      try {
+        await removeMcpEntry(writtenMcp, cwd);
+      } catch {
+        /* best-effort */
+      }
+    }
+    // 3. Tear down the upstream resource (if provider supports it).
+    const failStep = writtenSecrets.length > 0 ? "MCP/config write" : "materialize";
+    if (provider.deprovision) {
+      await provider.deprovision(ctx, auth, resource.id);
+      throw new StackError(
+        "ADD_SERVICE_ROLLED_BACK",
+        `Rolled back ${provider.displayName} after failure at step "${failStep}". ` +
+          `Upstream resource ${resource.id} has been torn down. ` +
+          `Original error: ${(err as Error).message}`,
+      );
+    }
+    // No deprovision support — warn and direct to manual cleanup.
+    ctx.log({
+      level: "warn",
+      msg: `[stack] Partial failure adding ${provider.displayName}. Upstream resource ID: ${resource.id}. This provider does not support automatic teardown — please delete it manually, then run \`stack doctor --fix\` to resync local state.`,
+      data: { provider: provider.name, resourceId: resource.id },
+    });
+    throw new StackError(
+      "ADD_SERVICE_PARTIAL_FAILURE",
+      `Adding ${provider.displayName} failed at step "${failStep}" after the upstream resource was created. ` +
+        `Resource ID: ${resource.id}. ` +
+        `Clean it up manually on the ${provider.displayName} dashboard, then run \`stack doctor --fix\`.`,
+    );
+    // .stack.toml is intentionally NOT written — the add was not atomic.
   }
 }

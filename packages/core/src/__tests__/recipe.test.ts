@@ -3,12 +3,12 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  type Recipe,
   listRecipes,
   readRecipe,
   recipeFromRetrieval,
   slugifyQuery,
   writeRecipe,
-  type Recipe,
 } from "../ai/recipe.ts";
 
 function scratchDir(): { dir: string; cleanup: () => void } {
@@ -69,7 +69,9 @@ name = "totally-made-up-provider"
 `,
         "utf-8",
       );
-      await expect(readRecipe("bad", dir)).rejects.toThrow(/UNKNOWN_PROVIDER_IN_RECIPE|unknown provider/i);
+      await expect(readRecipe("bad", dir)).rejects.toThrow(
+        /UNKNOWN_PROVIDER_IN_RECIPE|unknown provider/i,
+      );
     } finally {
       cleanup();
     }

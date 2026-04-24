@@ -1,8 +1,7 @@
 import type { ServiceEntry } from "../config.ts";
 import { StackError } from "../errors.ts";
-import { addSecret } from "../phantom.ts";
 import { fetchWithRetry } from "../http.ts";
-import { readLine, tryRevealSecret } from "./_helpers.ts";
+import { addSecret } from "../phantom.ts";
 import type {
   AuthHandle,
   HealthStatus,
@@ -12,6 +11,7 @@ import type {
   ProvisionOpts,
   Resource,
 } from "./_base.ts";
+import { readLine, tryRevealSecret } from "./_helpers.ts";
 
 /**
  * Sentry — error tracking. v1 uses an Auth Token (users create one at
@@ -114,9 +114,7 @@ const sentry: Provider = {
       headers: { Authorization: `Bearer ${token}` },
     });
     const latencyMs = Date.now() - start;
-    return res.ok
-      ? { kind: "ok", latencyMs }
-      : { kind: "error", detail: `HTTP ${res.status}` };
+    return res.ok ? { kind: "ok", latencyMs } : { kind: "error", detail: `HTTP ${res.status}` };
   },
 
   dashboardUrl(entry: ServiceEntry): string {
@@ -179,5 +177,3 @@ async function fetchDsn(
   const keys = (await res.json()) as Array<{ dsn?: { public?: string } }>;
   return keys[0]?.dsn?.public;
 }
-
-

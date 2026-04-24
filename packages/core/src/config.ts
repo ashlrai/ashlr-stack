@@ -96,10 +96,7 @@ export function hasConfig(cwd: string = process.cwd()): boolean {
 
 interface ShapeFile {
   stack: { version: string; template?: string };
-  services: Record<
-    string,
-    { provider: string; secrets: string[]; mcp?: string }
-  >;
+  services: Record<string, { provider: string; secrets: string[]; mcp?: string }>;
   environments: EnvironmentEntry[];
 }
 
@@ -154,10 +151,7 @@ export async function readConfig(cwd: string = process.cwd()): Promise<StackConf
 // Write: split and route to the two files, auto-gitignore the local one
 // ---------------------------------------------------------------------------
 
-export async function writeConfig(
-  config: StackConfig,
-  cwd: string = process.cwd(),
-): Promise<void> {
+export async function writeConfig(config: StackConfig, cwd: string = process.cwd()): Promise<void> {
   const { shape, instance } = split(config);
 
   const shapeHeader =
@@ -169,8 +163,7 @@ export async function writeConfig(
     "utf-8",
   );
 
-  const instanceHeader =
-    "# Ashlr Stack — local instance data. Auto-generated; do not commit.\n";
+  const instanceHeader = "# Ashlr Stack — local instance data. Auto-generated; do not commit.\n";
   await writeFile(
     resolveLocalConfigPath(cwd),
     instanceHeader + stringifyToml(instance as unknown as Record<string, unknown>),

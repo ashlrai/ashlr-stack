@@ -112,7 +112,8 @@ function Mark({ name }: { name: string }) {
   const common = { width: 32, height: 32, viewBox: "0 0 40 40", "aria-hidden": true } as const;
   if (name === "Claude Code") {
     return (
-      <svg {...common} fill="currentColor">
+      <svg {...common} fill="currentColor" role="img" aria-label={name}>
+        <title>{name}</title>
         <g>
           <ellipse cx="20" cy="20" rx="3" ry="14" />
           <ellipse cx="20" cy="20" rx="3" ry="14" transform="rotate(45 20 20)" />
@@ -124,14 +125,24 @@ function Mark({ name }: { name: string }) {
   }
   if (name === "Cursor") {
     return (
-      <svg {...common} fill="currentColor">
+      <svg {...common} fill="currentColor" role="img" aria-label={name}>
+        <title>{name}</title>
         <path d="M8 6 L32 20 L21 22 L16 33 Z" />
       </svg>
     );
   }
   if (name === "Windsurf") {
     return (
-      <svg {...common} fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+      <svg
+        {...common}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="3"
+        strokeLinecap="round"
+        role="img"
+        aria-label={name}
+      >
+        <title>{name}</title>
         <path d="M4 26 Q12 16 20 22 T36 18" />
         <path d="M4 20 Q12 10 20 16 T36 12" opacity="0.7" />
         <path d="M4 32 Q12 22 20 28 T36 24" opacity="0.4" />
@@ -140,7 +151,8 @@ function Mark({ name }: { name: string }) {
   }
   if (name === "OpenAI Codex") {
     return (
-      <svg {...common} fill="currentColor">
+      <svg {...common} fill="currentColor" role="img" aria-label={name}>
+        <title>{name}</title>
         <g transform="translate(20 20)">
           <ellipse rx="2.4" ry="11" />
           <ellipse rx="2.4" ry="11" transform="rotate(60)" />
@@ -151,7 +163,8 @@ function Mark({ name }: { name: string }) {
   }
   if (name === "ashlrcode") {
     return (
-      <svg {...common} fill="currentColor">
+      <svg {...common} fill="currentColor" role="img" aria-label={name}>
+        <title>{name}</title>
         <path d="M20 7 L33 30 L7 30 Z" />
         <path d="M20 14 L27 26 L13 26 Z" fill="var(--color-ink-950, #050506)" />
       </svg>
@@ -185,7 +198,8 @@ export default function McpClientsGrid() {
                   aria-hidden
                   className="mcp-glow pointer-events-none absolute inset-0 opacity-0 transition-opacity"
                   style={{
-                    background: "radial-gradient(200px 80px at 50% 130%, var(--accent), transparent 60%)",
+                    background:
+                      "radial-gradient(200px 80px at 50% 130%, var(--accent), transparent 60%)",
                     mixBlendMode: "screen",
                   }}
                 />
@@ -194,11 +208,19 @@ export default function McpClientsGrid() {
                     <Mark name={c.name} />
                   </div>
                   <div>
-                    <div className="text-[14px] font-semibold text-white tracking-tight">{c.name}</div>
-                    <div className="text-[11px] mono text-[color:var(--color-ink-400)] mt-0.5">{c.meta}</div>
-                    <div className={`text-[10px] mono tracking-[0.1em] uppercase mt-2 transition-colors ${
-                      isActive ? "text-[color:var(--color-blade-400)]" : "text-[color:var(--color-ink-500)] group-hover:text-[color:var(--color-blade-400)]"
-                    }`}>
+                    <div className="text-[14px] font-semibold text-white tracking-tight">
+                      {c.name}
+                    </div>
+                    <div className="text-[11px] mono text-[color:var(--color-ink-400)] mt-0.5">
+                      {c.meta}
+                    </div>
+                    <div
+                      className={`text-[10px] mono tracking-[0.1em] uppercase mt-2 transition-colors ${
+                        isActive
+                          ? "text-[color:var(--color-blade-400)]"
+                          : "text-[color:var(--color-ink-500)] group-hover:text-[color:var(--color-blade-400)]"
+                      }`}
+                    >
                       {isActive ? "close ↑" : "show config →"}
                     </div>
                   </div>

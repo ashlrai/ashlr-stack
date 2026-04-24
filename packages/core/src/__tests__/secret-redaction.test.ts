@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { StackError } from "../errors.ts";
+import { makeApiKeyProvider } from "../providers/_api-key.ts";
 import type { LogEvent } from "../providers/_base.ts";
 import { scrub } from "../providers/_helpers.ts";
-import { makeApiKeyProvider } from "../providers/_api-key.ts";
-import { StackError } from "../errors.ts";
 import { type Harness, setupFakePhantom } from "./_harness.ts";
 
 /**
@@ -75,8 +75,7 @@ describe("api-key provider login — invalid cached token warning", () => {
     const warn = logs.find((l) => l.level === "warn");
     expect(warn).toBeDefined();
     // The raw token must not appear anywhere in the message or data payload.
-    const full =
-      (warn?.msg ?? "") + " " + JSON.stringify(warn?.data ?? {});
+    const full = `${warn?.msg ?? ""} ${JSON.stringify(warn?.data ?? {})}`;
     expect(full).not.toContain(RAW_TOKEN);
     // And the tail of the token (last 6 chars) must not leak either — the
     // current _api-key warn doesn't reference the token at all, so belt + suspenders.
@@ -92,7 +91,7 @@ describe("phantom error formatting — regression guard for formatArgsForError",
    * exercise the error path.
    */
   function setupAlwaysFailingPhantom(): { cleanup(): void } {
-    const { chmodSync, mkdtempSync, rmSync, writeFileSync } = require("node:fs") as typeof import("node:fs");
+    const { chmodSync, mkdtempSync, rmSync, writeFileSync } = require("node:fs") as typeof import("node:fs"); // biome-ignore format: Bun parser rejects split typeof import()
     const { tmpdir } = require("node:os") as typeof import("node:os");
     const { join } = require("node:path") as typeof import("node:path");
     const { __resetPhantomCache } = require("../phantom.ts") as typeof import("../phantom.ts");
@@ -138,11 +137,11 @@ esac
       }
       expect(caught).toBeDefined();
       // The canonical guarantee: the raw value NEVER appears in the error.
-      expect(caught!.message).not.toContain(SECRET);
+      expect(caught?.message).not.toContain(SECRET);
       // The key name is safe to show — it's the vault slot, not the value.
-      expect(caught!.message).toContain("LEAKY_KEY");
+      expect(caught?.message).toContain("LEAKY_KEY");
       // And the redaction sentinel should be present.
-      expect(caught!.message).toContain("<redacted>");
+      expect(caught?.message).toContain("<redacted>");
     } finally {
       h.cleanup();
     }
@@ -162,7 +161,7 @@ esac
       // Reveal's second arg is a key name, not a secret value — it's fine
       // for it to appear in error output. The point is that `add`'s third arg
       // is redacted, and reveal's isn't wrongly redacted into uselessness.
-      expect(caught!.message).toContain("SOME_KEY");
+      expect(caught?.message).toContain("SOME_KEY");
     } finally {
       h.cleanup();
     }

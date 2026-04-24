@@ -1,8 +1,8 @@
 import type { APIRoute } from "astro";
 import {
+  type RetrievalHit,
   retrieve,
   retrieveByCategory,
-  type RetrievalHit,
 } from "../../../../core/src/ai/catalog-index";
 import { PROVIDER_CATEGORIES } from "../../../../core/src/catalog";
 
@@ -86,7 +86,10 @@ function buildGuidance(hits: RetrievalHit[], categories: string[]): string {
     );
   }
   parts.push(
-    `Apply a chosen set with: stack add ${hits.slice(0, 3).map((h) => h.provider.name).join(" ")} (or supply your own list).`,
+    `Apply a chosen set with: stack add ${hits
+      .slice(0, 3)
+      .map((h) => h.provider.name)
+      .join(" ")} (or supply your own list).`,
   );
   return parts.join(" ");
 }
@@ -128,9 +131,7 @@ export const POST: APIRoute = async ({ request }) => {
   const k = Math.min(20, Math.max(1, Number.isFinite(rawK) && rawK > 0 ? rawK : 6));
 
   const categories =
-    typeof body.category === "string" && body.category.length > 0
-      ? [body.category]
-      : undefined;
+    typeof body.category === "string" && body.category.length > 0 ? [body.category] : undefined;
 
   const hits = retrieve(query, {
     k,

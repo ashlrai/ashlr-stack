@@ -10,7 +10,10 @@ interface McpFile {
   [key: string]: unknown;
 }
 
-export async function mergeMcpEntry(entry: McpServerEntry, cwd: string = process.cwd()): Promise<void> {
+export async function mergeMcpEntry(
+  entry: McpServerEntry,
+  cwd: string = process.cwd(),
+): Promise<void> {
   const path = join(cwd, MCP_FILENAME);
   const current = await readMcp(path);
   current.mcpServers[entry.name] = toJsonShape(entry);

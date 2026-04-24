@@ -24,7 +24,7 @@ describe("config", () => {
   });
 
   afterEach(() => {
-    if (previousRegistryDir === undefined) delete process.env.STACK_REGISTRY_DIR;
+    if (previousRegistryDir === undefined) process.env.STACK_REGISTRY_DIR = undefined;
     else process.env.STACK_REGISTRY_DIR = previousRegistryDir;
   });
 

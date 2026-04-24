@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { listTemplates, loadTemplate } from "../templates.ts";
 import { listProviderNames } from "../providers/index.ts";
+import { listTemplates, loadTemplate } from "../templates.ts";
 
 describe("starter templates", () => {
   test("all templates reference only registered providers", async () => {

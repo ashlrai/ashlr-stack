@@ -1,8 +1,8 @@
 import { existsSync, mkdirSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { defineCommand } from "citty";
 import { hasConfig } from "@ashlr/stack-core";
+import { defineCommand } from "citty";
 import { colors, intro, outro, outroError } from "../ui.ts";
 
 const DEFAULT_WORKFLOW = `name: Stack doctor
@@ -94,13 +94,19 @@ export const ciCommand = defineCommand({
         }
         await writeFile(path, DEFAULT_WORKFLOW, "utf-8");
         console.log();
-        console.log(`  ${colors.green("●")} wrote ${colors.bold(".github/workflows/stack-ci.yml")}`);
+        console.log(
+          `  ${colors.green("●")} wrote ${colors.bold(".github/workflows/stack-ci.yml")}`,
+        );
         console.log();
         console.log(colors.dim("  Next steps:"));
-        console.log(colors.dim("    1. Add PHANTOM_VAULT_PASSPHRASE + PHANTOM_CLOUD_TOKEN to repo secrets."));
+        console.log(
+          colors.dim("    1. Add PHANTOM_VAULT_PASSPHRASE + PHANTOM_CLOUD_TOKEN to repo secrets."),
+        );
         console.log(colors.dim("    2. Commit the workflow."));
         console.log(
-          colors.dim("    3. Watch the first run in Actions — downloads the doctor report as an artifact."),
+          colors.dim(
+            "    3. Watch the first run in Actions — downloads the doctor report as an artifact.",
+          ),
         );
         console.log();
         outro(colors.green("CI workflow scaffolded."));

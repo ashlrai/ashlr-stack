@@ -1,12 +1,14 @@
+import type { LogEvent } from "@ashlr/stack-core";
 import * as p from "@clack/prompts";
 import pc from "picocolors";
-import type { LogEvent } from "@ashlr/stack-core";
 
 export const colors = pc;
 
 export function banner(): void {
   console.log();
-  console.log(pc.bold(pc.magenta("  ▲ stack  ")) + pc.dim("— the control plane for your dev stack"));
+  console.log(
+    pc.bold(pc.magenta("  ▲ stack  ")) + pc.dim("— the control plane for your dev stack"),
+  );
   console.log();
 }
 
@@ -28,11 +30,7 @@ export function outroError(message: string): void {
 
 export function logEvent(event: LogEvent): void {
   const prefix =
-    event.level === "error"
-      ? pc.red("✗")
-      : event.level === "warn"
-        ? pc.yellow("⚠")
-        : pc.cyan("›");
+    event.level === "error" ? pc.red("✗") : event.level === "warn" ? pc.yellow("⚠") : pc.cyan("›");
   p.log.message(`${prefix} ${event.msg}`);
 }
 

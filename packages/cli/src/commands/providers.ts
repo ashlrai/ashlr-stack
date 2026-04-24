@@ -1,5 +1,5 @@
-import { defineCommand } from "citty";
 import { getProvider, listProviderNames } from "@ashlr/stack-core";
+import { defineCommand } from "citty";
 import { colors, intro } from "../ui.ts";
 
 export const providersCommand = defineCommand({
@@ -7,11 +7,15 @@ export const providersCommand = defineCommand({
   async run() {
     intro("stack providers");
     const names = listProviderNames();
-    const byCategory: Record<string, Array<{ name: string; displayName: string; auth: string }>> = {};
+    const byCategory: Record<
+      string,
+      Array<{ name: string; displayName: string; auth: string }>
+    > = {};
     for (const name of names) {
       try {
         const p = await getProvider(name);
-        (byCategory[p.category] ??= []).push({
+        if (!byCategory[p.category]) byCategory[p.category] = [];
+        byCategory[p.category].push({
           name: p.name,
           displayName: p.displayName,
           auth: p.authKind,

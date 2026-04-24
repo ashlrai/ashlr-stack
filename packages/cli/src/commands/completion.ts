@@ -1,5 +1,5 @@
-import { defineCommand } from "citty";
 import { listProviderNames, listTemplates } from "@ashlr/stack-core";
+import { defineCommand } from "citty";
 
 /**
  * `stack completion <shell>` — emit a shell completion script. Runtime-static
@@ -146,15 +146,9 @@ _stack
 }
 
 function emitFish(commands: string[], providers: string[], templates: string[]): string {
-  const lines: string[] = [
-    "# stack completion — fish",
-    "complete -c stack -f",
-    "",
-  ];
+  const lines: string[] = ["# stack completion — fish", "complete -c stack -f", ""];
   for (const c of commands) {
-    lines.push(
-      `complete -c stack -n "__fish_use_subcommand" -a "${c}" -d "stack subcommand"`,
-    );
+    lines.push(`complete -c stack -n "__fish_use_subcommand" -a "${c}" -d "stack subcommand"`);
   }
   for (const verb of ["add", "remove", "info", "login", "open"]) {
     for (const p of providers) {

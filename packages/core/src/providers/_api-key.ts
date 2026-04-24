@@ -1,7 +1,6 @@
 import type { ServiceEntry } from "../config.ts";
 import { StackError } from "../errors.ts";
 import { addSecret } from "../phantom.ts";
-import { readLine, tryRevealSecret } from "./_helpers.ts";
 import type {
   AuthHandle,
   HealthStatus,
@@ -12,6 +11,7 @@ import type {
   ProviderContext,
   Resource,
 } from "./_base.ts";
+import { readLine, tryRevealSecret } from "./_helpers.ts";
 
 /**
  * Factory for API-key-paste providers (OpenAI, Anthropic, xAI, DeepSeek, Resend,
@@ -68,7 +68,8 @@ export function makeApiKeyProvider(spec: ApiKeyProviderSpec): Provider {
       }
       process.stderr.write(`\n  ${spec.howTo}\n  Paste your ${spec.displayName} API key: `);
       const key = (await readLine()).trim();
-      if (!key) throw new StackError(`${spec.name.toUpperCase()}_AUTH_REQUIRED`, "No key provided.");
+      if (!key)
+        throw new StackError(`${spec.name.toUpperCase()}_AUTH_REQUIRED`, "No key provided.");
       const identity = await spec.verify(key);
       if (!identity)
         throw new StackError(
@@ -118,5 +119,3 @@ export function makeApiKeyProvider(spec: ApiKeyProviderSpec): Provider {
     },
   };
 }
-
-

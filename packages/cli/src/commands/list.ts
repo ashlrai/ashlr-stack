@@ -1,5 +1,5 @@
-import { defineCommand } from "citty";
 import { readConfig } from "@ashlr/stack-core";
+import { defineCommand } from "citty";
 import { colors } from "../ui.ts";
 
 export const listCommand = defineCommand({
@@ -12,7 +12,9 @@ export const listCommand = defineCommand({
       return;
     }
     console.log();
-    console.log(colors.bold(`  ${config.stack.project_id}  `) + colors.dim(`(${entries.length} services)`));
+    console.log(
+      colors.bold(`  ${config.stack.project_id}  `) + colors.dim(`(${entries.length} services)`),
+    );
     console.log();
     for (const [name, entry] of entries) {
       const mcp = entry.mcp ? colors.cyan(` mcp:${entry.mcp}`) : "";

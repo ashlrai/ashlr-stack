@@ -33,12 +33,63 @@ const FIELD_WEIGHTS = {
 type FieldName = keyof typeof FIELD_WEIGHTS;
 
 const STOPWORDS = new Set([
-  "a", "an", "and", "are", "as", "at", "be", "but", "by", "for", "from",
-  "has", "have", "he", "i", "if", "in", "into", "is", "it", "its", "me",
-  "my", "need", "of", "on", "or", "some", "such", "that", "the", "their",
-  "then", "there", "these", "they", "this", "to", "us", "want", "was",
-  "we", "were", "will", "with", "you", "your", "build", "building", "make",
-  "making", "use", "using", "app", "apps", "application", "project",
+  "a",
+  "an",
+  "and",
+  "are",
+  "as",
+  "at",
+  "be",
+  "but",
+  "by",
+  "for",
+  "from",
+  "has",
+  "have",
+  "he",
+  "i",
+  "if",
+  "in",
+  "into",
+  "is",
+  "it",
+  "its",
+  "me",
+  "my",
+  "need",
+  "of",
+  "on",
+  "or",
+  "some",
+  "such",
+  "that",
+  "the",
+  "their",
+  "then",
+  "there",
+  "these",
+  "they",
+  "this",
+  "to",
+  "us",
+  "want",
+  "was",
+  "we",
+  "were",
+  "will",
+  "with",
+  "you",
+  "your",
+  "build",
+  "building",
+  "make",
+  "making",
+  "use",
+  "using",
+  "app",
+  "apps",
+  "application",
+  "project",
 ]);
 
 /**
@@ -178,7 +229,10 @@ function idf(term: string): number {
   return IDF_CACHE?.get(term) ?? Math.log(1 + (N + 0.5) / 1.5);
 }
 
-function scoreProvider(idx: IndexedProvider, qTokens: string[]): { score: number; matched: string[] } {
+function scoreProvider(
+  idx: IndexedProvider,
+  qTokens: string[],
+): { score: number; matched: string[] } {
   let score = 0;
   const matched = new Set<string>();
   for (const token of qTokens) {
@@ -221,7 +275,7 @@ export function retrieve(query: string, opts: RetrieveOptions = {}): RetrievalHi
   if (qTokens.length === 0) return [];
 
   const candidates = opts.categories?.length
-    ? getIndex().filter((idx) => opts.categories!.includes(idx.provider.category))
+    ? getIndex().filter((idx) => opts.categories?.includes(idx.provider.category))
     : getIndex();
 
   const hits: RetrievalHit[] = [];
@@ -240,11 +294,15 @@ export function retrieve(query: string, opts: RetrieveOptions = {}): RetrievalHi
  * Group the top hits by category. Handy for the MCP tool response shape —
  * Claude can reason over "one from each category" instead of a flat list.
  */
-export function retrieveByCategory(query: string, opts: RetrieveOptions = {}): Record<string, RetrievalHit[]> {
+export function retrieveByCategory(
+  query: string,
+  opts: RetrieveOptions = {},
+): Record<string, RetrievalHit[]> {
   const hits = retrieve(query, { ...opts, k: opts.k ?? 20 });
   const grouped: Record<string, RetrievalHit[]> = {};
   for (const hit of hits) {
-    (grouped[hit.provider.category] ??= []).push(hit);
+    if (!grouped[hit.provider.category]) grouped[hit.provider.category] = [];
+    grouped[hit.provider.category].push(hit);
   }
   return grouped;
 }

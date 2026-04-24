@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, existsSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { existsSync, mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { spawnSync } from "node:child_process";
 
 const CLI = join(import.meta.dir, "..", "..", "..", "cli", "src", "index.ts");
 
@@ -56,7 +56,7 @@ describe("stack ci init", () => {
     expect(content).toContain("PHANTOM_CLOUD_TOKEN");
     expect(content).toContain("actions/upload-artifact@v4");
 
-    if (prev === undefined) delete process.env.STACK_REGISTRY_DIR;
+    if (prev === undefined) process.env.STACK_REGISTRY_DIR = undefined;
     else process.env.STACK_REGISTRY_DIR = prev;
   });
 });

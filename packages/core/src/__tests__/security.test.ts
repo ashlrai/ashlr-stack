@@ -37,8 +37,8 @@ esac
       caught = err as Error;
     }
     expect(caught).toBeDefined();
-    expect(caught!.message).not.toContain("super-secret-value-XYZ123");
-    expect(caught!.message).toContain("<redacted>");
+    expect(caught?.message).not.toContain("super-secret-value-XYZ123");
+    expect(caught?.message).toContain("<redacted>");
   });
 });
 

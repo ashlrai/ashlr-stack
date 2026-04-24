@@ -1,5 +1,5 @@
+import { type RetryOptions, fetchWithRetry } from "../http.ts";
 import { revealSecret } from "../phantom.ts";
-import { fetchWithRetry, type RetryOptions } from "../http.ts";
 
 /**
  * Shared helpers for every hand-written provider. Before this existed, each
@@ -74,7 +74,7 @@ export function verifyFetch(
  * Usage: `ctx.log({ msg: \`token ${scrub(t)} rejected\` })` prints
  * `token ****abcd rejected`, never the raw secret.
  */
-export function scrub(value: string, keepLast: number = 4): string {
+export function scrub(value: string, keepLast = 4): string {
   if (!value) return "";
   if (value.length <= keepLast) return "****";
   return `****${value.slice(-keepLast)}`;

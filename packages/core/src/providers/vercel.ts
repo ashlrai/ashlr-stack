@@ -1,8 +1,7 @@
 import type { ServiceEntry } from "../config.ts";
 import { StackError } from "../errors.ts";
-import { addSecret } from "../phantom.ts";
 import { fetchWithRetry } from "../http.ts";
-import { readLine, tryRevealSecret } from "./_helpers.ts";
+import { addSecret } from "../phantom.ts";
 import type {
   AuthHandle,
   HealthStatus,
@@ -12,6 +11,7 @@ import type {
   ProvisionOpts,
   Resource,
 } from "./_base.ts";
+import { readLine, tryRevealSecret } from "./_helpers.ts";
 
 /**
  * Vercel provider.
@@ -55,7 +55,10 @@ const vercel: Provider = {
     if (opts.existingResourceId) {
       const project = await fetchProject(auth.token, opts.existingResourceId);
       if (!project)
-        throw new StackError("VERCEL_PROJECT_NOT_FOUND", `No Vercel project ${opts.existingResourceId}.`);
+        throw new StackError(
+          "VERCEL_PROJECT_NOT_FOUND",
+          `No Vercel project ${opts.existingResourceId}.`,
+        );
       return { id: project.id, displayName: project.name };
     }
     const name = `stack-${Date.now().toString(36)}`;
@@ -99,6 +102,27 @@ const vercel: Provider = {
       ? `https://vercel.com/dashboard/${entry.resource_id}`
       : "https://vercel.com/dashboard";
   },
+
+  async deprovision(ctx: ProviderContext, auth: AuthHandle, resourceId: string): Promise<void> {
+    try {
+      const res = await fetch(`${API}/v9/projects/${resourceId}`, {
+        method: "DELETE",
+        headers: authHeaders(auth.token),
+      });
+      if (res.status === 404) return; // already gone
+      if (!res.ok) {
+        ctx.log({
+          level: "warn",
+          msg: `Vercel deprovision returned ${res.status} for project ${resourceId}; resource may need manual cleanup.`,
+        });
+      }
+    } catch (err) {
+      ctx.log({
+        level: "warn",
+        msg: `Vercel deprovision failed for ${resourceId}: ${(err as Error).message}. Resource may need manual cleanup.`,
+      });
+    }
+  },
 };
 
 export default vercel;
@@ -112,23 +136,25 @@ async function fetchUser(token: string): Promise<Record<string, string> | undefi
     // Idempotent GET — retry transient failures during login validation + healthcheck.
     const res = await fetchWithRetry(`${API}/v2/user`, { headers: authHeaders(token) });
     if (!res.ok) return undefined;
-    const body = (await res.json()) as { user?: { uid?: string; email?: string; username?: string } };
+    const body = (await res.json()) as {
+      user?: { uid?: string; email?: string; username?: string };
+    };
     if (!body.user) return undefined;
     const out: Record<string, string> = {};
-    for (const [k, v] of Object.entries(body.user))
-      if (typeof v === "string") out[k] = v;
+    for (const [k, v] of Object.entries(body.user)) if (typeof v === "string") out[k] = v;
     return out;
   } catch {
     return undefined;
   }
 }
 
-async function fetchProject(token: string, id: string): Promise<{ id: string; name: string } | undefined> {
+async function fetchProject(
+  token: string,
+  id: string,
+): Promise<{ id: string; name: string } | undefined> {
   // Idempotent GET — healthcheck reads this on every `stack status` call.
   const res = await fetchWithRetry(`${API}/v9/projects/${id}`, { headers: authHeaders(token) });
   if (res.status === 404) return undefined;
   if (!res.ok) return undefined;
   return (await res.json()) as { id: string; name: string };
 }
-
-

@@ -1,19 +1,19 @@
-import {
-  type AuthHandle,
-  type HealthStatus,
-  type Materialized,
-  type Provider,
-  type ProviderContext,
-  type ProvisionOpts,
-  type Resource,
-} from "./_base.ts";
 import type { ServiceEntry } from "../config.ts";
+import { resolveOAuthClientId } from "../env.ts";
 import { StackError } from "../errors.ts";
-import { addSecret, exec as phantomExec } from "../phantom.ts";
-import { readLine, tryRevealSecret } from "./_helpers.ts";
 import { fetchWithRetry } from "../http.ts";
 import { runPkceFlow } from "../oauth.ts";
-import { resolveOAuthClientId } from "../env.ts";
+import { addSecret, exec as phantomExec } from "../phantom.ts";
+import type {
+  AuthHandle,
+  HealthStatus,
+  Materialized,
+  Provider,
+  ProviderContext,
+  ProvisionOpts,
+  Resource,
+} from "./_base.ts";
+import { readLine, tryRevealSecret } from "./_helpers.ts";
 
 /**
  * Supabase — the Wave 2 pilot provider. Proves the full loop:
@@ -41,7 +41,10 @@ const supabase: Provider = {
     if (cached) {
       const identity = await fetchIdentity(cached);
       if (identity) {
-        ctx.log({ level: "info", msg: `Reusing cached Supabase token for ${identity.email ?? identity.id}` });
+        ctx.log({
+          level: "info",
+          msg: `Reusing cached Supabase token for ${identity.email ?? identity.id}`,
+        });
         return { token: cached, identity };
       }
       ctx.log({ level: "warn", msg: "Cached Supabase token invalid; re-authenticating." });
@@ -88,11 +91,7 @@ const supabase: Provider = {
     return { token, identity };
   },
 
-  async provision(
-    ctx: ProviderContext,
-    auth: AuthHandle,
-    opts: ProvisionOpts,
-  ): Promise<Resource> {
+  async provision(ctx: ProviderContext, auth: AuthHandle, opts: ProvisionOpts): Promise<Resource> {
     if (opts.existingResourceId) {
       const project = await fetchProject(auth.token, opts.existingResourceId);
       if (!project)
@@ -185,10 +184,9 @@ const supabase: Provider = {
     const start = Date.now();
     try {
       // GET against the REST root. Safe to retry on transient 5xx / 429.
-      const res = await fetchWithRetry(
-        `https://${entry.resource_id}.supabase.co/rest/v1/`,
-        { headers: { apikey: anon, Authorization: `Bearer ${anon}` } },
-      );
+      const res = await fetchWithRetry(`https://${entry.resource_id}.supabase.co/rest/v1/`, {
+        headers: { apikey: anon, Authorization: `Bearer ${anon}` },
+      });
       const latencyMs = Date.now() - start;
       if (res.ok) return { kind: "ok", latencyMs };
       return { kind: "warn", detail: `HTTP ${res.status}` };
@@ -199,6 +197,27 @@ const supabase: Provider = {
 
   dashboardUrl(entry: ServiceEntry): string {
     return entry.resource_id ? dashboardUrl(entry.resource_id) : "https://supabase.com/dashboard";
+  },
+
+  async deprovision(ctx: ProviderContext, auth: AuthHandle, resourceId: string): Promise<void> {
+    try {
+      const res = await fetch(`${API}/v1/projects/${resourceId}`, {
+        method: "DELETE",
+        headers: authHeaders(auth.token),
+      });
+      if (res.status === 404) return; // already gone — treat as success
+      if (!res.ok) {
+        ctx.log({
+          level: "warn",
+          msg: `Supabase deprovision returned ${res.status} for project ${resourceId}; resource may need manual cleanup.`,
+        });
+      }
+    } catch (err) {
+      ctx.log({
+        level: "warn",
+        msg: `Supabase deprovision failed for ${resourceId}: ${(err as Error).message}. Resource may need manual cleanup.`,
+      });
+    }
   },
 };
 

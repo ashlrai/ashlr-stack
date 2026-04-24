@@ -25,9 +25,7 @@ const WITHOUT: { title: string; lines: StepLine[] }[] = [
   },
   {
     title: "3. Install client",
-    lines: [
-      { t: "cmd", text: "$ bun add @supabase/supabase-js" },
-    ],
+    lines: [{ t: "cmd", text: "$ bun add @supabase/supabase-js" }],
   },
   {
     title: "4. Wire up MCP server by hand",
@@ -56,15 +54,11 @@ const WITHOUT: { title: string; lines: StepLine[] }[] = [
   },
   {
     title: "7. Restart Claude Code, pray MCP attaches",
-    lines: [
-      { t: "note", text: "→ quit. relaunch. squint at logs." },
-    ],
+    lines: [{ t: "note", text: "→ quit. relaunch. squint at logs." }],
   },
   {
     title: "8. Realize you forgot to add Sentry, Resend, PostHog…",
-    lines: [
-      { t: "warn", text: "repeat steps 1–7, seven more times" },
-    ],
+    lines: [{ t: "warn", text: "repeat steps 1–7, seven more times" }],
   },
 ];
 
@@ -129,7 +123,7 @@ export default function OneCommand() {
             >
               {WITHOUT.map((step, i) => (
                 <div
-                  key={i}
+                  key={step.title}
                   className="panel rounded-xl p-4 sm:p-5 relative overflow-hidden"
                 >
                   <div className="flex items-center gap-2 mb-3">
@@ -139,22 +133,41 @@ export default function OneCommand() {
                     >
                       {i + 1}
                     </span>
-                    <h4 className="text-[13px] font-medium text-ink-100">
-                      {step.title}
-                    </h4>
+                    <h4 className="text-[13px] font-medium text-ink-100">{step.title}</h4>
                   </div>
                   <div className="mono text-[12px] leading-[1.65] space-y-0.5">
-                    {step.lines.map((l, j) => (
-                      <AnsiLine key={j} line={l} />
+                    {step.lines.map((l) => (
+                      <AnsiLine key={l} line={l} />
                     ))}
                   </div>
                 </div>
               ))}
               <div className="sm:col-span-2 mt-2 flex items-center gap-3 text-xs text-ink-400">
                 <span className="inline-flex items-center gap-1.5">
-                  <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden>
-                    <circle cx="6" cy="6" r="5" stroke="currentColor" fill="none" strokeWidth="1.1" />
-                    <path d="M6 3v3.2l2 1.3" stroke="currentColor" strokeWidth="1.1" fill="none" strokeLinecap="round" />
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 12 12"
+                    aria-hidden="true"
+                    role="img"
+                    aria-label="Clock"
+                  >
+                    <title>Clock</title>
+                    <circle
+                      cx="6"
+                      cy="6"
+                      r="5"
+                      stroke="currentColor"
+                      fill="none"
+                      strokeWidth="1.1"
+                    />
+                    <path
+                      d="M6 3v3.2l2 1.3"
+                      stroke="currentColor"
+                      strokeWidth="1.1"
+                      fill="none"
+                      strokeLinecap="round"
+                    />
                   </svg>
                   45 minutes
                 </span>
@@ -185,8 +198,8 @@ export default function OneCommand() {
                   }}
                 />
                 <div className="relative mono text-[13px] leading-[1.75] space-y-0">
-                  {WITH_LINES.map((l, i) => (
-                    <AnsiLine key={i} line={l} big />
+                  {WITH_LINES.map((l) => (
+                    <AnsiLine key={l} line={l} big />
                   ))}
                 </div>
               </div>
@@ -249,11 +262,7 @@ function TabButton({
         <span>{label}</span>
         <span
           className={`text-[10px] mono ${
-            active
-              ? accent
-                ? "text-white/80"
-                : "text-ink-300"
-              : "text-ink-500"
+            active ? (accent ? "text-white/80" : "text-ink-300") : "text-ink-500"
           }`}
         >
           {sublabel}
@@ -301,9 +310,7 @@ function Stat({
         {label}
       </div>
       <div className="mt-1.5 flex items-baseline gap-2">
-        <span className="text-2xl font-semibold text-white tabular-nums">
-          {value}
-        </span>
+        <span className="text-2xl font-semibold text-white tabular-nums">{value}</span>
         <span className="text-xs text-ink-400">{sub}</span>
       </div>
     </div>

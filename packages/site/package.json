@@ -5,9 +5,10 @@
   "description": "Marketing site for Ashlr Stack — stack.ashlr.ai",
   "type": "module",
   "scripts": {
-    "dev": "bun run sync-content && bun run sync-install && bun run sync-phantom-brand && astro dev",
-    "start": "bun run sync-content && bun run sync-install && bun run sync-phantom-brand && astro dev",
-    "build": "bun run sync-content && bun run sync-install && bun run sync-phantom-brand && astro build",
+    "gen:cli-ref": "bun run scripts/gen-cli-ref.ts",
+    "dev": "bun run gen:cli-ref && bun run sync-content && bun run sync-install && bun run sync-phantom-brand && astro dev",
+    "start": "bun run gen:cli-ref && bun run sync-content && bun run sync-install && bun run sync-phantom-brand && astro dev",
+    "build": "bun run gen:cli-ref && bun run sync-content && bun run sync-install && bun run sync-phantom-brand && astro build",
     "preview": "astro preview",
     "astro": "astro",
     "typecheck": "astro check && tsc --noEmit",

@@ -1,9 +1,8 @@
+import { existsSync } from "node:fs";
+import { writeFile } from "node:fs/promises";
+import { join, resolve } from "node:path";
+import { findProviderRef, isPhantomInstalled, listSecrets, readConfig } from "@ashlr/stack-core";
 import { defineCommand } from "citty";
-import {
-  isPhantomInstalled,
-  listSecrets,
-  readConfig,
-} from "@ashlr/stack-core";
 import { colors, intro, outro, outroError } from "../ui.ts";
 
 /**
@@ -42,13 +41,11 @@ export const envCommand = defineCommand({
             console.log(`    ${dot} ${slot.padEnd(30)} ${value}`);
           }
         }
-        const declared = new Set(
-          Object.values(config.services).flatMap((e) => e.secrets),
-        );
+        const declared = new Set(Object.values(config.services).flatMap((e) => e.secrets));
         const orphans = [...vaultKeys].filter((k) => !declared.has(k)).sort();
         if (orphans.length > 0) {
           console.log();
-          console.log(colors.dim(`  orphans in vault (not referenced by any service):`));
+          console.log(colors.dim("  orphans in vault (not referenced by any service):"));
           for (const k of orphans) console.log(`    ${colors.yellow("●")} ${k}`);
         }
         console.log();
@@ -57,6 +54,66 @@ export const envCommand = defineCommand({
             `${declared.size} declared · ${vaultKeys.size} in vault · ${orphans.length} orphan(s)`,
           ),
         );
+      },
+    }),
+    export: defineCommand({
+      meta: {
+        name: "export",
+        description: "Write a .env.example skeleton from the catalog secrets.",
+      },
+      args: {
+        example: {
+          type: "boolean",
+          default: false,
+          description: "Write .env.example (required flag to distinguish from future sub-verbs).",
+        },
+        stdout: {
+          type: "boolean",
+          default: false,
+          description: "Print to stdout instead of writing a file.",
+        },
+        force: {
+          type: "boolean",
+          default: false,
+          description: "Overwrite an existing .env.example without prompting.",
+        },
+      },
+      async run({ args }) {
+        intro("stack env export");
+        const config = await readConfig();
+        const lines: string[] = [];
+
+        for (const [name, entry] of Object.entries(config.services)) {
+          const ref = findProviderRef(entry.provider);
+          const displayName = ref?.displayName ?? entry.provider;
+          const secrets = ref?.secrets ?? entry.secrets;
+
+          // Always emit the header. Skip body only if secrets array is empty.
+          lines.push(
+            `# ── ${displayName} ${"─".repeat(Math.max(0, 40 - displayName.length - name.length - 1))}`,
+          );
+          for (const key of secrets) {
+            lines.push(`${key}=`);
+          }
+          lines.push("");
+        }
+
+        const content = lines.join("\n");
+
+        if (args.stdout) {
+          process.stdout.write(content);
+          outro(colors.dim("printed to stdout."));
+          return;
+        }
+
+        const outPath = resolve(join(process.cwd(), ".env.example"));
+        if (existsSync(outPath) && !args.force) {
+          outroError(".env.example already exists. Use --force to overwrite.");
+          return;
+        }
+
+        await writeFile(outPath, content, "utf-8");
+        outro(`${colors.green("✓")} wrote ${outPath}`);
       },
     }),
     diff: defineCommand({

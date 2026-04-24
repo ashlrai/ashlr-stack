@@ -1,9 +1,5 @@
 import { afterEach, describe, expect, it } from "bun:test";
-import {
-  __resetIndex,
-  retrieve,
-  retrieveByCategory,
-} from "../ai/catalog-index.ts";
+import { __resetIndex, retrieve, retrieveByCategory } from "../ai/catalog-index.ts";
 
 /**
  * Golden retrieval tests. Each query must surface the right provider(s) in
@@ -63,13 +59,12 @@ describe("catalog-index.retrieve", () => {
   });
 
   it("composes a B2B SaaS recipe across categories", () => {
-    const hits = names(retrieve(
-      "B2B SaaS with auth and payments and AI and error tracking",
-      { k: 8 },
-    ));
+    const hits = names(
+      retrieve("B2B SaaS with auth and payments and AI and error tracking", { k: 8 }),
+    );
     // Expect at least one provider from each intended category.
-    expect(hits).toContain("stripe");        // Payments
-    expect(hits).toContain("sentry");        // Errors
+    expect(hits).toContain("stripe"); // Payments
+    expect(hits).toContain("sentry"); // Errors
     // One of the auth providers
     expect(hits.some((n) => ["clerk", "supabase"].includes(n))).toBe(true);
     // One of the AI providers
@@ -77,10 +72,12 @@ describe("catalog-index.retrieve", () => {
   });
 
   it("respects category filter", () => {
-    const hits = names(retrieve("edge compute", {
-      k: 5,
-      categories: ["Deploy"],
-    }));
+    const hits = names(
+      retrieve("edge compute", {
+        k: 5,
+        categories: ["Deploy"],
+      }),
+    );
     for (const n of hits) {
       const cat = ["vercel", "railway", "fly", "cloudflare", "render", "modal"].includes(n);
       expect(cat).toBe(true);
@@ -93,10 +90,7 @@ describe("catalog-index.retrieve", () => {
   });
 
   it("retrieveByCategory buckets results", () => {
-    const grouped = retrieveByCategory(
-      "B2B SaaS with auth and payments and AI",
-      { k: 20 },
-    );
+    const grouped = retrieveByCategory("B2B SaaS with auth and payments and AI", { k: 20 });
     expect(Object.keys(grouped).length).toBeGreaterThan(1);
     expect(grouped.Payments?.[0]?.provider.name).toBe("stripe");
   });

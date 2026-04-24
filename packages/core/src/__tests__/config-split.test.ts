@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, writeFileSync, existsSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -22,7 +22,7 @@ describe("committed + local config split", () => {
   });
 
   afterEach(() => {
-    if (previousRegistryDir === undefined) delete process.env.STACK_REGISTRY_DIR;
+    if (previousRegistryDir === undefined) process.env.STACK_REGISTRY_DIR = undefined;
     else process.env.STACK_REGISTRY_DIR = previousRegistryDir;
   });
 

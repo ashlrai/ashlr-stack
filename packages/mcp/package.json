@@ -46,6 +46,7 @@
     "build": "bun build src/server.ts --outdir dist --target node --format esm && node -e \"const fs=require('fs');const f='dist/server.js';let c=fs.readFileSync(f,'utf8');if(c.startsWith('#!'))c=c.slice(c.indexOf('\\n')+1);fs.writeFileSync(f,'#!/usr/bin/env node\\n'+c);fs.chmodSync(f,0o755)\"",
     "prepublishOnly": "bun run build",
     "start": "bun run src/server.ts",
+    "test": "bun test __tests__/",
     "typecheck": "bunx tsc --noEmit"
   },
   "dependencies": {

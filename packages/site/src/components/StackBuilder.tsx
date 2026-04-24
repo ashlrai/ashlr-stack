@@ -1,14 +1,14 @@
+import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { PROVIDERS, CATEGORIES, type Provider } from "~/lib/providers";
+import CopyBtn from "~/components/primitives/CopyBtn";
+import { CATEGORIES, PROVIDERS, type Provider } from "~/lib/providers";
 import { PROVIDERS_REF, type ProviderRef } from "~/lib/providers-ref";
 import {
+  type RetrievalHit,
   retrieve,
   retrieveByCategory,
-  type RetrievalHit,
 } from "../../../core/src/ai/catalog-index";
 import { PROVIDER_CATEGORIES } from "../../../core/src/catalog";
-import CopyBtn from "~/components/primitives/CopyBtn";
 
 /**
  * StackBuilder — the interactive heart of the landing page.
@@ -94,17 +94,21 @@ function mergeCatalog(iconPaths: Record<string, string | null>): Merged[] {
   const byName = new Map(PROVIDERS_REF.map((r) => [r.name, r]));
   return PROVIDERS.map((p) => {
     const refName = SLUG_TO_REF_NAME[p.slug];
-    const ref = refName ? byName.get(refName) ?? null : null;
+    const ref = refName ? (byName.get(refName) ?? null) : null;
     return { display: p, ref: ref ?? stubRef(p), iconPath: iconPaths[p.slug] ?? null };
   });
 }
 
 function formatAuthKind(kind: ProviderRef["authKind"]): string {
   switch (kind) {
-    case "oauth_pkce": return "OAuth (PKCE)";
-    case "oauth_device": return "OAuth (device)";
-    case "pat": return "Personal access token";
-    case "api_key": return "API key";
+    case "oauth_pkce":
+      return "OAuth (PKCE)";
+    case "oauth_device":
+      return "OAuth (device)";
+    case "pat":
+      return "Personal access token";
+    case "api_key":
+      return "API key";
   }
 }
 
@@ -127,7 +131,9 @@ function buildMcpBlock(selected: Merged[]): string {
     servers[m.ref.mcp.name] = {
       command: "stack",
       args: ["mcp", "run", m.ref.mcp.name],
-      env: Object.fromEntries((m.ref.secrets ?? []).map((s) => [s, `<phantom://${m.ref!.name}/${s}>`])),
+      env: Object.fromEntries(
+        (m.ref.secrets ?? []).map((s) => [s, `<phantom://${m.ref?.name}/${s}>`]),
+      ),
     };
   }
   return JSON.stringify({ mcpServers: servers }, null, 2);
@@ -165,11 +171,19 @@ function ProviderCard({ m, selected, expanded, onToggle, onExpand }: CardProps) 
       <div className="relative flex items-start justify-between pointer-events-none">
         <div className="w-8 h-8 flex items-center justify-center rounded-md bg-white/5">
           {m.iconPath ? (
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" className="provider-icon text-[color:var(--color-ink-200)] group-hover:text-[color:var(--brand)] transition-colors">
+            <svg
+              viewBox="0 0 24 24"
+              width="18"
+              height="18"
+              fill="currentColor"
+              className="provider-icon text-[color:var(--color-ink-200)] group-hover:text-[color:var(--brand)] transition-colors"
+            >
               <path d={m.iconPath} />
             </svg>
           ) : (
-            <span className="text-[10px] mono text-[color:var(--color-ink-400)]">{m.display.name.slice(0, 2).toUpperCase()}</span>
+            <span className="text-[10px] mono text-[color:var(--color-ink-400)]">
+              {m.display.name.slice(0, 2).toUpperCase()}
+            </span>
           )}
         </div>
         <div className="flex items-center gap-1.5">
@@ -179,7 +193,10 @@ function ProviderCard({ m, selected, expanded, onToggle, onExpand }: CardProps) 
             </span>
           )}
           {m.display.keyOnly && (
-            <span className="text-[9px] mono tracking-[0.08em] uppercase px-1.5 py-0.5 border border-[color:var(--color-ink-600)] text-[color:var(--color-ink-500)]" title="Key-only · v0.2 adds provisioning">
+            <span
+              className="text-[9px] mono tracking-[0.08em] uppercase px-1.5 py-0.5 border border-[color:var(--color-ink-600)] text-[color:var(--color-ink-500)]"
+              title="Key-only · v0.2 adds provisioning"
+            >
               key
             </span>
           )}
@@ -189,15 +206,22 @@ function ProviderCard({ m, selected, expanded, onToggle, onExpand }: CardProps) 
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-white tracking-tight">{m.display.name}</span>
           {m.display.auth && (
-            <span className="text-[9px] mono text-[color:var(--color-ink-500)]">· {m.display.auth}</span>
+            <span className="text-[9px] mono text-[color:var(--color-ink-500)]">
+              · {m.display.auth}
+            </span>
           )}
         </div>
-        <div className="text-[11px] text-[color:var(--color-ink-400)] mt-0.5 leading-snug">{m.display.blurb}</div>
+        <div className="text-[11px] text-[color:var(--color-ink-400)] mt-0.5 leading-snug">
+          {m.display.blurb}
+        </div>
       </div>
       <div className="relative mt-3 flex items-center justify-between pointer-events-auto">
         <button
           type="button"
-          onClick={(e) => { e.stopPropagation(); onToggle(); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggle();
+          }}
           className={`mono text-[10px] tracking-[0.14em] uppercase px-2 py-1 border transition-colors ${
             selected
               ? "border-[color:var(--color-blade-500)] bg-[color:var(--color-blade-500)] text-[color:var(--color-ink-950)]"
@@ -214,7 +238,12 @@ function ProviderCard({ m, selected, expanded, onToggle, onExpand }: CardProps) 
   );
 }
 
-interface DetailProps { m: Merged; onClose: () => void; selected: boolean; onToggle: () => void }
+interface DetailProps {
+  m: Merged;
+  onClose: () => void;
+  selected: boolean;
+  onToggle: () => void;
+}
 function DetailPanel({ m, onClose, selected, onToggle }: DetailProps) {
   const ref = m.ref;
   if (!ref) return null;
@@ -242,10 +271,16 @@ function DetailPanel({ m, onClose, selected, onToggle }: DetailProps) {
         <div>
           <div className="mono text-[10px] tracking-[0.18em] uppercase text-[color:var(--color-ink-500)] mb-1">
             {ref.category} · {formatAuthKind(ref.authKind)}
-            {ref.mcp && <span className="text-[color:var(--color-blade-400)]"> · MCP auto-wired</span>}
+            {ref.mcp && (
+              <span className="text-[color:var(--color-blade-400)]"> · MCP auto-wired</span>
+            )}
           </div>
-          <h4 className="text-xl text-[color:var(--color-ink-50)] tracking-tight font-medium">{ref.displayName}</h4>
-          <p className="mt-1 text-sm text-[color:var(--color-ink-300)] max-w-[640px]">{ref.blurb}</p>
+          <h4 className="text-xl text-[color:var(--color-ink-50)] tracking-tight font-medium">
+            {ref.displayName}
+          </h4>
+          <p className="mt-1 text-sm text-[color:var(--color-ink-300)] max-w-[640px]">
+            {ref.blurb}
+          </p>
         </div>
         <button
           type="button"
@@ -261,21 +296,27 @@ function DetailPanel({ m, onClose, selected, onToggle }: DetailProps) {
         {/* Invocation block */}
         <div className="panel p-3" style={{ borderLeft: "2px solid var(--color-blade-500)" }}>
           <div className="flex items-center justify-between mb-2">
-            <span className="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--color-ink-500)]">invocation</span>
+            <span className="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--color-ink-500)]">
+              invocation
+            </span>
             <CopyBtn text={cmd} compact />
           </div>
           <div className="mono text-[13px] text-[color:var(--color-ink-100)]">
             <span className="text-[color:var(--color-blade-400)]">›</span> {cmd}
           </div>
           {ref.howTo && (
-            <p className="mt-3 text-[11px] text-[color:var(--color-ink-400)] leading-[1.5]">{ref.howTo}</p>
+            <p className="mt-3 text-[11px] text-[color:var(--color-ink-400)] leading-[1.5]">
+              {ref.howTo}
+            </p>
           )}
         </div>
 
         {/* Env block */}
         <div className="panel p-3">
           <div className="flex items-center justify-between mb-2">
-            <span className="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--color-ink-500)]">writes to .env</span>
+            <span className="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--color-ink-500)]">
+              writes to .env
+            </span>
             <CopyBtn text={envSample} compact />
           </div>
           <pre className="mono text-[12px] text-[color:var(--color-ink-200)] leading-[1.5] whitespace-pre-wrap break-all">
@@ -285,33 +326,54 @@ function DetailPanel({ m, onClose, selected, onToggle }: DetailProps) {
 
         {/* MCP block (if present) */}
         {ref.mcp && (
-          <div className="panel p-3 lg:col-span-2" style={{ borderLeft: "2px solid var(--color-blade-500)" }}>
+          <div
+            className="panel p-3 lg:col-span-2"
+            style={{ borderLeft: "2px solid var(--color-blade-500)" }}
+          >
             <div className="flex items-center justify-between mb-2">
-              <span className="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--color-ink-500)]">.mcp.json entry</span>
+              <span className="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--color-ink-500)]">
+                .mcp.json entry
+              </span>
               <CopyBtn text={mcpSample} compact />
             </div>
             <pre className="mono text-[12px] text-[color:var(--color-ink-200)] leading-[1.5] overflow-x-auto">
               {mcpSample}
             </pre>
-            <p className="mt-2 text-[11px] text-[color:var(--color-ink-400)] leading-[1.5]">{ref.mcp.detail}</p>
+            <p className="mt-2 text-[11px] text-[color:var(--color-ink-400)] leading-[1.5]">
+              {ref.mcp.detail}
+            </p>
           </div>
         )}
 
         {/* Dashboard + docs */}
         <div className="panel p-3 lg:col-span-2 flex flex-wrap gap-3 items-center">
-          <span className="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--color-ink-500)]">links</span>
+          <span className="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--color-ink-500)]">
+            links
+          </span>
           {ref.dashboard && (
-            <a href={ref.dashboard} target="_blank" rel="noopener noreferrer" className="mono text-[11px] text-[color:var(--color-ink-200)] hover:text-[color:var(--color-blade-400)] underline decoration-white/20 underline-offset-2">
+            <a
+              href={ref.dashboard}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mono text-[11px] text-[color:var(--color-ink-200)] hover:text-[color:var(--color-blade-400)] underline decoration-white/20 underline-offset-2"
+            >
               dashboard ↗
             </a>
           )}
           {ref.docs && (
-            <a href={ref.docs} target="_blank" rel="noopener noreferrer" className="mono text-[11px] text-[color:var(--color-ink-200)] hover:text-[color:var(--color-blade-400)] underline decoration-white/20 underline-offset-2">
+            <a
+              href={ref.docs}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mono text-[11px] text-[color:var(--color-ink-200)] hover:text-[color:var(--color-blade-400)] underline decoration-white/20 underline-offset-2"
+            >
               upstream docs ↗
             </a>
           )}
           {ref.notes && (
-            <span className="mono text-[10px] text-[color:var(--color-ink-500)]">note: {ref.notes}</span>
+            <span className="mono text-[10px] text-[color:var(--color-ink-500)]">
+              note: {ref.notes}
+            </span>
           )}
           <div className="ml-auto">
             <button
@@ -354,7 +416,9 @@ function StackDock({ selected, onClear, onOpen }: DockProps) {
           }}
         >
           <div className="flex items-center gap-3">
-            <span className="mono text-[10px] tracking-[0.16em] uppercase text-[color:var(--color-ink-500)]">your stack</span>
+            <span className="mono text-[10px] tracking-[0.16em] uppercase text-[color:var(--color-ink-500)]">
+              your stack
+            </span>
             <span className="mono text-[12px] text-[color:var(--color-ink-100)] tabular-nums">
               {selected.length.toString().padStart(2, "0")} providers
             </span>
@@ -375,11 +439,19 @@ function StackDock({ selected, onClear, onOpen }: DockProps) {
                 title={m.display.name}
               >
                 {m.iconPath ? (
-                  <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" className="text-[color:var(--color-ink-200)]">
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="12"
+                    height="12"
+                    fill="currentColor"
+                    className="text-[color:var(--color-ink-200)]"
+                  >
                     <path d={m.iconPath} />
                   </svg>
                 ) : (
-                  <span className="mono text-[8px] text-[color:var(--color-ink-300)]">{m.display.name.slice(0, 1)}</span>
+                  <span className="mono text-[8px] text-[color:var(--color-ink-300)]">
+                    {m.display.name.slice(0, 1)}
+                  </span>
                 )}
               </div>
             ))}
@@ -436,14 +508,18 @@ function RecipeModal({ selected, onClose }: RecipeProps) {
     "",
     "# Result: .env contents (secret values come from Phantom at read-time)",
     env,
-    mcp ? "\n# Result: .mcp.json\n" + mcp : "",
-  ].filter(Boolean).join("\n");
+    mcp ? `\n# Result: .mcp.json\n${mcp}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   // Intentionally omit `onClose` from deps — listener + body scroll lock
   // should mount/unmount exactly once per modal instance.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
     window.addEventListener("keydown", onKey);
     document.body.style.overflow = "hidden";
     closeBtnRef.current?.focus();
@@ -475,7 +551,9 @@ function RecipeModal({ selected, onClose }: RecipeProps) {
               {selected.length} providers. One recipe.
             </h3>
             <p className="mt-1 text-sm text-[color:var(--color-ink-300)] max-w-[560px]">
-              Every block below is real output from the exact <code className="mono text-[color:var(--color-ink-100)]">stack add</code> invocations Stack would run.
+              Every block below is real output from the exact{" "}
+              <code className="mono text-[color:var(--color-ink-100)]">stack add</code> invocations
+              Stack would run.
             </p>
           </div>
           <button
@@ -492,7 +570,9 @@ function RecipeModal({ selected, onClose }: RecipeProps) {
         <div className="space-y-4">
           <div className="panel p-3" style={{ borderLeft: "2px solid var(--color-blade-500)" }}>
             <div className="flex items-center justify-between mb-2">
-              <span className="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--color-ink-500)]">batch invocation</span>
+              <span className="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--color-ink-500)]">
+                batch invocation
+              </span>
               <CopyBtn text={batch} compact />
             </div>
             <div className="mono text-[13px] text-[color:var(--color-ink-100)] break-all">
@@ -502,7 +582,9 @@ function RecipeModal({ selected, onClose }: RecipeProps) {
 
           <div className="panel p-3">
             <div className="flex items-center justify-between mb-2">
-              <span className="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--color-ink-500)]">.env block</span>
+              <span className="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--color-ink-500)]">
+                .env block
+              </span>
               <CopyBtn text={env} compact />
             </div>
             <pre className="mono text-[12px] text-[color:var(--color-ink-200)] leading-[1.5] whitespace-pre-wrap break-all">
@@ -513,7 +595,9 @@ function RecipeModal({ selected, onClose }: RecipeProps) {
           {mcp && (
             <div className="panel p-3">
               <div className="flex items-center justify-between mb-2">
-                <span className="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--color-ink-500)]">.mcp.json block</span>
+                <span className="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--color-ink-500)]">
+                  .mcp.json block
+                </span>
                 <CopyBtn text={mcp} compact />
               </div>
               <pre className="mono text-[12px] text-[color:var(--color-ink-200)] leading-[1.5] overflow-x-auto">
@@ -670,17 +754,17 @@ function RecommendPrompt({ pending, guidance, onSubmit }: PromptProps) {
                 <motion.span
                   className="w-1.5 h-1.5 rounded-full bg-[color:var(--color-ink-950)]"
                   animate={{ opacity: [0.3, 1, 0.3] }}
-                  transition={{ duration: 0.9, repeat: Infinity, delay: 0 }}
+                  transition={{ duration: 0.9, repeat: Number.POSITIVE_INFINITY, delay: 0 }}
                 />
                 <motion.span
                   className="w-1.5 h-1.5 rounded-full bg-[color:var(--color-ink-950)]"
                   animate={{ opacity: [0.3, 1, 0.3] }}
-                  transition={{ duration: 0.9, repeat: Infinity, delay: 0.15 }}
+                  transition={{ duration: 0.9, repeat: Number.POSITIVE_INFINITY, delay: 0.15 }}
                 />
                 <motion.span
                   className="w-1.5 h-1.5 rounded-full bg-[color:var(--color-ink-950)]"
                   animate={{ opacity: [0.3, 1, 0.3] }}
-                  transition={{ duration: 0.9, repeat: Infinity, delay: 0.3 }}
+                  transition={{ duration: 0.9, repeat: Number.POSITIVE_INFINITY, delay: 0.3 }}
                 />
               </span>
             ) : (
@@ -717,7 +801,9 @@ function RecommendPrompt({ pending, guidance, onSubmit }: PromptProps) {
   );
 }
 
-interface StackBuilderProps { iconPaths: Record<string, string | null> }
+interface StackBuilderProps {
+  iconPaths: Record<string, string | null>;
+}
 
 export default function StackBuilder({ iconPaths }: StackBuilderProps) {
   const merged = useMemo(() => mergeCatalog(iconPaths), [iconPaths]);
@@ -761,9 +847,7 @@ export default function StackBuilder({ iconPaths }: StackBuilderProps) {
           setSelected(displayNames);
         }
       } catch {
-        setGuidance(
-          "Couldn't reach the recommender. Pick providers from the grid below.",
-        );
+        setGuidance("Couldn't reach the recommender. Pick providers from the grid below.");
       } finally {
         setRecommendPending(false);
       }
@@ -793,12 +877,15 @@ export default function StackBuilder({ iconPaths }: StackBuilderProps) {
   const toggle = (name: string) => {
     setSelected((prev) => {
       const next = new Set(prev);
-      if (next.has(name)) next.delete(name); else next.add(name);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
       return next;
     });
   };
 
-  const expandedMerged = expanded ? merged.find((m) => m.display.name === expanded) ?? null : null;
+  const expandedMerged = expanded
+    ? (merged.find((m) => m.display.name === expanded) ?? null)
+    : null;
 
   const closeRecipe = useCallback(() => setRecipeOpen(false), []);
   const clearSelected = useCallback(() => setSelected(new Set()), []);
@@ -807,18 +894,15 @@ export default function StackBuilder({ iconPaths }: StackBuilderProps) {
   return (
     <div className="space-y-8">
       {/* AI recommend prompt — describe the project, auto-select providers */}
-      <RecommendPrompt
-        pending={recommendPending}
-        guidance={guidance}
-        onSubmit={handleRecommend}
-      />
+      <RecommendPrompt pending={recommendPending} guidance={guidance} onSubmit={handleRecommend} />
 
       {/* Filter bar */}
       <div className="flex flex-col lg:flex-row gap-4 lg:items-center lg:justify-between">
         <div className="flex flex-wrap gap-2 -ml-1">
           {["All", ...CATEGORIES].map((c) => {
             const active = c === category;
-            const count = c === "All" ? merged.length : merged.filter((m) => m.display.category === c).length;
+            const count =
+              c === "All" ? merged.length : merged.filter((m) => m.display.category === c).length;
             if (c !== "All" && count === 0) return null;
             return (
               <button
@@ -831,7 +915,10 @@ export default function StackBuilder({ iconPaths }: StackBuilderProps) {
                     : "border-[color:var(--color-ink-600)] text-[color:var(--color-ink-400)] hover:text-[color:var(--color-ink-100)] hover:border-[color:var(--color-steel-500)]"
                 }`}
               >
-                {c} <span className="ml-1 text-[color:var(--color-ink-500)] tabular-nums">{count.toString().padStart(2, "0")}</span>
+                {c}{" "}
+                <span className="ml-1 text-[color:var(--color-ink-500)] tabular-nums">
+                  {count.toString().padStart(2, "0")}
+                </span>
               </button>
             );
           })}
@@ -853,7 +940,9 @@ export default function StackBuilder({ iconPaths }: StackBuilderProps) {
       {/* Result count */}
       <div className="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--color-ink-500)]">
         showing {filtered.length} / {merged.length} providers
-        {selected.size > 0 && <span className="text-[color:var(--color-blade-400)]"> · {selected.size} selected</span>}
+        {selected.size > 0 && (
+          <span className="text-[color:var(--color-blade-400)]"> · {selected.size} selected</span>
+        )}
       </div>
 
       {/* Grid */}
@@ -888,16 +977,10 @@ export default function StackBuilder({ iconPaths }: StackBuilderProps) {
       )}
 
       {/* Sticky dock */}
-      <StackDock
-        selected={selectedList}
-        onClear={clearSelected}
-        onOpen={openRecipe}
-      />
+      <StackDock selected={selectedList} onClear={clearSelected} onOpen={openRecipe} />
 
       {/* Recipe modal */}
-      {recipeOpen && (
-        <RecipeModal selected={selectedList} onClose={closeRecipe} />
-      )}
+      {recipeOpen && <RecipeModal selected={selectedList} onClose={closeRecipe} />}
     </div>
   );
 }

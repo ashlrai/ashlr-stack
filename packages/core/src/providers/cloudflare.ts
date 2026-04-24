@@ -1,7 +1,7 @@
 import type { ServiceEntry } from "../config.ts";
 import { StackError } from "../errors.ts";
-import { addSecret, revealSecret } from "../phantom.ts";
 import { fetchWithRetry } from "../http.ts";
+import { addSecret, revealSecret } from "../phantom.ts";
 import type {
   AuthHandle,
   HealthStatus,
@@ -44,7 +44,8 @@ const cloudflare: Provider = {
     );
     const token = (await readLine()).trim();
     const identity = await verifyToken(token);
-    if (!identity) throw new StackError("CLOUDFLARE_AUTH_INVALID", "Cloudflare rejected that token.");
+    if (!identity)
+      throw new StackError("CLOUDFLARE_AUTH_INVALID", "Cloudflare rejected that token.");
     await addSecret(TOKEN_SECRET, token);
     return { token, identity };
   },

@@ -1,4 +1,3 @@
-import { defineCommand } from "citty";
 import {
   type ProviderContext,
   getProvider,
@@ -6,6 +5,7 @@ import {
   listSecrets,
   readConfig,
 } from "@ashlr/stack-core";
+import { defineCommand } from "citty";
 import { colors, intro, logEvent, outro, outroError, prompts } from "../ui.ts";
 
 /**
@@ -38,7 +38,9 @@ export const infoCommand = defineCommand({
     console.log(`    ${colors.dim("resource:")} ${entry.resource_id ?? "(not provisioned)"}`);
     if (entry.region) console.log(`    ${colors.dim("region:")}   ${entry.region}`);
     console.log(`    ${colors.dim("auth:")}     ${provider.authKind}`);
-    console.log(`    ${colors.dim("created:")}  ${entry.created_at}${entry.created_by ? colors.dim(` by ${entry.created_by}`) : ""}`);
+    console.log(
+      `    ${colors.dim("created:")}  ${entry.created_at}${entry.created_by ? colors.dim(` by ${entry.created_by}`) : ""}`,
+    );
     if (provider.docs) console.log(`    ${colors.dim("docs:")}     ${provider.docs}`);
     const dashboard = provider.dashboardUrl?.(entry);
     if (dashboard) console.log(`    ${colors.dim("dash:")}     ${dashboard}`);

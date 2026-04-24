@@ -17,12 +17,8 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { findProviderRef } from "../catalog.ts";
-import {
-  assertPhantomInstalled,
-  exec as phantomExec,
-  PhantomExecResult,
-} from "../phantom.ts";
 import { PhantomNotInstalledError } from "../errors.ts";
+import { type PhantomExecResult, assertPhantomInstalled, exec as phantomExec } from "../phantom.ts";
 import type { Recipe } from "./recipe.ts";
 
 export interface WireResult {

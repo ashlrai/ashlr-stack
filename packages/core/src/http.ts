@@ -78,7 +78,6 @@ export async function fetchWithRetry(
       const waitMs = computeDelay(res, attempt, baseDelayMs, maxDelayMs);
       await sleep(waitMs, signal);
       attempt++;
-      continue;
     } catch (err) {
       // Network-level failure (DNS, connection reset, fetch threw). Only retry
       // for idempotent requests — a POST that "failed" may have actually been
@@ -89,7 +88,6 @@ export async function fetchWithRetry(
       const waitMs = computeDelay(undefined, attempt, baseDelayMs, maxDelayMs);
       await sleep(waitMs, signal);
       attempt++;
-      continue;
     }
   }
 
@@ -125,7 +123,7 @@ function computeDelay(
     const parsed = parseRetryAfter(header);
     if (parsed !== undefined) return Math.max(0, Math.min(parsed, maxDelayMs * 4));
   }
-  const exp = Math.min(baseDelayMs * Math.pow(2, attempt), maxDelayMs);
+  const exp = Math.min(baseDelayMs * 2 ** attempt, maxDelayMs);
   const jitter = Math.random() * baseDelayMs;
   return exp + jitter;
 }
@@ -181,7 +179,10 @@ function sleep(ms: number, signal?: AbortSignal): Promise<void> {
  * `AbortSignal.any` where available; falling back to a manual linkage on older
  * runtimes.
  */
-function mergeSignal(init: RequestInit | undefined, external?: AbortSignal): RequestInit | undefined {
+function mergeSignal(
+  init: RequestInit | undefined,
+  external?: AbortSignal,
+): RequestInit | undefined {
   if (!external) return init;
   const existing = init?.signal ?? undefined;
   if (!existing) return { ...init, signal: external };

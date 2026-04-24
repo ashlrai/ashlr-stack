@@ -99,9 +99,7 @@ export const MCP_TOOLS: McpTool[] = [
     name: "stack_info",
     description:
       "Deep-dive on a single service: resource, region, auth, secrets, MCP wiring, health.",
-    inputs: [
-      { name: "service", type: "string", required: true, description: "Service name." },
-    ],
+    inputs: [{ name: "service", type: "string", required: true, description: "Service name." }],
     cli: "stack info <service>",
   },
   {
@@ -200,11 +198,10 @@ export const MCP_TOOLS: McpTool[] = [
       {
         name: "save",
         type: "boolean",
-        description:
-          "Freeze the result to .stack/recipes/<id>.toml so you can run stack_apply.",
+        description: "Freeze the result to .stack/recipes/<id>.toml so you can run stack_apply.",
       },
     ],
-    cli: "stack recommend \"<query>\" --json [--k <n>] [--category <name>] [--save]",
+    cli: 'stack recommend "<query>" --json [--k <n>] [--category <name>] [--save]',
   },
   {
     name: "stack_apply",

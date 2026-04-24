@@ -69,9 +69,7 @@ function Row({ q, idx }: { q: Q; idx: number }) {
         aria-expanded={open}
       >
         {q.tag && (
-          <span
-            className="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--color-blade-400)] shrink-0 mt-1 min-w-[72px]"
-          >
+          <span className="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--color-blade-400)] shrink-0 mt-1 min-w-[72px]">
             {q.tag}
           </span>
         )}

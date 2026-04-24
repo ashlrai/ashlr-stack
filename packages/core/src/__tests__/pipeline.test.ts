@@ -31,7 +31,9 @@ describe("provider registry", () => {
   });
 
   test("getProvider rejects unknown names", async () => {
-    await expect(getProvider("not-a-real-provider")).rejects.toThrow(/PROVIDER_NOT_FOUND|No provider/);
+    await expect(getProvider("not-a-real-provider")).rejects.toThrow(
+      /PROVIDER_NOT_FOUND|No provider/,
+    );
   });
 });
 

@@ -220,8 +220,8 @@ describe("parseRetryAfter", () => {
     const parsed = parseRetryAfter(future);
     expect(parsed).toBeDefined();
     // Allow drift from test overhead; we just need it to be in the right ballpark.
-    expect(parsed!).toBeGreaterThan(5_000);
-    expect(parsed!).toBeLessThanOrEqual(12_000);
+    expect(parsed as number).toBeGreaterThan(5_000);
+    expect(parsed as number).toBeLessThanOrEqual(12_000);
   });
 
   test("HTTP-date in the past clamps to 0", () => {

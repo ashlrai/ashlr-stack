@@ -56,8 +56,10 @@ export function buildOgMeta(input: OgMetaInput = {}): OgMetaTag[] {
   const ogImage = absolute(input.ogImage ?? DEFAULT_OG_IMAGE);
   const twitterImage = absolute(input.twitterImage ?? input.ogImage ?? DEFAULT_TWITTER_IMAGE);
   const ogType = input.ogType ?? "website";
-  const canonical = input.canonical ?? SITE_URL + "/";
-  const imageAlt = input.imageAlt ?? "Ashlr Stack — dark terminal with magenta triangle logo and the tagline 'The control plane for your entire dev stack.'";
+  const canonical = input.canonical ?? `${SITE_URL}/`;
+  const imageAlt =
+    input.imageAlt ??
+    "Ashlr Stack — dark terminal with magenta triangle logo and the tagline 'The control plane for your entire dev stack.'";
 
   return [
     { attr: "property", key: "og:site_name", value: SITE_NAME },
@@ -83,7 +85,7 @@ export function buildOgMeta(input: OgMetaInput = {}): OgMetaTag[] {
 function absolute(pathOrUrl: string): string {
   if (/^https?:\/\//i.test(pathOrUrl)) return pathOrUrl;
   if (pathOrUrl.startsWith("/")) return SITE_URL + pathOrUrl;
-  return SITE_URL + "/" + pathOrUrl;
+  return `${SITE_URL}/${pathOrUrl}`;
 }
 
 /**

@@ -42,7 +42,7 @@ export default function Counter({
             const tick = (now: number) => {
               const t = Math.min((now - start) / duration, 1);
               // Ease-out cubic for a nice slowdown
-              const eased = 1 - Math.pow(1 - t, 3);
+              const eased = 1 - (1 - t) ** 3;
               setValue(Math.round(to * eased));
               if (t < 1) requestAnimationFrame(tick);
             };

@@ -55,7 +55,11 @@ const RULES: DetectionRule[] = [
     matches: (n) => /^UPSTASH_/.test(n),
     primary: (n) => n === "UPSTASH_MANAGEMENT_TOKEN",
   },
-  { provider: "openai", matches: (n) => /^OPENAI_/.test(n), primary: (n) => n === "OPENAI_API_KEY" },
+  {
+    provider: "openai",
+    matches: (n) => /^OPENAI_/.test(n),
+    primary: (n) => n === "OPENAI_API_KEY",
+  },
   {
     provider: "anthropic",
     matches: (n) => /^ANTHROPIC_/.test(n),
@@ -96,11 +100,14 @@ const RULES: DetectionRule[] = [
     matches: (n) => /^STRIPE_/.test(n),
     primary: (n) => n === "STRIPE_SECRET_KEY",
   },
-  { provider: "resend", matches: (n) => /^RESEND_/.test(n), primary: (n) => n === "RESEND_API_KEY" },
+  {
+    provider: "resend",
+    matches: (n) => /^RESEND_/.test(n),
+    primary: (n) => n === "RESEND_API_KEY",
+  },
   {
     provider: "clerk",
-    matches: (n) =>
-      /^CLERK_/.test(n) || /^NEXT_PUBLIC_CLERK_/.test(n),
+    matches: (n) => /^CLERK_/.test(n) || /^NEXT_PUBLIC_CLERK_/.test(n),
     primary: (n) => n === "CLERK_SECRET_KEY",
   },
   {
@@ -160,7 +167,8 @@ export function groupByProvider(envNames: string[]): Record<string, string[]> {
   for (const name of envNames) {
     const provider = detectProvider(name);
     if (!provider) continue;
-    (out[provider] ??= []).push(name);
+    if (!out[provider]) out[provider] = [];
+    out[provider].push(name);
   }
   return out;
 }

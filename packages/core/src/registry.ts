@@ -2,12 +2,7 @@ import { existsSync, mkdirSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { basename, resolve } from "node:path";
-import {
-  CONFIG_FILENAME,
-  hasConfig,
-  readConfig,
-  resolveConfigPath,
-} from "./config.ts";
+import { CONFIG_FILENAME, hasConfig, readConfig, resolveConfigPath } from "./config.ts";
 
 /**
  * Machine-global registry of every Stack-enabled project this user has

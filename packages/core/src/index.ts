@@ -1,4 +1,15 @@
 export * from "./config.ts";
+export {
+  isEnabled as isTelemetryEnabled,
+  promptFirstRun as promptTelemetryFirstRun,
+  emit as emitTelemetry,
+  disable as disableTelemetry,
+  enable as enableTelemetry,
+  type TelemetryEvent,
+  type TelemetryConfig,
+} from "./telemetry.ts";
+export { detectPackageManager, installCommand } from "./pm-detect.ts";
+export type { PackageManager } from "./pm-detect.ts";
 export * from "./phantom.ts";
 export * from "./providers/_base.ts";
 export { providers, getProvider, listProviderNames } from "./providers/index.ts";
@@ -47,6 +58,8 @@ export {
   type RecipeDraft,
   type RecipeProvider,
 } from "./ai/inference.ts";
+export { findSwap, suggestSwaps, SWAP_PAIRS } from "./swap.ts";
+export type { SwapPair } from "./swap.ts";
 export {
   CircuitBreaker,
   type CircuitBreakerOptions,

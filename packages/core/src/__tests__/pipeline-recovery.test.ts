@@ -9,11 +9,12 @@ import { providers } from "../providers/index.ts";
 import { type Harness, setupFakePhantom } from "./_harness.ts";
 
 /**
- * Partial-failure regression: if `materialize()` throws after `provision()`
- * succeeded, we MUST still write a breadcrumb entry to .stack.toml so
- * `stack doctor --fix` / `stack remove` can find and clean up the dangling
- * upstream resource. Without this guard, the user ends up with a live
- * provider-side resource and no local record of it at all.
+ * Partial-failure rollback: if `materialize()` throws after `provision()`
+ * succeeded, we MUST roll back atomically — tear down the upstream resource
+ * (if the provider implements `deprovision`), remove any written Phantom
+ * secrets, and NOT write to .stack.toml. The user gets a clear error message
+ * directing them to manual cleanup or `stack doctor --fix` if automatic
+ * teardown isn't available.
  */
 describe("addService partial-failure breadcrumb", () => {
   let h: Harness;
@@ -33,7 +34,7 @@ describe("addService partial-failure breadcrumb", () => {
     h.cleanup();
   });
 
-  test("writes a partial entry when materialize throws post-provision", async () => {
+  test("rolls back and does NOT write .stack.toml when materialize throws post-provision (no deprovision)", async () => {
     const failingProvider: Provider = {
       name: "partialsvc",
       displayName: "Partial Service",
@@ -48,26 +49,24 @@ describe("addService partial-failure breadcrumb", () => {
       async materialize() {
         throw new Error("simulated materialize failure (e.g. keys endpoint 500)");
       },
+      // No deprovision — exercises the "manual cleanup" warning path.
     };
 
     providers.partialsvc = async () => failingProvider;
 
-    await expect(
-      addService({ providerName: "partialsvc", cwd, interactive: false }),
-    ).rejects.toThrow(/simulated materialize failure/);
+    const err = await addService({ providerName: "partialsvc", cwd, interactive: false }).catch(
+      (e: Error) => e,
+    );
 
-    // Breadcrumb must be present so cleanup tooling can find the dangling resource.
+    // Error should reference the resource id and direct to manual cleanup.
+    expect((err as Error).message).toMatch(/partial-resource-42/);
+    expect((err as Error).message).toMatch(/stack doctor --fix/);
+
+    // .stack.toml must NOT have an entry — atomicity is the point.
     const config = await readConfig(cwd);
-    expect(config.services.partialsvc).toBeDefined();
-    expect(config.services.partialsvc.resource_id).toBe("partial-resource-42");
-    expect(config.services.partialsvc.provider).toBe("partialsvc");
-    expect(config.services.partialsvc.region).toBe("us-east-1");
-    // We don't know what was materialized, so secrets must be empty.
-    expect(config.services.partialsvc.secrets).toEqual([]);
-    // Marker lets `stack doctor` distinguish partial rows from healthy ones.
-    expect(config.services.partialsvc.created_by).toBe("stack add (partial)");
+    expect(config.services.partialsvc).toBeUndefined();
 
-    delete providers.partialsvc;
+    (providers as Record<string, unknown>).partialsvc = undefined;
   });
 
   test("non-persist runs do NOT leave a breadcrumb (dry-run / preview)", async () => {
@@ -85,22 +84,24 @@ describe("addService partial-failure breadcrumb", () => {
       async materialize() {
         throw new Error("boom");
       },
+      // No deprovision — exercises the "manual cleanup" warning path.
     };
 
     providers.drypartialsvc = async () => failingProvider;
 
-    await expect(
-      addService({
-        providerName: "drypartialsvc",
-        cwd,
-        interactive: false,
-        persist: false,
-      }),
-    ).rejects.toThrow(/boom/);
+    const err = await addService({
+      providerName: "drypartialsvc",
+      cwd,
+      interactive: false,
+      persist: false,
+    }).catch((e: Error) => e);
+
+    // Error must reference the resource id (manual cleanup path).
+    expect((err as Error).message).toMatch(/dry-resource-1/);
 
     const config = await readConfig(cwd);
     expect(config.services.drypartialsvc).toBeUndefined();
 
-    delete providers.drypartialsvc;
+    (providers as Record<string, unknown>).drypartialsvc = undefined;
   });
 });

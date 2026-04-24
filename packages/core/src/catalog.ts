@@ -23,12 +23,14 @@ export interface ProviderRef {
     | "Cloud"
     | "AI"
     | "Analytics"
+    | "Observability"
     | "Errors"
     | "Payments"
     | "Code"
     | "Tickets"
     | "Email"
-    | "Auth";
+    | "Auth"
+    | "FeatureFlags";
   authKind: CatalogAuthKind;
   /** Canonical .env names this provider writes into Phantom. */
   secrets: string[];
@@ -56,6 +58,14 @@ export interface ProviderRef {
   howTo: string;
   /** Free-form note about v1 limitations or caveats. */
   notes?: string;
+  /**
+   * npm packages to install in the consuming project after `stack add <name>`
+   * succeeds — the SDK(s) you'd `import` from to actually use this provider.
+   * `stack add` prompts the user to install these with their detected package
+   * manager (bun / pnpm / npm / yarn). Leave empty for providers with no first-
+   * party SDK (e.g. shell-script-only providers or REST-only adapters).
+   */
+  sdkPackages?: string[];
 }
 
 /** Back-compat re-export for call sites that still use `AuthKind`. */
@@ -80,6 +90,7 @@ export const PROVIDERS_REF: ProviderRef[] = [
     howTo: "Browser OAuth (PKCE) via the Ashlr Stack app.",
     notes:
       "v1 provisions a project and fetches service keys. Database password is auto-generated and stored in Phantom.",
+    sdkPackages: ["@supabase/supabase-js"],
   },
   {
     name: "neon",
@@ -97,6 +108,7 @@ export const PROVIDERS_REF: ProviderRef[] = [
     dashboard: "https://console.neon.tech",
     docs: "https://neon.tech/docs/reference/api-reference",
     howTo: "Paste a personal API key from https://console.neon.tech/app/settings/api-keys.",
+    sdkPackages: ["@neondatabase/serverless"],
   },
   {
     name: "turso",
@@ -108,6 +120,7 @@ export const PROVIDERS_REF: ProviderRef[] = [
     dashboard: "https://app.turso.tech",
     docs: "https://docs.turso.tech",
     howTo: "Paste a platform token from https://app.turso.tech/account/api-tokens.",
+    sdkPackages: ["@libsql/client"],
   },
   {
     name: "convex",
@@ -120,6 +133,7 @@ export const PROVIDERS_REF: ProviderRef[] = [
     dashboard: "https://dashboard.convex.dev",
     docs: "https://docs.convex.dev",
     howTo: "Create a deploy key in the Convex dashboard and paste it.",
+    sdkPackages: ["convex"],
   },
   {
     name: "upstash",
@@ -132,6 +146,7 @@ export const PROVIDERS_REF: ProviderRef[] = [
     dashboard: "https://console.upstash.com",
     docs: "https://upstash.com/docs/devops/developer-api",
     howTo: "Generate a management token from the Upstash console.",
+    sdkPackages: ["@upstash/redis"],
   },
   {
     name: "firebase",
@@ -145,6 +160,7 @@ export const PROVIDERS_REF: ProviderRef[] = [
     docs: "https://firebase.google.com/docs/admin/setup",
     howTo:
       "Paste the full service-account JSON from Firebase → Project settings → Service accounts.",
+    sdkPackages: ["firebase"],
   },
 
   // ── Deploy ────────────────────────────────────────────────────────────────
@@ -159,6 +175,7 @@ export const PROVIDERS_REF: ProviderRef[] = [
     dashboard: "https://modal.com",
     docs: "https://modal.com/docs",
     howTo: "Create a token in the Modal dashboard and paste it.",
+    sdkPackages: [],
   },
   {
     name: "vercel",
@@ -176,6 +193,7 @@ export const PROVIDERS_REF: ProviderRef[] = [
     dashboard: "https://vercel.com/dashboard",
     docs: "https://vercel.com/docs/rest-api",
     howTo: "Paste a personal access token from https://vercel.com/account/tokens.",
+    sdkPackages: [],
   },
   {
     name: "railway",
@@ -188,6 +206,7 @@ export const PROVIDERS_REF: ProviderRef[] = [
     dashboard: "https://railway.app/dashboard",
     docs: "https://docs.railway.app/reference/public-api",
     howTo: "Paste an API token from https://railway.app/account/tokens.",
+    sdkPackages: [],
   },
   {
     name: "fly",
@@ -200,6 +219,7 @@ export const PROVIDERS_REF: ProviderRef[] = [
     dashboard: "https://fly.io/dashboard",
     docs: "https://fly.io/docs/machines/api",
     howTo: "Paste an API token from https://fly.io/user/personal_access_tokens.",
+    sdkPackages: [],
   },
   {
     name: "cloudflare",
@@ -217,6 +237,7 @@ export const PROVIDERS_REF: ProviderRef[] = [
     dashboard: "https://dash.cloudflare.com",
     docs: "https://developers.cloudflare.com/api",
     howTo: "Create a scoped API token at https://dash.cloudflare.com/profile/api-tokens.",
+    sdkPackages: [],
   },
   {
     name: "render",
@@ -229,6 +250,7 @@ export const PROVIDERS_REF: ProviderRef[] = [
     dashboard: "https://dashboard.render.com",
     docs: "https://api-docs.render.com",
     howTo: "Generate a key at https://dashboard.render.com/u/settings#api-keys.",
+    sdkPackages: [],
   },
 
   // ── Cloud ─────────────────────────────────────────────────────────────────
@@ -244,6 +266,7 @@ export const PROVIDERS_REF: ProviderRef[] = [
     docs: "https://docs.aws.amazon.com/iam/",
     howTo: "Create an IAM access key pair in the AWS console and paste both halves.",
     notes: "v1 stores the keys only — no resource provisioning. Scope the IAM policy narrowly.",
+    sdkPackages: [],
   },
 
   // ── AI ────────────────────────────────────────────────────────────────────
@@ -258,6 +281,7 @@ export const PROVIDERS_REF: ProviderRef[] = [
     dashboard: "https://platform.openai.com",
     docs: "https://platform.openai.com/docs/api-reference",
     howTo: "Paste a secret key from https://platform.openai.com/api-keys.",
+    sdkPackages: ["openai"],
   },
   {
     name: "anthropic",
@@ -270,6 +294,7 @@ export const PROVIDERS_REF: ProviderRef[] = [
     dashboard: "https://console.anthropic.com",
     docs: "https://docs.anthropic.com/en/api",
     howTo: "Paste a secret key from https://console.anthropic.com/settings/keys.",
+    sdkPackages: ["@anthropic-ai/sdk"],
   },
   {
     name: "xai",
@@ -282,6 +307,7 @@ export const PROVIDERS_REF: ProviderRef[] = [
     dashboard: "https://console.x.ai",
     docs: "https://docs.x.ai/api",
     howTo: "Paste a key from https://console.x.ai.",
+    sdkPackages: ["openai"],
   },
   {
     name: "deepseek",
@@ -294,6 +320,7 @@ export const PROVIDERS_REF: ProviderRef[] = [
     dashboard: "https://platform.deepseek.com",
     docs: "https://api-docs.deepseek.com",
     howTo: "Paste a key from https://platform.deepseek.com/api_keys.",
+    sdkPackages: ["openai"],
   },
   {
     name: "replicate",
@@ -306,6 +333,7 @@ export const PROVIDERS_REF: ProviderRef[] = [
     dashboard: "https://replicate.com",
     docs: "https://replicate.com/docs/reference/http",
     howTo: "Create a token at https://replicate.com/account/api-tokens.",
+    sdkPackages: ["replicate"],
   },
   {
     name: "braintrust",
@@ -313,11 +341,13 @@ export const PROVIDERS_REF: ProviderRef[] = [
     category: "AI",
     authKind: "api_key",
     secrets: ["BRAINTRUST_API_KEY"],
-    blurb: "LLM evals + observability + prompt playground. Verified against /v1/organization on paste.",
+    blurb:
+      "LLM evals + observability + prompt playground. Verified against /v1/organization on paste.",
     keyOnly: true,
     dashboard: "https://www.braintrust.dev/app",
     docs: "https://www.braintrust.dev/docs",
     howTo: "Create a key at https://www.braintrust.dev/app/settings/api-keys.",
+    sdkPackages: ["braintrust"],
   },
 
   // ── Analytics ─────────────────────────────────────────────────────────────
@@ -337,6 +367,7 @@ export const PROVIDERS_REF: ProviderRef[] = [
     dashboard: "https://app.posthog.com",
     docs: "https://posthog.com/docs/api",
     howTo: "Create a personal API key at https://app.posthog.com/me/settings (scope: all).",
+    sdkPackages: ["posthog-node"],
   },
 
   // ── Errors ────────────────────────────────────────────────────────────────
@@ -356,6 +387,7 @@ export const PROVIDERS_REF: ProviderRef[] = [
     docs: "https://docs.sentry.io/api/",
     howTo:
       "Paste an auth token from https://sentry.io/settings/account/api/auth-tokens/ (scopes: project:read, project:write).",
+    sdkPackages: ["@sentry/node"],
   },
 
   // ── Payments ──────────────────────────────────────────────────────────────
@@ -379,6 +411,7 @@ export const PROVIDERS_REF: ProviderRef[] = [
       "Create a restricted key at https://dashboard.stripe.com/apikeys (use test mode for development).",
     notes:
       "v1 only stores the key. Full Stripe Connect / account linking lands when we register the Ashlr OAuth app.",
+    sdkPackages: ["stripe"],
   },
 
   // ── Code ──────────────────────────────────────────────────────────────────
@@ -397,6 +430,7 @@ export const PROVIDERS_REF: ProviderRef[] = [
     dashboard: "https://github.com",
     docs: "https://docs.github.com/en/rest",
     howTo: "Browser device-code flow — enter the code GitHub shows you, authorise, done.",
+    sdkPackages: ["octokit"],
   },
 
   // ── Tickets ───────────────────────────────────────────────────────────────
@@ -415,6 +449,7 @@ export const PROVIDERS_REF: ProviderRef[] = [
     dashboard: "https://linear.app",
     docs: "https://developers.linear.app/docs",
     howTo: "Create a personal API key at https://linear.app/settings/api.",
+    sdkPackages: ["@linear/sdk"],
   },
 
   // ── Email ─────────────────────────────────────────────────────────────────
@@ -429,6 +464,7 @@ export const PROVIDERS_REF: ProviderRef[] = [
     dashboard: "https://resend.com",
     docs: "https://resend.com/docs",
     howTo: "Paste an API key from https://resend.com/api-keys.",
+    sdkPackages: ["resend"],
   },
   {
     name: "sendgrid",
@@ -441,6 +477,7 @@ export const PROVIDERS_REF: ProviderRef[] = [
     dashboard: "https://app.sendgrid.com",
     docs: "https://docs.sendgrid.com/api-reference",
     howTo: "Paste an API key from https://app.sendgrid.com/settings/api_keys.",
+    sdkPackages: ["@sendgrid/mail"],
   },
   {
     name: "mailgun",
@@ -453,6 +490,7 @@ export const PROVIDERS_REF: ProviderRef[] = [
     dashboard: "https://app.mailgun.com",
     docs: "https://documentation.mailgun.com/docs/mailgun/api-reference/",
     howTo: "Paste an API key from https://app.mailgun.com/settings/api_security.",
+    sdkPackages: ["mailgun.js", "form-data"],
   },
   {
     name: "postmark",
@@ -466,9 +504,141 @@ export const PROVIDERS_REF: ProviderRef[] = [
     dashboard: "https://account.postmarkapp.com",
     docs: "https://postmarkapp.com/developer/api/overview",
     howTo: "Paste an account token from https://account.postmarkapp.com/api_tokens.",
+    sdkPackages: ["postmark"],
+  },
+
+  // ── Analytics ─────────────────────────────────────────────────────────────
+  {
+    name: "mixpanel",
+    displayName: "Mixpanel",
+    category: "Analytics",
+    authKind: "api_key",
+    secrets: ["MIXPANEL_PROJECT_TOKEN", "MIXPANEL_API_SECRET"],
+    blurb: "Product analytics. Project token + optional API secret stored in Phantom.",
+    keyOnly: true,
+    dashboard: "https://mixpanel.com",
+    docs: "https://developer.mixpanel.com/reference/overview",
+    howTo: "Find your project token and API secret in Mixpanel → Settings → Project Settings.",
+    sdkPackages: ["mixpanel"],
+  },
+  {
+    name: "plausible",
+    displayName: "Plausible",
+    category: "Analytics",
+    authKind: "api_key",
+    secrets: ["PLAUSIBLE_API_KEY", "PLAUSIBLE_SITE_ID"],
+    blurb: "Privacy-friendly web analytics. API key verified against the stats API.",
+    keyOnly: true,
+    dashboard: "https://plausible.io",
+    docs: "https://plausible.io/docs/stats-api",
+    howTo: "Generate an API key at https://plausible.io/settings and note your site ID.",
+    sdkPackages: [],
+  },
+
+  // ── Observability ─────────────────────────────────────────────────────────
+  {
+    name: "datadog",
+    displayName: "Datadog",
+    category: "Observability",
+    authKind: "api_key",
+    secrets: ["DD_API_KEY", "DD_APP_KEY"],
+    blurb: "Metrics, traces, logs. API + Application keys verified via /api/v1/validate.",
+    keyOnly: true,
+    dashboard: "https://app.datadoghq.com",
+    docs: "https://docs.datadoghq.com/api/latest/",
+    howTo:
+      "Create an API key at https://app.datadoghq.com/organization-settings/api-keys and an Application key at https://app.datadoghq.com/organization-settings/application-keys.",
+    sdkPackages: ["dd-trace"],
+  },
+  {
+    name: "grafana",
+    displayName: "Grafana",
+    category: "Observability",
+    authKind: "pat",
+    secrets: ["GRAFANA_API_KEY", "GRAFANA_URL"],
+    blurb: "Dashboards + alerting. Service-account token verified against your Grafana instance.",
+    keyOnly: true,
+    dashboard: "https://grafana.com",
+    docs: "https://grafana.com/docs/grafana/latest/developers/http_api/",
+    howTo:
+      "Create a service-account token in Grafana → Administration → Service accounts, and provide your Grafana base URL.",
+    sdkPackages: [],
+  },
+
+  // ── Cloud ─────────────────────────────────────────────────────────────────
+  {
+    name: "gcp",
+    displayName: "GCP",
+    category: "Cloud",
+    authKind: "api_key",
+    secrets: ["GCP_SERVICE_ACCOUNT_JSON", "GCP_PROJECT_ID"],
+    blurb: "Google Cloud Platform. Service-account JSON + project ID stored in Phantom.",
+    keyOnly: true,
+    dashboard: "https://console.cloud.google.com",
+    docs: "https://cloud.google.com/docs/authentication/getting-started",
+    howTo:
+      "Download a service-account JSON key from GCP → IAM & Admin → Service Accounts and paste the full JSON.",
+    notes:
+      "v1 validates JSON shape and project_id field only — live project endpoint verification requires an OAuth2 token exchange; deferred to v0.2.",
+    sdkPackages: [],
+  },
+  {
+    name: "digitalocean",
+    displayName: "DigitalOcean",
+    category: "Cloud",
+    authKind: "pat",
+    secrets: ["DIGITALOCEAN_TOKEN"],
+    blurb:
+      "Droplets, Kubernetes, managed databases. Personal access token verified via /v2/account.",
+    keyOnly: true,
+    dashboard: "https://cloud.digitalocean.com",
+    docs: "https://docs.digitalocean.com/reference/api/api-reference/",
+    howTo: "Create a personal access token at https://cloud.digitalocean.com/account/api/tokens.",
+    sdkPackages: [],
+  },
+  {
+    name: "hetzner",
+    displayName: "Hetzner",
+    category: "Cloud",
+    authKind: "api_key",
+    secrets: ["HETZNER_API_TOKEN"],
+    blurb: "Affordable European cloud servers. API token verified via /v1/locations.",
+    keyOnly: true,
+    dashboard: "https://console.hetzner.cloud",
+    docs: "https://docs.hetzner.cloud/",
+    howTo: "Create an API token in Hetzner Cloud Console → Project → Security → API Tokens.",
+    sdkPackages: [],
   },
 
   // ── Auth ──────────────────────────────────────────────────────────────────
+  {
+    name: "auth0",
+    displayName: "Auth0",
+    category: "Auth",
+    authKind: "api_key",
+    secrets: ["AUTH0_DOMAIN", "AUTH0_CLIENT_ID", "AUTH0_CLIENT_SECRET"],
+    blurb: "Identity platform. Domain + M2M client credentials stored in Phantom.",
+    keyOnly: true,
+    dashboard: "https://manage.auth0.com",
+    docs: "https://auth0.com/docs/api/management/v2",
+    howTo:
+      "Create a Machine-to-Machine application in Auth0 → Applications and note the domain, client ID, and client secret.",
+    notes: "Browser SDK: @auth0/auth0-spa-js. Server SDK: auth0 (bundled).",
+    sdkPackages: ["auth0"],
+  },
+  {
+    name: "workos",
+    displayName: "WorkOS",
+    category: "Auth",
+    authKind: "api_key",
+    secrets: ["WORKOS_API_KEY", "WORKOS_CLIENT_ID"],
+    blurb: "Enterprise SSO + Directory Sync. API key verified via GET /organizations.",
+    keyOnly: true,
+    dashboard: "https://dashboard.workos.com",
+    docs: "https://workos.com/docs/reference/api",
+    howTo: "Find your API key and client ID in the WorkOS dashboard → API Keys.",
+    sdkPackages: ["@workos-inc/node"],
+  },
   {
     name: "clerk",
     displayName: "Clerk",
@@ -480,6 +650,24 @@ export const PROVIDERS_REF: ProviderRef[] = [
     dashboard: "https://dashboard.clerk.com",
     docs: "https://clerk.com/docs",
     howTo: "Paste a secret key from https://dashboard.clerk.com (API Keys).",
+    sdkPackages: ["@clerk/backend"],
+  },
+
+  // ── FeatureFlags ──────────────────────────────────────────────────────────
+  {
+    name: "launchdarkly",
+    displayName: "LaunchDarkly",
+    category: "FeatureFlags",
+    authKind: "api_key",
+    secrets: ["LAUNCHDARKLY_SDK_KEY", "LAUNCHDARKLY_API_TOKEN"],
+    blurb:
+      "Feature flags + experimentation. SDK key + API token verified via /api/v2/caller-identity.",
+    keyOnly: true,
+    dashboard: "https://app.launchdarkly.com",
+    docs: "https://apidocs.launchdarkly.com/",
+    howTo:
+      "Find your SDK key in LaunchDarkly → Environments and create an API token at LaunchDarkly → Account settings → Authorization.",
+    sdkPackages: ["launchdarkly-node-server-sdk"],
   },
 ];
 
@@ -489,12 +677,14 @@ export const PROVIDER_CATEGORIES = [
   "Cloud",
   "AI",
   "Analytics",
+  "Observability",
   "Errors",
   "Payments",
   "Code",
   "Tickets",
   "Email",
   "Auth",
+  "FeatureFlags",
 ] as const;
 // If you see "Features" anywhere, it's stale — no provider currently maps to it.
 

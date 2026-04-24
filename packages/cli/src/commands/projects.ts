@@ -1,10 +1,10 @@
-import { defineCommand } from "citty";
 import {
   findProjectByName,
   listProjects,
   registerProject,
   unregisterProject,
 } from "@ashlr/stack-core";
+import { defineCommand } from "citty";
 import { colors, intro, outro, outroError } from "../ui.ts";
 
 /**
@@ -57,9 +57,16 @@ export const projectsCommand = defineCommand({
       },
     }),
     remove: defineCommand({
-      meta: { name: "remove", description: "Remove a project from the registry (does not delete files)." },
+      meta: {
+        name: "remove",
+        description: "Remove a project from the registry (does not delete files).",
+      },
       args: {
-        target: { type: "positional", required: true, description: "Project name or absolute path." },
+        target: {
+          type: "positional",
+          required: true,
+          description: "Project name or absolute path.",
+        },
       },
       async run({ args }) {
         intro("stack projects remove");

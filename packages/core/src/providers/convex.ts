@@ -12,8 +12,7 @@ export default makeApiKeyProvider({
   category: "database",
   docs: "https://docs.convex.dev",
   secretName: "CONVEX_DEPLOY_KEY",
-  howTo:
-    "Create a deploy key at https://dashboard.convex.dev (Project → Settings → Deploy Keys).",
+  howTo: "Create a deploy key at https://dashboard.convex.dev (Project → Settings → Deploy Keys).",
   dashboard: "https://dashboard.convex.dev",
   async verify(key) {
     // Convex deploy keys have the shape prod:<team>:<project>|<token>. No

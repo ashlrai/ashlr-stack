@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { CostTracker } from "../ai/cost-tracker.ts";
 import {
   ClaudeMCPBackend,
   LocalSLMBackend,
@@ -6,7 +7,6 @@ import {
   getInferenceBackend,
   parseRecipeDraft,
 } from "../ai/inference.ts";
-import { CostTracker } from "../ai/cost-tracker.ts";
 
 /**
  * Inference backend tests. The local backend talks to an OpenAI-compatible
@@ -15,7 +15,10 @@ import { CostTracker } from "../ai/cost-tracker.ts";
  */
 
 // Minimal valid chat-completion response.
-function okChatResponse(content: string, usage?: { prompt_tokens?: number; completion_tokens?: number }) {
+function okChatResponse(
+  content: string,
+  usage?: { prompt_tokens?: number; completion_tokens?: number },
+) {
   return new Response(
     JSON.stringify({
       choices: [{ message: { content } }],
@@ -117,7 +120,10 @@ describe("LocalSLMBackend — infer", () => {
   test("happy path — parses recipe + records usage with reported tokens", async () => {
     const costTracker = new CostTracker();
     const fetchImpl = (async () =>
-      okChatResponse(VALID_RECIPE_JSON, { prompt_tokens: 120, completion_tokens: 45 })) as unknown as typeof fetch;
+      okChatResponse(VALID_RECIPE_JSON, {
+        prompt_tokens: 120,
+        completion_tokens: 45,
+      })) as unknown as typeof fetch;
 
     const backend = new LocalSLMBackend({
       endpoints: [{ name: "lm-studio-fake", baseUrl: "http://fake/v1", model: "test" }],
@@ -146,7 +152,8 @@ describe("LocalSLMBackend — infer", () => {
   test("falls back to the second endpoint when the first fails", async () => {
     let call = 0;
     const fetchImpl = (async (input: string | URL | Request) => {
-      const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+      const url =
+        typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
       call++;
       if (url.includes("primary")) {
         throw new Error("ECONNREFUSED");
@@ -228,14 +235,15 @@ describe("LocalSLMBackend — infer", () => {
       costTracker: new CostTracker(),
     });
 
-    await expect(
-      backend.infer({ query: "x", catalogContext: "" }),
-    ).rejects.toBeInstanceOf(NoInferenceBackendError);
+    await expect(backend.infer({ query: "x", catalogContext: "" })).rejects.toBeInstanceOf(
+      NoInferenceBackendError,
+    );
   });
 
   test("healthy pings /models and returns true when any endpoint responds", async () => {
     const fetchImpl = (async (input: string | URL | Request) => {
-      const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+      const url =
+        typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
       if (url.endsWith("/models")) return new Response("[]", { status: 200 });
       return new Response("", { status: 500 });
     }) as unknown as typeof fetch;
@@ -252,19 +260,17 @@ describe("parseRecipeDraft", () => {
   test("parses plain JSON", () => {
     const draft = parseRecipeDraft(VALID_RECIPE_JSON);
     expect(draft.providers).toHaveLength(2);
-    expect(draft.providers[0]!.name).toBe("neon");
+    expect(draft.providers[0]?.name).toBe("neon");
   });
 
   test("tolerates markdown fences", () => {
-    const wrapped = "```json\n" + VALID_RECIPE_JSON + "\n```";
+    const wrapped = `\`\`\`json\n${VALID_RECIPE_JSON}\n\`\`\``;
     const draft = parseRecipeDraft(wrapped);
     expect(draft.providers).toHaveLength(2);
   });
 
   test("tolerates leading prose", () => {
-    const draft = parseRecipeDraft(
-      "Sure! Here's the recipe:\n" + VALID_RECIPE_JSON + "\nLet me know!",
-    );
+    const draft = parseRecipeDraft(`Sure! Here's the recipe:\n${VALID_RECIPE_JSON}\nLet me know!`);
     expect(draft.providers).toHaveLength(2);
   });
 

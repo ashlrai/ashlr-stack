@@ -9,9 +9,9 @@
  * Output is stringified and emitted via <script type="application/ld+json">.
  */
 
+import { QUESTIONS } from "~/components/FAQ";
 import { SITE_NAME, SITE_URL } from "./og";
 import { PROVIDERS_REF } from "./providers-ref";
-import { QUESTIONS } from "~/components/FAQ";
 
 export interface BreadcrumbItem {
   name: string;
@@ -27,14 +27,11 @@ export function organizationSchema(): Record<string, unknown> {
     url: "https://ashlr.ai",
     logo: {
       "@type": "ImageObject",
-      url: SITE_URL + "/icon-512.svg",
+      url: `${SITE_URL}/icon-512.svg`,
       width: 512,
       height: 512,
     },
-    sameAs: [
-      "https://github.com/ashlrai",
-      "https://github.com/ashlrai/ashlr-stack",
-    ],
+    sameAs: ["https://github.com/ashlrai", "https://github.com/ashlrai/ashlr-stack"],
   };
 }
 
@@ -42,7 +39,7 @@ export function websiteSchema(): Record<string, unknown> {
   return {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    "@id": SITE_URL + "/#website",
+    "@id": `${SITE_URL}/#website`,
     url: SITE_URL,
     name: SITE_NAME,
     description:
@@ -56,15 +53,14 @@ export function softwareApplicationSchema(): Record<string, unknown> {
   return {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
-    "@id": SITE_URL + "/#software",
+    "@id": `${SITE_URL}/#software`,
     name: SITE_NAME,
     alternateName: "Stack",
     applicationCategory: "DeveloperApplication",
     applicationSubCategory: "DevOps Tool",
     operatingSystem: "macOS, Linux, Windows",
     url: SITE_URL,
-    description:
-      `The control plane for your entire dev stack. One command to provision, wire, and operate every third-party service in a project. Ships as a CLI, an MCP server, and a Claude Code plugin. Supports ${PROVIDERS_REF.length} providers across databases, deploy targets, cloud, AI, observability, feature flags, payments, code hosting, tickets, email, and auth.`,
+    description: `The control plane for your entire dev stack. One command to provision, wire, and operate every third-party service in a project. Ships as a CLI, an MCP server, and a Claude Code plugin. Supports ${PROVIDERS_REF.length} providers across databases, deploy targets, cloud, AI, observability, feature flags, payments, code hosting, tickets, email, and auth.`,
     softwareVersion: "0.1.1",
     license: "https://opensource.org/licenses/MIT",
     offers: {
@@ -104,7 +100,7 @@ export function softwareApplicationSchema(): Record<string, unknown> {
 export function homepageFaqSchema(): Record<string, unknown> {
   return faqPageSchema(
     QUESTIONS.map((q) => ({ question: q.q, answer: q.a })),
-    SITE_URL + "/#faq",
+    `${SITE_URL}/#faq`,
   );
 }
 
@@ -124,7 +120,7 @@ export function breadcrumbSchema(items: BreadcrumbItem[]): Record<string, unknow
 function absolute(pathOrUrl: string): string {
   if (/^https?:\/\//i.test(pathOrUrl)) return pathOrUrl;
   if (pathOrUrl.startsWith("/")) return SITE_URL + pathOrUrl;
-  return SITE_URL + "/" + pathOrUrl;
+  return `${SITE_URL}/${pathOrUrl}`;
 }
 
 /**
@@ -166,9 +162,7 @@ export interface TechArticleInput {
   section?: string;
 }
 
-export function techArticleSchema(
-  input: TechArticleInput,
-): Record<string, unknown> {
+export function techArticleSchema(input: TechArticleInput): Record<string, unknown> {
   const datePublished = input.datePublished ?? "2026-04-17";
   const dateModified = input.dateModified ?? datePublished;
   const schema: Record<string, unknown> = {
@@ -187,7 +181,7 @@ export function techArticleSchema(
     inLanguage: "en-US",
     author: { "@id": "https://ashlr.ai/#organization" },
     publisher: { "@id": "https://ashlr.ai/#organization" },
-    isPartOf: { "@id": SITE_URL + "/#website" },
+    isPartOf: { "@id": `${SITE_URL}/#website` },
   };
   if (input.section) {
     schema.articleSection = input.section;
@@ -241,10 +235,7 @@ export interface FaqItem {
   answer: string;
 }
 
-export function faqPageSchema(
-  items: FaqItem[],
-  url?: string,
-): Record<string, unknown> {
+export function faqPageSchema(items: FaqItem[], url?: string): Record<string, unknown> {
   const schema: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "FAQPage",

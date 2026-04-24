@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import turso from "../providers/turso.ts";
 import type { ProviderContext } from "../providers/_base.ts";
+import turso from "../providers/turso.ts";
 import { type Harness, setupFakePhantom } from "./_harness.ts";
 
 describe("turso provider (mocked fetch)", () => {
@@ -22,10 +22,7 @@ describe("turso provider (mocked fetch)", () => {
       const u = String(url);
       const method = init?.method ?? "GET";
       if (u.endsWith("/organizations") && method === "GET") {
-        return new Response(
-          JSON.stringify([{ slug: "my-org", name: "My Org" }]),
-          { status: 200 },
-        );
+        return new Response(JSON.stringify([{ slug: "my-org", name: "My Org" }]), { status: 200 });
       }
       if (u.endsWith("/organizations/my-org/databases") && method === "POST") {
         return new Response(

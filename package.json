@@ -13,7 +13,8 @@
     "typecheck": "bunx tsc --noEmit -p tsconfig.json",
     "test": "bun test",
     "lint": "bunx biome check .",
-    "format": "bunx biome format --write ."
+    "format": "bunx biome format --write .",
+    "setup-hooks": "git config core.hooksPath .githooks && echo 'pre-commit hook wired via .githooks'"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",

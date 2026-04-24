@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Lightweight pre-commit hook — runs biome check on the whole repo.
+# Install once per clone: bun run setup-hooks
+set -euo pipefail
+
+echo "biome check..."
+bunx biome check . --reporter=summary

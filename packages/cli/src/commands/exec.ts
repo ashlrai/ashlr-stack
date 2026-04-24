@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
-import { defineCommand } from "citty";
 import { assertPhantomInstalled, hasConfig } from "@ashlr/stack-core";
+import { defineCommand } from "citty";
 import { colors, intro, outroError } from "../ui.ts";
 
 /**

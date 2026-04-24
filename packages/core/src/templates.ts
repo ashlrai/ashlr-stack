@@ -13,10 +13,14 @@ import type { StackConfig } from "./config.ts";
 
 export function resolveTemplatesDir(): string | undefined {
   const candidates = [
+    // Explicit override — useful in tests or custom installs.
+    process.env.STACK_TEMPLATES_DIR ?? "",
     resolve(join(process.cwd(), "templates")),
-    // When running from source inside the monorepo:
+    // When running from source inside the monorepo (packages/core/src → root):
+    resolve(join(fileURLToPath(dirname(import.meta.url)), "..", "..", "..", "templates")),
+    // Legacy: one extra level up (kept for backward compat with old dist layouts).
     resolve(join(fileURLToPath(dirname(import.meta.url)), "..", "..", "..", "..", "templates")),
-  ];
+  ].filter(Boolean);
   return candidates.find((p) => existsSync(p));
 }
 

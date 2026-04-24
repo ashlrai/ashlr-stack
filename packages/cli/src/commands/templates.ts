@@ -1,4 +1,3 @@
-import { defineCommand } from "citty";
 import {
   addService,
   assertPhantomInstalled,
@@ -9,6 +8,7 @@ import {
   readConfig,
   writeConfig,
 } from "@ashlr/stack-core";
+import { defineCommand } from "citty";
 import { colors, intro, logEvent, outro, outroError, prompts } from "../ui.ts";
 
 export const templatesCommand = defineCommand({

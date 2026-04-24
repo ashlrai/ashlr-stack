@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+import { emitTelemetry } from "@ashlr/stack-core";
 import { defineCommand, runMain } from "citty";
 import { addCommand } from "./commands/add.ts";
 import { applyCommand } from "./commands/apply.ts";
@@ -15,15 +16,18 @@ import { initCommand } from "./commands/init.ts";
 import { listCommand } from "./commands/list.ts";
 import { loginCommand } from "./commands/login.ts";
 import { openCommand } from "./commands/open.ts";
-import { recommendCommand } from "./commands/recommend.ts";
 import { projectsCommand } from "./commands/projects.ts";
 import { providersCommand } from "./commands/providers.ts";
+import { recommendCommand } from "./commands/recommend.ts";
 import { removeCommand } from "./commands/remove.ts";
 import { scanCommand } from "./commands/scan.ts";
 import { statusCommand } from "./commands/status.ts";
+import { swapCommand } from "./commands/swap.ts";
 import { syncCommand } from "./commands/sync.ts";
+import { telemetryCommand } from "./commands/telemetry.ts";
 import { templatesCommand } from "./commands/templates.ts";
 import { upgradeCommand } from "./commands/upgrade.ts";
+import { checkForUpdate } from "./lib/update-check.ts";
 
 // Single source of truth for the CLI version. citty wires this into `--help`
 // and we also use it for `stack --version` (citty ships a standalone flag when
@@ -74,9 +78,11 @@ const main = defineCommand({
     deps: depsCommand,
     doctor: doctorCommand,
     exec: execCommand,
+    swap: swapCommand,
     sync: syncCommand,
     open: openCommand,
     login: loginCommand,
+    telemetry: telemetryCommand,
     templates: templatesCommand,
     providers: providersCommand,
     recommend: recommendCommand,
@@ -88,4 +94,13 @@ const main = defineCommand({
   },
 });
 
-runMain(main);
+const _startMs = Date.now();
+void checkForUpdate(VERSION);
+runMain(main).finally(() => {
+  void emitTelemetry({
+    type: "command",
+    command: process.argv[2] ?? "unknown",
+    exitCode: typeof process.exitCode === "number" ? process.exitCode : 0,
+    durationMs: Date.now() - _startMs,
+  });
+});

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import neon from "../providers/neon.ts";
 import type { ProviderContext } from "../providers/_base.ts";
+import neon from "../providers/neon.ts";
 import { type Harness, readVault, setupFakePhantom } from "./_harness.ts";
 
 describe("neon provider (mocked fetch)", () => {

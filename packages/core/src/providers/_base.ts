@@ -5,6 +5,7 @@ export type ProviderCategory =
   | "deploy"
   | "cloud"
   | "analytics"
+  | "observability"
   | "errors"
   | "ai"
   | "payments"
@@ -12,6 +13,7 @@ export type ProviderCategory =
   | "tickets"
   | "email"
   | "auth"
+  | "featureflags"
   | "comms";
 
 export type AuthKind = "oauth_pkce" | "oauth_device" | "pat" | "api_key" | "cli_shell";
@@ -92,5 +94,12 @@ export interface Provider {
 
   healthcheck?(ctx: ProviderContext, entry: ServiceEntry): Promise<HealthStatus>;
   dashboardUrl?(entry: ServiceEntry): string;
-  deprovision?(ctx: ProviderContext, entry: ServiceEntry, auth: AuthHandle): Promise<void>;
+
+  /**
+   * Tear down an upstream resource created by `provision`. Used by `addService`
+   * to roll back on partial failure. Optional — if the provider doesn't
+   * implement it, the dangling resource is logged and the user is directed to
+   * `stack doctor --fix`.
+   */
+  deprovision?(ctx: ProviderContext, auth: AuthHandle, resourceId: string): Promise<void>;
 }

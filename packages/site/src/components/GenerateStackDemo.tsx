@@ -27,30 +27,23 @@ interface DemoProvider {
 // at mobile widths without crowding; all are in `packages/core/src/catalog.ts`
 // so the demo matches what `stack recommend` would actually return.
 const DEMO_STACK: DemoProvider[] = [
-  { slug: "supabase",  name: "Supabase",  category: "Database",  color: "3ECF8E", secrets: 3 },
-  { slug: "vercel",    name: "Vercel",    category: "Deploy",    color: "FFFFFF", secrets: 1 },
-  { slug: "anthropic", name: "Anthropic", category: "AI",        color: "D97757", secrets: 1 },
-  { slug: "posthog",   name: "PostHog",   category: "Analytics", color: "F54E00", secrets: 1 },
-  { slug: "sentry",    name: "Sentry",    category: "Errors",    color: "362D59", secrets: 4 },
-  { slug: "github",    name: "GitHub",    category: "Code",      color: "FFFFFF", secrets: 1 },
+  { slug: "supabase", name: "Supabase", category: "Database", color: "3ECF8E", secrets: 3 },
+  { slug: "vercel", name: "Vercel", category: "Deploy", color: "FFFFFF", secrets: 1 },
+  { slug: "anthropic", name: "Anthropic", category: "AI", color: "D97757", secrets: 1 },
+  { slug: "posthog", name: "PostHog", category: "Analytics", color: "F54E00", secrets: 1 },
+  { slug: "sentry", name: "Sentry", category: "Errors", color: "362D59", secrets: 4 },
+  { slug: "github", name: "GitHub", category: "Code", color: "FFFFFF", secrets: 1 },
 ];
 
-const DEMO_QUERY =
-  'Build me a B2B SaaS with auth, AI, analytics, and error tracking.';
+const DEMO_QUERY = "Build me a B2B SaaS with auth, AI, analytics, and error tracking.";
 
-const RECIPE_ID = 'b2b-saas-with-auth-ai-analytics';
+const RECIPE_ID = "b2b-saas-with-auth-ai-analytics";
 
 interface Props {
   iconPaths?: Record<string, string | null>;
 }
 
-type Phase =
-  | "idle"
-  | "typing"
-  | "recommending"
-  | "picked"
-  | "applying"
-  | "done";
+type Phase = "idle" | "typing" | "recommending" | "picked" | "applying" | "done";
 
 export default function GenerateStackDemo({ iconPaths = {} }: Props) {
   const [phase, setPhase] = useState<Phase>("idle");
@@ -62,9 +55,7 @@ export default function GenerateStackDemo({ iconPaths = {} }: Props) {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      reducedRef.current = window.matchMedia(
-        "(prefers-reduced-motion: reduce)",
-      ).matches;
+      reducedRef.current = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     }
     return () => {
       for (const t of timersRef.current) clearTimeout(t);
@@ -109,20 +100,14 @@ export default function GenerateStackDemo({ iconPaths = {} }: Props) {
     // Switch to recommend phase; chips stream in.
     schedule(() => setPhase("recommending"), typingDone);
     for (let i = 0; i < DEMO_STACK.length; i++) {
-      schedule(
-        () => setVisibleCount(i + 1),
-        typingDone + 400 + i * 220,
-      );
+      schedule(() => setVisibleCount(i + 1), typingDone + 400 + i * 220);
     }
     const recommendDone = typingDone + 400 + DEMO_STACK.length * 220 + 180;
 
     // Apply phase — stamp each chip.
     schedule(() => setPhase("applying"), recommendDone);
     for (let i = 0; i < DEMO_STACK.length; i++) {
-      schedule(
-        () => setAppliedCount(i + 1),
-        recommendDone + 260 + i * 260,
-      );
+      schedule(() => setAppliedCount(i + 1), recommendDone + 260 + i * 260);
     }
     const applyDone = recommendDone + 260 + DEMO_STACK.length * 260 + 200;
 
@@ -133,7 +118,10 @@ export default function GenerateStackDemo({ iconPaths = {} }: Props) {
   const totalSecrets = DEMO_STACK.reduce((acc, p) => acc + p.secrets, 0);
 
   return (
-    <div className="generate-stack-demo mt-4 panel-steel" style={{ borderLeft: "2px solid var(--color-blade-500)" }}>
+    <div
+      className="generate-stack-demo mt-4 panel-steel"
+      style={{ borderLeft: "2px solid var(--color-blade-500)" }}
+    >
       <div className="flex items-center justify-between gap-3 px-4 py-3 hairline-bottom">
         <div className="flex items-center gap-2 min-w-0">
           <span className="mono text-[10px] tracking-[0.18em] uppercase text-[color:var(--color-blade-400)]">
@@ -149,11 +137,28 @@ export default function GenerateStackDemo({ iconPaths = {} }: Props) {
           onClick={phase === "idle" || phase === "done" ? play : undefined}
           disabled={phase !== "idle" && phase !== "done"}
           className="inline-flex items-center gap-2 px-3 py-1.5 border border-[color:var(--color-blade-500)] text-[11px] tracking-[0.12em] uppercase text-[color:var(--color-ink-50)] bg-[color:var(--color-blade-500)]/10 hover:bg-[color:var(--color-blade-500)]/20 transition-colors disabled:opacity-40 disabled:cursor-wait flex-shrink-0"
-          aria-label={phase === "done" ? "Replay stack generation demo" : "Play stack generation demo"}
+          aria-label={
+            phase === "done" ? "Replay stack generation demo" : "Play stack generation demo"
+          }
         >
-          {phase === "idle" && <><span>▶</span><span>Generate a stack</span></>}
-          {phase === "done" && <><span>↻</span><span>Replay</span></>}
-          {phase !== "idle" && phase !== "done" && <><span>●</span><span>Generating…</span></>}
+          {phase === "idle" && (
+            <>
+              <span>▶</span>
+              <span>Generate a stack</span>
+            </>
+          )}
+          {phase === "done" && (
+            <>
+              <span>↻</span>
+              <span>Replay</span>
+            </>
+          )}
+          {phase !== "idle" && phase !== "done" && (
+            <>
+              <span>●</span>
+              <span>Generating…</span>
+            </>
+          )}
         </button>
       </div>
 
@@ -163,8 +168,7 @@ export default function GenerateStackDemo({ iconPaths = {} }: Props) {
           <span className="text-[color:var(--color-blade-400)] flex-shrink-0">you ›</span>
           <span className="whitespace-pre-wrap break-words">
             stack recommend "{phase === "idle" ? DEMO_QUERY : typed}
-            {phase === "typing" && <span className="caret" aria-hidden="true" />}
-            "
+            {phase === "typing" && <span className="caret" aria-hidden="true" />}"
           </span>
         </div>
 
@@ -172,7 +176,10 @@ export default function GenerateStackDemo({ iconPaths = {} }: Props) {
         {showOutput && (
           <div className="mt-3 space-y-2">
             {/* Recommend status line */}
-            {(phase === "recommending" || phase === "picked" || phase === "applying" || phase === "done") && (
+            {(phase === "recommending" ||
+              phase === "picked" ||
+              phase === "applying" ||
+              phase === "done") && (
               <div className="flex items-center gap-2 text-[color:var(--color-ink-400)]">
                 <span className="text-[color:var(--color-blade-400)]">○</span>
                 <span>stack recommend → retrieving top providers…</span>
@@ -197,7 +204,8 @@ export default function GenerateStackDemo({ iconPaths = {} }: Props) {
                       background: isApplied ? "rgba(74, 222, 128, 0.06)" : undefined,
                       borderColor: isApplied ? "#4ade80" : undefined,
                       color: isApplied ? "#4ade80" : "var(--color-ink-100)",
-                      transition: "border-color 180ms ease, background 180ms ease, color 180ms ease",
+                      transition:
+                        "border-color 180ms ease, background 180ms ease, color 180ms ease",
                     }}
                     title={`${p.name} — ${p.category}`}
                   >
@@ -241,15 +249,21 @@ export default function GenerateStackDemo({ iconPaths = {} }: Props) {
               <div className="pt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[color:var(--color-ink-300)]">
                 <span className="text-[color:var(--color-blade-400)]">✓</span>
                 <span>
-                  <span className="text-[color:var(--color-ink-50)] font-semibold">{DEMO_STACK.length}</span> providers wired
+                  <span className="text-[color:var(--color-ink-50)] font-semibold">
+                    {DEMO_STACK.length}
+                  </span>{" "}
+                  providers wired
                 </span>
                 <span className="text-[color:var(--color-ink-600)]">·</span>
                 <span>
-                  <span className="text-[color:var(--color-ink-50)] font-semibold">{totalSecrets}</span> secrets in{" "}
+                  <span className="text-[color:var(--color-ink-50)] font-semibold">
+                    {totalSecrets}
+                  </span>{" "}
+                  secrets in{" "}
                   <a
                     href="https://phm.dev"
                     target="_blank"
-                    rel="noopener"
+                    rel="noreferrer noopener"
                     className="text-[color:var(--color-ink-100)] underline decoration-dotted decoration-[#3b82f6]/40 underline-offset-4 hover:decoration-[#3b82f6] hover:text-[#3b82f6] transition-colors"
                   >
                     Phantom

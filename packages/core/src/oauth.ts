@@ -1,8 +1,8 @@
+import { spawn } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
 import { createServer } from "node:http";
-import { spawn } from "node:child_process";
-import { platform } from "node:os";
 import type { AddressInfo } from "node:net";
+import { platform } from "node:os";
 import { StackError } from "./errors.ts";
 
 /**
@@ -132,7 +132,9 @@ async function captureCallback(args: CaptureArgs): Promise<{ code: string; redir
             .writeHead(400, { "content-type": "text/html" })
             .end(htmlPage("error", args.providerName, "state mismatch"));
           server.close();
-          reject(new StackError("OAUTH_STATE_MISMATCH", "Auth callback state did not match request."));
+          reject(
+            new StackError("OAUTH_STATE_MISMATCH", "Auth callback state did not match request."),
+          );
           return;
         }
         res.writeHead(200, { "content-type": "text/html" }).end(htmlPage("ok", args.providerName));
@@ -169,7 +171,11 @@ function openBrowser(url: string): void {
 }
 
 function base64url(buf: Buffer | Uint8Array): string {
-  return Buffer.from(buf).toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  return Buffer.from(buf)
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
 }
 
 function htmlPage(kind: "ok" | "error", provider: string, detail?: string): string {

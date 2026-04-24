@@ -1,8 +1,8 @@
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { basename, resolve } from "node:path";
-import { defineCommand } from "citty";
 import { hasConfig, scanSource } from "@ashlr/stack-core";
+import { defineCommand } from "citty";
 import { colors, intro, outro, outroError } from "../ui.ts";
 
 /**
@@ -59,13 +59,15 @@ export const cloneCommand = defineCommand({
       );
       console.log(colors.dim("  Next steps:"));
       console.log(colors.dim(`    cd ${target}`));
-      console.log(colors.dim(`    stack doctor --fix     # verify, re-login for anything missing`));
+      console.log(colors.dim("    stack doctor --fix     # verify, re-login for anything missing"));
       console.log(colors.dim(`    stack exec -- bun dev  # run with Phantom's proxy active`));
     } else {
       const hits = await scanSource(resolved);
       const highConfidence = hits.filter((h) => h.confidence === "high");
       if (hits.length === 0) {
-        console.log(colors.dim("  No providers detected. You can still `cd in` and run `stack init`."));
+        console.log(
+          colors.dim("  No providers detected. You can still `cd in` and run `stack init`."),
+        );
       } else {
         console.log(
           `  ${colors.bold(String(hits.length))} provider(s) detected in source (${highConfidence.length} high-confidence):`,
@@ -81,7 +83,7 @@ export const cloneCommand = defineCommand({
         }
         console.log(colors.dim("\n  Next steps:"));
         console.log(colors.dim(`    cd ${target}`));
-        console.log(colors.dim(`    stack scan --auto     # offer to wire up each provider`));
+        console.log(colors.dim("    stack scan --auto     # offer to wire up each provider"));
       }
     }
 
