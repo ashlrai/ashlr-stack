@@ -10,7 +10,12 @@
 
 ## Install
 
-Three ways, pick one:
+Four ways, pick one:
+
+```bash
+# Homebrew (macOS / Linux — installs Phantom Secrets as a dependency)
+brew install ashlrai/ashlr/stack
+```
 
 ```bash
 # One-liner, macOS / Linux (also installs Phantom Secrets if missing)
@@ -23,7 +28,7 @@ irm stack.ashlr.ai/install.ps1 | iex
 ```
 
 ```bash
-# Manual (registry — once v0.1 ships):
+# npm / bun registry
 bun add -g @ashlr/stack ashlr-stack-mcp     # or: npm i -g
 ```
 
