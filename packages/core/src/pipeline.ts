@@ -119,11 +119,22 @@ export async function addService(opts: AddServiceOpts): Promise<AddServiceResult
     // 3. Tear down the upstream resource (if provider supports it).
     const failStep = writtenSecrets.length > 0 ? "MCP/config write" : "materialize";
     if (provider.deprovision) {
-      await provider.deprovision(ctx, auth, resource.id);
+      // If deprovision itself throws, we still want to surface the original
+      // failure AND note that teardown was incomplete — otherwise the caller
+      // has no idea whether the upstream resource is still live.
+      let teardownErr: Error | undefined;
+      try {
+        await provider.deprovision(ctx, auth, resource.id);
+      } catch (derr) {
+        teardownErr = derr as Error;
+      }
+      const teardownNote = teardownErr
+        ? `Attempted automatic teardown but it FAILED (${teardownErr.message}) — resource ${resource.id} may still exist. Clean it up manually on the ${provider.displayName} dashboard.`
+        : `Upstream resource ${resource.id} has been torn down.`;
       throw new StackError(
         "ADD_SERVICE_ROLLED_BACK",
         `Rolled back ${provider.displayName} after failure at step "${failStep}". ` +
-          `Upstream resource ${resource.id} has been torn down. ` +
+          `${teardownNote} ` +
           `Original error: ${(err as Error).message}`,
       );
     }

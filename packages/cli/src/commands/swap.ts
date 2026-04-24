@@ -52,6 +52,14 @@ export const swapCommand = defineCommand({
 
     intro(`stack swap ${from} → ${to}${args.dryRun ? colors.dim(" (dry-run)") : ""}`);
 
+    // ── 0. No-op guard ────────────────────────────────────────────────────
+    if (from === to) {
+      outroError(
+        `Cannot swap "${from}" with itself. Run \`stack providers\` to see other options in the same category.`,
+      );
+      return;
+    }
+
     // ── 1. Validate both providers exist in the catalog ───────────────────
     const fromRef = findProviderRef(from);
     const toRef = findProviderRef(to);

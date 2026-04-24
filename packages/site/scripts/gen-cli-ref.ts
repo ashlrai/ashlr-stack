@@ -102,14 +102,7 @@ function buildFlags(args: Record<string, ArgDef>): CliFlag[] {
       const ph = synopsisPlaceholder(name, arg);
       const flag: CliFlag = {
         name,
-        synopsis:
-          type === "positional"
-            ? arg.required
-              ? `<${ph}>`
-              : `[${ph}]`
-            : type === "boolean"
-              ? `--${name}`
-              : `--${name} <${ph}>`,
+        synopsis: flagSynopsis(name, type, ph, arg.required ?? false),
         type,
         description: arg.description ?? "",
       };
@@ -117,6 +110,23 @@ function buildFlags(args: Record<string, ArgDef>): CliFlag[] {
       if (arg.default !== undefined) flag.default = arg.default as string | boolean;
       return flag;
     });
+}
+
+/** Render the flag/positional synopsis cell, e.g. `<path>`, `[--flag]`, `--k <n>`. */
+function flagSynopsis(
+  name: string,
+  type: "string" | "boolean" | "positional",
+  placeholder: string,
+  required: boolean,
+): string {
+  switch (type) {
+    case "positional":
+      return required ? `<${placeholder}>` : `[${placeholder}]`;
+    case "boolean":
+      return `--${name}`;
+    default:
+      return `--${name} <${placeholder}>`;
+  }
 }
 
 // ---------------------------------------------------------------------------
