@@ -19,6 +19,32 @@ say()  { printf "  \033[1;35m▲\033[0m stack: %s\n" "$1"; }
 warn() { printf "  \033[1;33m!\033[0m stack: %s\n" "$1" >&2; }
 die()  { printf "  \033[1;31m✗\033[0m stack: %s\n" "$1" >&2; exit 1; }
 
+# Idempotently add a directory to the user's PATH by appending an export line
+# to their shell's rc file. Detects bash/zsh/fish from $SHELL.
+add_to_user_path() {
+  local bin="$1"
+  local marker="# ashlr-stack PATH"
+  local shell_name rc
+  shell_name="$(basename "${SHELL:-bash}")"
+  case "$shell_name" in
+    zsh)  rc="$HOME/.zshrc" ;;
+    fish) rc="$HOME/.config/fish/config.fish" ;;
+    *)    rc="$HOME/.bashrc" ;;
+  esac
+  mkdir -p "$(dirname "$rc")"
+  touch "$rc"
+  if grep -qF "$marker" "$rc" 2>/dev/null; then
+    say "$bin already wired into $rc"
+    return 0
+  fi
+  if [ "$shell_name" = "fish" ]; then
+    printf '\n%s\nset -gx PATH %s $PATH\n' "$marker" "$bin" >> "$rc"
+  else
+    printf '\n%s\nexport PATH="%s:$PATH"\n' "$marker" "$bin" >> "$rc"
+  fi
+  say "added $bin to PATH in $rc (open a new shell or run: source $rc)"
+}
+
 REPO="${STACK_REPO:-ashlrai/ashlr-stack}"
 REPO_URL="${STACK_REPO_URL:-https://github.com/${REPO}.git}"
 INSTALL_DIR="${STACK_INSTALL_DIR:-$HOME/.local/share/ashlr-stack}"
@@ -119,8 +145,7 @@ install_via_binary() {
   say "stack installed to $bin_dir/stack"
 
   if ! echo "$PATH" | tr ':' '\n' | grep -qx "$bin_dir"; then
-    warn "$bin_dir is not on your PATH — add to your shell init:"
-    warn "  export PATH=\"\$HOME/.ashlr/bin:\$PATH\""
+    add_to_user_path "$bin_dir"
   fi
   return 0
 }
@@ -159,7 +184,7 @@ install_via_clone() {
   else
     mkdir -p "$HOME/.local/bin"
     BIN_DIR="$HOME/.local/bin"
-    warn "$BIN_DIR isn't on your PATH — add it: export PATH=\"\$HOME/.local/bin:\$PATH\""
+    add_to_user_path "$BIN_DIR"
   fi
 
   # Write a thin wrapper script so we don't rely on `bun link`.
@@ -194,7 +219,7 @@ fi
 # ---------------------------------------------------------------------------
 
 if ! command -v stack >/dev/null 2>&1; then
-  warn "stack binary installed but not yet on PATH. Open a new shell or add the bin dir to your PATH."
+  warn "stack binary installed and PATH updated. Open a new shell (or 'source' your shell rc) and re-run 'stack --help'."
   exit 0
 fi
 

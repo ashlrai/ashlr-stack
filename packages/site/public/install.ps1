@@ -1,6 +1,10 @@
 # Ashlr Stack -- Windows PowerShell one-liner installer.
 #
-#   irm stack.ashlr.ai/install.ps1 | iex
+#   irm https://stack.ashlr.ai/install.ps1 | iex
+#
+# Note: the explicit https:// scheme is required. Without it, PowerShell 5.1's
+# Invoke-RestMethod defaults to http://, the host 308-redirects to https://, and
+# IRM refuses cross-scheme redirects -- aborting with a (308) Permanent Redirect.
 #
 # Mirrors scripts/install.sh for the macOS/Linux side. It tries, in order:
 #
@@ -139,8 +143,15 @@ function Install-AshlrStack {
             $binDir = $fallback
         } else {
             $binDir = $fallback
-            Write-StackWarn "$binDir isn't on PATH -- add it (user scope):"
-            Write-StackWarn "  [Environment]::SetEnvironmentVariable('Path', `"$binDir;`" + [Environment]::GetEnvironmentVariable('Path','User'), 'User')"
+            $userPath = [Environment]::GetEnvironmentVariable('Path','User')
+            $userPathDirs = if ($userPath) { $userPath -split ';' | Where-Object { $_ } } else { @() }
+            if ($userPathDirs -notcontains $binDir) {
+                $newUserPath = if ($userPath) { "$binDir;$userPath" } else { $binDir }
+                [Environment]::SetEnvironmentVariable('Path', $newUserPath, 'User')
+                # Make the new PATH visible to this same session, too.
+                $env:Path = "$binDir;$env:Path"
+                Write-StackSay "added $binDir to user PATH"
+            }
         }
 
         if (-not (Test-Path $binDir)) {
@@ -179,7 +190,7 @@ bun run "$mcpEntry" %*
     # -----------------------------------------------------------------------
 
     if (-not (Test-CommandExists 'stack')) {
-        Write-StackWarn 'stack binary installed but not yet on PATH. Open a new shell or add the bin dir to your PATH.'
+        Write-StackWarn 'stack binary installed and PATH updated. Open a new shell and re-run `stack --help`.'
         return
     }
 
