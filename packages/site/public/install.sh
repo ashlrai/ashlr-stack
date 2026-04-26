@@ -76,13 +76,24 @@ say "using $PKG_MGR"
 
 if ! command -v phantom >/dev/null 2>&1; then
   say "Phantom Secrets not found — installing…"
+  installed=0
+  # Prefer Homebrew on systems that have it (best UX for updates).
   if command -v brew >/dev/null 2>&1; then
-    brew tap ashlrai/phantom 2>/dev/null || true
-    brew install phantom || warn "brew install failed — continuing; install manually later."
-  elif [ "$PKG_MGR" = "bun" ]; then
-    bun add -g phantom-secrets 2>/dev/null || warn "bun add -g phantom-secrets failed — install manually later."
-  else
-    npm i -g phantom-secrets 2>/dev/null || warn "npm i -g phantom-secrets failed — install manually later."
+    if brew tap ashlrai/phantom >/dev/null 2>&1 && brew install phantom >/dev/null 2>&1; then
+      installed=1
+    fi
+  fi
+  # Fall back to phantom's official one-liner. This avoids `bun add -g`
+  # /`npm i -g` because the npm package lazy-downloads on first run and
+  # bun on Windows doesn't reliably materialize the shim either way.
+  if [ "$installed" -ne 1 ]; then
+    if curl -fsSL https://phm.dev/install.sh | bash; then
+      [ -d "$HOME/.phantom-secrets/bin" ] && export PATH="$HOME/.phantom-secrets/bin:$PATH"
+      installed=1
+    fi
+  fi
+  if [ "$installed" -ne 1 ]; then
+    warn "phantom-secrets install failed — install manually from https://phm.dev"
   fi
 else
   say "phantom already installed — good."

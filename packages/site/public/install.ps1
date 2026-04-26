@@ -66,18 +66,27 @@ function Install-AshlrStack {
     # -----------------------------------------------------------------------
 
     if (-not (Test-CommandExists 'phantom')) {
-        Write-StackSay 'Phantom Secrets not found -- installing...'
-        # No Homebrew on Windows. Fall back to npm/bun global install.
+        Write-StackSay 'Phantom Secrets not found -- installing via phantom installer...'
+        # Use phantom's own one-liner. This sidesteps two real bugs in the
+        # bun/npm path on Windows:
+        #   1. Bun-on-Windows doesn't reliably materialize the `phantom` shim
+        #      from the npm package's `bin` field, so even a successful
+        #      `bun add -g phantom-secrets` leaves nothing on PATH.
+        #   2. The PS5.1 native-stderr-as-error trap: redirecting bun's stderr
+        #      with `*>` inside try/catch + EAP=Stop turns benign progress
+        #      output into spurious throws.
+        # Phantom's installer downloads the signed release directly and wires
+        # User PATH itself, so it works whether bun is healthy or not.
         try {
-            if ($pkgMgr -eq 'bun') {
-                & bun add -g phantom-secrets *> $null
-                if ($LASTEXITCODE -ne 0) { throw 'bun add -g phantom-secrets failed' }
-            } else {
-                & npm i -g phantom-secrets *> $null
-                if ($LASTEXITCODE -ne 0) { throw 'npm i -g phantom-secrets failed' }
-            }
+            $phantomScript = Invoke-RestMethod 'https://phm.dev/install.ps1' -UseBasicParsing
+            $phantomScript | & powershell.exe -NoProfile -ExecutionPolicy Bypass -Command -
+            if ($LASTEXITCODE -ne 0) { throw "phantom installer exited $LASTEXITCODE" }
+            # phantom's installer modified User PATH; refresh this session so
+            # subsequent commands can see the new entries.
+            $env:Path = ([Environment]::GetEnvironmentVariable('Path','User')) + ';' +
+                        ([Environment]::GetEnvironmentVariable('Path','Machine'))
         } catch {
-            Write-StackWarn "phantom-secrets install failed -- continuing; install manually later. ($_)"
+            Write-StackWarn "phantom-secrets install failed -- continuing; install manually from https://phm.dev. ($_)"
         }
     } else {
         Write-StackSay 'phantom already installed -- good.'
