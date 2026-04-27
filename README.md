@@ -24,7 +24,7 @@ curl -fsSL stack.ashlr.ai/install.sh | bash
 
 ```powershell
 # One-liner, Windows (PowerShell)
-irm stack.ashlr.ai/install.ps1 | iex
+irm https://stack.ashlr.ai/install.ps1 | iex
 ```
 
 ```bash
