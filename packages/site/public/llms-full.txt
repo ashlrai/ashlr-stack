@@ -390,10 +390,10 @@ For providers needing an OAuth app, Ashlr registers a single "Ashlr Stack" app p
 
 Templates are TOML + shell recipes under `templates/` in the source repo. Run `stack templates` for the live list.
 
-- **nextjs-supabase-posthog** — Next.js 15 + Supabase + PostHog + PostHog feature flags. App-router, server components, Tailwind.
+- **nextjs-supabase-posthog** — Next.js 15 + Supabase + Vercel deploy + PostHog + PostHog feature flags. App-router, server components, Tailwind.
 - **nextjs-neon-vercel-sentry** — Next.js + Neon Postgres + Vercel deploy + Sentry error tracking + Drizzle ORM.
 - **cloudflare-turso-clerk** — Cloudflare Workers + Turso (libSQL) + Clerk auth. Edge-native, zero cold starts.
-- **supabase-posthog-sentry-resend** — Full SaaS baseline: Supabase + PostHog + Sentry + Resend transactional email.
+- **supabase-posthog-sentry-resend** — Full SaaS baseline: Supabase + Vercel deploy + PostHog + Sentry + Resend transactional email + Stripe billing.
 - **claude-agent-openai-anthropic** — Agent starter with both OpenAI + Anthropic SDKs wired, MCP-ready, Phantom-gated.
 
 Each template wires:

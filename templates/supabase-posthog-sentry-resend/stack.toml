@@ -1,5 +1,5 @@
-# SaaS starter — Supabase (DB + auth), PostHog (analytics), Sentry (errors),
-# Resend (transactional email), Stripe (payments), Clerk (auth, optional).
+# SaaS starter — Supabase (DB + auth), Vercel (deploy), PostHog (analytics),
+# Sentry (errors), Resend (transactional email), Stripe (payments).
 
 [stack]
 version = "1"
@@ -10,6 +10,12 @@ template = "supabase-posthog-sentry-resend"
 provider = "supabase"
 secrets = ["SUPABASE_URL", "SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY"]
 mcp = "supabase"
+created_at = "1970-01-01T00:00:00Z"
+created_by = "template"
+
+[services.vercel]
+provider = "vercel"
+secrets = ["VERCEL_TOKEN"]
 created_at = "1970-01-01T00:00:00Z"
 created_by = "template"
 
