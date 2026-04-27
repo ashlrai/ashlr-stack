@@ -15,7 +15,7 @@ One-liner (installs both `stack` and `ashlr-stack-mcp`):
 curl -fsSL stack.ashlr.ai/install.sh | bash
 
 # Windows (PowerShell)
-irm stack.ashlr.ai/install.ps1 | iex
+irm https://stack.ashlr.ai/install.ps1 | iex
 ```
 
 Or manually from the registry:

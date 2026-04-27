@@ -28,6 +28,45 @@ function Test-CommandExists {
     return [bool](Get-Command $Name -ErrorAction SilentlyContinue)
 }
 
+# Convert a Windows path (C:\Users\foo\bin) to a Git Bash / MSYS path
+# (/c/Users/foo/bin). Git Bash inherits the Windows user PATH, but only at
+# shell-start time -- so an already-running bash (e.g. inside Claude Code on
+# Windows) won't see new entries until the session restarts. Writing an
+# explicit export to ~/.bashrc with the unix-style path covers that gap and
+# also handles users whose Git Bash was launched with a sanitized PATH.
+function ConvertTo-BashPath {
+    param([Parameter(Mandatory)][string]$WinPath)
+    $p = $WinPath -replace '\\', '/'
+    if ($p -match '^([A-Za-z]):/(.*)$') {
+        $drive = $Matches[1].ToLower()
+        return "/$drive/$($Matches[2])"
+    }
+    return $p
+}
+
+# Append `export PATH="<bash-path>:$PATH"` to the user's ~/.bashrc (idempotent
+# via a marker comment) so Git Bash sessions pick up the stack bin dir.
+# Best-effort: skips silently if no HOME / no writable bashrc.
+function Add-ToBashrcPath {
+    param([Parameter(Mandatory)][string]$WinBinDir)
+    # NB: $home is a PowerShell read-only automatic variable -- using a different name.
+    $homeDir = if ($env:HOME) { $env:HOME } else { $env:USERPROFILE }
+    if (-not $homeDir) { return }
+    $bashrc = Join-Path $homeDir '.bashrc'
+    $bashPath = ConvertTo-BashPath -WinPath $WinBinDir
+    $marker = "# ashlr-stack PATH ($bashPath)"
+    try {
+        if ((Test-Path $bashrc) -and (Select-String -Path $bashrc -SimpleMatch $marker -Quiet -ErrorAction SilentlyContinue)) {
+            return
+        }
+        $line = "`n$marker`nexport PATH=`"$bashPath`:`$PATH`"`n"
+        Add-Content -LiteralPath $bashrc -Value $line -Encoding UTF8
+        Write-StackSay "wired $bashPath into $bashrc (for Git Bash / Claude Code)"
+    } catch {
+        Write-StackWarn "could not update $bashrc -- add '$bashPath' to your bash PATH manually. ($_)"
+    }
+}
+
 function Install-AshlrStack {
     $RepoUrl    = if ($env:STACK_REPO_URL)    { $env:STACK_REPO_URL }    else { 'https://github.com/ashlrai/ashlr-stack.git' }
     $InstallDir = if ($env:STACK_INSTALL_DIR) { $env:STACK_INSTALL_DIR } else { Join-Path $env:LOCALAPPDATA 'ashlr-stack' }
@@ -66,18 +105,27 @@ function Install-AshlrStack {
     # -----------------------------------------------------------------------
 
     if (-not (Test-CommandExists 'phantom')) {
-        Write-StackSay 'Phantom Secrets not found -- installing...'
-        # No Homebrew on Windows. Fall back to npm/bun global install.
+        Write-StackSay 'Phantom Secrets not found -- installing via phantom installer...'
+        # Use phantom's own one-liner. This sidesteps two real bugs in the
+        # bun/npm path on Windows:
+        #   1. Bun-on-Windows doesn't reliably materialize the `phantom` shim
+        #      from the npm package's `bin` field, so even a successful
+        #      `bun add -g phantom-secrets` leaves nothing on PATH.
+        #   2. The PS5.1 native-stderr-as-error trap: redirecting bun's stderr
+        #      with `*>` inside try/catch + EAP=Stop turns benign progress
+        #      output into spurious throws.
+        # Phantom's installer downloads the signed release directly and wires
+        # User PATH itself, so it works whether bun is healthy or not.
         try {
-            if ($pkgMgr -eq 'bun') {
-                & bun add -g phantom-secrets *> $null
-                if ($LASTEXITCODE -ne 0) { throw 'bun add -g phantom-secrets failed' }
-            } else {
-                & npm i -g phantom-secrets *> $null
-                if ($LASTEXITCODE -ne 0) { throw 'npm i -g phantom-secrets failed' }
-            }
+            $phantomScript = Invoke-RestMethod 'https://phm.dev/install.ps1' -UseBasicParsing
+            $phantomScript | & powershell.exe -NoProfile -ExecutionPolicy Bypass -Command -
+            if ($LASTEXITCODE -ne 0) { throw "phantom installer exited $LASTEXITCODE" }
+            # phantom's installer modified User PATH; refresh this session so
+            # subsequent commands can see the new entries.
+            $env:Path = ([Environment]::GetEnvironmentVariable('Path','User')) + ';' +
+                        ([Environment]::GetEnvironmentVariable('Path','Machine'))
         } catch {
-            Write-StackWarn "phantom-secrets install failed -- continuing; install manually later. ($_)"
+            Write-StackWarn "phantom-secrets install failed -- continuing; install manually from https://phm.dev. ($_)"
         }
     } else {
         Write-StackSay 'phantom already installed -- good.'
@@ -94,7 +142,22 @@ function Install-AshlrStack {
             } else {
                 & npm i -g '@ashlr/stack' 'ashlr-stack-mcp' *> $null
             }
-            return ($LASTEXITCODE -eq 0)
+            if ($LASTEXITCODE -ne 0) { return $false }
+
+            # Where the freshly-globally-installed shim lands. bun -> ~/.bun/bin,
+            # npm -> %APPDATA%\npm. Both put themselves on Windows User PATH at
+            # tool-install time, but already-running shells (Git Bash, the
+            # Claude Code session that just kicked this off) won't see it until
+            # restart. Mirror the entry into ~/.bashrc so bash picks it up.
+            $globalBin = if ($pkgMgr -eq 'bun') {
+                Join-Path $env:USERPROFILE '.bun\bin'
+            } else {
+                Join-Path $env:APPDATA 'npm'
+            }
+            if (Test-Path $globalBin) {
+                Add-ToBashrcPath -WinBinDir $globalBin
+            }
+            return $true
         } catch {
             return $false
         }
@@ -158,21 +221,43 @@ function Install-AshlrStack {
             New-Item -ItemType Directory -Path $binDir -Force | Out-Null
         }
 
-        # stack.cmd shim -- .cmd so it's picked up by cmd.exe AND PowerShell.
-        $stackShim = Join-Path $binDir 'stack.cmd'
-        $cliEntry  = Join-Path $InstallDir 'packages\cli\src\index.ts'
-        @"
-@echo off
-bun run "$cliEntry" %*
-"@ | Set-Content -LiteralPath $stackShim -Encoding ASCII
+        # We write TWO shims per command:
+        #   1. <name>.cmd  -- picked up by cmd.exe and PowerShell.
+        #   2. <name>      -- bare-name shell script with a bash shebang, picked
+        #                     up by Git Bash. MSYS2 bash's PATH lookup does NOT
+        #                     auto-append .cmd, so a user (or Claude Code, which
+        #                     shells out through Git Bash on Windows) typing
+        #                     `stack` would otherwise get "command not found"
+        #                     even though the bin dir is on PATH.
+        # The bash shim MUST use LF line endings -- a CRLF after the shebang
+        # makes /usr/bin/env try to exec "bash\r" and fail with ENOENT.
 
-        # Same deal for the MCP server.
-        $mcpShim  = Join-Path $binDir 'ashlr-stack-mcp.cmd'
+        function Write-Shim {
+            param(
+                [Parameter(Mandatory)][string]$BinDir,
+                [Parameter(Mandatory)][string]$Name,
+                [Parameter(Mandatory)][string]$EntryWinPath
+            )
+            $cmdShim = Join-Path $BinDir "$Name.cmd"
+            $cmdBody = "@echo off`r`nbun run `"$EntryWinPath`" %*`r`n"
+            [System.IO.File]::WriteAllText($cmdShim, $cmdBody, [System.Text.UTF8Encoding]::new($false))
+
+            $bashShim   = Join-Path $BinDir $Name
+            $entryBash  = ConvertTo-BashPath -WinPath $EntryWinPath
+            $bashBody   = "#!/usr/bin/env bash`nexec bun run `"$entryBash`" `"`$@`"`n"
+            [System.IO.File]::WriteAllText($bashShim, $bashBody, [System.Text.UTF8Encoding]::new($false))
+        }
+
+        $cliEntry = Join-Path $InstallDir 'packages\cli\src\index.ts'
         $mcpEntry = Join-Path $InstallDir 'packages\mcp\src\server.ts'
-        @"
-@echo off
-bun run "$mcpEntry" %*
-"@ | Set-Content -LiteralPath $mcpShim -Encoding ASCII
+        Write-Shim -BinDir $binDir -Name 'stack'            -EntryWinPath $cliEntry
+        Write-Shim -BinDir $binDir -Name 'ashlr-stack-mcp'  -EntryWinPath $mcpEntry
+        $stackShim = Join-Path $binDir 'stack.cmd'
+
+        # Mirror the bin dir into Git Bash's PATH too, so an already-running
+        # bash (Claude Code on Windows runs commands through Git Bash) picks it
+        # up on next session start.
+        Add-ToBashrcPath -WinBinDir $binDir
 
         Write-StackSay "stack shim written to $stackShim"
     }
@@ -190,7 +275,8 @@ bun run "$mcpEntry" %*
     # -----------------------------------------------------------------------
 
     if (-not (Test-CommandExists 'stack')) {
-        Write-StackWarn 'stack binary installed and PATH updated. Open a new shell and re-run `stack --help`.'
+        Write-StackWarn 'stack installed and PATH updated, but not yet visible in this shell.'
+        Write-StackWarn 'Restart your terminal -- and if you use Claude Code, restart that session too -- then run: stack --help'
         return
     }
 
