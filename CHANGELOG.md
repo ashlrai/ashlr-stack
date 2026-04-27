@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Templates: Vercel added to Next.js / SaaS starters
+
+- **`nextjs-supabase-posthog`** now provisions Vercel alongside Supabase + PostHog. The site catalog already advertised Vercel under this template — the underlying `stack.toml` was missing the service, so `stack init --template nextjs-supabase-posthog` left users without a deploy target. Site copy and `stack.toml` now agree.
+- **`supabase-posthog-sentry-resend`** (the maximal SaaS starter) gains Vercel as a deploy target. Anyone running this stack ships to Vercel or Cloudflare in practice; Cloudflare has its own template, so Vercel is the right default here.
+- Other templates unchanged: `nextjs-neon-vercel-sentry` already had Vercel; `cloudflare-turso-clerk` and `claude-agent-openai-anthropic` legitimately don't deploy to Vercel.
+- Updated surfaces: `templates/*/stack.toml`, `packages/site/src/lib/templates-ref.ts`, `packages/site/src/components/Templates.astro`, `packages/site/public/llms.txt`, `packages/site/public/llms-full.txt`.
+
 ### SEO + GEO content surface (major)
 
 - **29 programmatic provider pages** — new dynamic route at `/providers/[slug]` driven by `packages/core/src/catalog.ts`. Adding a provider to catalog auto-mints a page at build time. Each page: hero with brand logo, auth-flow explainer, secret-slot breakdown, MCP wiring status, `stack add` snippet, `stack recommend` trigger, related providers, templates that include it, FAQ, outbound dashboard + docs links. JSON-LD: TechArticle + BreadcrumbList + FAQPage.

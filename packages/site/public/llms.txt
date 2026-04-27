@@ -123,10 +123,10 @@ Full CLI reference: https://stack.ashlr.ai/llms-full.txt
 
 ## Templates
 
-- `nextjs-supabase-posthog` — Next.js + Supabase + PostHog
+- `nextjs-supabase-posthog` — Next.js + Supabase + Vercel + PostHog
 - `nextjs-neon-vercel-sentry` — Next.js + Neon + Vercel + Sentry
 - `cloudflare-turso-clerk` — Cloudflare Workers + Turso + Clerk
-- `supabase-posthog-sentry-resend` — Supabase + PostHog + Sentry + Resend
+- `supabase-posthog-sentry-resend` — Supabase + Vercel + PostHog + Sentry + Resend + Stripe
 - `claude-agent-openai-anthropic` — Agent starter with OpenAI + Anthropic
 
 Templates are TOML + shell recipes in `templates/` of the source repo.

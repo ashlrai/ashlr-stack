@@ -32,16 +32,21 @@ export interface TemplateRef {
 export const TEMPLATES_REF: TemplateRef[] = [
   {
     name: "nextjs-supabase-posthog",
-    displayName: "Next.js · Supabase · PostHog",
-    tagline: "Postgres + auth + product analytics.",
+    displayName: "Next.js · Supabase · Vercel · PostHog",
+    tagline: "Postgres + auth + deploy + product analytics.",
     blurb:
-      "The classic Next.js SaaS starting point. Supabase for data + auth, PostHog for analytics and feature flags. Two MCP servers wired (Supabase scoped to your project, PostHog SSE).",
+      "The classic Next.js SaaS starting point. Supabase for data + auth, Vercel as the deploy target, PostHog for analytics and feature flags. Two MCP servers wired (Supabase scoped to your project, PostHog SSE).",
     services: [
       {
         name: "supabase",
         provider: "supabase",
         secrets: ["SUPABASE_URL", "SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY"],
         mcp: "supabase",
+      },
+      {
+        name: "vercel",
+        provider: "vercel",
+        secrets: ["VERCEL_TOKEN"],
       },
       {
         name: "posthog",
@@ -51,7 +56,7 @@ export const TEMPLATES_REF: TemplateRef[] = [
       },
     ],
     environments: ["dev", "prod"],
-    goodFor: "Teams that want a full SaaS stack (DB + auth + analytics) in one command.",
+    goodFor: "Teams that want a full Next.js SaaS stack (DB + auth + deploy + analytics) in one command.",
   },
   {
     name: "nextjs-neon-vercel-sentry",
@@ -82,16 +87,21 @@ export const TEMPLATES_REF: TemplateRef[] = [
   },
   {
     name: "supabase-posthog-sentry-resend",
-    displayName: "Supabase · PostHog · Sentry · Resend · Stripe",
+    displayName: "Supabase · Vercel · PostHog · Sentry · Resend · Stripe",
     tagline: 'The "SaaS in a box" template.',
     blurb:
-      "The maximal SaaS starter — DB/auth, analytics, errors, transactional email, and billing all wired in one command. Three MCP servers (Supabase, PostHog, Sentry) come online alongside.",
+      "The maximal SaaS starter — DB/auth, deploy, analytics, errors, transactional email, and billing all wired in one command. Three MCP servers (Supabase, PostHog, Sentry) come online alongside.",
     services: [
       {
         name: "supabase",
         provider: "supabase",
         secrets: ["SUPABASE_URL", "SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY"],
         mcp: "supabase",
+      },
+      {
+        name: "vercel",
+        provider: "vercel",
+        secrets: ["VERCEL_TOKEN"],
       },
       {
         name: "posthog",
