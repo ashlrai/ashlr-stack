@@ -93,6 +93,25 @@ Stack is the *control plane*. [Phantom](https://phm.dev) is the *vault*. ashlr-p
 ```bash
 stack init                    # interactive template picker
 stack add supabase            # OAuth → new project → secrets → .mcp.json
+stack add stripe              # paste sk_live_… → validates → stores STRIPE_SECRET_KEY
+
+# Stripe webhook endpoint — fully agent-driveable, no dashboard copy-paste
+stack add stripe --webhook-endpoint https://example.com/webhooks/stripe
+# → creates the endpoint via Stripe API
+# → stores STRIPE_WEBHOOK_SECRET (whsec_…) + STRIPE_WEBHOOK_ENDPOINT_ID in Phantom
+# → default events: customer.subscription.{created,updated,deleted,trial_will_end}
+#                   invoice.payment_failed
+
+# Custom event list
+stack add stripe \
+  --webhook-endpoint https://example.com/webhooks/stripe \
+  --events "payment_intent.succeeded,charge.failed"
+
+# Reuse an existing sk_… from the vault (skip the interactive paste)
+stack add stripe \
+  --webhook-endpoint https://example.com/webhooks/stripe \
+  --secret-key-from-vault
+
 stack providers               # full catalog (29 services across 11 categories)
 stack doctor --fix            # verify every service; re-run setup for anything broken
 stack exec -- bun dev         # run with Phantom's secret proxy active

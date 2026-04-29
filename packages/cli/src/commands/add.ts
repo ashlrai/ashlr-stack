@@ -41,6 +41,22 @@ export const addCommand = defineCommand({
       default: "ask",
       description: "SDK install behaviour after provisioning: ask (default), always, never.",
     },
+    webhookEndpoint: {
+      type: "string",
+      description:
+        "Stripe only: HTTPS URL to register as a webhook endpoint. Triggers webhook provisioning and stores STRIPE_WEBHOOK_SECRET + STRIPE_WEBHOOK_ENDPOINT_ID in Phantom.",
+    },
+    events: {
+      type: "string",
+      description:
+        "Stripe only: comma-separated list of Stripe events to subscribe to. Defaults to the subscription-lifecycle set when --webhook-endpoint is given.",
+    },
+    secretKeyFromVault: {
+      type: "boolean",
+      default: false,
+      description:
+        "Stripe only: skip the interactive sk_… paste and reuse STRIPE_SECRET_KEY already in Phantom.",
+    },
   },
   async run({ args }) {
     if (!hasConfig()) {
@@ -145,7 +161,7 @@ export const addCommand = defineCommand({
       const result = await addService({
         providerName: service,
         existingResourceId: args.use ? String(args.use) : undefined,
-        hints: args.region ? { region: String(args.region) } : undefined,
+        hints: buildHints(args),
         interactive: process.stdout.isTTY === true,
         log: (event) => {
           spinner.stop();
@@ -219,6 +235,17 @@ async function handleSdkInstall(pkgs: string[], mode: string, dryRun: boolean): 
       `  ${colors.yellow("Warning:")} install exited with code ${result.status}. Run ${colors.bold(cmdStr)} manually.`,
     );
   }
+}
+
+function buildHints(
+  args: Record<string, unknown>,
+): Record<string, unknown> | undefined {
+  const hints: Record<string, unknown> = {};
+  if (args.region) hints.region = String(args.region);
+  if (args.webhookEndpoint) hints.webhookEndpoint = String(args.webhookEndpoint);
+  if (args.events) hints.events = String(args.events);
+  if (args.secretKeyFromVault) hints.secretKeyFromVault = true;
+  return Object.keys(hints).length > 0 ? hints : undefined;
 }
 
 async function groupProvidersForPicker(names: string[]) {

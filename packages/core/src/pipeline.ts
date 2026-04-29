@@ -49,6 +49,7 @@ export async function addService(opts: AddServiceOpts): Promise<AddServiceResult
     cwd,
     interactive: opts.interactive ?? process.stdout.isTTY === true,
     log: opts.log ?? (() => {}),
+    hints: opts.hints,
   };
 
   const auth = await provider.login(ctx);
