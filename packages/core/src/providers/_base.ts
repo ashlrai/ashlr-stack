@@ -24,6 +24,12 @@ export interface ProviderContext {
   interactive: boolean;
   /** Structured logger — callers wire this to the CLI's @clack spinner. */
   log: (event: LogEvent) => void;
+  /**
+   * Provider-specific hints forwarded from the CLI (e.g. webhookEndpoint,
+   * secretKeyFromVault). Available to both `login` and `provision` so providers
+   * can alter their auth flow based on flags.
+   */
+  hints?: Record<string, unknown>;
 }
 
 export interface LogEvent {
