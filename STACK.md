@@ -19,10 +19,10 @@ third-party service in a developer's project with one command.
 
 ## Quick orientation
 
-- 22 CLI commands live under `packages/cli/src/commands/*.ts`
-- 23 providers under `packages/core/src/providers/*.ts` (factory: `_api-key.ts`; pilot: `supabase.ts`)
-- 17 MCP tools listed in `packages/mcp/src/server.ts` — each shells out to the CLI
-- 69 tests across `packages/core/src/__tests__/` — run with `bun test` from the repo root
+- 26 CLI commands live under `packages/cli/src/commands/*.ts`
+- 39 providers under `packages/core/src/providers/*.ts` (factory: `_api-key.ts`; pilot: `supabase.ts`)
+- 19 MCP tools listed in `packages/mcp/src/server.ts` — each shells out to the CLI
+- ~352 tests across 48 files — run with `bun test` from the repo root
 - Site is Astro 5 + Tailwind v4 + Framer Motion
 
 ## Coding conventions (actually followed here)
@@ -65,7 +65,7 @@ third-party service in a developer's project with one command.
 
 ## Do NOT do these
 
-- Do not create new packages without a reason — the four in `packages/*` cover the architecture.
+- Do not create new packages without a reason — the six in `packages/*` cover the architecture.
 - Do not add a runtime dependency to `@ashlr/stack-core` that isn't already there (Bun + smol-toml is the whole surface; we want to keep `npm install @ashlr/stack` fast).
 - Do not modify `packages/site/src/pages/index.astro` layout without checking in with a human — it's the load-bearing hero.
 - Do not bypass Phantom by writing secrets to disk "temporarily."
@@ -76,7 +76,7 @@ third-party service in a developer's project with one command.
 
 ```bash
 bun install
-bun test                         # 69 pass, 0 fail
+bun test                         # ~352 tests across 48 files
 bunx tsc --noEmit -p tsconfig.json
 cd packages/site && bunx astro check  # 43 files / 0 errors
 cd packages/site && bun run build

@@ -56,7 +56,7 @@ In a Claude‑Code‑native world, the friction in starting a project isn't writ
 Stack collapses that hour into one command:
 
 ```bash
-stack init --template nextjs-supabase-posthog-sentry
+stack init --template nextjs-supabase-posthog
 # Stack does the OAuth dance per provider,
 # creates the upstream resource,
 # stores every secret in Phantom,
@@ -86,14 +86,14 @@ Stack is the *control plane*. [Phantom](https://phm.dev) is the *vault*. ashlr-p
 **Email** — Resend
 **Auth** — Clerk
 
-29 providers total. Run `stack providers` to see the live catalog.
+39 providers total. Run `stack providers` to see the live catalog.
 
 ## Usage
 
 ```bash
 stack init                    # interactive template picker
 stack add supabase            # OAuth → new project → secrets → .mcp.json
-stack providers               # full catalog (29 services across 11 categories)
+stack providers               # full catalog (39 services across 11 categories)
 stack doctor --fix            # verify every service; re-run setup for anything broken
 stack exec -- bun dev         # run with Phantom's secret proxy active
 ```
