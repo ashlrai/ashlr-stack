@@ -27,12 +27,13 @@ import { syncCommand } from "./commands/sync.ts";
 import { telemetryCommand } from "./commands/telemetry.ts";
 import { templatesCommand } from "./commands/templates.ts";
 import { upgradeCommand } from "./commands/upgrade.ts";
+import { normalizeKebabFlags } from "./lib/normalize-args.ts";
 import { checkForUpdate } from "./lib/update-check.ts";
 
 // Single source of truth for the CLI version. citty wires this into `--help`
 // and we also use it for `stack --version` (citty ships a standalone flag when
 // `version` is on the meta object — but older citty needs a fallback, below).
-const VERSION = "0.2.0";
+const VERSION = "0.2.1";
 
 const main = defineCommand({
   meta: {
@@ -117,7 +118,9 @@ const main = defineCommand({
 
 const _startMs = Date.now();
 void checkForUpdate(VERSION);
-runMain(main).finally(() => {
+// Normalize kebab-case flags (`--dry-run`) to the camelCase keys our commands
+// declare (`dryRun`) before citty parses them — see lib/normalize-args.ts.
+runMain(main, { rawArgs: normalizeKebabFlags(process.argv.slice(2)) }).finally(() => {
   void emitTelemetry({
     type: "command",
     command: process.argv[2] ?? "unknown",
