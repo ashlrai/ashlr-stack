@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Bug fixes
+
+- **Kebab-case flags now parse (`--dry-run`, `--keep-from`, `--all-orphans`, …)** — citty 0.1.6 silently dropped the documented kebab spelling of multi-word flags: a boolean arg with `default: false` shadowed the kebab-parsed value, so `--dry-run` was ignored while only `--dryRun` worked. For `stack add` this was high-severity — the documented "safe preview" form fell through to the **real** provisioning flow (live OAuth/network/vault writes). Raw argv is now normalized (`--dry-run` → `--dryRun`) before parsing, fixing every command at once while preserving camelCase, `--no-*` negation, and `--` passthrough. (`packages/cli/src/lib/normalize-args.ts`)
+
 ### SEO + GEO content surface (major)
 
 - **29 programmatic provider pages** — new dynamic route at `/providers/[slug]` driven by `packages/core/src/catalog.ts`. Adding a provider to catalog auto-mints a page at build time. Each page: hero with brand logo, auth-flow explainer, secret-slot breakdown, MCP wiring status, `stack add` snippet, `stack recommend` trigger, related providers, templates that include it, FAQ, outbound dashboard + docs links. JSON-LD: TechArticle + BreadcrumbList + FAQPage.
