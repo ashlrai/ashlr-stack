@@ -72,12 +72,15 @@ describe("stack add --dry-run", () => {
     expect(out).not.toContain("SUPABASE_STACK_CLIENT_ID");
   });
 
-  it("without the flag, the preview branch does NOT run (real flow is attempted)", () => {
+  it("without the flag, the preview branch does NOT run (dry-run is opt-in)", () => {
     const dir = mkTmp();
     const { stdout, stderr } = runCli(["add", "supabase"], dir);
     const out = stdout + stderr;
-    // No preview, and the real login() guard fires — proving dry-run is opt-in.
+    // The dry-run/preview branch never runs: no "(dry-run)" title, no preview
+    // line. (We don't assert the specific downstream error — whether it fails at
+    // the Phantom preflight or the OAuth guard depends on the environment, e.g.
+    // whether Phantom is installed on the CI runner.)
+    expect(out).not.toContain("(dry-run)");
     expect(out).not.toContain(PREVIEW);
-    expect(out).toContain("SUPABASE_STACK_CLIENT_ID");
   });
 });
