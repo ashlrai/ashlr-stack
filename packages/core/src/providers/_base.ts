@@ -24,6 +24,24 @@ export interface ProviderContext {
   interactive: boolean;
   /** Structured logger — callers wire this to the CLI's @clack spinner. */
   log: (event: LogEvent) => void;
+  /**
+   * Host-owned interactive prompt for credential entry. The CLI wires this to
+   * its @clack prompt and pauses any active spinner around it (mirrors `log`).
+   * Providers MUST route PAT/key paste through this rather than writing to
+   * stderr directly — a stderr prompt is clobbered by a running spinner, which
+   * makes `stack add` appear to hang. When absent (tests, non-CLI hosts),
+   * `promptSecret` falls back to a bare stdin read.
+   */
+  prompt?: (req: PromptRequest) => Promise<string>;
+}
+
+export interface PromptRequest {
+  /** One-line ask, e.g. "Paste your Supabase access token". */
+  message: string;
+  /** Optional guidance shown above the input (a URL, required scopes). */
+  howTo?: string;
+  /** Mask the input. Defaults to true — these are always secrets. */
+  secret?: boolean;
 }
 
 export interface LogEvent {

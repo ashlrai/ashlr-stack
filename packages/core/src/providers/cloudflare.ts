@@ -11,6 +11,7 @@ import type {
   ProvisionOpts,
   Resource,
 } from "./_base.ts";
+import { promptSecret } from "./_helpers.ts";
 
 /**
  * Cloudflare — Workers / Pages / R2 / D1 / KV all hang off one Account API
@@ -39,10 +40,11 @@ const cloudflare: Provider = {
     }
     if (!ctx.interactive)
       throw new StackError("CLOUDFLARE_AUTH_REQUIRED", "No valid Cloudflare token in vault.");
-    process.stderr.write(
-      "\n  Create an API token at https://dash.cloudflare.com/profile/api-tokens\n  Scopes: Account · Workers Scripts / Pages / R2 / D1 as needed\n  Paste it here: ",
-    );
-    const token = (await readLine()).trim();
+    const token = await promptSecret(ctx, {
+      message: "Paste your Cloudflare API token",
+      howTo:
+        "Create an API token at https://dash.cloudflare.com/profile/api-tokens (scopes: Account · Workers Scripts / Pages / R2 / D1 as needed)",
+    });
     const identity = await verifyToken(token);
     if (!identity)
       throw new StackError("CLOUDFLARE_AUTH_INVALID", "Cloudflare rejected that token.");
@@ -128,20 +130,4 @@ async function tryRevealSecret(key: string): Promise<string | undefined> {
   } catch {
     return undefined;
   }
-}
-
-async function readLine(): Promise<string> {
-  return new Promise((resolve) => {
-    let buf = "";
-    const onData = (chunk: Buffer) => {
-      buf += chunk.toString();
-      if (buf.includes("\n")) {
-        process.stdin.off("data", onData);
-        process.stdin.pause();
-        resolve(buf.split("\n")[0]);
-      }
-    };
-    process.stdin.resume();
-    process.stdin.on("data", onData);
-  });
 }

@@ -9,7 +9,7 @@ import {
 } from "@ashlr/stack-core";
 import { defineCommand } from "citty";
 import { requirePhantom } from "../lib/phantom-preflight.ts";
-import { colors, intro, logEvent, outro, outroError, prompts } from "../ui.ts";
+import { colors, intro, logEvent, outro, outroError, prompts, spinnerBridge } from "../ui.ts";
 
 interface DoctorReport {
   project: string;
@@ -264,11 +264,7 @@ async function runDoctor(
           cwd,
           existingResourceId: entry.resource_id,
           interactive: process.stdout.isTTY === true,
-          log: (event) => {
-            spinner.stop();
-            logEvent(event);
-            spinner.start(`  Re-running ${name}…`);
-          },
+          ...spinnerBridge(spinner, `  Re-running ${name}…`),
         });
         spinner.stop(`  ${colors.green("●")} ${name} re-wired.`);
       } catch (err) {

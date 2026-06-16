@@ -11,6 +11,7 @@ import type {
   ProvisionOpts,
   Resource,
 } from "./_base.ts";
+import { promptSecret } from "./_helpers.ts";
 
 /**
  * Turso — LibSQL-backed edge database. v1 uses a user-created Platform API
@@ -39,10 +40,10 @@ const turso: Provider = {
     }
     if (!ctx.interactive)
       throw new StackError("TURSO_AUTH_REQUIRED", "No valid Turso token in vault.");
-    process.stderr.write(
-      "\n  Create a Platform API token at https://app.turso.tech/settings/api-tokens\n  Paste it here: ",
-    );
-    const token = (await readLine()).trim();
+    const token = await promptSecret(ctx, {
+      message: "Paste your Turso Platform API token",
+      howTo: "Create a Platform API token at https://app.turso.tech/settings/api-tokens",
+    });
     const identity = await fetchIdentity(token);
     if (!identity) throw new StackError("TURSO_AUTH_INVALID", "Turso rejected that token.");
     await addSecret(PLATFORM_TOKEN_SECRET, token);
@@ -210,20 +211,4 @@ async function tryRevealSecret(key: string): Promise<string | undefined> {
   } catch {
     return undefined;
   }
-}
-
-async function readLine(): Promise<string> {
-  return new Promise((resolve) => {
-    let buf = "";
-    const onData = (chunk: Buffer) => {
-      buf += chunk.toString();
-      if (buf.includes("\n")) {
-        process.stdin.off("data", onData);
-        process.stdin.pause();
-        resolve(buf.split("\n")[0]);
-      }
-    };
-    process.stdin.resume();
-    process.stdin.on("data", onData);
-  });
 }

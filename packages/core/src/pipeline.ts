@@ -2,7 +2,7 @@ import { type ServiceEntry, type StackConfig, readConfig, writeConfig } from "./
 import { StackError } from "./errors.ts";
 import { mergeMcpEntry, removeMcpEntry } from "./mcp-writer.ts";
 import { addSecret, assertPhantomInstalled, removeSecret } from "./phantom.ts";
-import type { LogEvent, ProviderContext } from "./providers/_base.ts";
+import type { LogEvent, ProviderContext, PromptRequest } from "./providers/_base.ts";
 import { getProvider } from "./providers/index.ts";
 
 export interface AddServiceOpts {
@@ -12,6 +12,8 @@ export interface AddServiceOpts {
   existingResourceId?: string;
   hints?: Record<string, unknown>;
   log?: (event: LogEvent) => void;
+  /** Host-owned credential prompt. The CLI pauses its spinner around this. */
+  prompt?: (req: PromptRequest) => Promise<string>;
   /** If false, skip persisting to .stack.toml (used by dry-run / preview). */
   persist?: boolean;
 }
@@ -49,6 +51,7 @@ export async function addService(opts: AddServiceOpts): Promise<AddServiceResult
     cwd,
     interactive: opts.interactive ?? process.stdout.isTTY === true,
     log: opts.log ?? (() => {}),
+    prompt: opts.prompt,
   };
 
   const auth = await provider.login(ctx);
