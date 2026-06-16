@@ -11,7 +11,7 @@ import type {
   ProvisionOpts,
   Resource,
 } from "./_base.ts";
-import { readLine, tryRevealSecret } from "./_helpers.ts";
+import { promptSecret, tryRevealSecret } from "./_helpers.ts";
 
 /**
  * Vercel provider.
@@ -41,10 +41,10 @@ const vercel: Provider = {
     }
     if (!ctx.interactive)
       throw new StackError("VERCEL_AUTH_REQUIRED", "No valid Vercel token in vault.");
-    process.stderr.write(
-      "\n  Create a Vercel token at https://vercel.com/account/tokens\n  Paste it here: ",
-    );
-    const token = (await readLine()).trim();
+    const token = await promptSecret(ctx, {
+      message: "Paste your Vercel token",
+      howTo: "Create a Vercel token at https://vercel.com/account/tokens",
+    });
     const identity = await fetchUser(token);
     if (!identity) throw new StackError("VERCEL_AUTH_INVALID", "Vercel rejected that token.");
     await addSecret(TOKEN_SECRET, token);

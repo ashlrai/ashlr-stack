@@ -13,7 +13,7 @@ import {
 import { removeMcpEntry } from "@ashlr/stack-core/mcp-writer";
 import { defineCommand } from "citty";
 import { requirePhantom } from "../lib/phantom-preflight.ts";
-import { colors, intro, outro, outroError, prompts } from "../ui.ts";
+import { colors, intro, outro, outroError, prompts, spinnerBridge } from "../ui.ts";
 
 export const swapCommand = defineCommand({
   meta: {
@@ -178,15 +178,7 @@ export const swapCommand = defineCommand({
       await addService({
         providerName: to,
         interactive: process.stdout.isTTY === true,
-        log: (event) => {
-          spinner.stop();
-          if (event.level === "info") {
-            console.log(`  ${colors.dim(event.msg)}`);
-          } else if (event.level === "warn") {
-            console.log(`  ${colors.yellow(event.msg)}`);
-          }
-          spinner.start(`Provisioning ${to}…`);
-        },
+        ...spinnerBridge(spinner, `Provisioning ${to}…`),
       });
       toProvisioned = true;
       spinner.stop(`${colors.green("●")} ${to} provisioned.`);

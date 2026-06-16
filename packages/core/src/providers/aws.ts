@@ -10,7 +10,7 @@ import type {
   ProviderContext,
   Resource,
 } from "./_base.ts";
-import { readLine, tryRevealSecret } from "./_helpers.ts";
+import { promptSecret, tryRevealSecret } from "./_helpers.ts";
 
 /**
  * AWS — v1 accepts an IAM access key pair (access key id + secret access key).
@@ -41,12 +41,12 @@ const aws: Provider = {
     }
     if (!ctx.interactive)
       throw new StackError("AWS_AUTH_REQUIRED", "No valid AWS credentials in vault.");
-    process.stderr.write(
-      "\n  Create an IAM access key at https://console.aws.amazon.com/iam/home#/security_credentials\n  AWS_ACCESS_KEY_ID: ",
-    );
-    const accessKeyId = (await readLine()).trim();
-    process.stderr.write("  AWS_SECRET_ACCESS_KEY: ");
-    const secretAccessKey = (await readLine()).trim();
+    const accessKeyId = await promptSecret(ctx, {
+      message: "AWS_ACCESS_KEY_ID",
+      howTo:
+        "Create an IAM access key at https://console.aws.amazon.com/iam/home#/security_credentials",
+    });
+    const secretAccessKey = await promptSecret(ctx, { message: "AWS_SECRET_ACCESS_KEY" });
     const identity = await callStsIdentity(accessKeyId, secretAccessKey, "us-east-1");
     if (!identity) throw new StackError("AWS_AUTH_INVALID", "AWS rejected those credentials.");
     await addSecret(SECRET_ID_KEY, accessKeyId);

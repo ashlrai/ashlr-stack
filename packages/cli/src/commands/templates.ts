@@ -9,7 +9,7 @@ import {
   writeConfig,
 } from "@ashlr/stack-core";
 import { defineCommand } from "citty";
-import { colors, intro, logEvent, outro, outroError, prompts } from "../ui.ts";
+import { colors, intro, outro, outroError, prompts, spinnerBridge } from "../ui.ts";
 
 export const templatesCommand = defineCommand({
   meta: { name: "templates", description: "List or apply starter stack templates." },
@@ -98,11 +98,7 @@ export const templatesCommand = defineCommand({
             const result = await addService({
               providerName,
               interactive: process.stdout.isTTY === true,
-              log: (event) => {
-                spinner.stop();
-                logEvent(event);
-                spinner.start(`Adding ${name}…`);
-              },
+              ...spinnerBridge(spinner, `Adding ${name}…`),
             });
             spinner.stop(
               `${colors.green("●")} ${name} → ${result.displayName} (${result.resourceId})`,

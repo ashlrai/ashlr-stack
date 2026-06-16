@@ -13,7 +13,7 @@ import type {
   ProvisionOpts,
   Resource,
 } from "./_base.ts";
-import { readLine, tryRevealSecret } from "./_helpers.ts";
+import { promptSecret, tryRevealSecret } from "./_helpers.ts";
 
 /**
  * Supabase — the Wave 2 pilot provider. Proves the full loop:
@@ -78,11 +78,12 @@ const supabase: Provider = {
       );
     }
 
-    // Avoid a hard dependency on @clack/prompts in the core package — read from stdin.
-    process.stderr.write(
-      "\n  Create a Personal Access Token at https://supabase.com/dashboard/account/tokens\n  Paste it here: ",
-    );
-    const token = (await readLine()).trim();
+    // The host (CLI) owns the prompt UI so it can pause its spinner; core stays
+    // free of a hard @clack dependency.
+    const token = await promptSecret(ctx, {
+      message: "Paste your Supabase access token",
+      howTo: "Create a Personal Access Token at https://supabase.com/dashboard/account/tokens",
+    });
     if (!token) throw new StackError("SUPABASE_AUTH_REQUIRED", "No token provided.");
     const identity = await fetchIdentity(token);
     if (!identity)

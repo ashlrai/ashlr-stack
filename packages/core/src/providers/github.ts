@@ -11,7 +11,7 @@ import type {
   ProviderContext,
   Resource,
 } from "./_base.ts";
-import { readLine, tryRevealSecret } from "./_helpers.ts";
+import { promptSecret, tryRevealSecret } from "./_helpers.ts";
 
 /**
  * GitHub — OAuth device flow (no local redirect needed, works in SSH/remote
@@ -41,7 +41,7 @@ const github: Provider = {
 
     const clientId = resolveOAuthClientId("github", process.env.GITHUB_STACK_CLIENT_ID);
     if (clientId) {
-      const token = await runDeviceFlow(clientId);
+      const token = await runDeviceFlow(ctx, clientId);
       const identity = await fetchUser(token);
       if (!identity)
         throw new StackError(
@@ -55,10 +55,10 @@ const github: Provider = {
     // PAT fallback.
     if (!ctx.interactive)
       throw new StackError("GITHUB_AUTH_REQUIRED", "Set GITHUB_STACK_CLIENT_ID or paste a PAT.");
-    process.stderr.write(
-      "\n  Create a GitHub PAT at https://github.com/settings/personal-access-tokens/new\n  Paste it here: ",
-    );
-    const token = (await readLine()).trim();
+    const token = await promptSecret(ctx, {
+      message: "Paste your GitHub PAT",
+      howTo: "Create a GitHub PAT at https://github.com/settings/personal-access-tokens/new",
+    });
     const identity = await fetchUser(token);
     if (!identity) throw new StackError("GITHUB_AUTH_INVALID", "GitHub rejected that token.");
     await addSecret(TOKEN_SECRET, token);
@@ -126,7 +126,7 @@ async function fetchUser(token: string): Promise<Record<string, string> | undefi
   }
 }
 
-async function runDeviceFlow(clientId: string): Promise<string> {
+async function runDeviceFlow(ctx: ProviderContext, clientId: string): Promise<string> {
   // 1. Request device code.
   const startRes = await fetch("https://github.com/login/device/code", {
     method: "POST",
@@ -144,9 +144,12 @@ async function runDeviceFlow(clientId: string): Promise<string> {
       expires_in: number;
     };
 
-  process.stderr.write(
-    `\n  Visit ${verification_uri} and enter this code: ${user_code}\n  (waiting for approval…)\n`,
-  );
+  // Route through ctx.log so the CLI pauses its spinner — a bare stderr write
+  // here is repainted over by the spinner and the user never sees the code.
+  ctx.log({
+    level: "info",
+    msg: `Visit ${verification_uri} and enter this code: ${user_code} (waiting for approval…)`,
+  });
 
   // 2. Poll for the token.
   const deadline = Date.now() + expires_in * 1000;
