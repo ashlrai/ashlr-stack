@@ -9,7 +9,7 @@ import {
 } from "@ashlr/stack-core";
 import { defineCommand } from "citty";
 import { requirePhantom } from "../lib/phantom-preflight.ts";
-import { colors, intro, logEvent, outro, outroError, prompts } from "../ui.ts";
+import { colors, intro, outro, outroError, prompts, spinnerBridge } from "../ui.ts";
 
 /**
  * `stack scan` — look at the current repo's source (package.json, config files,
@@ -163,11 +163,7 @@ export const scanCommand = defineCommand({
             providerName: h.provider,
             cwd,
             interactive: false,
-            log: (event) => {
-              spinner.stop();
-              logEvent(event);
-              spinner.start(`Adding ${h.provider}…`);
-            },
+            ...spinnerBridge(spinner, `Adding ${h.provider}…`),
           });
           spinner.stop(`${colors.green("●")} ${h.provider} → ${result.displayName}`);
         } catch (err) {
@@ -191,11 +187,7 @@ export const scanCommand = defineCommand({
           providerName: h.provider,
           cwd,
           interactive: true,
-          log: (event) => {
-            spinner.stop();
-            logEvent(event);
-            spinner.start(`Adding ${h.provider}…`);
-          },
+          ...spinnerBridge(spinner, `Adding ${h.provider}…`),
         });
         spinner.stop(`${colors.green("●")} ${h.provider} → ${result.displayName}`);
       } catch (err) {

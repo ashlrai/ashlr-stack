@@ -11,7 +11,7 @@ import type {
   ProviderContext,
   Resource,
 } from "./_base.ts";
-import { readLine, tryRevealSecret } from "./_helpers.ts";
+import { promptSecret, tryRevealSecret } from "./_helpers.ts";
 
 /**
  * Factory for API-key-paste providers (OpenAI, Anthropic, xAI, DeepSeek, Resend,
@@ -66,8 +66,10 @@ export function makeApiKeyProvider(spec: ApiKeyProviderSpec): Provider {
           `${spec.displayName}: no valid key in vault and session is non-interactive.`,
         );
       }
-      process.stderr.write(`\n  ${spec.howTo}\n  Paste your ${spec.displayName} API key: `);
-      const key = (await readLine()).trim();
+      const key = await promptSecret(ctx, {
+        message: `Paste your ${spec.displayName} API key`,
+        howTo: spec.howTo,
+      });
       if (!key)
         throw new StackError(`${spec.name.toUpperCase()}_AUTH_REQUIRED`, "No key provided.");
       const identity = await spec.verify(key);

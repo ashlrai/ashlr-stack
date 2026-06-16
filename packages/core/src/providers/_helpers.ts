@@ -1,5 +1,6 @@
 import { type RetryOptions, fetchWithRetry } from "../http.ts";
 import { revealSecret } from "../phantom.ts";
+import type { ProviderContext } from "./_base.ts";
 
 /**
  * Shared helpers for every hand-written provider. Before this existed, each
@@ -17,8 +18,30 @@ export async function tryRevealSecret(key: string): Promise<string | undefined> 
 }
 
 /**
- * Read a single line from stdin. Used by every provider's PAT-paste fallback
- * when no OAuth client is configured. Resumes stdin, reads until newline, then
+ * Prompt the user for a credential. When the host supplies `ctx.prompt` (the
+ * CLI always does), the request goes through it — the CLI pauses its spinner,
+ * runs a @clack prompt, then resumes. This is the ONLY safe way to read a
+ * credential while a spinner is running: writing the prompt to stderr directly
+ * gets clobbered by the spinner's repaint and `stack add` looks like it hung.
+ *
+ * Falls back to a bare stderr-prompt + stdin read for non-CLI hosts and tests,
+ * where no spinner is competing for the terminal.
+ */
+export async function promptSecret(
+  ctx: ProviderContext,
+  req: { message: string; howTo?: string },
+): Promise<string> {
+  if (ctx.prompt) {
+    return (await ctx.prompt({ message: req.message, howTo: req.howTo, secret: true })).trim();
+  }
+  if (req.howTo) process.stderr.write(`\n  ${req.howTo}\n`);
+  process.stderr.write(`  ${req.message}: `);
+  return (await readLine()).trim();
+}
+
+/**
+ * Read a single line from stdin. Used by `promptSecret`'s non-CLI fallback when
+ * no host prompt is configured. Resumes stdin, reads until newline, then
  * pauses stdin so the parent process doesn't hang waiting for EOF.
  */
 export async function readLine(): Promise<string> {

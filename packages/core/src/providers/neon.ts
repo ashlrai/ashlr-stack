@@ -11,7 +11,7 @@ import type {
   ProvisionOpts,
   Resource,
 } from "./_base.ts";
-import { readLine, tryRevealSecret } from "./_helpers.ts";
+import { promptSecret, tryRevealSecret } from "./_helpers.ts";
 
 /**
  * Neon — serverless Postgres. v1 uses a Neon API key (users create one at
@@ -41,10 +41,10 @@ const neon: Provider = {
     }
     if (!ctx.interactive)
       throw new StackError("NEON_AUTH_REQUIRED", "No valid Neon API key in vault.");
-    process.stderr.write(
-      "\n  Create a Neon API key at https://console.neon.tech/app/settings/api-keys\n  Paste it here: ",
-    );
-    const token = (await readLine()).trim();
+    const token = await promptSecret(ctx, {
+      message: "Paste your Neon API key",
+      howTo: "Create a Neon API key at https://console.neon.tech/app/settings/api-keys",
+    });
     const identity = await fetchIdentity(token);
     if (!identity) throw new StackError("NEON_AUTH_INVALID", "Neon rejected that API key.");
     await addSecret(TOKEN_SECRET, token);

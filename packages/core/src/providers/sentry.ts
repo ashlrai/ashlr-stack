@@ -11,7 +11,7 @@ import type {
   ProvisionOpts,
   Resource,
 } from "./_base.ts";
-import { readLine, tryRevealSecret } from "./_helpers.ts";
+import { promptSecret, tryRevealSecret } from "./_helpers.ts";
 
 /**
  * Sentry — error tracking. v1 uses an Auth Token (users create one at
@@ -40,10 +40,11 @@ const sentry: Provider = {
       ctx.log({ level: "warn", msg: "Cached Sentry token invalid." });
     }
     if (!ctx.interactive) throw new StackError("SENTRY_AUTH_REQUIRED", "No valid Sentry token.");
-    process.stderr.write(
-      "\n  Create a Sentry Auth Token at https://sentry.io/settings/account/api/auth-tokens/\n  Required scopes: project:write, org:read\n  Paste it here: ",
-    );
-    const token = (await readLine()).trim();
+    const token = await promptSecret(ctx, {
+      message: "Paste your Sentry Auth Token",
+      howTo:
+        "Create a Sentry Auth Token at https://sentry.io/settings/account/api/auth-tokens/ (scopes: project:write, org:read)",
+    });
     const identity = await fetchIdentity(token);
     if (!identity) throw new StackError("SENTRY_AUTH_INVALID", "Sentry rejected that token.");
     await addSecret(TOKEN_SECRET, token);

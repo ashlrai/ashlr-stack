@@ -10,7 +10,7 @@ import {
 } from "@ashlr/stack-core";
 import { defineCommand } from "citty";
 import { requirePhantom } from "../lib/phantom-preflight.ts";
-import { colors, intro, logEvent, outro, outroError, prompts } from "../ui.ts";
+import { colors, intro, outro, outroError, prompts, spinnerBridge } from "../ui.ts";
 
 export const addCommand = defineCommand({
   meta: {
@@ -147,11 +147,7 @@ export const addCommand = defineCommand({
         existingResourceId: args.use ? String(args.use) : undefined,
         hints: args.region ? { region: String(args.region) } : undefined,
         interactive: process.stdout.isTTY === true,
-        log: (event) => {
-          spinner.stop();
-          logEvent(event);
-          spinner.start(`Wiring ${service}…`);
-        },
+        ...spinnerBridge(spinner, `Wiring ${service}…`),
       });
       spinner.stop(
         `${colors.green("●")} ${result.displayName} (${result.resourceId}) · ${result.secretCount} secrets${
