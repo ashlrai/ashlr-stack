@@ -5,6 +5,12 @@
 ### Bug fixes
 
 - **Kebab-case flags now parse (`--dry-run`, `--keep-from`, `--all-orphans`, …)** — citty 0.1.6 silently dropped the documented kebab spelling of multi-word flags: a boolean arg with `default: false` shadowed the kebab-parsed value, so `--dry-run` was ignored while only `--dryRun` worked. For `stack add` this was high-severity — the documented "safe preview" form fell through to the **real** provisioning flow (live OAuth/network/vault writes). Raw argv is now normalized (`--dry-run` → `--dryRun`) before parsing, fixing every command at once while preserving camelCase, `--no-*` negation, and `--` passthrough. (`packages/cli/src/lib/normalize-args.ts`)
+- **`stack add` no longer hangs on interactive credential entry** — the CLI started a @clack spinner, then a provider's PAT/key-paste path wrote its prompt to stderr and blocked on stdin while the spinner repainted over the (now invisible) prompt. With no cached credential — e.g. a fresh repo — `stack add` appeared to hang forever. The host now owns prompting: a new `ProviderContext.prompt` plus a `spinnerBridge` helper pause the spinner around a masked @clack prompt, and all nine interactive providers route credential entry through a shared `promptSecret`. GitHub's device-code message goes through `ctx.log` for the same reason. (`packages/core/src/providers/_helpers.ts`, `packages/cli/src/ui.ts`)
+
+### CI / Release
+
+- **Release workflow no longer fails at startup** — a multi-line `git commit -m` message in the Homebrew-tap job terminated the YAML `run:` block scalar early, leaking an `Assisted-By` stray top-level key that GitHub's schema validator rejected. Every push since the v0.2 polish produced a 0-second startup failure, and the v0.2.0 npm publish never landed (npm stayed at 0.1.1). Collapsed the message to two `-m` flags. (`.github/workflows/release.yml`)
+- **npm publish migrated to Trusted Publishing (OIDC)** — replaces the long-lived `NPM_TOKEN` (which expired and hit EOTP under 2FA) with per-package GitHub-Actions trusted publishers. Nothing to rotate; provenance is attached automatically. Requires npm ≥ 11.5.1, installed in-workflow. (`.github/workflows/release.yml`)
 
 ### SEO + GEO content surface (major)
 
