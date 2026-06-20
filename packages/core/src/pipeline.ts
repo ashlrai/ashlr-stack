@@ -2,7 +2,7 @@ import { type ServiceEntry, type StackConfig, readConfig, writeConfig } from "./
 import { StackError } from "./errors.ts";
 import { mergeMcpEntry, removeMcpEntry } from "./mcp-writer.ts";
 import { addSecret, assertPhantomInstalled, removeSecret } from "./phantom.ts";
-import type { LogEvent, ProviderContext, PromptRequest } from "./providers/_base.ts";
+import type { LogEvent, PromptRequest, ProviderContext } from "./providers/_base.ts";
 import { getProvider } from "./providers/index.ts";
 
 export interface AddServiceOpts {
