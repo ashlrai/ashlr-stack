@@ -82,6 +82,9 @@ describe("normalizeKebabFlags", () => {
   });
 
   it("rewrites a kebab flag with a hyphenated value", () => {
-    expect(normalizeKebabFlags(["swap", "--keep-from=a-b-c"])).toEqual(["swap", "--keepFrom=a-b-c"]);
+    expect(normalizeKebabFlags(["swap", "--keep-from=a-b-c"])).toEqual([
+      "swap",
+      "--keepFrom=a-b-c",
+    ]);
   });
 });
