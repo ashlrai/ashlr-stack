@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { emptyConfig, writeConfig } from "../config.ts";
 import { addService } from "../pipeline.ts";
-import type { Provider, ProviderContext, PromptRequest } from "../providers/_base.ts";
+import type { PromptRequest, Provider, ProviderContext } from "../providers/_base.ts";
 import { promptSecret } from "../providers/_helpers.ts";
 import { providers } from "../providers/index.ts";
 import { type Harness, setupFakePhantom } from "./_harness.ts";
