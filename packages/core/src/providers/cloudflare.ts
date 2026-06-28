@@ -1,7 +1,8 @@
 import type { ServiceEntry } from "../config.ts";
 import { StackError } from "../errors.ts";
 import { fetchWithRetry } from "../http.ts";
-import { addSecret, revealSecret } from "../phantom.ts";
+import { addSecret } from "../phantom.ts";
+import { tryRevealSecret } from "./_helpers.ts";
 import type {
   AuthHandle,
   HealthStatus,
@@ -119,15 +120,6 @@ async function fetchAccounts(token: string): Promise<Array<{ id: string; name: s
   if (!res.ok) return [];
   const body = (await res.json()) as { result?: Array<{ id: string; name: string }> };
   return body.result ?? [];
-}
-
-async function tryRevealSecret(key: string): Promise<string | undefined> {
-  try {
-    const v = await revealSecret(key);
-    return v.length > 0 ? v : undefined;
-  } catch {
-    return undefined;
-  }
 }
 
 async function readLine(): Promise<string> {

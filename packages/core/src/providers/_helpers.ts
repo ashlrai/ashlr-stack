@@ -1,5 +1,5 @@
 import { type RetryOptions, fetchWithRetry } from "../http.ts";
-import { revealSecret } from "../phantom.ts";
+import { resolveSecret } from "@ashlr/config/secrets";
 
 /**
  * Shared helpers for every hand-written provider. Before this existed, each
@@ -8,12 +8,7 @@ import { revealSecret } from "../phantom.ts";
  */
 
 export async function tryRevealSecret(key: string): Promise<string | undefined> {
-  try {
-    const value = await revealSecret(key);
-    return value.length > 0 ? value : undefined;
-  } catch {
-    return undefined;
-  }
+  return resolveSecret(key);
 }
 
 /**

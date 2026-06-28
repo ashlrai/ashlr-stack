@@ -1,7 +1,8 @@
 import type { ServiceEntry } from "../config.ts";
 import { StackError } from "../errors.ts";
 import { fetchWithRetry } from "../http.ts";
-import { addSecret, revealSecret } from "../phantom.ts";
+import { addSecret } from "../phantom.ts";
+import { tryRevealSecret } from "./_helpers.ts";
 import type {
   AuthHandle,
   HealthStatus,
@@ -201,15 +202,6 @@ async function mintDbToken(
     );
   const body = (await res.json()) as { jwt: string };
   return body.jwt;
-}
-
-async function tryRevealSecret(key: string): Promise<string | undefined> {
-  try {
-    const v = await revealSecret(key);
-    return v.length > 0 ? v : undefined;
-  } catch {
-    return undefined;
-  }
 }
 
 async function readLine(): Promise<string> {
