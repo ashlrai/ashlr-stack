@@ -257,3 +257,17 @@ export {
   type Scope,
   type PermissionSetDefinition,
 } from "./permission-validator.ts";
+export {
+  ResourceLifecycle,
+  readLocalLifecycle,
+  writeLocalLifecycle,
+  DEFAULT_STALE_THRESHOLD_MS,
+  type ResourceLifecycleMeta,
+  type ResourceDrift,
+  type DriftKind,
+  type ReconcileResult,
+  type ReconcileSummary,
+  type LiveProbe,
+  type LiveProbeMap,
+  type LifecycleStore,
+} from "./resource-lifecycle.ts";

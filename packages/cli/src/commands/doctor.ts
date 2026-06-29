@@ -9,6 +9,7 @@ import {
   providers,
   readConfig,
   scanSource,
+  ResourceLifecycle,
 } from "@ashlr/stack-core";
 import { defineCommand } from "citty";
 import { requirePhantom } from "../lib/phantom-preflight.ts";
@@ -82,6 +83,13 @@ export const doctorCommand = defineCommand({
         "Check that all configured provider credentials are least-privilege. " +
         "Detects overprivileged tokens/keys and surfaces remediation guidance.",
     },
+    drift: {
+      type: "boolean",
+      default: false,
+      description:
+        "Surface stale, deleted, or degraded resources tracked in .stack.local.toml. " +
+        "Use `stack reconcile` to auto-remediate detected drift.",
+    },
   },
   async run({ args }) {
     const json = Boolean(args.json);
@@ -103,6 +111,12 @@ export const doctorCommand = defineCommand({
         cmd: auditPermissionsCommand,
         rawArgs: [],
       } as Parameters<NonNullable<typeof auditPermissionsCommand.run>>[0]);
+      return;
+    }
+
+    // --drift: surface stale/deleted/degraded lifecycle records.
+    if (args.drift) {
+      await runDriftCheck(process.cwd(), json);
       return;
     }
 
@@ -462,4 +476,74 @@ async function runCoverage(json: boolean): Promise<void> {
     );
   }
   console.log();
+}
+
+// ---------------------------------------------------------------------------
+// --drift: surface stale lifecycle records
+// ---------------------------------------------------------------------------
+
+/**
+ * Run a drift check against the resource lifecycle registry stored in
+ * `.stack.local.toml`.  Surfaces stale, deleted, and degraded resources.
+ * Use `stack reconcile` (or `stack reconcile --apply`) to remediate.
+ */
+async function runDriftCheck(cwd: string, json: boolean): Promise<void> {
+  const registry = await ResourceLifecycle.load(cwd);
+  const services = registry.services();
+
+  if (services.length === 0) {
+    if (json) {
+      process.stdout.write(`${JSON.stringify({ drift: [], total: 0 })}\n`);
+      return;
+    }
+    outro(colors.dim("No lifecycle records found. Resources are tracked after `stack add`."));
+    return;
+  }
+
+  // Compute drift without live probes (pure local staleness / field checks).
+  const drifts = services.map((s) => registry.computeDrift(s));
+
+  if (json) {
+    process.stdout.write(`${JSON.stringify({ drift: drifts, total: drifts.length }, null, 2)}\n`);
+    const hasDrift = drifts.some((d) => d.kind !== "ok" && d.kind !== "unknown");
+    process.exitCode = hasDrift ? 1 : 0;
+    return;
+  }
+
+  if (!json) intro("stack doctor --drift");
+
+  console.log(
+    `\n  ${colors.bold("●")} ${services.length} tracked resource(s)\n`,
+  );
+
+  let hasDrift = false;
+  for (const drift of drifts) {
+    const icon =
+      drift.kind === "ok"
+        ? colors.green("●")
+        : drift.kind === "deleted"
+          ? colors.red("✗")
+          : drift.kind === "degraded"
+            ? colors.yellow("▲")
+            : drift.kind === "stale"
+              ? colors.cyan("○")
+              : colors.dim("?");
+
+    console.log(`  ${icon} ${colors.bold(drift.service)} ${colors.dim(`[${drift.kind}]`)}`);
+    if (drift.kind !== "ok") {
+      console.log(`    ${colors.dim(drift.detail)}`);
+      hasDrift = true;
+    }
+  }
+
+  console.log();
+
+  if (hasDrift) {
+    process.exitCode = 1;
+    outroError(
+      `Drift detected. Run ${colors.bold("stack reconcile")} to inspect or ${colors.bold("stack reconcile --apply")} to fix.`,
+    );
+  } else {
+    outro(colors.green("All tracked resources are up to date."));
+  }
 }
