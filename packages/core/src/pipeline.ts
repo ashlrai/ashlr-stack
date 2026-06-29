@@ -1,6 +1,11 @@
 import { type ServiceEntry, type StackConfig, readConfig, writeConfig } from "./config.ts";
 import { type DryRunAddServiceOpts, dryRunAddService } from "./dry-run.ts";
 import { StackError } from "./errors.ts";
+import {
+  buildReplayRecord,
+  captureProvisionError,
+  saveReplayRecord,
+} from "./errors/provision-errors.ts";
 import { instrumentation } from "./instrumentation.ts";
 import type { RollbackItem } from "./instrumentation.ts";
 import { mergeMcpEntry, removeMcpEntry } from "./mcp-writer.ts";
@@ -173,6 +178,13 @@ export async function addService(opts: AddServiceOpts): Promise<AddServiceResult
     const code = err instanceof StackError ? err.code : undefined;
     const status = code === "PROVISION_TIMEOUT" ? "timeout" : "failure";
     instrumentation.recordStep("login", provider.name, 0, status, (err as Error).message, code);
+    const report = captureProvisionError(err, {
+      providerName: provider.name,
+      stepName: "login",
+      attemptCount: 1,
+      elapsedMs: 0,
+    }, cwd);
+    saveReplayRecord(buildReplayRecord(report), cwd);
     throw err;
   }
 
@@ -193,6 +205,13 @@ export async function addService(opts: AddServiceOpts): Promise<AddServiceResult
     const code = err instanceof StackError ? err.code : undefined;
     const status = code === "PROVISION_TIMEOUT" ? "timeout" : "failure";
     instrumentation.recordStep("provision", provider.name, 0, status, (err as Error).message, code);
+    const provisionReport = captureProvisionError(err, {
+      providerName: provider.name,
+      stepName: "provision",
+      attemptCount: 1,
+      elapsedMs: 0,
+    }, cwd);
+    saveReplayRecord(buildReplayRecord(provisionReport), cwd);
     if (
       err instanceof StackError &&
       err.code === "PROVISION_TIMEOUT" &&
@@ -293,6 +312,13 @@ export async function addService(opts: AddServiceOpts): Promise<AddServiceResult
       (err as Error).message,
       errCode,
     );
+    const materializeReport = captureProvisionError(err, {
+      providerName: provider.name,
+      stepName: failStep,
+      attemptCount: 1,
+      elapsedMs: 0,
+    }, cwd);
+    saveReplayRecord(buildReplayRecord(materializeReport), cwd);
 
     // --- Atomic rollback ---
     // 1. Remove any Phantom secrets already written.

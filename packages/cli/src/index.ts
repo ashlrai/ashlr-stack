@@ -20,6 +20,7 @@ import { projectsCommand } from "./commands/projects.ts";
 import { providersCommand } from "./commands/providers.ts";
 import { recommendCommand } from "./commands/recommend.ts";
 import { removeCommand } from "./commands/remove.ts";
+import { replayCommand } from "./commands/replay.ts";
 import { scanCommand } from "./commands/scan.ts";
 import { statusCommand } from "./commands/status.ts";
 import { swapCommand } from "./commands/swap.ts";
@@ -108,6 +109,7 @@ const main = defineCommand({
     templates: templatesCommand,
     providers: providersCommand,
     recommend: recommendCommand,
+    replay: replayCommand,
     apply: applyCommand,
     projects: projectsCommand,
     ci: ciCommand,

@@ -33,7 +33,8 @@
     "./phantom": "./src/phantom.ts",
     "./config": "./src/config.ts",
     "./mcp-writer": "./src/mcp-writer.ts",
-    "./dry-run": "./src/dry-run.ts"
+    "./dry-run": "./src/dry-run.ts",
+    "./errors/provision-errors": "./src/errors/provision-errors.ts"
   },
   "files": [
     "src/**/*",

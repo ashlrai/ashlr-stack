@@ -109,6 +109,24 @@ export {
   type SchemaViolation,
 } from "./provision-schema.ts";
 export {
+  captureProvisionError,
+  classifyError,
+  sanitizeBody,
+  buildHints,
+  buildReplayRecord,
+  saveReplayRecord,
+  loadReplayRecord,
+  loadProvisionErrorReport,
+  printProvisionError,
+  type ProvisionErrorCode,
+  type ProvisionErrorReport,
+  type ProvisionErrorContext,
+  type RecoveryHint,
+  type RetryPolicy,
+  type RequestSnapshot,
+  type ReplayRecord,
+} from "./errors/provision-errors.ts";
+export {
   dryRunProvider,
   dryRunProviders,
   dryRunAddService,
