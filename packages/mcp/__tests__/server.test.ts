@@ -15,7 +15,7 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 
 const SERVER_PATH = join(import.meta.dir, "..", "dist", "server.js");
 
-// Expected tool names as defined in server.ts TOOLS array (19 tools).
+// Expected tool names as defined in server.ts TOOLS array (20 tools).
 const EXPECTED_TOOL_NAMES = [
   "stack_init",
   "stack_import",
@@ -36,6 +36,7 @@ const EXPECTED_TOOL_NAMES = [
   "stack_upgrade",
   "stack_recommend",
   "stack_apply",
+  "stack_pricing_lookup",
 ];
 
 let client: Client;
@@ -87,7 +88,8 @@ describe("MCP server smoke tests", () => {
 
   test("tools/list returns the expected tool count", async () => {
     const response = await client.listTools();
-    // Report actual count — plan says 20, description says 19.
+    // The server exposes exactly the tools enumerated in EXPECTED_TOOL_NAMES;
+    // a mismatch means server.ts gained/lost a tool without updating this list.
     expect(response.tools.length).toBe(EXPECTED_TOOL_NAMES.length);
   });
 
