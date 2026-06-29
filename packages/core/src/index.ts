@@ -112,19 +112,26 @@ export {
 } from "./ai/cost-tracker.ts";
 export {
   ProvisionSchemaValidationError,
+  SchemaValidator,
+  schemaValidator,
   generateTypeScript,
   getProviderSchema,
   listRegisteredSchemas,
   registerProviderSchema,
   resolvePath,
+  runValidateOnly,
+  formatValidateOnlyResults,
   validateProvisionResponse,
   validateSchema,
   validateSchemaCompleteness,
+  type CompiledValidator,
   type JsonSchemaProperty,
   type JsonSchemaType,
   type ProvisionResponseSchema,
+  type ProvisionResponseSchemaWithVersion,
   type SchemaCompletenessResult,
   type SchemaViolation,
+  type ValidateOnlyResult,
 } from "./provision-schema.ts";
 export {
   captureProvisionError,

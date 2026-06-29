@@ -776,6 +776,212 @@ registerProviderSchema("github", {
 });
 
 // ---------------------------------------------------------------------------
+// SchemaValidator — compiled + cached validators
+// ---------------------------------------------------------------------------
+
+/**
+ * A compiled validator entry cached by provider name.
+ * Stores both the schema reference and a pre-built validation function so
+ * compilation is amortised across repeated calls (e.g. during `--validate-only`
+ * batch runs or high-frequency pipeline tests).
+ */
+export interface CompiledValidator {
+  providerName: string;
+  schemaVersion: string;
+  /** Direct reference to the registered ProvisionResponseSchema */
+  schema: ProvisionResponseSchema;
+  /**
+   * Compiled validation function — runs the schema validator and returns
+   * violations. Equivalent to `validateSchema(raw, schema.schema)` but cached
+   * so the schema property lookup is skipped on each call.
+   */
+  validate(raw: unknown): SchemaViolation[];
+  /**
+   * Validate raw AND extract a typed Resource in one step.
+   * Throws `ProvisionSchemaValidationError` on violations.
+   */
+  validateAndExtract(raw: unknown): Resource;
+}
+
+/**
+ * `SchemaValidator` compiles provider schemas into runtime validators and
+ * caches them by provider name. Compilation is O(1) (just a closure over the
+ * schema object) but caching avoids repeated registry lookups in tight loops.
+ *
+ * Usage:
+ * ```ts
+ * const sv = new SchemaValidator();
+ * const validator = sv.compile("neon");      // compiles + caches
+ * const resource  = validator.validateAndExtract(rawApiResponse);
+ * ```
+ */
+export class SchemaValidator {
+  private readonly _cache = new Map<string, CompiledValidator>();
+
+  /**
+   * Compile (or return cached) a validator for `providerName`.
+   * Returns `undefined` when no schema is registered for the provider.
+   * Callers that need strict enforcement should check for `undefined`.
+   */
+  compile(providerName: string): CompiledValidator | undefined {
+    const key = providerName.toLowerCase();
+    if (this._cache.has(key)) return this._cache.get(key)!;
+
+    const schema = getProviderSchema(key);
+    if (!schema) return undefined;
+
+    const compiled: CompiledValidator = {
+      providerName: key,
+      schemaVersion: (schema as ProvisionResponseSchemaWithVersion).schemaVersion ?? "1.0.0",
+      schema,
+      validate: (raw: unknown) => validateSchema(raw, schema.schema),
+      validateAndExtract: (raw: unknown) => validateProvisionResponse(key, raw),
+    };
+    this._cache.set(key, compiled);
+    return compiled;
+  }
+
+  /**
+   * Invalidate the cached entry for `providerName`.
+   * Call after `registerProviderSchema()` to force recompilation.
+   */
+  invalidate(providerName: string): void {
+    this._cache.delete(providerName.toLowerCase());
+  }
+
+  /** Clear the entire cache. */
+  clear(): void {
+    this._cache.clear();
+  }
+
+  /** Return the number of currently-cached compiled validators. */
+  get size(): number {
+    return this._cache.size;
+  }
+
+  /**
+   * Return all currently-cached provider names (sorted).
+   */
+  cachedProviders(): string[] {
+    return [...this._cache.keys()].sort();
+  }
+}
+
+/** Module-level singleton validator — shared across pipeline calls. */
+export const schemaValidator = new SchemaValidator();
+
+// ---------------------------------------------------------------------------
+// Provider schema version typing
+// ---------------------------------------------------------------------------
+
+/**
+ * Extended ProvisionResponseSchema that carries an optional `schemaVersion`
+ * string (semver). Providers that declare `provisionResponseSchema` on their
+ * Provider object should also set this to enable cache invalidation and
+ * changelog tracking.
+ */
+export interface ProvisionResponseSchemaWithVersion extends ProvisionResponseSchema {
+  /**
+   * Semver string for this schema definition, e.g. "1.0.0".
+   * Used by SchemaValidator to tag compiled entries and by `stack validate-schema`
+   * to surface schema-version drift across providers.
+   */
+  schemaVersion?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Validate-only mode  (for `stack validate-schema --validate-only`)
+// ---------------------------------------------------------------------------
+
+export interface ValidateOnlyResult {
+  providerName: string;
+  schemaVersion: string;
+  passed: boolean;
+  violations: SchemaViolation[];
+  /**
+   * Time taken to run the validator in microseconds (wall-clock).
+   * Useful for benchmarking schema compile + validate overhead.
+   */
+  durationUs: number;
+}
+
+/**
+ * Run validators against a map of `{ providerName → mockResponse }` without
+ * persisting anything. This is the `--validate-only` mode used by
+ * `stack validate-schema`.
+ *
+ * Each entry is compiled (or fetched from cache) and validated. The results
+ * are returned in the same order as the input entries.
+ *
+ * @param mocks   Map of provider name → raw mock response object
+ * @param sv      Optional SchemaValidator instance (defaults to module singleton)
+ * @returns       Array of per-provider results
+ */
+export function runValidateOnly(
+  mocks: Record<string, unknown>,
+  sv: SchemaValidator = schemaValidator,
+): ValidateOnlyResult[] {
+  const results: ValidateOnlyResult[] = [];
+
+  for (const [providerName, mockResponse] of Object.entries(mocks)) {
+    const t0 = performance.now();
+    const validator = sv.compile(providerName);
+
+    if (!validator) {
+      const durationUs = Math.round((performance.now() - t0) * 1000);
+      results.push({
+        providerName,
+        schemaVersion: "unknown",
+        passed: false,
+        violations: [{ path: "$", message: `no schema registered for provider "${providerName}"` }],
+        durationUs,
+      });
+      continue;
+    }
+
+    const violations = validator.validate(mockResponse);
+    const durationUs = Math.round((performance.now() - t0) * 1000);
+
+    results.push({
+      providerName,
+      schemaVersion: validator.schemaVersion,
+      passed: violations.length === 0,
+      violations,
+      durationUs,
+    });
+  }
+
+  return results;
+}
+
+/**
+ * Format a `runValidateOnly` result array as a human-readable string suitable
+ * for CLI output. Mirrors the style of `stack validate-schema --validate-only`.
+ *
+ * Example output:
+ * ```
+ * neon          PASS (v1.0.0) — 12 µs
+ * stripe        FAIL (v1.0.0) — $.id: required field missing
+ * ```
+ */
+export function formatValidateOnlyResults(results: ValidateOnlyResult[]): string {
+  return results
+    .map((r) => {
+      const status = r.passed ? "PASS" : "FAIL";
+      const version = `v${r.schemaVersion}`;
+      if (r.passed) {
+        return `${r.providerName.padEnd(20)} ${status} (${version}) — ${r.durationUs} µs`;
+      }
+      const detail = r.violations
+        .slice(0, 3)
+        .map((v) => `${v.path}: ${v.message}`)
+        .join("; ");
+      return `${r.providerName.padEnd(20)} ${status} (${version}) — ${detail}`;
+    })
+    .join("\n");
+}
+
+// ---------------------------------------------------------------------------
 // Built-in schemas: remaining 34 providers
 // ---------------------------------------------------------------------------
 

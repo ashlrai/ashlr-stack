@@ -186,6 +186,32 @@ export interface Provider {
   /** Human-readable docs URL for when something goes wrong. */
   docs?: string;
 
+  /**
+   * Semver string for the provider's `provisionResponseSchema` definition.
+   * e.g. "1.0.0". Increment this when the schema changes to allow cache
+   * invalidation and `stack validate-schema` version-drift detection.
+   *
+   * Optional — defaults to "1.0.0" when not declared.
+   */
+  schemaVersion?: string;
+
+  /**
+   * OpenAPI 3.1–compatible JSON Schema fragment describing the expected shape
+   * of the raw object returned by `provision()`. When declared here the pipeline
+   * auto-registers it via `registerProviderSchema()` at startup and the
+   * `SchemaValidator` uses it to validate every provision response before
+   * persisting to `.stack.toml` or Phantom.
+   *
+   * The schema must be a `JsonSchemaProperty` with `type: "object"`.
+   * Required fields must map to at least `id` and `displayName` (or their
+   * provider-specific equivalents as declared in the `mapping` block).
+   *
+   * Optional — if omitted the provider falls back to the built-in schema
+   * registered in `provision-schema.ts` (if any), or passes through without
+   * validation in non-strict mode.
+   */
+  provisionResponseSchema?: import("../provision-schema.ts").ProvisionResponseSchemaWithVersion;
+
   login(ctx: ProviderContext): Promise<AuthHandle>;
   provision(ctx: ProviderContext, auth: AuthHandle, opts: ProvisionOpts): Promise<Resource>;
   materialize(ctx: ProviderContext, resource: Resource, auth: AuthHandle): Promise<Materialized>;
