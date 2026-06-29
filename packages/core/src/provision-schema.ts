@@ -544,6 +544,227 @@ function jsonSchemaToTsType(prop: JsonSchemaProperty): string {
 }
 
 // ---------------------------------------------------------------------------
+// Runtime coercion for common shape mismatches
+// ---------------------------------------------------------------------------
+
+/**
+ * Coercion result — the normalised value plus a list of coercions applied.
+ */
+export interface CoercionResult {
+  /** Coerced value, ready to feed into validateSchema / resolvePath. */
+  value: unknown;
+  /** Human-readable descriptions of each coercion that was applied. */
+  coercions: string[];
+}
+
+/**
+ * Apply common shape-coercions to a raw provision API response before schema
+ * validation. This prevents silent failures when provider APIs evolve in
+ * backwards-compatible ways (e.g. returning a numeric id instead of string).
+ *
+ * Coercions applied (in order):
+ *   1. `null` / `undefined` top-level value → empty object `{}`
+ *   2. Non-object primitives wrapped in `{ value: <original> }` (best-effort)
+ *   3. Numeric `id` field → coerced to `String(id)` (provider APIs sometimes
+ *      return numeric ids, e.g. GitHub's `id` field in some contexts)
+ *   4. Missing `displayName` → falls back to `name`, then `login`, then `id`
+ *   5. Nested id path flattening: if the schema mapping.id contains a dot
+ *      (e.g. `"project.id"`) and the top-level `id` field is absent, the
+ *      nested value is promoted to `id` so downstream consumers can read it
+ *      without re-resolving the path.
+ *
+ * This function does NOT mutate the original object — it returns a shallow
+ * copy with only the coerced fields replaced.
+ */
+export function coerceProvisionResponse(
+  providerName: string,
+  raw: unknown,
+): CoercionResult {
+  const coercions: string[] = [];
+  const schema = getProviderSchema(providerName);
+
+  // 1. Handle null / undefined top-level
+  if (raw === null || raw === undefined) {
+    coercions.push(`coerced null/undefined top-level to empty object for ${providerName}`);
+    return { value: {}, coercions };
+  }
+
+  // 2. Handle non-object primitives
+  if (!isObject(raw) && !Array.isArray(raw)) {
+    coercions.push(
+      `coerced primitive ${typeof raw} to { value: ${String(raw)} } for ${providerName}`,
+    );
+    return { value: { value: raw }, coercions };
+  }
+
+  if (!isObject(raw)) {
+    // Array — not a valid provision response; return as-is for schema to reject
+    return { value: raw, coercions };
+  }
+
+  // Work on a shallow copy so we never mutate the caller's object
+  const obj: Record<string, unknown> = { ...raw };
+
+  // 3. Numeric id → string coercion
+  // Only coerce when the schema's id field is mapped to "id" AND the schema
+  // declares id as type "string". Providers like GitHub declare id as integer
+  // so we must not coerce it.
+  if (typeof obj.id === "number") {
+    const idProp = schema?.schema?.properties?.["id"];
+    const idTypes = idProp
+      ? Array.isArray(idProp.type) ? idProp.type : idProp.type ? [idProp.type] : []
+      : [];
+    const idExpectsString = idTypes.includes("string") && !idTypes.includes("integer");
+    // When no schema is registered, coerce by default (safe fallback)
+    const shouldCoerce = idExpectsString || !schema;
+    if (shouldCoerce) {
+      coercions.push(
+        `coerced numeric id ${obj.id} → "${String(obj.id)}" for ${providerName}`,
+      );
+      obj.id = String(obj.id);
+    }
+  }
+
+  // 4. Missing displayName fallback chain
+  if (obj.displayName === undefined || obj.displayName === null) {
+    const fallback = obj.name ?? obj.login ?? obj.id;
+    if (fallback !== undefined && fallback !== null) {
+      coercions.push(
+        `coerced missing displayName to "${String(fallback)}" (from ${
+          obj.name !== undefined ? "name" : obj.login !== undefined ? "login" : "id"
+        }) for ${providerName}`,
+      );
+      obj.displayName = String(fallback);
+    }
+  }
+
+  // 5. Nested id path flattening — only when schema has a dotted mapping.id
+  if (schema && schema.mapping.id.includes(".")) {
+    const nestedId = resolvePath(obj, schema.mapping.id);
+    if (nestedId !== undefined && obj.id === undefined) {
+      coercions.push(
+        `promoted nested id path "${schema.mapping.id}" → top-level id="${String(nestedId)}" for ${providerName}`,
+      );
+      obj.id = String(nestedId);
+    }
+  }
+
+  // 6. String → number coercion for known integer fields
+  // Some provider APIs return pg_version or similar as a string in older SDKs.
+  if (typeof obj.pg_version === "string" && /^\d+$/.test(obj.pg_version)) {
+    coercions.push(
+      `coerced string pg_version "${obj.pg_version}" → integer ${Number(obj.pg_version)} for ${providerName}`,
+    );
+    obj.pg_version = Number(obj.pg_version);
+  }
+
+  return { value: obj, coercions };
+}
+
+// ---------------------------------------------------------------------------
+// Build-time schema registry scan
+// ---------------------------------------------------------------------------
+
+/**
+ * Result of a single provider's registry scan entry.
+ */
+export interface RegistryScanEntry {
+  providerName: string;
+  inRegistry: boolean;
+  hasSchema: boolean;
+  /** True when both inRegistry and hasSchema are true. */
+  compliant: boolean;
+  issues: string[];
+}
+
+/**
+ * Result of `scanProviderSchemaRegistry()`.
+ */
+export interface RegistryScanResult {
+  /**
+   * Total number of providers checked (union of adapter registry + schema registry).
+   */
+  total: number;
+  /** Providers that are fully compliant (adapter + schema both present). */
+  compliant: string[];
+  /** Providers that have an adapter but no schema registered. */
+  missingSchema: string[];
+  /** Per-provider detail entries. */
+  entries: RegistryScanEntry[];
+  /** True when every provider in `knownProviders` has a registered schema. */
+  allCompliant: boolean;
+}
+
+/**
+ * Scan the provider schema registry against a list of known provider adapter
+ * names. Returns a detailed result identifying any provider that has an adapter
+ * but no schema registered.
+ *
+ * This is the **build-time** gate: if `result.missingSchema.length > 0` the
+ * build script should throw or exit non-zero so CI catches schema gaps early.
+ *
+ * Usage in a build script:
+ * ```ts
+ * import { scanProviderSchemaRegistry } from "./provision-schema.ts";
+ * import { listProviderNames } from "./providers/index.ts";
+ *
+ * const result = scanProviderSchemaRegistry(listProviderNames());
+ * if (!result.allCompliant) {
+ *   console.error("Missing schemas for:", result.missingSchema.join(", "));
+ *   process.exit(1);
+ * }
+ * ```
+ *
+ * @param knownProviders  List of provider adapter names from the registry
+ *                        (e.g. from `listProviderNames()`).
+ */
+export function scanProviderSchemaRegistry(
+  knownProviders: string[],
+): RegistryScanResult {
+  const registeredSchemas = new Set(listRegisteredSchemas());
+  const entries: RegistryScanEntry[] = [];
+  const compliant: string[] = [];
+  const missingSchema: string[] = [];
+
+  // Check every known adapter
+  for (const name of knownProviders) {
+    const hasSchema = registeredSchemas.has(name.toLowerCase());
+    const issues: string[] = [];
+    if (!hasSchema) {
+      issues.push(
+        `provider adapter "${name}" exists but has no schema registered in ProviderSchemaRegistry. ` +
+          `Call registerProviderSchema("${name}", { ... }) in provision-schema.ts.`,
+      );
+      missingSchema.push(name);
+    } else {
+      compliant.push(name);
+    }
+    entries.push({ providerName: name, inRegistry: true, hasSchema, compliant: hasSchema, issues });
+  }
+
+  // Also surface schemas that have no matching adapter (informational only — not a failure)
+  for (const schemaName of registeredSchemas) {
+    if (!knownProviders.map((n) => n.toLowerCase()).includes(schemaName)) {
+      entries.push({
+        providerName: schemaName,
+        inRegistry: false,
+        hasSchema: true,
+        compliant: true, // schema-only entries are not a compliance failure
+        issues: [`schema registered for "${schemaName}" but no matching provider adapter found`],
+      });
+    }
+  }
+
+  return {
+    total: entries.length,
+    compliant,
+    missingSchema,
+    entries,
+    allCompliant: missingSchema.length === 0,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Built-in schemas: 5 high-value providers
 // ---------------------------------------------------------------------------
 
@@ -1703,3 +1924,185 @@ registerProviderSchema("workos", {
     additionalProperties: true,
   },
 });
+
+// ---------------------------------------------------------------------------
+// validateSchemaAgainstReal — cross-check schema against recorded responses
+// ---------------------------------------------------------------------------
+
+/**
+ * Result of a single field cross-check in `validateSchemaAgainstReal`.
+ */
+export interface SchemaRealCheckViolation {
+  /** JSON path of the mismatched field. */
+  path: string;
+  /** Human-readable description of the mismatch. */
+  message: string;
+  /** The value found in the real response (if available). */
+  realValue?: unknown;
+}
+
+/**
+ * Result of `validateSchemaAgainstReal()`.
+ */
+export interface SchemaRealCheckResult {
+  providerName: string;
+  /** True when the schema is neither over- nor under-specified relative to the real response. */
+  aligned: boolean;
+  /**
+   * Fields present in the real response but absent from the schema's `properties`
+   * (schema is under-specified: missing coverage for real fields).
+   */
+  undocumentedFields: string[];
+  /**
+   * Schema `required` fields absent from the real response
+   * (schema is over-specified: requiring fields the API doesn't always return).
+   */
+  missingRequiredFields: string[];
+  /**
+   * Fields whose type in the real response doesn't match the schema declaration.
+   */
+  typeMismatches: SchemaRealCheckViolation[];
+  /**
+   * Raw schema violations produced by running `validateSchema` against the real response.
+   * Non-empty means the schema would REJECT this real response — a regression risk.
+   */
+  schemaViolations: SchemaViolation[];
+}
+
+/**
+ * Cross-check a provider's registered schema against a set of "real" (or
+ * recorded) API responses. This function is the schema drift detector: if a
+ * provider's API response changes shape, this function catches it at the schema
+ * level before it breaks provisioning in production.
+ *
+ * Three checks are performed:
+ *   1. **Under-specification** — real fields absent from `schema.properties`
+ *      are flagged in `undocumentedFields`. The schema should document all
+ *      fields the API actually returns so downstream consumers can rely on them.
+ *   2. **Over-specification** — `required` fields in the schema that are absent
+ *      from the real response are flagged in `missingRequiredFields`. This
+ *      would cause `validateSchema` to reject a valid real response.
+ *   3. **Type drift** — for each field present in both the schema and the real
+ *      response, the actual JSON type is compared to the declared schema type.
+ *      Mismatches are flagged in `typeMismatches`.
+ *
+ * The `schemaViolations` array is populated by running the full `validateSchema`
+ * validator against each real response. If non-empty, the schema would REJECT
+ * these responses — which is a hard regression indicator.
+ *
+ * @param providerName   Provider to look up in the registry.
+ * @param realResponses  One or more recorded real API responses to cross-check.
+ *                       At least one response is required for a useful check.
+ * @returns              A `SchemaRealCheckResult` per response, aggregated into
+ *                       one result (fields are unioned across all responses).
+ */
+export function validateSchemaAgainstReal(
+  providerName: string,
+  realResponses: unknown[],
+): SchemaRealCheckResult {
+  const schema = getProviderSchema(providerName);
+  const result: SchemaRealCheckResult = {
+    providerName,
+    aligned: false,
+    undocumentedFields: [],
+    missingRequiredFields: [],
+    typeMismatches: [],
+    schemaViolations: [],
+  };
+
+  if (!schema) {
+    result.typeMismatches.push({
+      path: "$",
+      message: `no schema registered for provider "${providerName}"`,
+    });
+    return result;
+  }
+
+  const schemaProperties = schema.schema.properties ?? {};
+  const requiredFields = schema.schema.required ?? [];
+  const undocumentedSet = new Set<string>();
+  const missingRequiredSet = new Set<string>();
+  const typeMismatchMap = new Map<string, SchemaRealCheckViolation>();
+  const allViolations: SchemaViolation[] = [];
+
+  for (const realResponse of realResponses) {
+    // Run the full schema validator — detects if this real response would be rejected
+    const violations = validateSchema(realResponse, schema.schema);
+    allViolations.push(...violations);
+
+    if (!isObject(realResponse)) continue;
+
+    // Check 1: undocumented fields (schema under-specification)
+    for (const key of Object.keys(realResponse)) {
+      if (!(key in schemaProperties)) {
+        undocumentedSet.add(key);
+      }
+    }
+
+    // Check 2: over-specified required fields (present in schema.required but absent from real response)
+    for (const req of requiredFields) {
+      if (!(req in realResponse)) {
+        missingRequiredSet.add(req);
+      }
+    }
+
+    // Check 3: type drift for documented fields
+    for (const [key, propSchema] of Object.entries(schemaProperties)) {
+      if (!(key in realResponse)) continue;
+      const realValue = (realResponse as Record<string, unknown>)[key];
+      if (realValue === null || realValue === undefined) continue;
+
+      const allowedTypes: JsonSchemaType[] = Array.isArray(propSchema.type)
+        ? [...propSchema.type]
+        : propSchema.type
+          ? [propSchema.type]
+          : [];
+      if (propSchema.nullable && !allowedTypes.includes("null")) allowedTypes.push("null");
+
+      if (allowedTypes.length > 0) {
+        const actualType = getJsonTypeForReal(realValue);
+        const matches = allowedTypes.some((t) => typeMatchesForReal(actualType, t, realValue));
+        if (!matches && !typeMismatchMap.has(key)) {
+          typeMismatchMap.set(key, {
+            path: `$.${key}`,
+            message: `schema declares type "${allowedTypes.join("|")}" but real response has type "${actualType}"`,
+            realValue,
+          });
+        }
+      }
+    }
+  }
+
+  result.undocumentedFields = [...undocumentedSet].sort();
+  result.missingRequiredFields = [...missingRequiredSet].sort();
+  result.typeMismatches = [...typeMismatchMap.values()];
+  result.schemaViolations = allViolations;
+
+  // aligned = schema would accept all real responses AND has no type drift
+  result.aligned =
+    allViolations.length === 0 &&
+    result.typeMismatches.length === 0 &&
+    result.missingRequiredFields.length === 0;
+
+  return result;
+}
+
+// Internal helpers used by validateSchemaAgainstReal (mirrors the private ones above)
+function getJsonTypeForReal(value: unknown): JsonSchemaType {
+  if (value === null) return "null";
+  if (Array.isArray(value)) return "array";
+  if (typeof value === "object") return "object";
+  if (typeof value === "number") return Number.isInteger(value) ? "integer" : "number";
+  return typeof value as JsonSchemaType;
+}
+
+function typeMatchesForReal(
+  actual: JsonSchemaType,
+  expected: JsonSchemaType,
+  value: unknown,
+): boolean {
+  if (actual === expected) return true;
+  if (expected === "number" && actual === "integer") return true;
+  if (expected === "integer" && actual === "number" && Number.isInteger(value)) return true;
+  return false;
+}
