@@ -17,6 +17,7 @@ import { join } from "node:path";
 import { PROVIDERS_REF } from "../catalog.ts";
 import { appendSample, computePercentiles, readHistogram } from "./histogram.ts";
 import probeAnthropic from "./probe-anthropic.ts";
+import probeAuth0 from "./probe-auth0.ts";
 import probeAws from "./probe-aws.ts";
 import probeBraintrust from "./probe-braintrust.ts";
 import probeClerk from "./probe-clerk.ts";
@@ -73,6 +74,7 @@ export const BUILTIN_PROBES: Probe[] = [
   probeLinear,
   probeAws,
   // Newly added probes — completing coverage of all 39 catalog providers
+  probeAuth0,
   probeBraintrust,
   probeCloudflare,
   probeConvex,

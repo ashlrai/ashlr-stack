@@ -2645,3 +2645,216 @@ describe("probe-xai", () => {
     expect(result.alertThreshold).toBeDefined();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Individual probe tests — Auth0
+// ---------------------------------------------------------------------------
+
+describe("probe-auth0", () => {
+  const hh = makeProbeHarness();
+  beforeEach(hh.beforeEach);
+  afterEach(hh.afterEach);
+
+  test("returns skipped when AUTH0_DOMAIN absent", async () => {
+    const { default: probe } = await import("../probes/probe-auth0.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("skipped");
+    expect(result.latencyMs).toBe(0);
+    expect(result.detail).toContain("AUTH0_DOMAIN");
+  });
+
+  test("returns skipped when AUTH0_CLIENT_ID absent", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("AUTH0_DOMAIN", "myapp.us.auth0.com");
+    const { default: probe } = await import("../probes/probe-auth0.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("skipped");
+    expect(result.latencyMs).toBe(0);
+  });
+
+  test("returns skipped when AUTH0_CLIENT_SECRET absent", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("AUTH0_DOMAIN", "myapp.us.auth0.com");
+    await addSecret("AUTH0_CLIENT_ID", "fake-client-id");
+    const { default: probe } = await import("../probes/probe-auth0.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("skipped");
+    expect(result.latencyMs).toBe(0);
+  });
+
+  test("returns ok when both token exchange and stats call succeed", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("AUTH0_DOMAIN", "myapp.us.auth0.com");
+    await addSecret("AUTH0_CLIENT_ID", "fake-client-id");
+    await addSecret("AUTH0_CLIENT_SECRET", "fake-client-secret");
+
+    let callCount = 0;
+    globalThis.fetch = (async (_url: unknown) => {
+      callCount++;
+      const url = String(_url);
+      if (url.includes("/oauth/token")) {
+        return new Response(JSON.stringify({ access_token: "mgmt-token-123", token_type: "Bearer" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      // /api/v2/stats/daily
+      return new Response(JSON.stringify([{ date: "20240101", logins: 42 }]), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }) as unknown as typeof fetch;
+
+    const { default: probe } = await import("../probes/probe-auth0.ts");
+    const result = await probe.run({ log: () => {} });
+
+    expect(result.status).toBe("ok");
+    expect(result.latencyMs).toBeGreaterThanOrEqual(0);
+    expect(result.detail).toContain("reachable");
+    expect(callCount).toBe(2);
+  });
+
+  test("returns error when /oauth/token returns non-200", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("AUTH0_DOMAIN", "myapp.us.auth0.com");
+    await addSecret("AUTH0_CLIENT_ID", "fake-client-id");
+    await addSecret("AUTH0_CLIENT_SECRET", "fake-client-secret");
+
+    globalThis.fetch = mockFetch(401, { error: "access_denied", error_description: "Unauthorized" });
+
+    const { default: probe } = await import("../probes/probe-auth0.ts");
+    const result = await probe.run({ log: () => {} });
+
+    expect(result.status).toBe("error");
+    expect(result.detail).toContain("401");
+  });
+
+  test("returns error when access_token missing from token response", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("AUTH0_DOMAIN", "myapp.us.auth0.com");
+    await addSecret("AUTH0_CLIENT_ID", "fake-client-id");
+    await addSecret("AUTH0_CLIENT_SECRET", "fake-client-secret");
+
+    globalThis.fetch = mockFetch(200, { token_type: "Bearer" }); // no access_token
+
+    const { default: probe } = await import("../probes/probe-auth0.ts");
+    const result = await probe.run({ log: () => {} });
+
+    expect(result.status).toBe("error");
+    expect(result.detail).toContain("access_token");
+  });
+
+  test("returns error when stats endpoint returns 403", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("AUTH0_DOMAIN", "myapp.us.auth0.com");
+    await addSecret("AUTH0_CLIENT_ID", "fake-client-id");
+    await addSecret("AUTH0_CLIENT_SECRET", "fake-client-secret");
+
+    globalThis.fetch = (async (_url: unknown) => {
+      const url = String(_url);
+      if (url.includes("/oauth/token")) {
+        return new Response(JSON.stringify({ access_token: "mgmt-token-123" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify({ statusCode: 403, error: "Forbidden" }), {
+        status: 403,
+        headers: { "Content-Type": "application/json" },
+      });
+    }) as unknown as typeof fetch;
+
+    const { default: probe } = await import("../probes/probe-auth0.ts");
+    const result = await probe.run({ log: () => {} });
+
+    expect(result.status).toBe("error");
+    expect(result.detail).toContain("403");
+  });
+
+  test("parses x-ratelimit headers from stats endpoint", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("AUTH0_DOMAIN", "myapp.us.auth0.com");
+    await addSecret("AUTH0_CLIENT_ID", "fake-client-id");
+    await addSecret("AUTH0_CLIENT_SECRET", "fake-client-secret");
+
+    globalThis.fetch = (async (_url: unknown) => {
+      const url = String(_url);
+      if (url.includes("/oauth/token")) {
+        return new Response(JSON.stringify({ access_token: "mgmt-token-123" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify([{ date: "20240101", logins: 5 }]), {
+        status: 200,
+        headers: {
+          "x-ratelimit-limit": "1000",
+          "x-ratelimit-remaining": "150",
+          "Content-Type": "application/json",
+        },
+      });
+    }) as unknown as typeof fetch;
+
+    const { default: probe } = await import("../probes/probe-auth0.ts");
+    const result = await probe.run({ log: () => {} });
+
+    expect(result.rateLimitCeiling).toBe(1000);
+    expect(result.quotaUtilization).toBeCloseTo(0.85);
+    expect(result.status).toBe("warn");
+    expect(result.alertThreshold).toBeDefined();
+  });
+
+  test("returns error on rate-limit exhaustion (>= 95% utilization)", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("AUTH0_DOMAIN", "myapp.us.auth0.com");
+    await addSecret("AUTH0_CLIENT_ID", "fake-client-id");
+    await addSecret("AUTH0_CLIENT_SECRET", "fake-client-secret");
+
+    globalThis.fetch = (async (_url: unknown) => {
+      const url = String(_url);
+      if (url.includes("/oauth/token")) {
+        return new Response(JSON.stringify({ access_token: "mgmt-token-123" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify([]), {
+        status: 200,
+        headers: {
+          "x-ratelimit-limit": "1000",
+          "x-ratelimit-remaining": "10",
+          "Content-Type": "application/json",
+        },
+      });
+    }) as unknown as typeof fetch;
+
+    const { default: probe } = await import("../probes/probe-auth0.ts");
+    const result = await probe.run({ log: () => {} });
+
+    expect(result.status).toBe("error");
+    expect(result.quotaUtilization).toBeGreaterThanOrEqual(0.95);
+    expect(result.alertThreshold).toContain("0.95");
+  });
+
+  test("propagates abort signal — returns error when aborted", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("AUTH0_DOMAIN", "myapp.us.auth0.com");
+    await addSecret("AUTH0_CLIENT_ID", "fake-client-id");
+    await addSecret("AUTH0_CLIENT_SECRET", "fake-client-secret");
+
+    globalThis.fetch = (async (_url: unknown, init?: RequestInit) => {
+      if (init?.signal?.aborted) {
+        throw new DOMException("The operation was aborted.", "AbortError");
+      }
+      return new Response(JSON.stringify({ access_token: "tok" }), { status: 200 });
+    }) as unknown as typeof fetch;
+
+    const controller = new AbortController();
+    controller.abort();
+
+    const { default: probe } = await import("../probes/probe-auth0.ts");
+    const result = await probe.run({ signal: controller.signal, log: () => {} });
+
+    expect(result.status).toBe("error");
+  });
+});
