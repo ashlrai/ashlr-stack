@@ -30,6 +30,8 @@ import {
   ProvisionSchemaValidationError,
   validateProvisionResponse,
 } from "./provision-schema.ts";
+import { enforcePostCompliance, enforcePreCompliance } from "./provision-compliance.ts";
+import { enforceReadiness } from "./provision-readiness.ts";
 
 /** Default wall-clock timeout for each provider step (login / provision / materialize). */
 const DEFAULT_STEP_TIMEOUT_MS = 30_000;
@@ -288,6 +290,35 @@ export async function addService(opts: AddServiceOpts): Promise<AddServiceResult
     throw err;
   }
 
+  // --- pre-provision compliance checks ---
+  // Run before any upstream resource is created so failures are free to abort.
+  try {
+    enforcePreCompliance({
+      provider: provider.name,
+      hints: opts.hints,
+      log: (level, msg) => ctx.log({ level, msg }),
+    });
+  } catch (err) {
+    finaliseSession("failed");
+    throw err;
+  }
+
+  // --- provider readiness gate ---
+  // Run after auth but before any upstream resource is created.  Checks
+  // billing state, quota headroom, org existence, API limits, etc. so that
+  // failures surface with actionable remediation rather than mysterious
+  // post-provision errors.
+  try {
+    enforceReadiness({
+      provider: provider.name,
+      hints: opts.hints,
+      log: (level, msg) => ctx.log({ level, msg }),
+    });
+  } catch (err) {
+    finaliseSession("failed");
+    throw err;
+  }
+
   // --- conflict check (pre-provision) ---
   // Determine whether checks are enabled.
   // Default: enabled in interactive mode, disabled in CI.
@@ -437,6 +468,24 @@ export async function addService(opts: AddServiceOpts): Promise<AddServiceResult
         { cause: err },
       );
     }
+    throw err;
+  }
+
+  // --- Post-provision compliance checks ---
+  // Run after schema validation but before materialize(). Failures trigger
+  // best-effort deprovision so the upstream resource is cleaned up automatically.
+  try {
+    await enforcePostCompliance({
+      provider: provider.name,
+      resource,
+      hints: resolvedHints,
+      log: (level, msg) => ctx.log({ level, msg }),
+      deprovision: provider.deprovision
+        ? () => provider.deprovision!(ctx, auth, resource.id)
+        : undefined,
+    });
+  } catch (err) {
+    finaliseSession("failed");
     throw err;
   }
 

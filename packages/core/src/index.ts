@@ -61,6 +61,12 @@ export {
   type DeprovisionFn,
   type ExecuteRollbackPlanOpts,
 } from "./orchestration.ts";
+export {
+  RollbackGraphVisualizer,
+  type JsonGraphExport,
+  type GraphNode,
+  type GraphEdge,
+} from "./orchestration/graph-visualizer.ts";
 export * from "./detect.ts";
 export * from "./detect-source.ts";
 export * from "./registry.ts";
@@ -200,6 +206,8 @@ export {
   Instrumentation,
   MemoryCollector,
   FileCollector,
+  ProvenanceCollector,
+  checksumOutput,
   instrumentation,
   type InstrumentationCollector,
   type InstrumentationEvent,
@@ -211,6 +219,9 @@ export {
   type PartialFailureEvent,
   type PartialStateItem,
   type OrchestrationStepEvent,
+  type ProvisionProvenance,
+  type ProvenanceStep,
+  type ProvisionDecision,
 } from "./instrumentation.ts";
 export {
   QuotaEngine,
@@ -271,3 +282,21 @@ export {
   type LiveProbeMap,
   type LifecycleStore,
 } from "./resource-lifecycle.ts";
+export {
+  registerReadinessRules,
+  getReadinessRules,
+  listReadinessProviders,
+  runReadinessChecks,
+  enforceReadiness,
+  validateAllProviders,
+  generateReadinessJson,
+  generateAllReadinessJson,
+  ProviderNotReadyError,
+  type ProviderReadinessRule,
+  type ProviderReadinessRules,
+  type ReadinessCheckOutcome,
+  type ReadinessResult,
+  type ProviderValidationSummary,
+  type BatchValidationResult,
+  type ReadinessRulesJson,
+} from "./provision-readiness.ts";

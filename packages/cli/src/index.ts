@@ -34,6 +34,8 @@ import { probesCommand } from "./commands/probes.ts";
 import { quotaForecastCommand } from "./commands/quota-forecast.ts";
 import { auditPermissionsCommand } from "./commands/audit-permissions.ts";
 import { reconcileCommand } from "./commands/reconcile.ts";
+import { auditTrailCommand } from "./commands/audit-trail.ts";
+import { validateReadinessCommand } from "./commands/validate-readiness.ts";
 import { checkForUpdate } from "./lib/update-check.ts";
 
 // Single source of truth for the CLI version. citty wires this into `--help`
@@ -125,7 +127,9 @@ const main = defineCommand({
     "quota-forecast": quotaForecastCommand,
     probes: probesCommand,
     "audit-permissions": auditPermissionsCommand,
+    "audit-trail": auditTrailCommand,
     reconcile: reconcileCommand,
+    validate: validateReadinessCommand,
   },
 });
 
