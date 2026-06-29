@@ -24,6 +24,11 @@ import type { ServiceEntry } from "./config.ts";
 import type { Resource } from "./providers/_base.ts";
 import { getProvider } from "./providers/index.ts";
 import { getProviderSchema, validateSchemaCompleteness } from "./provision-schema.ts";
+import {
+  type ProviderMcpBroker,
+  getCostEstimateWithFallback,
+  getSessionBroker,
+} from "./provider-mcp-broker.ts";
 
 // ---------------------------------------------------------------------------
 // Cost estimation registry
@@ -372,6 +377,18 @@ export interface DryRunReport {
 export interface DryRunProviderOpts {
   /** Whether to include cost estimates in the output */
   costEstimate?: boolean;
+  /**
+   * When true, attempt a live MCP call to the provider's pricing endpoint
+   * before falling back to the static registry. Results are cached for the
+   * session (default 60 s TTL). Requires `--live-pricing` flag on the CLI.
+   */
+  livePricing?: boolean;
+  /**
+   * Optional broker instance to use for live pricing. Defaults to the
+   * session-scoped singleton (getSessionBroker()). Pass a custom instance
+   * in tests to inject a mock.
+   */
+  pricingBroker?: ProviderMcpBroker;
   /** Existing resource id (skip creation, attach to this id) */
   existingResourceId?: string;
   /** Provider-specific hints */
@@ -417,7 +434,19 @@ export async function dryRunProvider(
   // Cost estimate (optional)
   let costEstimate: CostEstimate | undefined;
   if (opts.costEstimate) {
-    costEstimate = getStaticCostEstimate(providerName);
+    const staticEstimate = getStaticCostEstimate(providerName);
+
+    if (opts.livePricing) {
+      // Attempt live MCP lookup; falls back to static on timeout/unavailability.
+      costEstimate = await getCostEstimateWithFallback(
+        providerName,
+        staticEstimate,
+        opts.pricingBroker,
+      );
+    } else {
+      costEstimate = staticEstimate;
+    }
+
     if (!costEstimate) {
       // Fallback for providers not in the static registry
       costEstimate = {
@@ -451,8 +480,15 @@ export async function dryRunProviders(
   providerNames: string[],
   opts: DryRunProviderOpts = {},
 ): Promise<DryRunReport> {
+  // When live-pricing is requested, share a single broker instance across all
+  // providers so the session cache is shared — avoids redundant MCP calls.
+  const sharedOpts: DryRunProviderOpts =
+    opts.livePricing && !opts.pricingBroker
+      ? { ...opts, pricingBroker: getSessionBroker() }
+      : opts;
+
   const results = await Promise.all(
-    providerNames.map((name) => dryRunProvider(name, opts)),
+    providerNames.map((name) => dryRunProvider(name, sharedOpts)),
   );
 
   const totalSecrets = results.reduce((sum, r) => sum + Object.keys(r.secrets).length, 0);
@@ -543,7 +579,8 @@ export function formatDryRunReport(report: DryRunReport): string {
         r.costEstimate.monthlyUsd !== null
           ? `$${r.costEstimate.monthlyUsd.toFixed(2)}/mo`
           : "dynamic pricing";
-      lines.push(`│  cost est. : ${cost} [${r.costEstimate.tier}] — ${r.costEstimate.notes}`);
+      const badge = r.costEstimate.source === "mcp" ? "[live]" : "[estimated]";
+      lines.push(`│  cost est. : ${cost} ${badge} [${r.costEstimate.tier}] — ${r.costEstimate.notes}`);
     }
 
     lines.push("└" + "─".repeat(59));

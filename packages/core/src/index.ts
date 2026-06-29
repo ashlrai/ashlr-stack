@@ -175,6 +175,16 @@ export {
   type DryRunAddServiceOpts,
 } from "./dry-run.ts";
 export {
+  ProviderMcpBroker,
+  getSessionBroker,
+  setSessionBroker,
+  resetSessionBroker,
+  getCostEstimateWithFallback,
+  type McpInvokeFn,
+  type LivePricingData,
+  type ProviderMcpBrokerOptions,
+} from "./provider-mcp-broker.ts";
+export {
   Instrumentation,
   MemoryCollector,
   FileCollector,

@@ -1,9 +1,11 @@
 import {
   NoInferenceBackendError,
   PROVIDER_CATEGORIES,
+  ProviderMcpBroker,
   type Recipe,
   type RetrievalHit,
   getInferenceBackend,
+  getStaticCostEstimate,
   recipeFromRetrieval,
   retrieve,
   retrieveByCategory,
@@ -40,6 +42,9 @@ interface RecommendOutputHit {
   score: number;
   matched: string[];
   rationale?: string;
+  costBadge?: string; // "[live]" | "[estimated]"
+  costNotes?: string;
+  costMonthlyUsd?: number | null;
 }
 
 interface RecommendOutput {
@@ -49,6 +54,7 @@ interface RecommendOutput {
   guidance: string;
   recipe?: { id: string; path: string };
   inference?: { mode: "synth" | "mcp-delegated"; backend: string; note?: string };
+  pricingSource?: "live" | "estimated" | "none";
 }
 
 function toOutputHit(hit: RetrievalHit, rationale?: string): RecommendOutputHit {
@@ -174,6 +180,12 @@ export const recommendCommand = defineCommand({
         "Call the local SLM (LM Studio / Ollama) to synthesize rationales. Silently falls back to retrieval-only when no endpoint is reachable.",
       required: false,
     },
+    "live-pricing": {
+      type: "boolean",
+      description:
+        "Attempt live MCP calls to each provider's pricing endpoint (Stripe, Vercel, GitHub, Anthropic, OpenAI, AWS). Results are cached 60 s. Falls back to static estimates on timeout.",
+      required: false,
+    },
   },
   async run({ args }) {
     const query = typeof args.query === "string" ? args.query.trim() : "";
@@ -211,9 +223,52 @@ export const recommendCommand = defineCommand({
       synthOutcome = await trySynth(query, hits);
     }
 
-    const outputHits: RecommendOutputHit[] = hits.map((h) =>
-      toOutputHit(h, synthOutcome?.rationales.get(h.provider.name)),
-    );
+    // Live pricing: attempt MCP calls for the top hits, fall back to static.
+    const livePricingRequested = Boolean(args["live-pricing"]);
+    const pricingMap = new Map<
+      string,
+      { badge: "[live]" | "[estimated]"; notes: string; monthlyUsd: number | null }
+    >();
+    if (livePricingRequested && hits.length > 0) {
+      const broker = new ProviderMcpBroker();
+      await Promise.all(
+        hits.map(async (h) => {
+          const name = h.provider.name;
+          const staticEst = getStaticCostEstimate(name);
+          try {
+            const live = await broker.getLiveCostEstimate(name);
+            if (live) {
+              pricingMap.set(name, {
+                badge: "[live]",
+                notes: live.notes,
+                monthlyUsd: live.monthlyUsd,
+              });
+              return;
+            }
+          } catch {
+            // fall through to static
+          }
+          if (staticEst) {
+            pricingMap.set(name, {
+              badge: "[estimated]",
+              notes: staticEst.notes,
+              monthlyUsd: staticEst.monthlyUsd,
+            });
+          }
+        }),
+      );
+    }
+
+    const outputHits: RecommendOutputHit[] = hits.map((h) => {
+      const pricing = pricingMap.get(h.provider.name);
+      const hit = toOutputHit(h, synthOutcome?.rationales.get(h.provider.name));
+      if (pricing) {
+        hit.costBadge = pricing.badge;
+        hit.costNotes = pricing.notes;
+        hit.costMonthlyUsd = pricing.monthlyUsd;
+      }
+      return hit;
+    });
 
     let recipeInfo: RecommendOutput["recipe"];
     if (args.save && hits.length > 0) {
@@ -229,6 +284,9 @@ export const recommendCommand = defineCommand({
       const path = await writeRecipe(recipe);
       recipeInfo = { id: recipe.id, path };
     }
+
+    const anyLive = [...pricingMap.values()].some((p) => p.badge === "[live]");
+    const anyPricing = pricingMap.size > 0;
 
     const payload: RecommendOutput = {
       query,
@@ -246,6 +304,13 @@ export const recommendCommand = defineCommand({
       recipe: recipeInfo,
       inference: synthOutcome
         ? { mode: synthOutcome.mode, backend: synthOutcome.backend, note: synthOutcome.note }
+        : undefined,
+      pricingSource: livePricingRequested
+        ? anyLive
+          ? "live"
+          : anyPricing
+            ? "estimated"
+            : "none"
         : undefined,
     };
 
@@ -270,6 +335,15 @@ export const recommendCommand = defineCommand({
       console.log(`    ${colors.dim(hit.blurb)}`);
       if (hit.rationale) {
         console.log(`    ${colors.dim("why:")} ${hit.rationale}`);
+      }
+      if (hit.costBadge && hit.costNotes) {
+        const costStr =
+          hit.costMonthlyUsd !== null && hit.costMonthlyUsd !== undefined
+            ? `$${hit.costMonthlyUsd.toFixed(2)}/mo`
+            : "usage-based";
+        console.log(
+          `    ${colors.dim("cost:")} ${costStr} ${colors.dim(hit.costBadge)}  ${colors.dim(hit.costNotes)}`,
+        );
       }
       console.log(`    ${colors.dim("add with:")} ${colors.reset("stack add ")}${hit.name}`);
       console.log();

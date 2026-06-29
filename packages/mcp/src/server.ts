@@ -5,6 +5,9 @@
  * Exposes every major `stack` CLI command as an MCP tool, plus the current
  * project's .stack.toml as an MCP resource so Claude can read it without a
  * tool call. Keeps the server thin — all behaviour lives in the CLI.
+ *
+ * Special tools handled in-process (not via CLI spawn):
+ *   - stack_pricing_lookup: calls ProviderMcpBroker directly for live pricing.
  */
 
 import { spawn } from "node:child_process";
@@ -18,6 +21,10 @@ import {
   ListToolsRequestSchema,
   ReadResourceRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
+import {
+  ProviderMcpBroker,
+  getStaticCostEstimate,
+} from "@ashlr/stack-core";
 
 interface ToolDef {
   name: string;
@@ -274,6 +281,23 @@ const TOOLS: ToolDef[] = [
       return args;
     },
   },
+  {
+    name: "stack_pricing_lookup",
+    description:
+      "Fetch real-time pricing, region availability, and quota limits for one or more providers (Stripe, Vercel, GitHub, Anthropic, OpenAI, AWS). Results are cached 60 s per session. Falls back to static estimates when the provider MCP server is unavailable. Returns a JSON object with per-provider pricing data including source badge ([live] or [estimated]). Handled in-process — does not spawn the CLI.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        providers: {
+          type: "string",
+          description:
+            "Comma-separated list of provider names to look up (e.g. 'stripe,vercel,openai'). Omit to look up all 6 supported providers: stripe, vercel, github, anthropic, openai, aws.",
+        },
+      },
+    },
+    // Sentinel: handled in-process, not via CLI.
+    cliArgs: (_input) => [],
+  },
 ];
 
 const STACK_BIN = process.env.STACK_BIN ?? "stack";
@@ -320,6 +344,15 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
   tools: TOOLS.map(({ name, description, inputSchema }) => ({ name, description, inputSchema })),
 }));
 
+// Session-scoped broker for stack_pricing_lookup (lazy-init).
+let _pricingBroker: ProviderMcpBroker | undefined;
+function getPricingBroker(): ProviderMcpBroker {
+  if (!_pricingBroker) _pricingBroker = new ProviderMcpBroker();
+  return _pricingBroker;
+}
+
+const ALL_PRICING_PROVIDERS = ProviderMcpBroker.supportedProviders();
+
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const tool = TOOLS.find((t) => t.name === request.params.name);
   if (!tool) {
@@ -328,6 +361,77 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       isError: true,
     };
   }
+
+  // ── stack_pricing_lookup: handled in-process via ProviderMcpBroker ────────
+  if (request.params.name === "stack_pricing_lookup") {
+    const input = (request.params.arguments ?? {}) as Record<string, unknown>;
+    const requestedRaw = typeof input.providers === "string" ? input.providers : "";
+    const providerNames = requestedRaw.trim()
+      ? requestedRaw.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean)
+      : ALL_PRICING_PROVIDERS;
+
+    const broker = getPricingBroker();
+    const results: Record<string, {
+      source: "live" | "estimated";
+      badge: string;
+      monthlyUsd: number | null;
+      tier: string;
+      notes: string;
+      regions?: string[];
+      quotas?: Record<string, unknown>;
+    }> = {};
+
+    await Promise.all(
+      providerNames.map(async (name) => {
+        const live = await broker.getLiveCostEstimate(name);
+        if (live) {
+          results[name] = {
+            source: "live",
+            badge: "[live]",
+            monthlyUsd: live.monthlyUsd,
+            tier: live.tier,
+            notes: live.notes,
+          };
+          return;
+        }
+        const staticEst = getStaticCostEstimate(name);
+        if (staticEst) {
+          results[name] = {
+            source: "estimated",
+            badge: "[estimated]",
+            monthlyUsd: staticEst.monthlyUsd,
+            tier: staticEst.tier,
+            notes: staticEst.notes,
+          };
+          return;
+        }
+        results[name] = {
+          source: "estimated",
+          badge: "[estimated]",
+          monthlyUsd: null,
+          tier: "unknown",
+          notes: `No pricing data available for "${name}". Check provider docs.`,
+        };
+      }),
+    );
+
+    const anyLive = Object.values(results).some((r) => r.source === "live");
+    const summary = {
+      providers: results,
+      pricingSource: anyLive ? "live" : "estimated",
+      cachedProviders: providerNames.filter((n) => broker.isCached(n)),
+      note: anyLive
+        ? "Some results fetched live from provider MCP servers (60 s cache)."
+        : "All results are static estimates — provider MCP servers not available.",
+    };
+
+    return {
+      content: [{ type: "text", text: JSON.stringify(summary, null, 2) }],
+      isError: false,
+    };
+  }
+
+  // ── All other tools: delegate to CLI ─────────────────────────────────────
   const input = (request.params.arguments ?? {}) as Record<string, unknown>;
   const args = tool.cliArgs(input);
   const { stdout, stderr, code } = await runStack(args);
