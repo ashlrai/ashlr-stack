@@ -16,6 +16,14 @@ export { providers, getProvider, listProviderNames } from "./providers/index.ts"
 export * from "./errors.ts";
 export * from "./templates.ts";
 export * from "./pipeline.ts";
+export {
+  resolveOrder,
+  runOrchestrationGroup,
+  type OrchestrationEntry,
+  type OrchestrationGroup,
+  type OrchestrationGroupDefaults,
+  type OrchestrationResult,
+} from "./orchestration.ts";
 export * from "./detect.ts";
 export * from "./detect-source.ts";
 export * from "./registry.ts";
