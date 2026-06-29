@@ -308,11 +308,19 @@ export class ResourceLifecycle {
       return { service, patched: false, drift };
     }
 
-    const probe = liveProbes[local.provider];
+    // `Record` indexing does not surface `undefined` in the type, but at
+    // runtime a provider with no registered probe yields `undefined`. Reflect
+    // that explicitly so downstream guards (e.g. `if (probe)`) are meaningful.
+    const probe: LiveProbe | undefined = liveProbes[local.provider];
     let liveSnapshot: (Partial<ResourceLifecycleMeta> & { alive?: boolean }) | undefined;
     let probeError: string | undefined;
+    // Whether a live probe actually ran for this service (false when the
+    // provider has no registered probe). Tracked explicitly so the
+    // `last_verified_at` bump below reads as a value check, not a function ref.
+    let probeRan = false;
 
     if (probe) {
+      probeRan = true;
       try {
         const result = await probe(local.resource_id, local);
         liveSnapshot = {
@@ -345,7 +353,7 @@ export class ResourceLifecycle {
       }
 
       // Always bump last_verified_at on a successful probe
-      if (probe && !probeError && liveSnapshot?.alive !== false) {
+      if (probeRan && !probeError && liveSnapshot?.alive !== false) {
         updated.last_verified_at = new Date().toISOString();
         patched = true;
       }

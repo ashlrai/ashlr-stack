@@ -167,7 +167,9 @@ export const validateSchemaCommand = defineCommand({
     const completeness = validateSchemaCompleteness(name, schema ?? undefined);
 
     if (isJson) {
-      process.stdout.write(`${JSON.stringify({ provider: name, ...completeness }, null, 2)}\n`);
+      // `completeness` already carries `provider: name`, so spreading it is
+      // sufficient — an explicit `provider` here would just be overwritten.
+      process.stdout.write(`${JSON.stringify(completeness, null, 2)}\n`);
       return;
     }
 

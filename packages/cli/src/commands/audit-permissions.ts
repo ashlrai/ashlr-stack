@@ -261,7 +261,9 @@ function printResultRow(result: PermissionValidationResult, showFix: boolean): v
       ? result.remediationApplied.slice("manual:".length).trim()
       : result.remediationApplied;
     console.log(`      ${colors.cyan("fix:")} ${fixText}`);
-  } else if (!showFix && result.status !== "ok" && result.status !== "skipped") {
+  } else if (!showFix) {
+    // Reached only for "overprivileged" | "error" rows (ok/warn/skipped
+    // already returned above), so the actionable hint always applies here.
     console.log(`      ${colors.dim("→ Re-run with --fix for remediation guidance.")}`);
   }
 }

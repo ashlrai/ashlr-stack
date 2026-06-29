@@ -106,11 +106,14 @@ export const doctorCommand = defineCommand({
       const { auditPermissionsCommand } = await import("./audit-permissions.ts");
       // Delegate to the dedicated command, forwarding the --json and --fix flags.
       const fixArg = Boolean((args as Record<string, unknown>).fix);
+      // citty's CommandContext carries more internal fields than we can
+      // synthesise here; the command only reads `args`, so route through
+      // `unknown` to construct the minimal shape it actually consumes.
       await auditPermissionsCommand.run!({
         args: { fix: fixArg, provider: undefined, json },
         cmd: auditPermissionsCommand,
         rawArgs: [],
-      } as Parameters<NonNullable<typeof auditPermissionsCommand.run>>[0]);
+      } as unknown as Parameters<NonNullable<typeof auditPermissionsCommand.run>>[0]);
       return;
     }
 

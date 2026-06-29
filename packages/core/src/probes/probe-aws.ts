@@ -24,9 +24,15 @@ const REGION = "us-east-1";
 // ---------------------------------------------------------------------------
 
 async function hmacSha256(key: ArrayBuffer | Uint8Array, data: string): Promise<ArrayBuffer> {
+  // Normalise to a fresh Uint8Array backed by a plain ArrayBuffer. The Web
+  // Crypto lib types require `BufferSource` to be backed by `ArrayBuffer` (not
+  // `SharedArrayBuffer`/`ArrayBufferLike`), so copy into a clean view to keep
+  // the call type-safe regardless of the incoming buffer kind.
+  const keyBytes: Uint8Array<ArrayBuffer> =
+    key instanceof Uint8Array ? new Uint8Array(key) : new Uint8Array(key);
   const cryptoKey = await crypto.subtle.importKey(
     "raw",
-    key,
+    keyBytes,
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign"],

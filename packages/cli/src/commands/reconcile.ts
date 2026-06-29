@@ -11,6 +11,7 @@
 
 import { readConfig } from "@ashlr/stack-core";
 import {
+  type LifecycleStore,
   type LiveProbeMap,
   ResourceLifecycle,
   type ReconcileSummary,
@@ -123,14 +124,12 @@ export const reconcileCommand = defineCommand({
     const liveProbes: LiveProbeMap = buildLiveProbes(config);
 
     // Run reconciliation for each target service
-    const subRegistry = new ResourceLifecycle(
-      Object.fromEntries(
-        targetServices
-          .map((s) => [s, registry.get(s)])
-          .filter((e): e is [string, NonNullable<typeof e[1]>] => e[1] !== undefined),
-      ),
-      cwd,
-    );
+    const subStore: LifecycleStore = {};
+    for (const s of targetServices) {
+      const meta = registry.get(s);
+      if (meta !== undefined) subStore[s] = meta;
+    }
+    const subRegistry = new ResourceLifecycle(subStore, cwd);
 
     const summary: ReconcileSummary = await subRegistry.reconcileAll({
       liveProbes,
