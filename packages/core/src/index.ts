@@ -19,10 +19,22 @@ export * from "./pipeline.ts";
 export {
   resolveOrder,
   runOrchestrationGroup,
+  buildRollbackGraph,
+  buildRollbackPlan,
+  computeRollbackPlan,
+  executeRollbackPlan,
   type OrchestrationEntry,
   type OrchestrationGroup,
   type OrchestrationGroupDefaults,
   type OrchestrationResult,
+  type OrchestrationRollbackFn,
+  type RollbackGraph,
+  type RollbackPlan,
+  type RollbackWave,
+  type RollbackStepResult,
+  type RollbackTranscript,
+  type DeprovisionFn,
+  type ExecuteRollbackPlanOpts,
 } from "./orchestration.ts";
 export * from "./detect.ts";
 export * from "./detect-source.ts";
