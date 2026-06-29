@@ -1,11 +1,13 @@
 import { spawnSync } from "node:child_process";
 import {
+  FileCollector,
   addService,
   detectPackageManager,
   findProviderRef,
   getProvider,
   hasConfig,
   installCommand,
+  instrumentation,
   listProviderNames,
 } from "@ashlr/stack-core";
 import {
@@ -66,6 +68,11 @@ export const addCommand = defineCommand({
       type: "string",
       description:
         "Wall-clock timeout in seconds for each provider step (login, provision, materialize). Defaults to 30. Pass 0 to disable.",
+    },
+    trace: {
+      type: "string",
+      description:
+        "Collect all instrumentation events (step timings, rollbacks, partial failures) to a JSON file. Useful for debugging multi-provider orchestration failures.",
     },
   },
   async run({ args }) {
@@ -167,6 +174,13 @@ export const addCommand = defineCommand({
       return;
     }
 
+    // Attach trace collector if --trace was given.
+    const traceFile = args.trace ? String(args.trace) : undefined;
+    const traceCollector = traceFile ? new FileCollector(traceFile) : undefined;
+    if (traceCollector) {
+      instrumentation.attach(traceCollector);
+    }
+
     const spinner = prompts.spinner();
     try {
       spinner.start(`Wiring ${service}…`);
@@ -207,6 +221,15 @@ export const addCommand = defineCommand({
     } catch (err) {
       spinner.stop(colors.red("Failed."));
       outroError((err as Error).message);
+    } finally {
+      // Always flush trace (captures both success and failure events).
+      if (traceCollector) {
+        await instrumentation.flush();
+        instrumentation.detach();
+        console.log(
+          `  ${colors.dim("trace:")} instrumentation events written to ${colors.bold(traceFile!)}`,
+        );
+      }
     }
   },
 });

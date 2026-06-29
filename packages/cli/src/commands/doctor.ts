@@ -231,15 +231,19 @@ async function runDoctor(
         spinner?.stop(colors.dim(`  ${name}: no healthcheck implemented`));
         continue;
       }
+      const _t0 = Date.now();
       const status = await provider.healthcheck(ctx, entry);
+      const measuredLatencyMs = status.kind === "ok" && status.latencyMs !== undefined
+        ? status.latencyMs
+        : Date.now() - _t0;
       if (status.kind === "ok") {
-        report.services.push({ name, status: "ok", latencyMs: status.latencyMs });
+        report.services.push({ name, status: "ok", latencyMs: measuredLatencyMs });
         spinner?.stop(
-          `  ${colors.green("●")} ${name}${status.latencyMs ? colors.dim(` (${status.latencyMs}ms)`) : ""}`,
+          `  ${colors.green("●")} ${name} ${colors.dim(`${measuredLatencyMs}ms`)}`,
         );
       } else if (status.kind === "warn") {
-        report.services.push({ name, status: "warn", detail: status.detail });
-        spinner?.stop(`  ${colors.yellow("●")} ${name}: ${status.detail}`);
+        report.services.push({ name, status: "warn", detail: status.detail, latencyMs: measuredLatencyMs });
+        spinner?.stop(`  ${colors.yellow("●")} ${name}: ${status.detail} ${colors.dim(`(${measuredLatencyMs}ms)`)}`);
       } else {
         failingNames.push(name);
         report.services.push({ name, status: "error", detail: status.detail });

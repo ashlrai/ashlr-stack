@@ -109,3 +109,19 @@ export {
   type DryRunProviderOpts,
   type DryRunAddServiceOpts,
 } from "./dry-run.ts";
+export {
+  Instrumentation,
+  MemoryCollector,
+  FileCollector,
+  instrumentation,
+  type InstrumentationCollector,
+  type InstrumentationEvent,
+  type InstrumentationEventType,
+  type StepEvent,
+  type StepStatus,
+  type RollbackEvent,
+  type RollbackItem,
+  type PartialFailureEvent,
+  type PartialStateItem,
+  type OrchestrationStepEvent,
+} from "./instrumentation.ts";

@@ -1,6 +1,8 @@
 import { type ServiceEntry, type StackConfig, readConfig, writeConfig } from "./config.ts";
 import { type DryRunAddServiceOpts, dryRunAddService } from "./dry-run.ts";
 import { StackError } from "./errors.ts";
+import { instrumentation } from "./instrumentation.ts";
+import type { RollbackItem } from "./instrumentation.ts";
 import { mergeMcpEntry, removeMcpEntry } from "./mcp-writer.ts";
 import { addSecret, assertPhantomInstalled, removeSecret } from "./phantom.ts";
 import type { AuthHandle, LogEvent, ProviderContext, Resource } from "./providers/_base.ts";
@@ -163,24 +165,34 @@ export async function addService(opts: AddServiceOpts): Promise<AddServiceResult
   // --- login ---
   let auth: AuthHandle;
   try {
+    const _t0 = Date.now();
     auth = await withTimeout("login", timeoutMs, controller, () => provider.login(ctx));
+    instrumentation.recordStep("login", provider.name, Date.now() - _t0, "success");
   } catch (err) {
     // login timed out or failed — no upstream resource was created, nothing to roll back.
+    const code = err instanceof StackError ? err.code : undefined;
+    const status = code === "PROVISION_TIMEOUT" ? "timeout" : "failure";
+    instrumentation.recordStep("login", provider.name, 0, status, (err as Error).message, code);
     throw err;
   }
 
   // --- provision ---
   let resource: Resource;
   try {
+    const _t0 = Date.now();
     resource = await withTimeout("provision", timeoutMs, controller, () =>
       provider.provision(ctx, auth, {
         existingResourceId: opts.existingResourceId,
         hints: opts.hints,
       }),
     );
+    instrumentation.recordStep("provision", provider.name, Date.now() - _t0, "success");
   } catch (err) {
     // provision timed out or failed before an upstream resource was confirmed —
     // if it's a timeout and the provider has deprovision, attempt best-effort rollback.
+    const code = err instanceof StackError ? err.code : undefined;
+    const status = code === "PROVISION_TIMEOUT" ? "timeout" : "failure";
+    instrumentation.recordStep("provision", provider.name, 0, status, (err as Error).message, code);
     if (
       err instanceof StackError &&
       err.code === "PROVISION_TIMEOUT" &&
@@ -229,9 +241,11 @@ export async function addService(opts: AddServiceOpts): Promise<AddServiceResult
   let writtenMcp: string | undefined;
 
   try {
+    const _t0 = Date.now();
     const materialized = await withTimeout("materialize", timeoutMs, controller, () =>
       provider.materialize(ctx, resource, auth),
     );
+    instrumentation.recordStep("materialize", provider.name, Date.now() - _t0, "success");
 
     for (const [key, value] of Object.entries(materialized.secrets)) {
       await addSecret(key, value, cwd);
@@ -267,25 +281,42 @@ export async function addService(opts: AddServiceOpts): Promise<AddServiceResult
       entry,
     };
   } catch (err) {
+    // Record materialize failure before starting rollback.
+    const errCode = err instanceof StackError ? err.code : undefined;
+    const errStatus = errCode === "PROVISION_TIMEOUT" ? "timeout" : "failure";
+    const failStep = writtenSecrets.length > 0 ? "MCP/config write" : "materialize";
+    instrumentation.recordStep(
+      "materialize",
+      provider.name,
+      0,
+      errStatus,
+      (err as Error).message,
+      errCode,
+    );
+
     // --- Atomic rollback ---
     // 1. Remove any Phantom secrets already written.
+    const cleanedItems: RollbackItem[] = [];
+    const failedItems: RollbackItem[] = [];
+
     for (const key of writtenSecrets) {
       try {
         await removeSecret(key, cwd);
-      } catch {
-        /* best-effort */
+        cleanedItems.push({ kind: "secret", id: key });
+      } catch (rerr) {
+        failedItems.push({ kind: "secret", id: key, error: (rerr as Error).message });
       }
     }
     // 2. Remove the MCP entry if it was written.
     if (writtenMcp) {
       try {
         await removeMcpEntry(writtenMcp, cwd);
-      } catch {
-        /* best-effort */
+        cleanedItems.push({ kind: "mcp_entry", id: writtenMcp });
+      } catch (rerr) {
+        failedItems.push({ kind: "mcp_entry", id: writtenMcp, error: (rerr as Error).message });
       }
     }
     // 3. Tear down the upstream resource (if provider supports it).
-    const failStep = writtenSecrets.length > 0 ? "MCP/config write" : "materialize";
 
     // Timeout errors: rollback (secrets/MCP) already done above — re-throw
     // the original PROVISION_TIMEOUT so the caller sees the real error code.
@@ -299,10 +330,39 @@ export async function addService(opts: AddServiceOpts): Promise<AddServiceResult
       // has no idea whether the upstream resource is still live.
       let teardownErr: Error | undefined;
       try {
+        const _dt0 = Date.now();
         await provider.deprovision(ctx, auth, resource.id);
+        instrumentation.recordStep("deprovision", provider.name, Date.now() - _dt0, "success");
+        cleanedItems.push({ kind: "upstream_resource", id: resource.id });
       } catch (derr) {
         teardownErr = derr as Error;
+        instrumentation.recordStep(
+          "deprovision",
+          provider.name,
+          0,
+          "failure",
+          teardownErr.message,
+        );
+        failedItems.push({
+          kind: "upstream_resource",
+          id: resource.id,
+          error: teardownErr.message,
+        });
       }
+
+      // Emit rollback event with full context.
+      const recoverySuggestion = teardownErr
+        ? `Resource ${resource.id} may still exist on ${provider.displayName}. Delete it manually on the dashboard, then run \`stack doctor --fix\`.`
+        : `Rollback complete. Run \`stack doctor\` to verify state.`;
+      instrumentation.recordRollback(
+        provider.name,
+        resource.id,
+        (err as Error).message,
+        cleanedItems,
+        failedItems,
+        recoverySuggestion,
+      );
+
       const teardownNote = teardownErr
         ? `Attempted automatic teardown but it FAILED (${teardownErr.message}) — resource ${resource.id} may still exist. Clean it up manually on the ${provider.displayName} dashboard.`
         : `Upstream resource ${resource.id} has been torn down.`;
@@ -315,7 +375,36 @@ export async function addService(opts: AddServiceOpts): Promise<AddServiceResult
           `Original error: ${(err as Error).message}`,
       );
     }
-    // No deprovision support — warn and direct to manual cleanup.
+
+    // No deprovision support — emit partial-failure event and warn.
+    const partialState: import("./instrumentation.ts").PartialStateItem[] = [
+      { kind: "upstream_resource", id: resource.id, written: true },
+      ...writtenSecrets.map((k) => ({
+        kind: "secret" as const,
+        id: k,
+        written: true,
+      })),
+      ...(writtenMcp ? [{ kind: "mcp_entry" as const, id: writtenMcp, written: true }] : []),
+    ];
+    const suggestion =
+      `Delete resource ${resource.id} manually on the ${provider.displayName} dashboard, then run \`stack doctor --fix\`.`;
+    instrumentation.recordPartialFailure(
+      provider.name,
+      failStep,
+      (err as Error).message,
+      errCode,
+      partialState,
+      suggestion,
+    );
+    instrumentation.recordRollback(
+      provider.name,
+      resource.id,
+      (err as Error).message,
+      cleanedItems,
+      [{ kind: "upstream_resource", id: resource.id, error: "provider has no deprovision support" }],
+      suggestion,
+    );
+
     ctx.log({
       level: "warn",
       msg: `[stack] Partial failure adding ${provider.displayName}. Upstream resource ID: ${resource.id}. This provider does not support automatic teardown — please delete it manually, then run \`stack doctor --fix\` to resync local state.`,
