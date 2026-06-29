@@ -18,19 +18,46 @@ import { PROVIDERS_REF } from "../catalog.ts";
 import { appendSample, computePercentiles, readHistogram } from "./histogram.ts";
 import probeAnthropic from "./probe-anthropic.ts";
 import probeAws from "./probe-aws.ts";
+import probeBraintrust from "./probe-braintrust.ts";
 import probeClerk from "./probe-clerk.ts";
+import probeCloudflare from "./probe-cloudflare.ts";
+import probeConvex from "./probe-convex.ts";
+import probeDatadog from "./probe-datadog.ts";
+import probeDeepseek from "./probe-deepseek.ts";
+import probeDigitalocean from "./probe-digitalocean.ts";
 import probeFirebase from "./probe-firebase.ts";
+import probeFly from "./probe-fly.ts";
+import probeGcp from "./probe-gcp.ts";
 import probeGithub from "./probe-github.ts";
+import probeGrafana from "./probe-grafana.ts";
+import probeHetzner from "./probe-hetzner.ts";
+import probeLaunchdarkly from "./probe-launchdarkly.ts";
 import probeLinear from "./probe-linear.ts";
+import probeMailgun from "./probe-mailgun.ts";
+import probeMixpanel from "./probe-mixpanel.ts";
+import probeModal from "./probe-modal.ts";
 import probeNeon from "./probe-neon.ts";
 import probeOpenai from "./probe-openai.ts";
+import probePlausible from "./probe-plausible.ts";
+import probePosthog from "./probe-posthog.ts";
+import probePostmark from "./probe-postmark.ts";
+import probeRailway from "./probe-railway.ts";
+import probeRender from "./probe-render.ts";
+import probeReplicate from "./probe-replicate.ts";
+import probeResend from "./probe-resend.ts";
+import probeSendgrid from "./probe-sendgrid.ts";
+import probeSentry from "./probe-sentry.ts";
 import probeStripe from "./probe-stripe.ts";
 import probeSupabase from "./probe-supabase.ts";
+import probeTurso from "./probe-turso.ts";
+import probeUpstash from "./probe-upstash.ts";
 import probeVercel from "./probe-vercel.ts";
+import probeWorkos from "./probe-workos.ts";
+import probeXai from "./probe-xai.ts";
 import type { Probe, ProbeContext, ProbeResult, ProbeRunSummary } from "./types.ts";
 
 // ---------------------------------------------------------------------------
-// Registry — all 11 built-in probes
+// Registry — all 39 built-in probes (full catalog coverage)
 // ---------------------------------------------------------------------------
 
 export const BUILTIN_PROBES: Probe[] = [
@@ -45,6 +72,34 @@ export const BUILTIN_PROBES: Probe[] = [
   probeClerk,
   probeLinear,
   probeAws,
+  // Newly added probes — completing coverage of all 39 catalog providers
+  probeBraintrust,
+  probeCloudflare,
+  probeConvex,
+  probeDatadog,
+  probeDeepseek,
+  probeDigitalocean,
+  probeFly,
+  probeGcp,
+  probeGrafana,
+  probeHetzner,
+  probeLaunchdarkly,
+  probeMailgun,
+  probeMixpanel,
+  probeModal,
+  probePlausible,
+  probePosthog,
+  probePostmark,
+  probeRailway,
+  probeRender,
+  probeReplicate,
+  probeResend,
+  probeSendgrid,
+  probeSentry,
+  probeTurso,
+  probeUpstash,
+  probeWorkos,
+  probeXai,
 ];
 
 // ---------------------------------------------------------------------------

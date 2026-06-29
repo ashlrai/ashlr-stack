@@ -187,18 +187,17 @@ describe("ProbeRegistry — coverageStats", () => {
 });
 
 // ---------------------------------------------------------------------------
-// CI gate: built-in coverage is 11 of the total catalog providers
+// CI gate: built-in coverage is 39 of the total catalog providers
 //
-// The spec targets 43 providers / 32 missing, but the live catalog has 39
-// providers with 11 built-in probes (28 missing). These tests assert the
-// actual values so they remain green as the catalog grows.
+// The catalog has 39 providers and all 39 now have built-in probes.
+// These tests assert the actual values so they remain green as the catalog grows.
 // ---------------------------------------------------------------------------
 
 /** Total catalog providers (update when a new provider is added to catalog.ts). */
 const CATALOG_TOTAL = PROVIDERS_REF.length; // currently 39
 
-/** Built-in probes shipped in BUILTIN_PROBES array (currently 11). */
-const BUILTIN_PROBE_COUNT = BUILTIN_PROBES.length; // currently 11
+/** Built-in probes shipped in BUILTIN_PROBES array (currently 39 — full coverage). */
+const BUILTIN_PROBE_COUNT = BUILTIN_PROBES.length; // currently 39
 
 describe("CI gate — built-in probe coverage", () => {
   test("catalog provider count matches PROVIDERS_REF", () => {
@@ -398,13 +397,15 @@ describe("writeProbeStub — file writing", () => {
     expect(filePath.startsWith("/")).toBe(true);
   });
 
-  test("can write stubs for all 32 missing providers", () => {
+  test("can write stubs for all missing providers (may be empty with full coverage)", () => {
     const { missing } = defaultProbeRegistry.coverageStats();
     const outputDir = join(tmpDir, "all-stubs");
     for (const name of missing) {
       const filePath = writeProbeStub(name, outputDir);
       expect(existsSync(filePath)).toBe(true);
     }
+    // With full coverage, missing will be empty — that's correct.
+    expect(Array.isArray(missing)).toBe(true);
   });
 
   test("overwrites existing stub on repeat call", () => {

@@ -1460,3 +1460,1188 @@ describe("runProbes — integration", () => {
     expect(summary.results[0].provider).toBe("provider-a");
   });
 });
+
+// ---------------------------------------------------------------------------
+// Helper: standard probe test harness for the 27 new probes
+// ---------------------------------------------------------------------------
+
+function makeProbeHarness() {
+  let h: Harness;
+  let dir: string;
+  let realFetch: typeof fetch;
+
+  return {
+    beforeEach() {
+      h = setupFakePhantom();
+      dir = makeTmpDir();
+      __setHistogramDirForTesting(dir);
+      realFetch = globalThis.fetch;
+    },
+    afterEach() {
+      globalThis.fetch = realFetch;
+      h.cleanup();
+      __setHistogramDirForTesting(undefined);
+      try { rmSync(dir, { recursive: true, force: true }); } catch { /* best-effort */ }
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Individual probe tests — Braintrust
+// ---------------------------------------------------------------------------
+
+describe("probe-braintrust", () => {
+  const hh = makeProbeHarness();
+  beforeEach(hh.beforeEach);
+  afterEach(hh.afterEach);
+
+  test("returns skipped when BRAINTRUST_API_KEY absent", async () => {
+    const { default: probe } = await import("../probes/probe-braintrust.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("skipped");
+    expect(result.latencyMs).toBe(0);
+  });
+
+  test("returns ok when API succeeds", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("BRAINTRUST_API_KEY", "bt-fake-key");
+    globalThis.fetch = mockFetch(200, { id: "org_1", name: "Acme" });
+    const { default: probe } = await import("../probes/probe-braintrust.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("ok");
+    expect(result.latencyMs).toBeGreaterThanOrEqual(0);
+  });
+
+  test("returns error on 401", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("BRAINTRUST_API_KEY", "bt-fake-key");
+    globalThis.fetch = mockFetch(401, { error: "unauthorized" });
+    const { default: probe } = await import("../probes/probe-braintrust.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("error");
+    expect(result.detail).toContain("401");
+  });
+
+  test("parses rate-limit headers", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("BRAINTRUST_API_KEY", "bt-fake-key");
+    globalThis.fetch = (async () => new Response(JSON.stringify({}), {
+      status: 200,
+      headers: { "x-ratelimit-limit": "1000", "x-ratelimit-remaining": "150", "Content-Type": "application/json" },
+    })) as unknown as typeof fetch;
+    const { default: probe } = await import("../probes/probe-braintrust.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.rateLimitCeiling).toBe(1000);
+    expect(result.quotaUtilization).toBeCloseTo(0.85);
+    expect(result.status).toBe("warn");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Individual probe tests — Cloudflare
+// ---------------------------------------------------------------------------
+
+describe("probe-cloudflare", () => {
+  const hh = makeProbeHarness();
+  beforeEach(hh.beforeEach);
+  afterEach(hh.afterEach);
+
+  test("returns skipped when CLOUDFLARE_API_TOKEN absent", async () => {
+    const { default: probe } = await import("../probes/probe-cloudflare.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("skipped");
+  });
+
+  test("returns ok when token is active", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("CLOUDFLARE_API_TOKEN", "cf-fake-token");
+    globalThis.fetch = mockFetch(200, { success: true, result: { status: "active" } });
+    const { default: probe } = await import("../probes/probe-cloudflare.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("ok");
+    expect(result.detail).toContain("active");
+  });
+
+  test("returns error on 401", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("CLOUDFLARE_API_TOKEN", "cf-fake-token");
+    globalThis.fetch = mockFetch(401, { success: false, errors: [{ code: 9109 }] });
+    const { default: probe } = await import("../probes/probe-cloudflare.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("error");
+    expect(result.detail).toContain("401");
+  });
+
+  test("returns error when token status is not active", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("CLOUDFLARE_API_TOKEN", "cf-fake-token");
+    globalThis.fetch = mockFetch(200, { success: true, result: { status: "expired" } });
+    const { default: probe } = await import("../probes/probe-cloudflare.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("error");
+    expect(result.detail).toContain("expired");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Individual probe tests — Convex
+// ---------------------------------------------------------------------------
+
+describe("probe-convex", () => {
+  const hh = makeProbeHarness();
+  beforeEach(hh.beforeEach);
+  afterEach(hh.afterEach);
+
+  test("returns skipped when CONVEX_DEPLOY_KEY absent", async () => {
+    const { default: probe } = await import("../probes/probe-convex.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("skipped");
+  });
+
+  test("returns ok on non-401 response (key accepted)", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("CONVEX_DEPLOY_KEY", "prod:https://fake.convex.cloud|convex-fake-key");
+    globalThis.fetch = mockFetch(200, { status: "running" });
+    const { default: probe } = await import("../probes/probe-convex.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("ok");
+  });
+
+  test("returns error on 401", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("CONVEX_DEPLOY_KEY", "prod:https://fake.convex.cloud|convex-fake-key");
+    globalThis.fetch = mockFetch(401, { error: "unauthorized" });
+    const { default: probe } = await import("../probes/probe-convex.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("error");
+    expect(result.detail).toContain("401");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Individual probe tests — Datadog
+// ---------------------------------------------------------------------------
+
+describe("probe-datadog", () => {
+  const hh = makeProbeHarness();
+  beforeEach(hh.beforeEach);
+  afterEach(hh.afterEach);
+
+  test("returns skipped when DD_API_KEY absent", async () => {
+    const prev = process.env.DD_API_KEY;
+    delete process.env.DD_API_KEY;
+    try {
+      const { default: probe } = await import("../probes/probe-datadog.ts");
+      const result = await probe.run({ log: () => {} });
+      expect(result.status).toBe("skipped");
+    } finally {
+      if (prev !== undefined) process.env.DD_API_KEY = prev;
+    }
+  });
+
+  test("returns ok when API key is valid", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("DD_API_KEY", "dd-fake-api-key");
+    globalThis.fetch = mockFetch(200, { valid: true });
+    const { default: probe } = await import("../probes/probe-datadog.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("ok");
+  });
+
+  test("returns error on 403", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("DD_API_KEY", "dd-fake-api-key");
+    globalThis.fetch = mockFetch(403, { errors: ["Forbidden"] });
+    const { default: probe } = await import("../probes/probe-datadog.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("error");
+    expect(result.detail).toContain("403");
+  });
+
+  test("returns error on 429 rate-limit", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("DD_API_KEY", "dd-fake-api-key");
+    globalThis.fetch = mockFetch(429, { errors: ["Too Many Requests"] });
+    const { default: probe } = await import("../probes/probe-datadog.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("error");
+    expect(result.detail).toContain("429");
+  });
+
+  test("parses X-RateLimit headers", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("DD_API_KEY", "dd-fake-api-key");
+    globalThis.fetch = (async () => new Response(JSON.stringify({ valid: true }), {
+      status: 200,
+      headers: { "x-ratelimit-limit": "300", "x-ratelimit-remaining": "10", "Content-Type": "application/json" },
+    })) as unknown as typeof fetch;
+    const { default: probe } = await import("../probes/probe-datadog.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.rateLimitCeiling).toBe(300);
+    expect(result.quotaUtilization).toBeCloseTo(290 / 300);
+    expect(result.status).toBe("error"); // >= 0.95
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Individual probe tests — DeepSeek
+// ---------------------------------------------------------------------------
+
+describe("probe-deepseek", () => {
+  const hh = makeProbeHarness();
+  beforeEach(hh.beforeEach);
+  afterEach(hh.afterEach);
+
+  test("returns skipped when DEEPSEEK_API_KEY absent", async () => {
+    const { default: probe } = await import("../probes/probe-deepseek.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("skipped");
+  });
+
+  test("returns ok and parses token rate-limit headers", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("DEEPSEEK_API_KEY", "sk-ds-fake");
+    globalThis.fetch = (async () => new Response(JSON.stringify({ data: [{ id: "deepseek-chat" }] }), {
+      status: 200,
+      headers: {
+        "x-ratelimit-limit-tokens": "50000",
+        "x-ratelimit-remaining-tokens": "40000",
+        "Content-Type": "application/json",
+      },
+    })) as unknown as typeof fetch;
+    const { default: probe } = await import("../probes/probe-deepseek.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("ok");
+    expect(result.rateLimitCeiling).toBe(50000);
+    expect(result.quotaUtilization).toBeCloseTo(0.2);
+  });
+
+  test("returns error on 401", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("DEEPSEEK_API_KEY", "sk-ds-fake");
+    globalThis.fetch = mockFetch(401, { error: { code: "invalid_api_key" } });
+    const { default: probe } = await import("../probes/probe-deepseek.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("error");
+    expect(result.detail).toContain("401");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Individual probe tests — DigitalOcean
+// ---------------------------------------------------------------------------
+
+describe("probe-digitalocean", () => {
+  const hh = makeProbeHarness();
+  beforeEach(hh.beforeEach);
+  afterEach(hh.afterEach);
+
+  test("returns skipped when DIGITALOCEAN_TOKEN absent", async () => {
+    const { default: probe } = await import("../probes/probe-digitalocean.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("skipped");
+  });
+
+  test("returns ok and surfaces droplet limit", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("DIGITALOCEAN_TOKEN", "dop-fake-token");
+    globalThis.fetch = mockFetch(200, { account: { droplet_limit: 25, email: "user@example.com" } });
+    const { default: probe } = await import("../probes/probe-digitalocean.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("ok");
+    expect(result.detail).toContain("25");
+  });
+
+  test("returns error on 401", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("DIGITALOCEAN_TOKEN", "dop-fake-token");
+    globalThis.fetch = mockFetch(401, { id: "unauthorized" });
+    const { default: probe } = await import("../probes/probe-digitalocean.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("error");
+    expect(result.detail).toContain("401");
+  });
+
+  test("parses RateLimit headers", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("DIGITALOCEAN_TOKEN", "dop-fake-token");
+    globalThis.fetch = (async () => new Response(JSON.stringify({ account: { droplet_limit: 10 } }), {
+      status: 200,
+      headers: { "ratelimit-limit": "5000", "ratelimit-remaining": "4500", "Content-Type": "application/json" },
+    })) as unknown as typeof fetch;
+    const { default: probe } = await import("../probes/probe-digitalocean.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.rateLimitCeiling).toBe(5000);
+    expect(result.quotaUtilization).toBeCloseTo(0.1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Individual probe tests — Fly.io
+// ---------------------------------------------------------------------------
+
+describe("probe-fly", () => {
+  const hh = makeProbeHarness();
+  beforeEach(hh.beforeEach);
+  afterEach(hh.afterEach);
+
+  test("returns skipped when FLY_API_TOKEN absent", async () => {
+    const { default: probe } = await import("../probes/probe-fly.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("skipped");
+  });
+
+  test("returns ok when token is valid", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("FLY_API_TOKEN", "fly-fake-token");
+    globalThis.fetch = mockFetch(200, { apps: { nodes: [] } });
+    const { default: probe } = await import("../probes/probe-fly.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("ok");
+  });
+
+  test("returns error on 401", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("FLY_API_TOKEN", "fly-fake-token");
+    globalThis.fetch = mockFetch(401, { error: "unauthorized" });
+    const { default: probe } = await import("../probes/probe-fly.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("error");
+    expect(result.detail).toContain("401");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Individual probe tests — GCP
+// ---------------------------------------------------------------------------
+
+describe("probe-gcp", () => {
+  const hh = makeProbeHarness();
+  beforeEach(hh.beforeEach);
+  afterEach(hh.afterEach);
+
+  test("returns skipped when GCP_SERVICE_ACCOUNT_JSON absent", async () => {
+    const { default: probe } = await import("../probes/probe-gcp.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("skipped");
+  });
+
+  test("returns error when JSON is invalid", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("GCP_SERVICE_ACCOUNT_JSON", "not-valid-json");
+    const { default: probe } = await import("../probes/probe-gcp.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("error");
+    expect(result.detail).toContain("not valid JSON");
+  });
+
+  test("returns error when type is wrong", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("GCP_SERVICE_ACCOUNT_JSON", JSON.stringify({ type: "oauth2_client" }));
+    const { default: probe } = await import("../probes/probe-gcp.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("error");
+    expect(result.detail).toContain("unexpected type");
+  });
+
+  test("returns ok when service account JSON is valid and IAM returns 401", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    const sa = {
+      type: "service_account",
+      project_id: "my-project",
+      client_email: "svc@my-project.iam.gserviceaccount.com",
+      private_key_id: "key123",
+      private_key: "-----BEGIN RSA PRIVATE KEY-----\nfake\n-----END RSA PRIVATE KEY-----",
+    };
+    await addSecret("GCP_SERVICE_ACCOUNT_JSON", JSON.stringify(sa));
+    // 401 is expected (no OAuth token provided) — shape is valid
+    globalThis.fetch = mockFetch(401, { error: { code: 401 } });
+    const { default: probe } = await import("../probes/probe-gcp.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("ok");
+    expect(result.detail).toContain("my-project");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Individual probe tests — Grafana
+// ---------------------------------------------------------------------------
+
+describe("probe-grafana", () => {
+  const hh = makeProbeHarness();
+  beforeEach(hh.beforeEach);
+  afterEach(hh.afterEach);
+
+  test("returns skipped when GRAFANA_API_KEY absent", async () => {
+    const { default: probe } = await import("../probes/probe-grafana.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("skipped");
+  });
+
+  test("returns skipped when GRAFANA_URL absent", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("GRAFANA_API_KEY", "glsa_fake");
+    const { default: probe } = await import("../probes/probe-grafana.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("skipped");
+    expect(result.detail).toContain("GRAFANA_URL");
+  });
+
+  test("returns ok and includes org name", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("GRAFANA_API_KEY", "glsa_fake");
+    await addSecret("GRAFANA_URL", "https://grafana.example.com");
+    globalThis.fetch = mockFetch(200, { id: 1, name: "Main Org." });
+    const { default: probe } = await import("../probes/probe-grafana.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("ok");
+    expect(result.detail).toContain("Main Org.");
+  });
+
+  test("returns error on 401", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("GRAFANA_API_KEY", "glsa_fake");
+    await addSecret("GRAFANA_URL", "https://grafana.example.com");
+    globalThis.fetch = mockFetch(401, { message: "Invalid API key" });
+    const { default: probe } = await import("../probes/probe-grafana.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("error");
+    expect(result.detail).toContain("401");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Individual probe tests — Hetzner
+// ---------------------------------------------------------------------------
+
+describe("probe-hetzner", () => {
+  const hh = makeProbeHarness();
+  beforeEach(hh.beforeEach);
+  afterEach(hh.afterEach);
+
+  test("returns skipped when HETZNER_API_TOKEN absent", async () => {
+    const { default: probe } = await import("../probes/probe-hetzner.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("skipped");
+  });
+
+  test("returns ok when token is valid", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("HETZNER_API_TOKEN", "htz-fake-token");
+    globalThis.fetch = mockFetch(200, { servers: [], meta: { pagination: { total_entries: 0 } } });
+    const { default: probe } = await import("../probes/probe-hetzner.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("ok");
+  });
+
+  test("returns error on 401", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("HETZNER_API_TOKEN", "htz-fake-token");
+    globalThis.fetch = mockFetch(401, { error: { code: "unauthorized" } });
+    const { default: probe } = await import("../probes/probe-hetzner.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("error");
+    expect(result.detail).toContain("401");
+  });
+
+  test("parses X-RateLimit headers and warns at >= 80%", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("HETZNER_API_TOKEN", "htz-fake-token");
+    globalThis.fetch = (async () => new Response(JSON.stringify({ servers: [] }), {
+      status: 200,
+      headers: { "x-ratelimit-limit": "3600", "x-ratelimit-remaining": "500", "Content-Type": "application/json" },
+    })) as unknown as typeof fetch;
+    const { default: probe } = await import("../probes/probe-hetzner.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.rateLimitCeiling).toBe(3600);
+    expect(result.status).toBe("warn");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Individual probe tests — LaunchDarkly
+// ---------------------------------------------------------------------------
+
+describe("probe-launchdarkly", () => {
+  const hh = makeProbeHarness();
+  beforeEach(hh.beforeEach);
+  afterEach(hh.afterEach);
+
+  test("returns skipped when LAUNCHDARKLY_API_TOKEN absent", async () => {
+    const { default: probe } = await import("../probes/probe-launchdarkly.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("skipped");
+  });
+
+  test("returns ok with token name", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("LAUNCHDARKLY_API_TOKEN", "api-fake-ld-token");
+    globalThis.fetch = mockFetch(200, { tokenName: "CI token", accountId: "acct_123" });
+    const { default: probe } = await import("../probes/probe-launchdarkly.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("ok");
+    expect(result.detail).toContain("CI token");
+  });
+
+  test("returns error on 401", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("LAUNCHDARKLY_API_TOKEN", "api-fake-ld-token");
+    globalThis.fetch = mockFetch(401, { code: "unauthorized" });
+    const { default: probe } = await import("../probes/probe-launchdarkly.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("error");
+    expect(result.detail).toContain("401");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Individual probe tests — Mailgun
+// ---------------------------------------------------------------------------
+
+describe("probe-mailgun", () => {
+  const hh = makeProbeHarness();
+  beforeEach(hh.beforeEach);
+  afterEach(hh.afterEach);
+
+  test("returns skipped when MAILGUN_API_KEY absent", async () => {
+    const { default: probe } = await import("../probes/probe-mailgun.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("skipped");
+  });
+
+  test("returns ok with domain count", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("MAILGUN_API_KEY", "mg-fake-key");
+    globalThis.fetch = mockFetch(200, { total_count: 2, items: [{}, {}] });
+    const { default: probe } = await import("../probes/probe-mailgun.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("ok");
+    expect(result.detail).toContain("2");
+  });
+
+  test("returns error on 401", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("MAILGUN_API_KEY", "mg-fake-key");
+    globalThis.fetch = mockFetch(401, { message: "Unauthorized" });
+    const { default: probe } = await import("../probes/probe-mailgun.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("error");
+    expect(result.detail).toContain("401");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Individual probe tests — Mixpanel
+// ---------------------------------------------------------------------------
+
+describe("probe-mixpanel", () => {
+  const hh = makeProbeHarness();
+  beforeEach(hh.beforeEach);
+  afterEach(hh.afterEach);
+
+  test("returns skipped when MIXPANEL_API_SECRET absent", async () => {
+    const { default: probe } = await import("../probes/probe-mixpanel.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("skipped");
+  });
+
+  test("returns ok when API responds with 200", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("MIXPANEL_API_SECRET", "mp-fake-secret");
+    globalThis.fetch = mockFetch(200, { results: { name: "Test Project" } });
+    const { default: probe } = await import("../probes/probe-mixpanel.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("ok");
+  });
+
+  test("returns error on 401", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("MIXPANEL_API_SECRET", "mp-fake-secret");
+    globalThis.fetch = mockFetch(401, { error: "Unauthorized" });
+    const { default: probe } = await import("../probes/probe-mixpanel.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("error");
+    expect(result.detail).toContain("401");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Individual probe tests — Modal
+// ---------------------------------------------------------------------------
+
+describe("probe-modal", () => {
+  const hh = makeProbeHarness();
+  beforeEach(hh.beforeEach);
+  afterEach(hh.afterEach);
+
+  test("returns skipped when MODAL_TOKEN absent", async () => {
+    const { default: probe } = await import("../probes/probe-modal.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("skipped");
+  });
+
+  test("returns ok when API responds with 200", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("MODAL_TOKEN", "ak-fakeid:fakesecret");
+    globalThis.fetch = mockFetch(200, [{ name: "my-workspace" }]);
+    const { default: probe } = await import("../probes/probe-modal.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("ok");
+  });
+
+  test("returns error on 401", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("MODAL_TOKEN", "ak-fakeid:fakesecret");
+    globalThis.fetch = mockFetch(401, { error: "unauthorized" });
+    const { default: probe } = await import("../probes/probe-modal.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("error");
+    expect(result.detail).toContain("401");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Individual probe tests — Plausible
+// ---------------------------------------------------------------------------
+
+describe("probe-plausible", () => {
+  const hh = makeProbeHarness();
+  beforeEach(hh.beforeEach);
+  afterEach(hh.afterEach);
+
+  test("returns skipped when PLAUSIBLE_API_KEY absent", async () => {
+    const { default: probe } = await import("../probes/probe-plausible.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("skipped");
+  });
+
+  test("returns ok with site count", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("PLAUSIBLE_API_KEY", "plausible-fake-key");
+    globalThis.fetch = mockFetch(200, { sites: [{ domain: "example.com" }, { domain: "test.com" }] });
+    const { default: probe } = await import("../probes/probe-plausible.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("ok");
+    expect(result.detail).toContain("2");
+  });
+
+  test("returns error on 401", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("PLAUSIBLE_API_KEY", "plausible-fake-key");
+    globalThis.fetch = mockFetch(401, { error: "Unauthorized" });
+    const { default: probe } = await import("../probes/probe-plausible.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("error");
+    expect(result.detail).toContain("401");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Individual probe tests — PostHog
+// ---------------------------------------------------------------------------
+
+describe("probe-posthog", () => {
+  const hh = makeProbeHarness();
+  beforeEach(hh.beforeEach);
+  afterEach(hh.afterEach);
+
+  test("returns skipped when POSTHOG_PERSONAL_API_KEY absent", async () => {
+    const { default: probe } = await import("../probes/probe-posthog.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("skipped");
+  });
+
+  test("returns ok with org name", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("POSTHOG_PERSONAL_API_KEY", "phx_fake_key");
+    globalThis.fetch = mockFetch(200, { results: [{ name: "Acme Corp", id: "org_1" }] });
+    const { default: probe } = await import("../probes/probe-posthog.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("ok");
+    expect(result.detail).toContain("Acme Corp");
+  });
+
+  test("returns error on 401", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("POSTHOG_PERSONAL_API_KEY", "phx_fake_key");
+    globalThis.fetch = mockFetch(401, { detail: "Authentication credentials were not provided." });
+    const { default: probe } = await import("../probes/probe-posthog.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("error");
+    expect(result.detail).toContain("401");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Individual probe tests — Postmark
+// ---------------------------------------------------------------------------
+
+describe("probe-postmark", () => {
+  const hh = makeProbeHarness();
+  beforeEach(hh.beforeEach);
+  afterEach(hh.afterEach);
+
+  test("returns skipped when POSTMARK_ACCOUNT_TOKEN absent", async () => {
+    const { default: probe } = await import("../probes/probe-postmark.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("skipped");
+  });
+
+  test("returns ok with server count", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("POSTMARK_ACCOUNT_TOKEN", "pm-fake-token");
+    globalThis.fetch = mockFetch(200, { TotalCount: 3, Servers: [{}, {}, {}] });
+    const { default: probe } = await import("../probes/probe-postmark.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("ok");
+    expect(result.detail).toContain("3");
+  });
+
+  test("returns error on 401", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("POSTMARK_ACCOUNT_TOKEN", "pm-fake-token");
+    globalThis.fetch = mockFetch(401, { ErrorCode: 10, Message: "Bad or missing credentials." });
+    const { default: probe } = await import("../probes/probe-postmark.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("error");
+    expect(result.detail).toContain("401");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Individual probe tests — Railway
+// ---------------------------------------------------------------------------
+
+describe("probe-railway", () => {
+  const hh = makeProbeHarness();
+  beforeEach(hh.beforeEach);
+  afterEach(hh.afterEach);
+
+  test("returns skipped when RAILWAY_TOKEN absent", async () => {
+    const { default: probe } = await import("../probes/probe-railway.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("skipped");
+  });
+
+  test("returns ok with user email", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("RAILWAY_TOKEN", "rw-fake-token");
+    globalThis.fetch = mockFetch(200, { data: { me: { id: "u1", email: "user@example.com", name: "User" } } });
+    const { default: probe } = await import("../probes/probe-railway.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("ok");
+    expect(result.detail).toContain("user@example.com");
+  });
+
+  test("returns error when GraphQL errors present", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("RAILWAY_TOKEN", "rw-fake-token");
+    globalThis.fetch = mockFetch(200, { errors: [{ message: "Authentication required" }] });
+    const { default: probe } = await import("../probes/probe-railway.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("error");
+    expect(result.detail).toContain("Authentication required");
+  });
+
+  test("returns error on 401", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("RAILWAY_TOKEN", "rw-fake-token");
+    globalThis.fetch = mockFetch(401, { error: "Unauthorized" });
+    const { default: probe } = await import("../probes/probe-railway.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("error");
+    expect(result.detail).toContain("401");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Individual probe tests — Render
+// ---------------------------------------------------------------------------
+
+describe("probe-render", () => {
+  const hh = makeProbeHarness();
+  beforeEach(hh.beforeEach);
+  afterEach(hh.afterEach);
+
+  test("returns skipped when RENDER_API_KEY absent", async () => {
+    const { default: probe } = await import("../probes/probe-render.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("skipped");
+  });
+
+  test("returns ok when API succeeds", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("RENDER_API_KEY", "rnd-fake-key");
+    globalThis.fetch = mockFetch(200, [{ service: { id: "srv_1" } }]);
+    const { default: probe } = await import("../probes/probe-render.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("ok");
+  });
+
+  test("returns error on 401", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("RENDER_API_KEY", "rnd-fake-key");
+    globalThis.fetch = mockFetch(401, { id: "unauthorized", message: "You do not have permission" });
+    const { default: probe } = await import("../probes/probe-render.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("error");
+    expect(result.detail).toContain("401");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Individual probe tests — Replicate
+// ---------------------------------------------------------------------------
+
+describe("probe-replicate", () => {
+  const hh = makeProbeHarness();
+  beforeEach(hh.beforeEach);
+  afterEach(hh.afterEach);
+
+  test("returns skipped when REPLICATE_API_TOKEN absent", async () => {
+    const { default: probe } = await import("../probes/probe-replicate.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("skipped");
+  });
+
+  test("returns ok with username", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("REPLICATE_API_TOKEN", "r8_fake-token");
+    globalThis.fetch = mockFetch(200, { username: "acme-ai", name: "Acme AI", github_url: "" });
+    const { default: probe } = await import("../probes/probe-replicate.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("ok");
+    expect(result.detail).toContain("acme-ai");
+  });
+
+  test("returns error on 401", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("REPLICATE_API_TOKEN", "r8_fake-token");
+    globalThis.fetch = mockFetch(401, { detail: "Invalid token." });
+    const { default: probe } = await import("../probes/probe-replicate.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("error");
+    expect(result.detail).toContain("401");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Individual probe tests — Resend
+// ---------------------------------------------------------------------------
+
+describe("probe-resend", () => {
+  const hh = makeProbeHarness();
+  beforeEach(hh.beforeEach);
+  afterEach(hh.afterEach);
+
+  test("returns skipped when RESEND_API_KEY absent", async () => {
+    const { default: probe } = await import("../probes/probe-resend.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("skipped");
+  });
+
+  test("returns ok with domain count", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("RESEND_API_KEY", "re_fake-key");
+    globalThis.fetch = mockFetch(200, { data: [{ id: "d1", name: "example.com" }] });
+    const { default: probe } = await import("../probes/probe-resend.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("ok");
+    expect(result.detail).toContain("1 domain");
+  });
+
+  test("returns error on 401", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("RESEND_API_KEY", "re_fake-key");
+    globalThis.fetch = mockFetch(401, { statusCode: 401, message: "Unauthorized" });
+    const { default: probe } = await import("../probes/probe-resend.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("error");
+    expect(result.detail).toContain("401");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Individual probe tests — SendGrid
+// ---------------------------------------------------------------------------
+
+describe("probe-sendgrid", () => {
+  const hh = makeProbeHarness();
+  beforeEach(hh.beforeEach);
+  afterEach(hh.afterEach);
+
+  test("returns skipped when SENDGRID_API_KEY absent", async () => {
+    const { default: probe } = await import("../probes/probe-sendgrid.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("skipped");
+  });
+
+  test("returns ok with scope count", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("SENDGRID_API_KEY", "SG.fake-key");
+    globalThis.fetch = mockFetch(200, { scopes: ["mail.send", "stats.read", "templates.read"] });
+    const { default: probe } = await import("../probes/probe-sendgrid.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("ok");
+    expect(result.detail).toContain("3 scope");
+  });
+
+  test("returns error on 401", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("SENDGRID_API_KEY", "SG.fake-key");
+    globalThis.fetch = mockFetch(401, { errors: [{ message: "Permission denied" }] });
+    const { default: probe } = await import("../probes/probe-sendgrid.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("error");
+    expect(result.detail).toContain("401");
+  });
+
+  test("parses X-RateLimit headers", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("SENDGRID_API_KEY", "SG.fake-key");
+    globalThis.fetch = (async () => new Response(JSON.stringify({ scopes: ["mail.send"] }), {
+      status: 200,
+      headers: { "x-ratelimit-limit": "500", "x-ratelimit-remaining": "400", "Content-Type": "application/json" },
+    })) as unknown as typeof fetch;
+    const { default: probe } = await import("../probes/probe-sendgrid.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.rateLimitCeiling).toBe(500);
+    expect(result.quotaUtilization).toBeCloseTo(0.2);
+    expect(result.status).toBe("ok");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Individual probe tests — Sentry
+// ---------------------------------------------------------------------------
+
+describe("probe-sentry", () => {
+  const hh = makeProbeHarness();
+  beforeEach(hh.beforeEach);
+  afterEach(hh.afterEach);
+
+  test("returns skipped when SENTRY_AUTH_TOKEN absent", async () => {
+    const prev = process.env.SENTRY_AUTH_TOKEN;
+    delete process.env.SENTRY_AUTH_TOKEN;
+    try {
+      const { default: probe } = await import("../probes/probe-sentry.ts");
+      const result = await probe.run({ log: () => {} });
+      expect(result.status).toBe("skipped");
+    } finally {
+      if (prev !== undefined) process.env.SENTRY_AUTH_TOKEN = prev;
+    }
+  });
+
+  test("returns ok with project count", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("SENTRY_AUTH_TOKEN", "sntrys_fake-token");
+    globalThis.fetch = mockFetch(200, [{ id: "1", slug: "my-project" }, { id: "2", slug: "other" }]);
+    const { default: probe } = await import("../probes/probe-sentry.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("ok");
+    expect(result.detail).toContain("2 project");
+  });
+
+  test("returns error on 401", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("SENTRY_AUTH_TOKEN", "sntrys_fake-token");
+    globalThis.fetch = mockFetch(401, { detail: "Authentication credentials were not provided." });
+    const { default: probe } = await import("../probes/probe-sentry.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("error");
+    expect(result.detail).toContain("401");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Individual probe tests — Turso
+// ---------------------------------------------------------------------------
+
+describe("probe-turso", () => {
+  const hh = makeProbeHarness();
+  beforeEach(hh.beforeEach);
+  afterEach(hh.afterEach);
+
+  test("returns skipped when TURSO_PLATFORM_TOKEN absent", async () => {
+    const { default: probe } = await import("../probes/probe-turso.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("skipped");
+  });
+
+  test("returns ok with org name", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("TURSO_PLATFORM_TOKEN", "turso-fake-token");
+    globalThis.fetch = mockFetch(200, [{ name: "Acme", slug: "acme" }]);
+    const { default: probe } = await import("../probes/probe-turso.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("ok");
+    expect(result.detail).toContain("Acme");
+  });
+
+  test("returns error on 401", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("TURSO_PLATFORM_TOKEN", "turso-fake-token");
+    globalThis.fetch = mockFetch(401, { error: "Unauthorized" });
+    const { default: probe } = await import("../probes/probe-turso.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("error");
+    expect(result.detail).toContain("401");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Individual probe tests — Upstash
+// ---------------------------------------------------------------------------
+
+describe("probe-upstash", () => {
+  const hh = makeProbeHarness();
+  beforeEach(hh.beforeEach);
+  afterEach(hh.afterEach);
+
+  test("returns skipped when UPSTASH_MANAGEMENT_TOKEN absent", async () => {
+    const { default: probe } = await import("../probes/probe-upstash.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("skipped");
+  });
+
+  test("returns ok with database count", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("UPSTASH_MANAGEMENT_TOKEN", "upstash-fake-token");
+    globalThis.fetch = mockFetch(200, [
+      { database_name: "redis-1", max_daily_requests: 10000, used_daily_requests: 2000 },
+    ]);
+    const { default: probe } = await import("../probes/probe-upstash.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("ok");
+    expect(result.detail).toContain("1 Redis database");
+    expect(result.quotaUtilization).toBeCloseTo(0.2);
+  });
+
+  test("warns when database usage >= 80%", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("UPSTASH_MANAGEMENT_TOKEN", "upstash-fake-token");
+    globalThis.fetch = mockFetch(200, [
+      { database_name: "redis-1", max_daily_requests: 10000, used_daily_requests: 9000 },
+    ]);
+    const { default: probe } = await import("../probes/probe-upstash.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("warn");
+    expect(result.quotaUtilization).toBeCloseTo(0.9);
+  });
+
+  test("returns error on 401", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("UPSTASH_MANAGEMENT_TOKEN", "upstash-fake-token");
+    globalThis.fetch = mockFetch(401, { message: "Unauthorized" });
+    const { default: probe } = await import("../probes/probe-upstash.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("error");
+    expect(result.detail).toContain("401");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Individual probe tests — WorkOS
+// ---------------------------------------------------------------------------
+
+describe("probe-workos", () => {
+  const hh = makeProbeHarness();
+  beforeEach(hh.beforeEach);
+  afterEach(hh.afterEach);
+
+  test("returns skipped when WORKOS_API_KEY absent", async () => {
+    const { default: probe } = await import("../probes/probe-workos.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("skipped");
+  });
+
+  test("returns ok with org count", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("WORKOS_API_KEY", "sk_test_fake_workos");
+    globalThis.fetch = mockFetch(200, {
+      data: [{ id: "org_01", name: "Acme Corp" }],
+      list_metadata: { total: 1 },
+    });
+    const { default: probe } = await import("../probes/probe-workos.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("ok");
+    expect(result.detail).toContain("1 organization");
+  });
+
+  test("returns error on 401", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("WORKOS_API_KEY", "sk_test_fake_workos");
+    globalThis.fetch = mockFetch(401, { message: "Unauthorized" });
+    const { default: probe } = await import("../probes/probe-workos.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("error");
+    expect(result.detail).toContain("401");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Individual probe tests — xAI
+// ---------------------------------------------------------------------------
+
+describe("probe-xai", () => {
+  const hh = makeProbeHarness();
+  beforeEach(hh.beforeEach);
+  afterEach(hh.afterEach);
+
+  test("returns skipped when XAI_API_KEY absent", async () => {
+    const prev = process.env.XAI_API_KEY;
+    delete process.env.XAI_API_KEY;
+    try {
+      const { default: probe } = await import("../probes/probe-xai.ts");
+      const result = await probe.run({ log: () => {} });
+      expect(result.status).toBe("skipped");
+    } finally {
+      if (prev !== undefined) process.env.XAI_API_KEY = prev;
+    }
+  });
+
+  test("returns ok and parses token rate-limit headers", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("XAI_API_KEY", "xai-fake-key");
+    globalThis.fetch = (async () => new Response(JSON.stringify({ data: [{ id: "grok-2" }] }), {
+      status: 200,
+      headers: {
+        "x-ratelimit-limit-tokens": "100000",
+        "x-ratelimit-remaining-tokens": "85000",
+        "Content-Type": "application/json",
+      },
+    })) as unknown as typeof fetch;
+    const { default: probe } = await import("../probes/probe-xai.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("ok");
+    expect(result.rateLimitCeiling).toBe(100000);
+    expect(result.quotaUtilization).toBeCloseTo(0.15);
+  });
+
+  test("returns error on 401", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("XAI_API_KEY", "xai-fake-key");
+    globalThis.fetch = mockFetch(401, { error: { code: "invalid_api_key" } });
+    const { default: probe } = await import("../probes/probe-xai.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("error");
+    expect(result.detail).toContain("401");
+  });
+
+  test("warns at >= 80% utilization", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("XAI_API_KEY", "xai-fake-key");
+    globalThis.fetch = (async () => new Response(JSON.stringify({ data: [] }), {
+      status: 200,
+      headers: {
+        "x-ratelimit-limit-tokens": "100000",
+        "x-ratelimit-remaining-tokens": "15000",
+        "Content-Type": "application/json",
+      },
+    })) as unknown as typeof fetch;
+    const { default: probe } = await import("../probes/probe-xai.ts");
+    const result = await probe.run({ log: () => {} });
+    expect(result.status).toBe("warn");
+    expect(result.alertThreshold).toBeDefined();
+  });
+});
