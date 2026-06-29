@@ -23,6 +23,11 @@ export default makeApiKeyProvider({
       return undefined;
     }
   },
+  deprovision: {
+    description:
+      "Resend API keys must be revoked manually at https://resend.com/api-keys.",
+    docsUrl: "https://resend.com/docs/api-reference/api-keys/delete-api-key",
+  },
   async healthcheck(ctx) {
     const key = await tryRevealSecret(SECRET);
     if (!key) return { kind: "error", detail: `${SECRET} missing from vault` };

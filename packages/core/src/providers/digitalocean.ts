@@ -29,6 +29,11 @@ export default makeApiKeyProvider({
       return undefined;
     }
   },
+  deprovision: {
+    description:
+      "DigitalOcean personal access tokens must be revoked manually at https://cloud.digitalocean.com/account/api/tokens.",
+    docsUrl: "https://cloud.digitalocean.com/account/api/tokens",
+  },
   async healthcheck(ctx) {
     const key = await tryRevealSecret(SECRET);
     if (!key) return { kind: "error", detail: `${SECRET} missing from vault` };

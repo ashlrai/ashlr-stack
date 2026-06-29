@@ -23,6 +23,11 @@ export default makeApiKeyProvider({
       return undefined;
     }
   },
+  deprovision: {
+    description:
+      "DeepSeek API keys must be revoked manually at https://platform.deepseek.com/api_keys.",
+    docsUrl: "https://platform.deepseek.com/api_keys",
+  },
   async healthcheck(ctx) {
     const key = await tryRevealSecret(SECRET);
     if (!key) return { kind: "error", detail: `${SECRET} missing from vault` };

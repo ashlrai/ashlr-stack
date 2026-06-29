@@ -32,6 +32,11 @@ export default makeApiKeyProvider({
       return undefined;
     }
   },
+  deprovision: {
+    description:
+      "Braintrust API keys must be revoked manually at https://www.braintrust.dev/app/settings/api-keys.",
+    docsUrl: "https://www.braintrust.dev/app/settings/api-keys",
+  },
   async healthcheck(ctx) {
     const key = await tryRevealSecret(SECRET);
     if (!key) return { kind: "error", detail: `${SECRET} missing from vault` };

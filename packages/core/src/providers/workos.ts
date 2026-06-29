@@ -26,6 +26,11 @@ export default makeApiKeyProvider({
       return undefined;
     }
   },
+  deprovision: {
+    description:
+      "WorkOS API keys must be revoked manually in the WorkOS dashboard → API Keys.",
+    docsUrl: "https://workos.com/docs/reference/api",
+  },
   async healthcheck(ctx) {
     const key = await tryRevealSecret(SECRET);
     if (!key) return { kind: "error", detail: `${SECRET} missing from vault` };

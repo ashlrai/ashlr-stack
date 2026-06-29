@@ -32,6 +32,11 @@ export default makeApiKeyProvider({
       return undefined;
     }
   },
+  deprovision: {
+    description:
+      "LaunchDarkly access tokens must be revoked manually at LaunchDarkly → Account settings → Authorization.",
+    docsUrl: "https://apidocs.launchdarkly.com/#tag/Access-tokens",
+  },
   async healthcheck(ctx) {
     const key = await tryRevealSecret(SECRET);
     if (!key) return { kind: "error", detail: `${SECRET} missing from vault` };

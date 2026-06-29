@@ -25,6 +25,11 @@ export default makeApiKeyProvider({
       return undefined;
     }
   },
+  deprovision: {
+    description:
+      "Mailgun API keys must be revoked manually at https://app.mailgun.com/settings/api_security.",
+    docsUrl: "https://documentation.mailgun.com/docs/mailgun/api-reference/",
+  },
   async healthcheck(ctx) {
     const key = await tryRevealSecret(SECRET);
     if (!key) return { kind: "error", detail: `${SECRET} missing from vault` };

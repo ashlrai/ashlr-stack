@@ -26,6 +26,11 @@ export default makeApiKeyProvider({
       return undefined;
     }
   },
+  deprovision: {
+    description:
+      "Postmark account tokens must be revoked manually at https://account.postmarkapp.com/api_tokens.",
+    docsUrl: "https://postmarkapp.com/developer/api/overview",
+  },
   async healthcheck(ctx) {
     const key = await tryRevealSecret(SECRET);
     if (!key) return { kind: "error", detail: `${SECRET} missing from vault` };

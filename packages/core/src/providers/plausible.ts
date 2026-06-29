@@ -25,6 +25,11 @@ export default makeApiKeyProvider({
       return undefined;
     }
   },
+  deprovision: {
+    description:
+      "Plausible API keys must be revoked manually at https://plausible.io/settings.",
+    docsUrl: "https://plausible.io/docs/stats-api",
+  },
   async healthcheck(ctx) {
     const key = await tryRevealSecret(SECRET);
     if (!key) return { kind: "error", detail: `${SECRET} missing from vault` };

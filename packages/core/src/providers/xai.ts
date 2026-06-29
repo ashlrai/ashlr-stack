@@ -23,6 +23,11 @@ export default makeApiKeyProvider({
       return undefined;
     }
   },
+  deprovision: {
+    description:
+      "xAI API keys must be revoked manually at https://console.x.ai.",
+    docsUrl: "https://docs.x.ai/api",
+  },
   async healthcheck(ctx) {
     const key = await tryRevealSecret(SECRET);
     if (!key) return { kind: "error", detail: `${SECRET} missing from vault` };

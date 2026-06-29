@@ -23,6 +23,11 @@ export default makeApiKeyProvider({
       return undefined;
     }
   },
+  deprovision: {
+    description:
+      "OpenAI API keys must be revoked manually at https://platform.openai.com/api-keys.",
+    docsUrl: "https://platform.openai.com/api-keys",
+  },
   async healthcheck(ctx) {
     const key = await tryRevealSecret(SECRET);
     if (!key) return { kind: "error", detail: `${SECRET} missing from vault` };

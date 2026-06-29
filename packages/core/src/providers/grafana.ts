@@ -29,6 +29,11 @@ export default makeApiKeyProvider({
     }
     return undefined;
   },
+  deprovision: {
+    description:
+      "Grafana service-account tokens must be revoked manually in Grafana → Administration → Service accounts.",
+    docsUrl: "https://grafana.com/docs/grafana/latest/administration/service-accounts/",
+  },
   async healthcheck(ctx) {
     const key = await tryRevealSecret(SECRET);
     if (!key) return { kind: "error", detail: `${SECRET} missing from vault` };

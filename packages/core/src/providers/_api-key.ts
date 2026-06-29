@@ -20,6 +20,33 @@ import { readLine, tryRevealSecret } from "./_helpers.ts";
  * Phantom vault under a canonical secret name.
  */
 
+export interface ApiKeyDeprovisionSpec {
+  /**
+   * Optional description of what cleanup is attempted (shown in rollback logs).
+   * If omitted, a generic no-op message is logged.
+   */
+  description?: string;
+  /**
+   * Perform provider-specific cleanup (e.g. delete a registered integration,
+   * revoke a token). Return void on success or idempotent not-found. Throw a
+   * StackError with a provider-namespaced code on hard failures.
+   *
+   * If undefined, `makeApiKeyProvider` logs a structured no-op message and
+   * returns gracefully — this is correct for most API-key-only providers where
+   * the "resource" is just an opaque key in the vault.
+   */
+  cleanup?: (
+    ctx: ProviderContext,
+    auth: AuthHandle,
+    resourceId: string,
+  ) => Promise<void>;
+  /**
+   * Docs link surfaced in the no-op log so operators know where to manually
+   * revoke the key if desired.
+   */
+  docsUrl?: string;
+}
+
 export interface ApiKeyProviderSpec {
   name: string;
   displayName: string;
@@ -43,6 +70,12 @@ export interface ApiKeyProviderSpec {
    * secret, which is the right call for stateless API keys.
    */
   healthcheck?: (ctx: ProviderContext, entry: ServiceEntry) => Promise<HealthStatus>;
+  /**
+   * Optional deprovision spec. When absent, `makeApiKeyProvider` auto-wires a
+   * graceful no-op that logs a structured message and returns cleanly — correct
+   * for API-key-only providers where no upstream resource was created.
+   */
+  deprovision?: ApiKeyDeprovisionSpec;
 }
 
 export function makeApiKeyProvider(spec: ApiKeyProviderSpec): Provider {
@@ -116,6 +149,28 @@ export function makeApiKeyProvider(spec: ApiKeyProviderSpec): Provider {
 
     dashboardUrl() {
       return spec.dashboard ?? "";
+    },
+
+    async deprovision(ctx: ProviderContext, auth: AuthHandle, resourceId: string): Promise<void> {
+      const depSpec = spec.deprovision;
+      if (depSpec?.cleanup) {
+        await depSpec.cleanup(ctx, auth, resourceId);
+        return;
+      }
+      // No upstream resource was created — log a structured no-op so rollback
+      // transcripts are accurate and operators can manually revoke if needed.
+      const docsLink = depSpec?.docsUrl ?? spec.docs ?? "";
+      const description = depSpec?.description ?? `${spec.displayName} API keys are not automatically revoked.`;
+      ctx.log({
+        level: "info",
+        msg: `deprovision no-op: ${spec.displayName} (${spec.name})`,
+        data: {
+          resourceId,
+          provider: spec.name,
+          reason: description,
+          ...(docsLink ? { docsUrl: docsLink } : {}),
+        },
+      });
     },
   };
 }

@@ -36,6 +36,11 @@ export default makeApiKeyProvider({
       return undefined;
     }
   },
+  deprovision: {
+    description:
+      "Mixpanel project tokens are per-project and cannot be individually revoked via API. Rotate in Mixpanel → Settings → Project Settings.",
+    docsUrl: "https://developer.mixpanel.com/reference/overview",
+  },
   async healthcheck(ctx) {
     const key = await tryRevealSecret(SECRET);
     if (!key) return { kind: "error", detail: `${SECRET} missing from vault` };

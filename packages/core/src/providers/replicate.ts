@@ -29,6 +29,11 @@ export default makeApiKeyProvider({
       return undefined;
     }
   },
+  deprovision: {
+    description:
+      "Replicate API tokens must be revoked manually at https://replicate.com/account/api-tokens.",
+    docsUrl: "https://replicate.com/docs/reference/http#authentication",
+  },
   async healthcheck(ctx) {
     const key = await tryRevealSecret(SECRET);
     if (!key) return { kind: "error", detail: `${SECRET} missing from vault` };

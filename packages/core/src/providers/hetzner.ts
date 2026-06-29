@@ -28,6 +28,11 @@ export default makeApiKeyProvider({
       return undefined;
     }
   },
+  deprovision: {
+    description:
+      "Hetzner API tokens must be revoked manually in Hetzner Cloud Console → Project → Security → API Tokens.",
+    docsUrl: "https://docs.hetzner.cloud/#authentication",
+  },
   async healthcheck(ctx) {
     const key = await tryRevealSecret(SECRET);
     if (!key) return { kind: "error", detail: `${SECRET} missing from vault` };

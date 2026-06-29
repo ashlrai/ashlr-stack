@@ -26,6 +26,11 @@ export default makeApiKeyProvider({
       return undefined;
     }
   },
+  deprovision: {
+    description:
+      "Anthropic API keys must be revoked manually in the Anthropic Console. No automated cleanup is performed.",
+    docsUrl: "https://console.anthropic.com/settings/keys",
+  },
   async healthcheck(ctx) {
     const key = await tryRevealSecret(SECRET);
     if (!key) return { kind: "error", detail: `${SECRET} missing from vault` };

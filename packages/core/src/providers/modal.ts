@@ -27,6 +27,11 @@ export default makeApiKeyProvider({
     if (!id.startsWith("ak-") && !id.startsWith("as-")) return undefined;
     return { token_id: id };
   },
+  deprovision: {
+    description:
+      "Modal tokens must be revoked manually at https://modal.com/settings/tokens or via `modal token revoke`.",
+    docsUrl: "https://modal.com/docs/reference/modal.token",
+  },
   async healthcheck(_ctx) {
     // Modal has no public unauthenticated verify endpoint; structural shape
     // check is the best we can do without incurring a full CLI round-trip.

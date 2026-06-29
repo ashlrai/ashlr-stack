@@ -23,6 +23,11 @@ export default makeApiKeyProvider({
       return undefined;
     }
   },
+  deprovision: {
+    description:
+      "SendGrid API keys must be revoked manually at https://app.sendgrid.com/settings/api_keys.",
+    docsUrl: "https://docs.sendgrid.com/api-reference/api-keys/delete-api-keys",
+  },
   async healthcheck(ctx) {
     const key = await tryRevealSecret(SECRET);
     if (!key) return { kind: "error", detail: `${SECRET} missing from vault` };
