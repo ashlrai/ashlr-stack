@@ -29,6 +29,7 @@ import { telemetryCommand } from "./commands/telemetry.ts";
 import { templatesCommand } from "./commands/templates.ts";
 import { upgradeCommand } from "./commands/upgrade.ts";
 import { validateSchemaCommand } from "./commands/validate.ts";
+import { quotaForecastCommand } from "./commands/quota-forecast.ts";
 import { checkForUpdate } from "./lib/update-check.ts";
 
 // Single source of truth for the CLI version. citty wires this into `--help`
@@ -116,6 +117,7 @@ const main = defineCommand({
     completion: completionCommand,
     upgrade: upgradeCommand,
     "validate-schema": validateSchemaCommand,
+    "quota-forecast": quotaForecastCommand,
   },
 });
 

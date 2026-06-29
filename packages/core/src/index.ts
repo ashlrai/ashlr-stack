@@ -155,3 +155,27 @@ export {
   type PartialStateItem,
   type OrchestrationStepEvent,
 } from "./instrumentation.ts";
+export {
+  QuotaEngine,
+  buildForecast,
+  probeResultToSnapshot,
+  type QuotaSnapshot,
+  type QuotaForecast,
+  type QuotaAlert,
+  type BurnTrend,
+  type QuotaEngineOptions,
+} from "./quota-engine.ts";
+export {
+  runProbes,
+  BUILTIN_PROBES,
+  type Probe,
+  type ProbeContext,
+  type ProbeResult,
+  type ProbeRunSummary,
+  type RunProbesOptions,
+  appendSample,
+  computePercentiles,
+  readHistogram,
+  writeHistogram,
+  __setHistogramDirForTesting,
+} from "./probes/index.ts";
