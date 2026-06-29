@@ -4,12 +4,14 @@ import { fetchWithRetry } from "../http.ts";
 import { addSecret } from "../phantom.ts";
 import type {
   AuthHandle,
+  ConflictCheckOpts,
   HealthStatus,
   Materialized,
   Provider,
   ProviderContext,
   ProvisionOpts,
   Resource,
+  ResourceConflictCheckConfig,
 } from "./_base.ts";
 import { readLine, tryRevealSecret } from "./_helpers.ts";
 
@@ -143,6 +145,55 @@ const neon: Provider = {
       });
     }
   },
+
+  async checkConflict(
+    auth: AuthHandle,
+    opts: ConflictCheckOpts,
+  ): Promise<ResourceConflictCheckConfig> {
+    const now = new Date().toISOString();
+    const desiredName = opts.desiredName;
+    try {
+      const projects = await listProjects(auth.token, opts.signal);
+      if (!desiredName) {
+        return {
+          requestedName: "(auto)",
+          exists: false,
+          action: "ok",
+          message: "No desired name specified; auto-naming will avoid conflicts.",
+          checkedAt: now,
+        };
+      }
+      const match = projects.find((p) => p.name === desiredName);
+      if (!match) {
+        return {
+          requestedName: desiredName,
+          exists: false,
+          action: "ok",
+          message: `No Neon project named "${desiredName}" found; safe to create.`,
+          checkedAt: now,
+        };
+      }
+      const suffix = Date.now().toString(36);
+      return {
+        requestedName: desiredName,
+        exists: true,
+        existingResourceId: match.id,
+        existingDisplayName: match.name,
+        suggestedUniqueName: `${desiredName}-${suffix}`,
+        action: "rename",
+        message: `A Neon project named "${desiredName}" already exists (id: ${match.id}). You can attach to it or use a unique name.`,
+        checkedAt: now,
+      };
+    } catch {
+      return {
+        requestedName: desiredName ?? "(auto)",
+        exists: undefined,
+        action: "unreachable",
+        message: "Neon API unreachable during conflict check; proceeding with provision.",
+        checkedAt: now,
+      };
+    }
+  },
 };
 
 export default neon;
@@ -198,4 +249,14 @@ async function fetchConnectionUri(token: string, projectId: string): Promise<str
 
 function toResource(project: NeonProject): Resource {
   return { id: project.id, displayName: project.name, region: project.region_id };
+}
+
+async function listProjects(token: string, signal?: AbortSignal): Promise<NeonProject[]> {
+  const res = await fetchWithRetry(`${API}/projects?limit=100`, {
+    headers: authHeaders(token),
+    ...(signal ? { signal } : {}),
+  });
+  if (!res.ok) return [];
+  const body = (await res.json()) as { projects?: NeonProject[] };
+  return body.projects ?? [];
 }

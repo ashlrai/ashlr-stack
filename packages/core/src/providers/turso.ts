@@ -5,12 +5,14 @@ import { addSecret } from "../phantom.ts";
 import { tryRevealSecret } from "./_helpers.ts";
 import type {
   AuthHandle,
+  ConflictCheckOpts,
   HealthStatus,
   Materialized,
   Provider,
   ProviderContext,
   ProvisionOpts,
   Resource,
+  ResourceConflictCheckConfig,
 } from "./_base.ts";
 
 /**
@@ -156,6 +158,68 @@ const turso: Provider = {
       });
     }
   },
+
+  async checkConflict(
+    auth: AuthHandle,
+    opts: ConflictCheckOpts,
+  ): Promise<ResourceConflictCheckConfig> {
+    const now = new Date().toISOString();
+    const desiredName = opts.desiredName;
+    try {
+      const orgs = await fetchOrganizations(auth.token);
+      if (orgs.length === 0) {
+        return {
+          requestedName: desiredName ?? "(auto)",
+          exists: undefined,
+          action: "unreachable",
+          message: "No Turso organizations found; cannot perform conflict check.",
+          checkedAt: now,
+        };
+      }
+      const orgSlug = (opts.hints?.orgSlug as string | undefined) ?? orgs[0].slug;
+
+      if (!desiredName) {
+        return {
+          requestedName: "(auto)",
+          exists: false,
+          action: "ok",
+          message: "No desired name specified; auto-naming will avoid conflicts.",
+          checkedAt: now,
+        };
+      }
+
+      const dbs = await listTursoDatabases(auth.token, orgSlug, opts.signal);
+      const match = dbs.find((db) => db.Name === desiredName);
+      if (!match) {
+        return {
+          requestedName: desiredName,
+          exists: false,
+          action: "ok",
+          message: `No Turso database named "${desiredName}" found in org "${orgSlug}"; safe to create.`,
+          checkedAt: now,
+        };
+      }
+      const suffix = Date.now().toString(36);
+      return {
+        requestedName: desiredName,
+        exists: true,
+        existingResourceId: `${orgSlug}/${match.Name}`,
+        existingDisplayName: match.Name,
+        suggestedUniqueName: `${desiredName}-${suffix}`,
+        action: "rename",
+        message: `A Turso database named "${desiredName}" already exists in org "${orgSlug}". You can attach to it or use a unique name.`,
+        checkedAt: now,
+      };
+    } catch {
+      return {
+        requestedName: desiredName ?? "(auto)",
+        exists: undefined,
+        action: "unreachable",
+        message: "Turso API unreachable during conflict check; proceeding with provision.",
+        checkedAt: now,
+      };
+    }
+  },
 };
 
 export default turso;
@@ -183,6 +247,20 @@ async function fetchOrganizations(token: string): Promise<Array<{ slug: string; 
   });
   if (!res.ok) return [];
   return (await res.json()) as Array<{ slug: string; name: string }>;
+}
+
+async function listTursoDatabases(
+  token: string,
+  orgSlug: string,
+  signal?: AbortSignal,
+): Promise<Array<{ Name: string; Hostname: string }>> {
+  const res = await fetchWithRetry(`${API}/organizations/${orgSlug}/databases`, {
+    headers: { Authorization: `Bearer ${token}` },
+    ...(signal ? { signal } : {}),
+  });
+  if (!res.ok) return [];
+  const body = (await res.json()) as { databases?: Array<{ Name: string; Hostname: string }> };
+  return body.databases ?? [];
 }
 
 async function mintDbToken(

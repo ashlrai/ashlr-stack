@@ -6,12 +6,14 @@ import { runPkceFlow } from "../oauth.ts";
 import { addSecret, exec as phantomExec } from "../phantom.ts";
 import type {
   AuthHandle,
+  ConflictCheckOpts,
   HealthStatus,
   Materialized,
   Provider,
   ProviderContext,
   ProvisionOpts,
   Resource,
+  ResourceConflictCheckConfig,
 } from "./_base.ts";
 import { readLine, tryRevealSecret } from "./_helpers.ts";
 
@@ -220,6 +222,55 @@ const supabase: Provider = {
       });
     }
   },
+
+  async checkConflict(
+    auth: AuthHandle,
+    opts: ConflictCheckOpts,
+  ): Promise<ResourceConflictCheckConfig> {
+    const now = new Date().toISOString();
+    const desiredName = opts.desiredName;
+    try {
+      const projects = await listAllProjects(auth.token, opts.signal);
+      if (!desiredName) {
+        return {
+          requestedName: "(auto)",
+          exists: false,
+          action: "ok",
+          message: "No desired name specified; auto-naming will avoid conflicts.",
+          checkedAt: now,
+        };
+      }
+      const match = projects.find((p) => p.name === desiredName);
+      if (!match) {
+        return {
+          requestedName: desiredName,
+          exists: false,
+          action: "ok",
+          message: `No Supabase project named "${desiredName}" found; safe to create.`,
+          checkedAt: now,
+        };
+      }
+      const suffix = Date.now().toString(36);
+      return {
+        requestedName: desiredName,
+        exists: true,
+        existingResourceId: match.id,
+        existingDisplayName: match.name,
+        suggestedUniqueName: `${desiredName}-${suffix}`,
+        action: "rename",
+        message: `A Supabase project named "${desiredName}" already exists (ref: ${match.id}). You can attach to it or use a unique name.`,
+        checkedAt: now,
+      };
+    } catch {
+      return {
+        requestedName: desiredName ?? "(auto)",
+        exists: undefined,
+        action: "unreachable",
+        message: "Supabase API unreachable during conflict check; proceeding with provision.",
+        checkedAt: now,
+      };
+    }
+  },
 };
 
 export default supabase;
@@ -318,6 +369,18 @@ function toResource(project: SupabaseProject): Resource {
 
 function dashboardUrl(ref: string): string {
   return `https://supabase.com/dashboard/project/${ref}`;
+}
+
+async function listAllProjects(
+  token: string,
+  signal?: AbortSignal,
+): Promise<SupabaseProject[]> {
+  const res = await fetchWithRetry(`${API}/v1/projects`, {
+    headers: authHeaders(token),
+    ...(signal ? { signal } : {}),
+  });
+  if (!res.ok) return [];
+  return (await res.json()) as SupabaseProject[];
 }
 
 function generateStrongPassword(): string {

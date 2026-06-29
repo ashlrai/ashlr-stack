@@ -15,7 +15,25 @@ export * from "./providers/_base.ts";
 export { providers, getProvider, listProviderNames } from "./providers/index.ts";
 export * from "./errors.ts";
 export * from "./templates.ts";
-export * from "./pipeline.ts";
+export {
+  addService,
+  resumeProvisionFromLog,
+  type AddServiceOpts,
+  type AddServiceResult,
+  type ResumeProvisionOpts,
+} from "./pipeline.ts";
+export {
+  runConflictCheck,
+  buildConflictCheckMeta,
+  buildConflictCheckTelemetry,
+  generateUniqueName,
+  defaultCiPrompt,
+  type ConflictCheckRunOpts,
+  type ConflictCheckResult,
+  type ConflictCheckTelemetry,
+  type ConflictResolutionStrategy,
+  type ConflictPromptFn,
+} from "./resource-conflict.ts";
 export {
   resolveOrder,
   runOrchestrationGroup,
@@ -118,6 +136,13 @@ export {
   loadReplayRecord,
   loadProvisionErrorReport,
   printProvisionError,
+  appendReplayLog,
+  writeReplaySessionMeta,
+  readReplaySessionMeta,
+  readReplayLog,
+  listReplaySessions,
+  generateSessionId,
+  replayLogDir,
   type ProvisionErrorCode,
   type ProvisionErrorReport,
   type ProvisionErrorContext,
@@ -125,6 +150,9 @@ export {
   type RetryPolicy,
   type RequestSnapshot,
   type ReplayRecord,
+  type ProvisionReplayLog,
+  type ReplayLogStatus,
+  type ReplaySessionMeta,
 } from "./errors/provision-errors.ts";
 export {
   dryRunProvider,
@@ -168,6 +196,10 @@ export {
 export {
   runProbes,
   BUILTIN_PROBES,
+  ProbeRegistry,
+  defaultProbeRegistry,
+  generateProbeStub,
+  writeProbeStub,
   type Probe,
   type ProbeContext,
   type ProbeResult,

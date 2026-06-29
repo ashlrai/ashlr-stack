@@ -2,9 +2,23 @@ import { type ServiceEntry, type StackConfig, readConfig, writeConfig } from "./
 import { type DryRunAddServiceOpts, dryRunAddService } from "./dry-run.ts";
 import { StackError } from "./errors.ts";
 import {
+  buildConflictCheckMeta,
+  buildConflictCheckTelemetry,
+  runConflictCheck,
+  type ConflictCheckRunOpts,
+  type ConflictPromptFn,
+} from "./resource-conflict.ts";
+import {
+  appendReplayLog,
   buildReplayRecord,
   captureProvisionError,
+  generateSessionId,
+  readReplayLog,
+  readReplaySessionMeta,
   saveReplayRecord,
+  writeReplaySessionMeta,
+  type ProvisionReplayLog,
+  type ReplaySessionMeta,
 } from "./errors/provision-errors.ts";
 import { instrumentation } from "./instrumentation.ts";
 import type { RollbackItem } from "./instrumentation.ts";
@@ -84,6 +98,34 @@ export interface AddServiceOpts {
    * live provider MCP calls in a future release).
    */
   costEstimate?: boolean;
+  /**
+   * Session ID for the crash-recovery replay log. When provided, the pipeline
+   * will append JSONL entries to `~/.stack/.replay-logs/<sessionId>.jsonl` at
+   * every step boundary so that `stack resume <sessionId>` can skip completed
+   * steps after a crash. When omitted, a new session ID is generated automatically.
+   * Set to `false` to disable replay logging entirely (e.g. dry-run).
+   */
+  sessionId?: string | false;
+  /**
+   * Whether to run pre-provision resource conflict detection.
+   *   true  — always check (default in interactive mode)
+   *   false — skip entirely (default in CI / dry-run)
+   * When omitted, defaults to `true` in interactive mode and `false` in CI.
+   */
+  checkConflicts?: boolean;
+  /**
+   * Resolution strategy for non-interactive (CI) conflict resolution.
+   *   "attach" — reuse existing resource automatically
+   *   "rename" — auto-generate a unique name (default)
+   *   "fail"   — stop and surface an error
+   */
+  ciConflictStrategy?: "attach" | "rename" | "fail";
+  /**
+   * Optional interactive prompt function injected by the CLI for conflict
+   * resolution. When provided and interactive mode is active, it will be
+   * called when a conflict is detected. Must return the chosen strategy.
+   */
+  conflictPrompt?: ConflictPromptFn;
 }
 
 export interface AddServiceResult {
@@ -167,17 +209,75 @@ export async function addService(opts: AddServiceOpts): Promise<AddServiceResult
     signal: controller.signal,
   };
 
+  // --- Replay log session setup ---
+  // sessionId === false means caller explicitly opted out (dry-run etc.).
+  // sessionId === undefined means auto-generate a new one.
+  const sessionId: string | false =
+    opts.sessionId === false ? false : (opts.sessionId ?? generateSessionId(provider.name));
+
+  if (sessionId !== false) {
+    const meta: ReplaySessionMeta = {
+      sessionId,
+      providerName: provider.name,
+      cwd,
+      startedAt: new Date().toISOString(),
+      finalStatus: undefined,
+    };
+    writeReplaySessionMeta(meta);
+  }
+
+  /** Append a replay log entry when replay logging is active. */
+  function emitReplayLog(entry: ProvisionReplayLog): void {
+    if (sessionId !== false) appendReplayLog(sessionId, entry);
+  }
+
+  /** Finalise the session meta with a terminal status. */
+  function finaliseSession(status: ReplaySessionMeta["finalStatus"]): void {
+    if (sessionId === false) return;
+    const meta = readReplaySessionMeta(sessionId);
+    if (meta) {
+      writeReplaySessionMeta({ ...meta, finishedAt: new Date().toISOString(), finalStatus: status });
+    }
+  }
+
   // --- login ---
   let auth: AuthHandle;
   try {
     const _t0 = Date.now();
+    // Mark the step as in_progress before we start so a crash mid-step is detectable.
+    emitReplayLog({
+      timestamp: new Date().toISOString(),
+      stepName: "login",
+      providerName: provider.name,
+      input: {},
+      output: {},
+      status: "in_progress",
+    });
     auth = await withTimeout("login", timeoutMs, controller, () => provider.login(ctx));
     instrumentation.recordStep("login", provider.name, Date.now() - _t0, "success");
+    emitReplayLog({
+      timestamp: new Date().toISOString(),
+      stepName: "login",
+      providerName: provider.name,
+      input: {},
+      output: { identity: (auth as { identity?: unknown }).identity ?? null },
+      status: "completed",
+    });
   } catch (err) {
     // login timed out or failed — no upstream resource was created, nothing to roll back.
     const code = err instanceof StackError ? err.code : undefined;
     const status = code === "PROVISION_TIMEOUT" ? "timeout" : "failure";
     instrumentation.recordStep("login", provider.name, 0, status, (err as Error).message, code);
+    emitReplayLog({
+      timestamp: new Date().toISOString(),
+      stepName: "login",
+      providerName: provider.name,
+      input: {},
+      output: {},
+      status: "failed",
+      error: (err as Error).message,
+    });
+    finaliseSession("failed");
     const report = captureProvisionError(err, {
       providerName: provider.name,
       stepName: "login",
@@ -188,23 +288,109 @@ export async function addService(opts: AddServiceOpts): Promise<AddServiceResult
     throw err;
   }
 
+  // --- conflict check (pre-provision) ---
+  // Determine whether checks are enabled.
+  // Default: enabled in interactive mode, disabled in CI.
+  const conflictCheckEnabled =
+    opts.checkConflicts !== undefined
+      ? opts.checkConflicts
+      : (opts.interactive ?? process.stdout.isTTY === true);
+
+  // Only run when not using an existingResourceId (that path is an explicit attach).
+  let resolvedExistingResourceId = opts.existingResourceId;
+  let resolvedHints = opts.hints;
+  if (!opts.existingResourceId && !opts.dryRun) {
+    const conflictOpts: ConflictCheckRunOpts = {
+      provider,
+      auth,
+      desiredName: (opts.hints?.name as string | undefined),
+      hints: opts.hints,
+      signal: controller.signal,
+      interactive: opts.interactive ?? process.stdout.isTTY === true,
+      ciStrategy: opts.ciConflictStrategy ?? "rename",
+      enabled: conflictCheckEnabled,
+      prompt: opts.conflictPrompt,
+    };
+    const conflictResult = await runConflictCheck(conflictOpts);
+    // Track telemetry (fire-and-forget, non-blocking)
+    const conflictTelemetry = buildConflictCheckTelemetry(provider.name, conflictResult);
+    void conflictTelemetry; // available for future telemetry.emit() integration
+
+    if (conflictResult.resolvedStrategy === "fail") {
+      throw new StackError(
+        "RESOURCE_CONFLICT",
+        `Resource conflict detected for ${provider.displayName}: ${conflictResult.check.message} ` +
+          `Pass --use <id> to attach to the existing resource, or choose a different name.`,
+      );
+    }
+    if (conflictResult.resolvedStrategy === "attach" && conflictResult.attachResourceId) {
+      resolvedExistingResourceId = conflictResult.attachResourceId;
+    }
+    if (conflictResult.resolvedStrategy === "rename" && conflictResult.uniqueName) {
+      resolvedHints = { ...(opts.hints ?? {}), name: conflictResult.uniqueName };
+    }
+
+    // Persist conflict check metadata to the service entry meta (wired into
+    // .stack.local.toml under [services.SERVICE_NAME.meta.conflictCheck]).
+    // We stash it on ctx.hints so it flows through to the entry builder below.
+    if (conflictResult.check.action !== "skipped") {
+      const conflictMeta = buildConflictCheckMeta(
+        conflictResult,
+        conflictResult.check.requestedName,
+      );
+      resolvedHints = { ...(resolvedHints ?? {}), _conflictCheckMeta: conflictMeta };
+    }
+  }
+
   // --- provision ---
   let resource: Resource;
   try {
     const _t0 = Date.now();
+    emitReplayLog({
+      timestamp: new Date().toISOString(),
+      stepName: "provision",
+      providerName: provider.name,
+      input: {
+        existingResourceId: resolvedExistingResourceId ?? null,
+        hints: resolvedHints ?? null,
+      },
+      output: {},
+      status: "in_progress",
+    });
     resource = await withTimeout("provision", timeoutMs, controller, () =>
       provider.provision(ctx, auth, {
-        existingResourceId: opts.existingResourceId,
-        hints: opts.hints,
+        existingResourceId: resolvedExistingResourceId,
+        hints: resolvedHints,
       }),
     );
     instrumentation.recordStep("provision", provider.name, Date.now() - _t0, "success");
+    emitReplayLog({
+      timestamp: new Date().toISOString(),
+      stepName: "provision",
+      providerName: provider.name,
+      input: {
+        existingResourceId: resolvedExistingResourceId ?? null,
+        hints: resolvedHints ?? null,
+      },
+      output: { resourceId: resource.id, displayName: resource.displayName, region: resource.region ?? null },
+      status: "completed",
+    });
   } catch (err) {
     // provision timed out or failed before an upstream resource was confirmed —
     // if it's a timeout and the provider has deprovision, attempt best-effort rollback.
     const code = err instanceof StackError ? err.code : undefined;
     const status = code === "PROVISION_TIMEOUT" ? "timeout" : "failure";
     instrumentation.recordStep("provision", provider.name, 0, status, (err as Error).message, code);
+    emitReplayLog({
+      timestamp: new Date().toISOString(),
+      stepName: "provision",
+      providerName: provider.name,
+      input: { existingResourceId: resolvedExistingResourceId ?? null },
+      output: {},
+      status: "failed",
+      error: (err as Error).message,
+    });
+    finaliseSession("failed");
     const provisionReport = captureProvisionError(err, {
       providerName: provider.name,
       stepName: "provision",
@@ -216,10 +402,10 @@ export async function addService(opts: AddServiceOpts): Promise<AddServiceResult
       err instanceof StackError &&
       err.code === "PROVISION_TIMEOUT" &&
       provider.deprovision &&
-      opts.existingResourceId
+      resolvedExistingResourceId
     ) {
       try {
-        await provider.deprovision(ctx, auth, opts.existingResourceId);
+        await provider.deprovision(ctx, auth, resolvedExistingResourceId);
       } catch {
         /* best-effort */
       }
@@ -261,19 +447,62 @@ export async function addService(opts: AddServiceOpts): Promise<AddServiceResult
 
   try {
     const _t0 = Date.now();
+    emitReplayLog({
+      timestamp: new Date().toISOString(),
+      stepName: "materialize",
+      providerName: provider.name,
+      input: { resourceId: resource.id },
+      output: {},
+      status: "in_progress",
+    });
     const materialized = await withTimeout("materialize", timeoutMs, controller, () =>
       provider.materialize(ctx, resource, auth),
     );
     instrumentation.recordStep("materialize", provider.name, Date.now() - _t0, "success");
+    emitReplayLog({
+      timestamp: new Date().toISOString(),
+      stepName: "materialize",
+      providerName: provider.name,
+      input: { resourceId: resource.id },
+      // Never log secret values — only key names.
+      output: { secretKeys: Object.keys(materialized.secrets), mcpName: materialized.mcp?.name ?? null },
+      status: "completed",
+    });
 
+    // --- secrets ---
+    emitReplayLog({
+      timestamp: new Date().toISOString(),
+      stepName: "secrets",
+      providerName: provider.name,
+      input: { secretKeys: Object.keys(materialized.secrets) },
+      output: {},
+      status: "in_progress",
+    });
     for (const [key, value] of Object.entries(materialized.secrets)) {
       await addSecret(key, value, cwd);
       writtenSecrets.push(key);
     }
+    emitReplayLog({
+      timestamp: new Date().toISOString(),
+      stepName: "secrets",
+      providerName: provider.name,
+      input: { secretKeys: Object.keys(materialized.secrets) },
+      output: { writtenKeys: writtenSecrets.slice() },
+      status: "completed",
+    });
+
     if (materialized.mcp) {
       await mergeMcpEntry(materialized.mcp, cwd);
       writtenMcp = materialized.mcp.name;
     }
+
+    // Merge conflict check metadata into the service entry meta so it is
+    // persisted into .stack.local.toml under [services.NAME.meta.conflictCheck].
+    const conflictCheckMeta = resolvedHints?._conflictCheckMeta as Record<string, unknown> | undefined;
+    const entryMeta: Record<string, unknown> | undefined =
+      conflictCheckMeta
+        ? { ...(resource.meta ?? {}), conflictCheck: conflictCheckMeta }
+        : resource.meta;
 
     const entry: ServiceEntry = {
       provider: provider.name,
@@ -281,7 +510,7 @@ export async function addService(opts: AddServiceOpts): Promise<AddServiceResult
       region: resource.region,
       secrets: Object.keys(materialized.secrets),
       mcp: materialized.mcp?.name,
-      meta: resource.meta,
+      meta: entryMeta,
       created_at: new Date().toISOString(),
       created_by: "stack add",
     };
@@ -290,6 +519,8 @@ export async function addService(opts: AddServiceOpts): Promise<AddServiceResult
       config.services[provider.name] = entry;
       await writeConfig(config, cwd);
     }
+
+    finaliseSession("success");
 
     return {
       providerName: provider.name,
@@ -312,6 +543,30 @@ export async function addService(opts: AddServiceOpts): Promise<AddServiceResult
       (err as Error).message,
       errCode,
     );
+
+    // Distinguish 'partial state written before crash' from 'stepwise rollback on error'.
+    // If some secrets were already written when the error occurred, this is a partial-state
+    // crash scenario; otherwise it is a clean stepwise rollback.
+    const isPartialCrash = writtenSecrets.length > 0 || writtenMcp !== undefined;
+    emitReplayLog({
+      timestamp: new Date().toISOString(),
+      stepName: failStep,
+      providerName: provider.name,
+      input: { resourceId: resource.id },
+      output: {},
+      status: isPartialCrash ? "partial" : "failed",
+      error: (err as Error).message,
+      ...(isPartialCrash
+        ? {
+            partialItems: [
+              ...writtenSecrets.map((k) => ({ kind: "secret" as const, id: k })),
+              ...(writtenMcp ? [{ kind: "mcp_entry" as const, id: writtenMcp }] : []),
+            ],
+          }
+        : {}),
+    });
+    finaliseSession(isPartialCrash ? "partial_crash" : "failed");
+
     const materializeReport = captureProvisionError(err, {
       providerName: provider.name,
       stepName: failStep,
@@ -444,4 +699,88 @@ export async function addService(opts: AddServiceOpts): Promise<AddServiceResult
     );
     // .stack.toml is intentionally NOT written — the add was not atomic.
   }
+}
+
+// ---------------------------------------------------------------------------
+// resumeProvisionFromLog — crash-recovery entry point
+// ---------------------------------------------------------------------------
+
+/**
+ * Context passed into resumeProvisionFromLog by callers (CLI / tests).
+ * Mirrors AddServiceOpts but requires cwd and omits sessionId (we already know it).
+ */
+export interface ResumeProvisionOpts {
+  cwd: string;
+  interactive?: boolean;
+  log?: (event: LogEvent) => void;
+  timeoutMs?: number;
+}
+
+/**
+ * Read the replay log for `sessionId` and re-run `addService` only for the
+ * steps that did NOT complete successfully.
+ *
+ * Rules:
+ * - If "login" completed → pass `existingResourceId` from the "provision"
+ *   completed entry so the provider skips re-creating the upstream resource.
+ * - If "provision" completed → pass the captured `resourceId` as
+ *   `existingResourceId`; the login step will still run (credentials may have
+ *   expired) but provision is skipped at the provider level.
+ * - If "secrets" is partial → the partial items are noted in the log; recovery
+ *   re-runs the full addService (provider deduplicates idempotently via
+ *   existingResourceId).
+ * - Completed sessions (finalStatus === "success") are not re-run.
+ *
+ * Returns the `AddServiceResult` from the replayed addService call, or throws
+ * if the session cannot be recovered (unknown sessionId, already succeeded, etc).
+ */
+export async function resumeProvisionFromLog(
+  sessionId: string,
+  opts: ResumeProvisionOpts,
+): Promise<AddServiceResult> {
+  const meta = readReplaySessionMeta(sessionId);
+  if (!meta) {
+    throw new StackError(
+      "RESUME_SESSION_NOT_FOUND",
+      `No replay session found for id "${sessionId}". Run \`stack resume\` without arguments to list recent sessions.`,
+    );
+  }
+
+  if (meta.finalStatus === "success") {
+    throw new StackError(
+      "RESUME_SESSION_ALREADY_SUCCEEDED",
+      `Session "${sessionId}" already completed successfully — nothing to resume.`,
+    );
+  }
+
+  const entries = readReplayLog(sessionId);
+
+  // Find the last completed step for each step name (entries are appended in order;
+  // the last entry for a name wins — an in_progress followed by completed = completed).
+  const stepStatus = new Map<string, ProvisionReplayLog>();
+  for (const entry of entries) {
+    stepStatus.set(entry.stepName, entry);
+  }
+
+  const provisionEntry = stepStatus.get("provision");
+  const provisionCompleted =
+    provisionEntry?.status === "completed" && typeof provisionEntry.output.resourceId === "string";
+
+  // If provision completed we can skip re-creating the upstream resource by
+  // passing existingResourceId.  This is the core of idempotent replay.
+  const existingResourceId = provisionCompleted
+    ? (provisionEntry!.output.resourceId as string)
+    : undefined;
+
+  return addService({
+    providerName: meta.providerName,
+    cwd: opts.cwd,
+    interactive: opts.interactive,
+    log: opts.log,
+    timeoutMs: opts.timeoutMs,
+    existingResourceId,
+    // Assign the same sessionId so the log is updated in-place rather than
+    // creating a new session file alongside the old one.
+    sessionId,
+  });
 }

@@ -1,5 +1,5 @@
 import { StackError } from "../errors.ts";
-import type { AuthHandle, ProviderContext } from "./_base.ts";
+import type { AuthHandle, ConflictCheckOpts, ProviderContext, ResourceConflictCheckConfig } from "./_base.ts";
 import { makeApiKeyProvider } from "./_api-key.ts";
 import { tryRevealSecret, verifyFetch } from "./_helpers.ts";
 
@@ -106,4 +106,81 @@ async function deprovision(
   // Account attachment only — no upstream resource to delete.
 }
 
-export default { ..._base, deprovision };
+/**
+ * Railway conflict check — Railway projects are account-scoped and not
+ * name-deduplicated at the API level, so we list projects and check for a
+ * matching name via the GraphQL API.
+ */
+async function checkConflict(
+  auth: AuthHandle,
+  opts: ConflictCheckOpts,
+): Promise<ResourceConflictCheckConfig> {
+  const now = new Date().toISOString();
+  const desiredName = opts.desiredName;
+  try {
+    if (!desiredName) {
+      return {
+        requestedName: "(auto)",
+        exists: false,
+        action: "ok",
+        message: "No desired name specified; auto-naming will avoid conflicts.",
+        checkedAt: now,
+      };
+    }
+    const res = await verifyFetch("https://backboard.railway.app/graphql/v2", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        Authorization: `Bearer ${auth.token}`,
+      },
+      body: JSON.stringify({
+        query: `{ projects(first: 100) { edges { node { id name } } } }`,
+      }),
+      ...(opts.signal ? { signal: opts.signal } : {}),
+    });
+    if (!res.ok) {
+      return {
+        requestedName: desiredName,
+        exists: undefined,
+        action: "unreachable",
+        message: `Railway API returned ${res.status} during conflict check; proceeding with provision.`,
+        checkedAt: now,
+      };
+    }
+    const body = (await res.json()) as {
+      data?: { projects?: { edges?: Array<{ node: { id: string; name: string } }> } };
+    };
+    const projects = body.data?.projects?.edges?.map((e) => e.node) ?? [];
+    const match = projects.find((p) => p.name === desiredName);
+    if (!match) {
+      return {
+        requestedName: desiredName,
+        exists: false,
+        action: "ok",
+        message: `No Railway project named "${desiredName}" found; safe to create.`,
+        checkedAt: now,
+      };
+    }
+    const suffix = Date.now().toString(36);
+    return {
+      requestedName: desiredName,
+      exists: true,
+      existingResourceId: match.id,
+      existingDisplayName: match.name,
+      suggestedUniqueName: `${desiredName}-${suffix}`,
+      action: "rename",
+      message: `A Railway project named "${desiredName}" already exists (id: ${match.id}). You can attach to it or use a unique name.`,
+      checkedAt: now,
+    };
+  } catch {
+    return {
+      requestedName: desiredName ?? "(auto)",
+      exists: undefined,
+      action: "unreachable",
+      message: "Railway API unreachable during conflict check; proceeding with provision.",
+      checkedAt: now,
+    };
+  }
+}
+
+export default { ..._base, deprovision, checkConflict };

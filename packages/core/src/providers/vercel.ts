@@ -4,12 +4,14 @@ import { fetchWithRetry } from "../http.ts";
 import { addSecret } from "../phantom.ts";
 import type {
   AuthHandle,
+  ConflictCheckOpts,
   HealthStatus,
   Materialized,
   Provider,
   ProviderContext,
   ProvisionOpts,
   Resource,
+  ResourceConflictCheckConfig,
 } from "./_base.ts";
 import { readLine, tryRevealSecret } from "./_helpers.ts";
 
@@ -123,6 +125,55 @@ const vercel: Provider = {
       });
     }
   },
+
+  async checkConflict(
+    auth: AuthHandle,
+    opts: ConflictCheckOpts,
+  ): Promise<ResourceConflictCheckConfig> {
+    const now = new Date().toISOString();
+    const desiredName = opts.desiredName;
+    try {
+      if (!desiredName) {
+        return {
+          requestedName: "(auto)",
+          exists: false,
+          action: "ok",
+          message: "No desired name specified; auto-naming will avoid conflicts.",
+          checkedAt: now,
+        };
+      }
+      const projects = await listVercelProjects(auth.token, opts.signal);
+      const match = projects.find((p) => p.name === desiredName);
+      if (!match) {
+        return {
+          requestedName: desiredName,
+          exists: false,
+          action: "ok",
+          message: `No Vercel project named "${desiredName}" found; safe to create.`,
+          checkedAt: now,
+        };
+      }
+      const suffix = Date.now().toString(36);
+      return {
+        requestedName: desiredName,
+        exists: true,
+        existingResourceId: match.id,
+        existingDisplayName: match.name,
+        suggestedUniqueName: `${desiredName}-${suffix}`,
+        action: "rename",
+        message: `A Vercel project named "${desiredName}" already exists (id: ${match.id}). You can attach to it or use a unique name.`,
+        checkedAt: now,
+      };
+    } catch {
+      return {
+        requestedName: desiredName ?? "(auto)",
+        exists: undefined,
+        action: "unreachable",
+        message: "Vercel API unreachable during conflict check; proceeding with provision.",
+        checkedAt: now,
+      };
+    }
+  },
 };
 
 export default vercel;
@@ -157,4 +208,17 @@ async function fetchProject(
   if (res.status === 404) return undefined;
   if (!res.ok) return undefined;
   return (await res.json()) as { id: string; name: string };
+}
+
+async function listVercelProjects(
+  token: string,
+  signal?: AbortSignal,
+): Promise<Array<{ id: string; name: string }>> {
+  const res = await fetchWithRetry(`${API}/v9/projects?limit=100`, {
+    headers: authHeaders(token),
+    ...(signal ? { signal } : {}),
+  });
+  if (!res.ok) return [];
+  const body = (await res.json()) as { projects?: Array<{ id: string; name: string }> };
+  return body.projects ?? [];
 }
