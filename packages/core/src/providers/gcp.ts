@@ -1,3 +1,5 @@
+import { StackError } from "../errors.ts";
+import type { AuthHandle, ProviderContext } from "./_base.ts";
 import { makeApiKeyProvider } from "./_api-key.ts";
 import { tryRevealSecret } from "./_helpers.ts";
 
@@ -9,7 +11,7 @@ const SECRET = "GCP_SERVICE_ACCOUNT_JSON";
 // Resource Manager API requires network round-trips to token.googleapis.com
 // and is deferred to v0.2. The structural check is sufficient to catch copy-
 // paste errors (wrong file, truncated JSON, wrong project).
-export default makeApiKeyProvider({
+const _base = makeApiKeyProvider({
   name: "gcp",
   displayName: "GCP",
   category: "cloud",
@@ -58,3 +60,43 @@ export default makeApiKeyProvider({
     }
   },
 });
+
+/**
+ * GCP deprovision — the v1 provision only stores a service-account JSON
+ * (no GCP project or resource is created by Stack). Deprovision validates
+ * the stored JSON is structurally sound, then is a no-op. Actual project
+ * deletion must be done via the GCP console or `gcloud` CLI.
+ */
+async function deprovision(
+  ctx: ProviderContext,
+  auth: AuthHandle,
+  resourceId: string,
+): Promise<void> {
+  if (ctx.signal?.aborted) {
+    throw new StackError("GCP_DEPROVISION_ABORTED", "GCP deprovision cancelled.");
+  }
+  try {
+    const parsed = JSON.parse(auth.token) as Record<string, unknown>;
+    if (
+      parsed.type !== "service_account" ||
+      typeof parsed.project_id !== "string" ||
+      typeof parsed.client_email !== "string"
+    ) {
+      throw new StackError(
+        "GCP_DEPROVISION_FAILED",
+        `GCP service-account JSON for resource ${resourceId} is malformed. ` +
+          `Delete the project manually at https://console.cloud.google.com.`,
+      );
+    }
+  } catch (err) {
+    if (err instanceof StackError) throw err;
+    throw new StackError(
+      "GCP_DEPROVISION_FAILED",
+      `GCP deprovision failed parsing credentials for ${resourceId}: ${(err as Error).message}. ` +
+        `Delete manually at https://console.cloud.google.com.`,
+    );
+  }
+  // Service-account attachment only — no upstream resource created by Stack.
+}
+
+export default { ..._base, deprovision };

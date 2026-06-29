@@ -1,3 +1,5 @@
+import { StackError } from "../errors.ts";
+import type { AuthHandle, ProviderContext } from "./_base.ts";
 import { makeApiKeyProvider } from "./_api-key.ts";
 import { tryRevealSecret } from "./_helpers.ts";
 
@@ -9,7 +11,7 @@ const SECRET = "FIREBASE_SERVICE_ACCOUNT_JSON";
  * → Generate new private key). We store the entire JSON blob as a single
  * secret and shape-check it has the fields Firebase SDKs need.
  */
-export default makeApiKeyProvider({
+const _base = makeApiKeyProvider({
   name: "firebase",
   displayName: "Firebase",
   category: "database",
@@ -61,3 +63,44 @@ export default makeApiKeyProvider({
     }
   },
 });
+
+/**
+ * Firebase deprovision — the v1 provision only stores a service-account JSON
+ * (no GCP project is created by Stack). Deprovision validates the stored JSON
+ * is structurally sound, then is a no-op. Actual project deletion must be done
+ * via the Firebase or GCP console.
+ */
+async function deprovision(
+  ctx: ProviderContext,
+  auth: AuthHandle,
+  resourceId: string,
+): Promise<void> {
+  if (ctx.signal?.aborted) {
+    throw new StackError("FIREBASE_DEPROVISION_ABORTED", "Firebase deprovision cancelled.");
+  }
+  // Validate the service-account JSON stored in the token is still parseable.
+  try {
+    const parsed = JSON.parse(auth.token) as {
+      type?: string;
+      project_id?: string;
+      client_email?: string;
+    };
+    if (parsed.type !== "service_account" || !parsed.project_id || !parsed.client_email) {
+      throw new StackError(
+        "FIREBASE_DEPROVISION_FAILED",
+        `Firebase service-account JSON for resource ${resourceId} is malformed. ` +
+          `Delete the project manually at https://console.firebase.google.com.`,
+      );
+    }
+  } catch (err) {
+    if (err instanceof StackError) throw err;
+    throw new StackError(
+      "FIREBASE_DEPROVISION_FAILED",
+      `Firebase deprovision failed parsing credentials for ${resourceId}: ${(err as Error).message}. ` +
+        `Delete manually at https://console.firebase.google.com.`,
+    );
+  }
+  // Service-account attachment only — no upstream resource created by Stack.
+}
+
+export default { ..._base, deprovision };

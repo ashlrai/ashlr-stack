@@ -122,6 +122,89 @@ const sentry: Provider = {
     const [orgSlug, projectSlug] = entry.resource_id.split("/");
     return `https://sentry.io/organizations/${orgSlug}/projects/${projectSlug}/`;
   },
+
+  /**
+   * Sentry deprovision — deletes a project created/attached during provision.
+   * resourceId is "orgSlug/projectSlug". Validates the project exists before
+   * attempting deletion. Idempotent: 404 is treated as success.
+   * Requires the token to have `project:admin` scope.
+   */
+  async deprovision(ctx: ProviderContext, auth: AuthHandle, resourceId: string): Promise<void> {
+    if (ctx.signal?.aborted) {
+      throw new StackError("SENTRY_DEPROVISION_ABORTED", "Sentry deprovision cancelled.");
+    }
+
+    const parts = resourceId.split("/").filter(Boolean);
+    if (parts.length < 2) {
+      throw new StackError(
+        "SENTRY_DEPROVISION_FAILED",
+        `Sentry deprovision: invalid resourceId "${resourceId}". Expected "org-slug/project-slug". ` +
+          `Delete manually at https://sentry.io.`,
+      );
+    }
+    const [orgSlug, projectSlug] = parts;
+
+    // Validate the project exists first.
+    try {
+      const checkRes = await fetch(`${API}/projects/${orgSlug}/${projectSlug}/`, {
+        headers: { Authorization: `Bearer ${auth.token}` },
+        signal: ctx.signal,
+      });
+      if (checkRes.status === 404) return; // already gone — idempotent
+      if (checkRes.status === 403 || checkRes.status === 401) {
+        throw new StackError(
+          "SENTRY_DEPROVISION_FORBIDDEN",
+          `Sentry returned ${checkRes.status} checking project ${resourceId}. ` +
+            `Ensure token has project:admin scope. Delete manually at ` +
+            `https://sentry.io/organizations/${orgSlug}/projects/${projectSlug}/settings/`,
+        );
+      }
+      if (!checkRes.ok) {
+        throw new StackError(
+          "SENTRY_DEPROVISION_FAILED",
+          `Sentry returned ${checkRes.status} checking project ${resourceId}. ` +
+            `Delete manually at https://sentry.io/organizations/${orgSlug}/projects/${projectSlug}/settings/`,
+        );
+      }
+    } catch (err) {
+      if (err instanceof StackError) throw err;
+      throw new StackError(
+        "SENTRY_DEPROVISION_FAILED",
+        `Sentry deprovision check failed for ${resourceId}: ${(err as Error).message}. ` +
+          `Delete manually at https://sentry.io/organizations/${orgSlug}/projects/${projectSlug}/settings/`,
+      );
+    }
+
+    // Project exists — delete it.
+    try {
+      const delRes = await fetch(`${API}/projects/${orgSlug}/${projectSlug}/`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${auth.token}` },
+        signal: ctx.signal,
+      });
+      if (delRes.status === 204 || delRes.status === 404) return; // deleted or already gone
+      if (delRes.status === 403 || delRes.status === 401) {
+        throw new StackError(
+          "SENTRY_DEPROVISION_FORBIDDEN",
+          `Sentry returned ${delRes.status} deleting project ${resourceId}. ` +
+            `Ensure token has project:admin scope. Delete manually at ` +
+            `https://sentry.io/organizations/${orgSlug}/projects/${projectSlug}/settings/`,
+        );
+      }
+      throw new StackError(
+        "SENTRY_DEPROVISION_FAILED",
+        `Sentry returned ${delRes.status} deleting project ${resourceId}. ` +
+          `Delete manually at https://sentry.io/organizations/${orgSlug}/projects/${projectSlug}/settings/`,
+      );
+    } catch (err) {
+      if (err instanceof StackError) throw err;
+      throw new StackError(
+        "SENTRY_DEPROVISION_FAILED",
+        `Sentry deprovision failed for ${resourceId}: ${(err as Error).message}. ` +
+          `Delete manually at https://sentry.io/organizations/${orgSlug}/projects/${projectSlug}/settings/`,
+      );
+    }
+  },
 };
 
 export default sentry;

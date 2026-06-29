@@ -93,6 +93,53 @@ const cloudflare: Provider = {
       ? `https://dash.cloudflare.com/${entry.resource_id}`
       : "https://dash.cloudflare.com";
   },
+
+  /**
+   * Cloudflare deprovision — the v1 provision attaches to an existing account
+   * (no new account or Worker is created). Deprovision validates the token is
+   * still active, then is a no-op since there is no upstream resource to delete.
+   */
+  async deprovision(ctx: ProviderContext, auth: AuthHandle, resourceId: string): Promise<void> {
+    if (ctx.signal?.aborted) {
+      throw new StackError("CLOUDFLARE_DEPROVISION_ABORTED", "Cloudflare deprovision cancelled.");
+    }
+
+    // Validate the account is still accessible with this token.
+    try {
+      const res = await fetch(`${API}/accounts/${resourceId}`, {
+        headers: { Authorization: `Bearer ${auth.token}` },
+        signal: ctx.signal,
+      });
+      if (res.status === 404) return; // account gone or token lost access — treat as success
+      if (res.status === 403 || res.status === 401) {
+        throw new StackError(
+          "CLOUDFLARE_DEPROVISION_FORBIDDEN",
+          `Cloudflare returned ${res.status} validating account ${resourceId}. ` +
+            `Check token scopes at https://dash.cloudflare.com/profile/api-tokens.`,
+        );
+      }
+      // Any other non-ok response is unexpected — surface it.
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as {
+          errors?: Array<{ message?: string }>;
+        };
+        const detail = body.errors?.[0]?.message ?? `HTTP ${res.status}`;
+        throw new StackError(
+          "CLOUDFLARE_DEPROVISION_FAILED",
+          `Cloudflare returned error validating account ${resourceId}: ${detail}. ` +
+            `Check at https://dash.cloudflare.com.`,
+        );
+      }
+    } catch (err) {
+      if (err instanceof StackError) throw err;
+      throw new StackError(
+        "CLOUDFLARE_DEPROVISION_FAILED",
+        `Cloudflare deprovision failed for ${resourceId}: ${(err as Error).message}. ` +
+          `Check at https://dash.cloudflare.com.`,
+      );
+    }
+    // Account attachment only — no upstream resource to delete.
+  },
 };
 
 export default cloudflare;

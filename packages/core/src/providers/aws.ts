@@ -104,6 +104,47 @@ const aws: Provider = {
   dashboardUrl(): string {
     return "https://console.aws.amazon.com";
   },
+
+  /**
+   * AWS deprovision — the v1 provision only attaches to the caller's AWS
+   * account identity (no IAM role, S3 bucket, or other resource is created).
+   * Deprovision validates the credentials are still active via STS
+   * GetCallerIdentity, then is a no-op. Actual resource deletion must be done
+   * via the AWS console or CLI.
+   */
+  async deprovision(ctx: ProviderContext, auth: AuthHandle, resourceId: string): Promise<void> {
+    if (ctx.signal?.aborted) {
+      throw new StackError("AWS_DEPROVISION_ABORTED", "AWS deprovision cancelled.");
+    }
+    const sep = auth.token.indexOf(":");
+    if (sep <= 0 || sep === auth.token.length - 1) {
+      throw new StackError(
+        "AWS_DEPROVISION_FAILED",
+        `AWS deprovision: auth token malformed for resource ${resourceId}. ` +
+          `Expected accessKeyId:secretAccessKey. Clean up at https://console.aws.amazon.com.`,
+      );
+    }
+    const accessKeyId = auth.token.slice(0, sep);
+    const secretAccessKey = auth.token.slice(sep + 1);
+    try {
+      const identity = await callStsIdentity(accessKeyId, secretAccessKey, "us-east-1");
+      if (!identity) {
+        throw new StackError(
+          "AWS_DEPROVISION_FAILED",
+          `AWS credentials are no longer valid for resource ${resourceId}. ` +
+            `Clean up at https://console.aws.amazon.com/iam/.`,
+        );
+      }
+    } catch (err) {
+      if (err instanceof StackError) throw err;
+      throw new StackError(
+        "AWS_DEPROVISION_FAILED",
+        `AWS deprovision validation failed for ${resourceId}: ${(err as Error).message}. ` +
+          `Clean up at https://console.aws.amazon.com.`,
+      );
+    }
+    // Account attachment only — no upstream resource created by Stack.
+  },
 };
 
 export default aws;

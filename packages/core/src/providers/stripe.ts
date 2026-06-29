@@ -253,6 +253,77 @@ const stripeProvider: Provider = {
   dashboardUrl() {
     return "https://dashboard.stripe.com";
   },
+
+  /**
+   * Stripe deprovision — tears down a webhook endpoint created during provision.
+   * If provision ran in plain API-key mode (no webhook), resourceId is the
+   * account id and there is no upstream resource to delete. We detect this by
+   * checking whether the resourceId starts with "we_" (webhook endpoint prefix).
+   */
+  async deprovision(ctx: ProviderContext, auth: AuthHandle, resourceId: string): Promise<void> {
+    if (ctx.signal?.aborted) {
+      throw new StackError("STRIPE_DEPROVISION_ABORTED", "Stripe deprovision cancelled.");
+    }
+
+    // Only webhook endpoints (we_…) are created by provision — plain account
+    // attachments have no upstream resource to tear down.
+    if (!resourceId.startsWith("we_")) {
+      return; // no-op: account attachment, nothing to delete
+    }
+
+    // Validate the endpoint exists before attempting deletion.
+    let exists: boolean;
+    try {
+      const checkRes = await fetch(`https://api.stripe.com/v1/webhook_endpoints/${resourceId}`, {
+        headers: { Authorization: `Bearer ${auth.token}` },
+        signal: ctx.signal,
+      });
+      if (checkRes.status === 404) return; // already gone — idempotent
+      if (checkRes.status === 403 || checkRes.status === 401) {
+        throw new StackError(
+          "STRIPE_DEPROVISION_FORBIDDEN",
+          `Stripe returned ${checkRes.status} checking webhook endpoint ${resourceId}. ` +
+            `Delete manually at https://dashboard.stripe.com/webhooks.`,
+        );
+      }
+      exists = checkRes.ok;
+    } catch (err) {
+      if (err instanceof StackError) throw err;
+      throw new StackError(
+        "STRIPE_DEPROVISION_FAILED",
+        `Stripe deprovision check failed for ${resourceId}: ${(err as Error).message}. ` +
+          `Delete manually at https://dashboard.stripe.com/webhooks.`,
+      );
+    }
+
+    if (!exists) return; // resource gone
+
+    // Delete the webhook endpoint.
+    try {
+      const delRes = await fetch(`https://api.stripe.com/v1/webhook_endpoints/${resourceId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${auth.token}` },
+        signal: ctx.signal,
+      });
+      if (delRes.status === 404) return; // already deleted — idempotent
+      if (!delRes.ok) {
+        const body = (await delRes.json().catch(() => ({}))) as { error?: { message?: string } };
+        const detail = body.error?.message ?? `HTTP ${delRes.status}`;
+        throw new StackError(
+          "STRIPE_DEPROVISION_FAILED",
+          `Stripe failed to delete webhook endpoint ${resourceId}: ${detail}. ` +
+            `Delete manually at https://dashboard.stripe.com/webhooks.`,
+        );
+      }
+    } catch (err) {
+      if (err instanceof StackError) throw err;
+      throw new StackError(
+        "STRIPE_DEPROVISION_FAILED",
+        `Stripe deprovision failed for ${resourceId}: ${(err as Error).message}. ` +
+          `Delete manually at https://dashboard.stripe.com/webhooks.`,
+      );
+    }
+  },
 };
 
 export default stripeProvider;

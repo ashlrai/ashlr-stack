@@ -1,3 +1,5 @@
+import { StackError } from "../errors.ts";
+import type { AuthHandle, ProviderContext } from "./_base.ts";
 import { makeApiKeyProvider } from "./_api-key.ts";
 import { tryRevealSecret, verifyFetch } from "./_helpers.ts";
 
@@ -9,7 +11,7 @@ const SECRET = "UPSTASH_MANAGEMENT_TOKEN";
  * base64 Authorization header. Thicker provisioning (create Redis / Kafka /
  * QStash) lands in a future wave.
  */
-export default makeApiKeyProvider({
+const _base = makeApiKeyProvider({
   name: "upstash",
   displayName: "Upstash",
   category: "database",
@@ -49,3 +51,50 @@ export default makeApiKeyProvider({
     }
   },
 });
+
+/**
+ * Upstash deprovision — the v1 provision only stores an API credential (no
+ * Redis / Kafka / QStash database is auto-created). Deprovision validates the
+ * credential is still active, then is a no-op. Actual database deletion must
+ * be done via the Upstash console or Management API with an explicit database id.
+ */
+async function deprovision(
+  ctx: ProviderContext,
+  auth: AuthHandle,
+  resourceId: string,
+): Promise<void> {
+  if (ctx.signal?.aborted) {
+    throw new StackError("UPSTASH_DEPROVISION_ABORTED", "Upstash deprovision cancelled.");
+  }
+  try {
+    const basic = Buffer.from(auth.token).toString("base64");
+    const res = await verifyFetch("https://api.upstash.com/v2/redis/databases", {
+      headers: { Authorization: `Basic ${basic}` },
+      signal: ctx.signal,
+    });
+    if (res.status === 401 || res.status === 403) {
+      throw new StackError(
+        "UPSTASH_DEPROVISION_FORBIDDEN",
+        `Upstash returned ${res.status} validating credentials for resource ${resourceId}. ` +
+          `Check your Management API key at https://console.upstash.com/account/api.`,
+      );
+    }
+    if (!res.ok) {
+      throw new StackError(
+        "UPSTASH_DEPROVISION_FAILED",
+        `Upstash returned ${res.status} validating resource ${resourceId}. ` +
+          `Delete manually at https://console.upstash.com.`,
+      );
+    }
+  } catch (err) {
+    if (err instanceof StackError) throw err;
+    throw new StackError(
+      "UPSTASH_DEPROVISION_FAILED",
+      `Upstash deprovision failed for ${resourceId}: ${(err as Error).message}. ` +
+        `Delete manually at https://console.upstash.com.`,
+    );
+  }
+  // Credential attachment only — no upstream resource created by Stack.
+}
+
+export default { ..._base, deprovision };

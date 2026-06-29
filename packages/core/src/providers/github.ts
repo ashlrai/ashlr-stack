@@ -100,6 +100,101 @@ const github: Provider = {
   dashboardUrl(): string {
     return "https://github.com";
   },
+
+  /**
+   * GitHub deprovision — the v1 provision only attaches to the authenticated
+   * user's account (no repo is created). Deprovision validates the token still
+   * works, then is a no-op. If the resourceId refers to an explicit repo in
+   * "owner/repo" form, it attempts to delete that repo.
+   */
+  async deprovision(ctx: ProviderContext, auth: AuthHandle, resourceId: string): Promise<void> {
+    if (ctx.signal?.aborted) {
+      throw new StackError("GITHUB_DEPROVISION_ABORTED", "GitHub deprovision cancelled.");
+    }
+
+    // Check if resourceId looks like "owner/repo" — only then is there a real resource to delete.
+    const parts = resourceId.split("/").filter(Boolean);
+    if (parts.length < 2) {
+      // Plain user login — no upstream resource to tear down.
+      const identity = await fetchUser(auth.token);
+      if (!identity) {
+        throw new StackError(
+          "GITHUB_DEPROVISION_FAILED",
+          `GitHub token is invalid — cannot verify resource ${resourceId}. ` +
+            `Check your token at https://github.com/settings/tokens.`,
+        );
+      }
+      return; // Account attachment — nothing to delete.
+    }
+
+    const [owner, repo] = parts;
+    // Validate the repo exists first.
+    try {
+      const checkRes = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
+        headers: {
+          Authorization: `Bearer ${auth.token}`,
+          Accept: "application/vnd.github+json",
+          "User-Agent": "ashlr-stack",
+        },
+        signal: ctx.signal,
+      });
+      if (checkRes.status === 404) return; // already gone — idempotent
+      if (checkRes.status === 403) {
+        throw new StackError(
+          "GITHUB_DEPROVISION_FORBIDDEN",
+          `GitHub returned 403 for repo ${resourceId}. Check token scopes (needs delete_repo). ` +
+            `Delete manually at https://github.com/${owner}/${repo}/settings.`,
+        );
+      }
+      if (!checkRes.ok) {
+        throw new StackError(
+          "GITHUB_DEPROVISION_FAILED",
+          `GitHub returned ${checkRes.status} checking repo ${resourceId}. ` +
+            `Delete manually at https://github.com/${owner}/${repo}/settings.`,
+        );
+      }
+    } catch (err) {
+      if (err instanceof StackError) throw err;
+      throw new StackError(
+        "GITHUB_DEPROVISION_FAILED",
+        `GitHub deprovision check failed for ${resourceId}: ${(err as Error).message}. ` +
+          `Delete manually at https://github.com/${owner}/${repo}/settings.`,
+      );
+    }
+
+    // Repo exists — delete it.
+    try {
+      const delRes = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${auth.token}`,
+          Accept: "application/vnd.github+json",
+          "User-Agent": "ashlr-stack",
+        },
+        signal: ctx.signal,
+      });
+      if (delRes.status === 204 || delRes.status === 404) return; // deleted or already gone
+      if (delRes.status === 403) {
+        throw new StackError(
+          "GITHUB_DEPROVISION_FORBIDDEN",
+          `GitHub returned 403 deleting repo ${resourceId}. Check token scopes (needs delete_repo). ` +
+            `Delete manually at https://github.com/${owner}/${repo}/settings.`,
+        );
+      }
+      throw new StackError(
+        "GITHUB_DEPROVISION_FAILED",
+        `GitHub returned ${delRes.status} deleting repo ${resourceId}. ` +
+          `Delete manually at https://github.com/${owner}/${repo}/settings.`,
+      );
+    } catch (err) {
+      if (err instanceof StackError) throw err;
+      throw new StackError(
+        "GITHUB_DEPROVISION_FAILED",
+        `GitHub deprovision failed for ${resourceId}: ${(err as Error).message}. ` +
+          `Delete manually at https://github.com/${owner}/${repo}/settings.`,
+      );
+    }
+  },
 };
 
 export default github;
