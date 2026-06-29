@@ -1,12 +1,14 @@
 import { makeApiKeyProvider } from "./_api-key.ts";
-import { verifyFetch } from "./_helpers.ts";
+import { tryRevealSecret, verifyFetch } from "./_helpers.ts";
+
+const SECRET = "RESEND_API_KEY";
 
 export default makeApiKeyProvider({
   name: "resend",
   displayName: "Resend",
   category: "email",
   docs: "https://resend.com/docs",
-  secretName: "RESEND_API_KEY",
+  secretName: SECRET,
   howTo: "Create a key at https://resend.com/api-keys",
   dashboard: "https://resend.com",
   async verify(key) {
@@ -19,6 +21,22 @@ export default makeApiKeyProvider({
       return { domains: String(body.data?.length ?? 0) };
     } catch {
       return undefined;
+    }
+  },
+  async healthcheck(ctx) {
+    const key = await tryRevealSecret(SECRET);
+    if (!key) return { kind: "error", detail: `${SECRET} missing from vault` };
+    const start = Date.now();
+    try {
+      const res = await verifyFetch(
+        "https://api.resend.com/domains",
+        { headers: { Authorization: `Bearer ${key}` }, signal: ctx.signal },
+      );
+      const latencyMs = Date.now() - start;
+      if (res.ok) return { kind: "ok", latencyMs };
+      return { kind: "error", detail: `HTTP ${res.status}` };
+    } catch (err) {
+      return { kind: "error", detail: (err as Error).message };
     }
   },
 });

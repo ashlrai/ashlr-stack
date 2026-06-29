@@ -1,12 +1,14 @@
 import { makeApiKeyProvider } from "./_api-key.ts";
-import { verifyFetch } from "./_helpers.ts";
+import { tryRevealSecret, verifyFetch } from "./_helpers.ts";
+
+const SECRET = "MIXPANEL_PROJECT_TOKEN";
 
 export default makeApiKeyProvider({
   name: "mixpanel",
   displayName: "Mixpanel",
   category: "analytics",
   docs: "https://developer.mixpanel.com/reference/overview",
-  secretName: "MIXPANEL_PROJECT_TOKEN",
+  secretName: SECRET,
   howTo:
     "Find your project token in Mixpanel → Settings → Project Settings. The API secret is on the same page.",
   dashboard: "https://mixpanel.com",
@@ -32,6 +34,29 @@ export default makeApiKeyProvider({
       return undefined;
     } catch {
       return undefined;
+    }
+  },
+  async healthcheck(ctx) {
+    const key = await tryRevealSecret(SECRET);
+    if (!key) return { kind: "error", detail: `${SECRET} missing from vault` };
+    const start = Date.now();
+    try {
+      // Use the same no-op import to confirm the token is still valid.
+      const res = await verifyFetch("https://api.mixpanel.com/import?strict=1", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          Authorization: `Basic ${Buffer.from(`${key}:`).toString("base64")}`,
+        },
+        body: JSON.stringify([]),
+        signal: ctx.signal,
+      });
+      const latencyMs = Date.now() - start;
+      if (res.status === 200 || res.status === 400) return { kind: "ok", latencyMs };
+      return { kind: "error", detail: `HTTP ${res.status}` };
+    } catch (err) {
+      return { kind: "error", detail: (err as Error).message };
     }
   },
 });

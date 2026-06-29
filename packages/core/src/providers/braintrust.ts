@@ -1,5 +1,7 @@
 import { makeApiKeyProvider } from "./_api-key.ts";
-import { verifyFetch } from "./_helpers.ts";
+import { tryRevealSecret, verifyFetch } from "./_helpers.ts";
+
+const SECRET = "BRAINTRUST_API_KEY";
 
 /**
  * Braintrust — LLM eval + observability. v1 accepts a Braintrust API key
@@ -11,7 +13,7 @@ export default makeApiKeyProvider({
   displayName: "Braintrust",
   category: "ai",
   docs: "https://www.braintrust.dev/docs",
-  secretName: "BRAINTRUST_API_KEY",
+  secretName: SECRET,
   howTo: "Create a key at https://www.braintrust.dev/app/settings/api-keys",
   dashboard: "https://www.braintrust.dev/app",
   async verify(key) {
@@ -28,6 +30,22 @@ export default makeApiKeyProvider({
       return { id: first.id, name: first.name ?? "" };
     } catch {
       return undefined;
+    }
+  },
+  async healthcheck(ctx) {
+    const key = await tryRevealSecret(SECRET);
+    if (!key) return { kind: "error", detail: `${SECRET} missing from vault` };
+    const start = Date.now();
+    try {
+      const res = await verifyFetch(
+        "https://api.braintrust.dev/v1/organization",
+        { headers: { Authorization: `Bearer ${key}` }, signal: ctx.signal },
+      );
+      const latencyMs = Date.now() - start;
+      if (res.ok) return { kind: "ok", latencyMs };
+      return { kind: "error", detail: `HTTP ${res.status}` };
+    } catch (err) {
+      return { kind: "error", detail: (err as Error).message };
     }
   },
 });

@@ -3,7 +3,9 @@ import {
   addService,
   getProvider,
   isPhantomInstalled,
+  listProviderNames,
   listProjects,
+  providers,
   readConfig,
   scanSource,
 } from "@ashlr/stack-core";
@@ -32,7 +34,8 @@ export interface ReconcileReport {
 export const doctorCommand = defineCommand({
   meta: {
     name: "doctor",
-    description: "Verify every service is reachable and credentials are valid.",
+    description:
+      "Verify every service is reachable and credentials are valid. Use --coverage to report healthcheck coverage across all registered providers.",
   },
   args: {
     fix: {
@@ -55,10 +58,21 @@ export const doctorCommand = defineCommand({
       default: false,
       description: "Check whether .stack.toml services are still present in source code.",
     },
+    coverage: {
+      type: "boolean",
+      default: false,
+      description: "Report healthcheck coverage % across all registered providers and exit.",
+    },
   },
   async run({ args }) {
     const json = Boolean(args.json);
     const reconcile = Boolean(args.reconcile);
+
+    // --coverage: report healthcheck coverage % across all registered providers.
+    if (args.coverage) {
+      await runCoverage(json);
+      return;
+    }
 
     // --reconcile mode: source-drift check (additive — runs alongside reachability if both given)
     if (reconcile) {
@@ -278,4 +292,46 @@ async function runDoctor(
   }
 
   return report;
+}
+
+/**
+ * Report healthcheck coverage % across all registered providers.
+ * A provider "has coverage" when its loaded instance exposes a `healthcheck`
+ * method (either a hand-written one or via makeApiKeyProvider's built-in).
+ */
+async function runCoverage(json: boolean): Promise<void> {
+  const names = listProviderNames();
+  const results: Array<{ name: string; hasCoverage: boolean }> = [];
+
+  for (const name of names) {
+    try {
+      const p = await providers[name]!();
+      results.push({ name, hasCoverage: typeof p.healthcheck === "function" });
+    } catch {
+      results.push({ name, hasCoverage: false });
+    }
+  }
+
+  const total = results.length;
+  const covered = results.filter((r) => r.hasCoverage).length;
+  const pct = total > 0 ? Math.round((covered / total) * 100) : 0;
+  const missing = results.filter((r) => !r.hasCoverage).map((r) => r.name);
+
+  if (json) {
+    process.stdout.write(
+      `${JSON.stringify({ total, covered, pct, missing }, null, 2)}\n`,
+    );
+    return;
+  }
+
+  console.log();
+  console.log(
+    `  ${colors.bold("Healthcheck coverage:")} ${covered}/${total} providers (${colors.bold(`${pct}%`)})`,
+  );
+  if (missing.length === 0) {
+    console.log(`  ${colors.green("✓")} All providers have healthchecks.`);
+  } else {
+    console.log(`  ${colors.yellow("⚠")} Missing healthcheck: ${missing.join(", ")}`);
+  }
+  console.log();
 }

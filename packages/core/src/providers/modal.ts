@@ -1,4 +1,7 @@
 import { makeApiKeyProvider } from "./_api-key.ts";
+import { tryRevealSecret } from "./_helpers.ts";
+
+const SECRET = "MODAL_TOKEN";
 
 /**
  * Modal — serverless GPU / sandbox platform for AI workloads. v1 accepts the
@@ -11,7 +14,7 @@ export default makeApiKeyProvider({
   displayName: "Modal",
   category: "deploy",
   docs: "https://modal.com/docs",
-  secretName: "MODAL_TOKEN",
+  secretName: SECRET,
   howTo:
     "Run `modal token new` locally, then paste as `<token-id>:<token-secret>` (or create at https://modal.com/settings/tokens)",
   dashboard: "https://modal.com",
@@ -23,5 +26,22 @@ export default makeApiKeyProvider({
     // the token. First real API call (modal deploy) will surface any issue.
     if (!id.startsWith("ak-") && !id.startsWith("as-")) return undefined;
     return { token_id: id };
+  },
+  async healthcheck(_ctx) {
+    // Modal has no public unauthenticated verify endpoint; structural shape
+    // check is the best we can do without incurring a full CLI round-trip.
+    const key = await tryRevealSecret(SECRET);
+    if (!key) return { kind: "error", detail: `${SECRET} missing from vault` };
+    const start = Date.now();
+    const isValid =
+      key.includes(":") &&
+      (() => {
+        const [id, secret] = key.split(":");
+        return Boolean(id && secret && (id.startsWith("ak-") || id.startsWith("as-")));
+      })();
+    const latencyMs = Date.now() - start;
+    return isValid
+      ? { kind: "ok", latencyMs, detail: "structural check only — full validation occurs on first deploy" }
+      : { kind: "error", detail: "token shape invalid; expected ak-<id>:<secret> or as-<id>:<secret>" };
   },
 });

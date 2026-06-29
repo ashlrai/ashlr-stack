@@ -1,12 +1,14 @@
 import { makeApiKeyProvider } from "./_api-key.ts";
-import { verifyFetch } from "./_helpers.ts";
+import { tryRevealSecret, verifyFetch } from "./_helpers.ts";
+
+const SECRET = "PLAUSIBLE_API_KEY";
 
 export default makeApiKeyProvider({
   name: "plausible",
   displayName: "Plausible",
   category: "analytics",
   docs: "https://plausible.io/docs/stats-api",
-  secretName: "PLAUSIBLE_API_KEY",
+  secretName: SECRET,
   howTo:
     "Generate an API key at https://plausible.io/settings and note your site ID (the domain you track).",
   dashboard: "https://plausible.io",
@@ -21,6 +23,22 @@ export default makeApiKeyProvider({
       return { sites: String(body.sites?.length ?? 0) };
     } catch {
       return undefined;
+    }
+  },
+  async healthcheck(ctx) {
+    const key = await tryRevealSecret(SECRET);
+    if (!key) return { kind: "error", detail: `${SECRET} missing from vault` };
+    const start = Date.now();
+    try {
+      const res = await verifyFetch(
+        "https://plausible.io/api/v1/sites",
+        { headers: { Authorization: `Bearer ${key}` }, signal: ctx.signal },
+      );
+      const latencyMs = Date.now() - start;
+      if (res.ok) return { kind: "ok", latencyMs };
+      return { kind: "error", detail: `HTTP ${res.status}` };
+    } catch (err) {
+      return { kind: "error", detail: (err as Error).message };
     }
   },
 });

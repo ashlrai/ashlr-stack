@@ -1,12 +1,14 @@
 import { makeApiKeyProvider } from "./_api-key.ts";
-import { verifyFetch } from "./_helpers.ts";
+import { tryRevealSecret, verifyFetch } from "./_helpers.ts";
+
+const SECRET = "ANTHROPIC_API_KEY";
 
 export default makeApiKeyProvider({
   name: "anthropic",
   displayName: "Anthropic",
   category: "ai",
   docs: "https://docs.anthropic.com/en/api",
-  secretName: "ANTHROPIC_API_KEY",
+  secretName: SECRET,
   howTo: "Create a key at https://console.anthropic.com/settings/keys",
   dashboard: "https://console.anthropic.com",
   async verify(key) {
@@ -22,6 +24,22 @@ export default makeApiKeyProvider({
       return { models: String(body.data?.length ?? 0) };
     } catch {
       return undefined;
+    }
+  },
+  async healthcheck(ctx) {
+    const key = await tryRevealSecret(SECRET);
+    if (!key) return { kind: "error", detail: `${SECRET} missing from vault` };
+    const start = Date.now();
+    try {
+      const res = await verifyFetch(
+        "https://api.anthropic.com/v1/models",
+        { headers: { "x-api-key": key, "anthropic-version": "2023-06-01" }, signal: ctx.signal },
+      );
+      const latencyMs = Date.now() - start;
+      if (res.ok) return { kind: "ok", latencyMs };
+      return { kind: "error", detail: `HTTP ${res.status}` };
+    } catch (err) {
+      return { kind: "error", detail: (err as Error).message };
     }
   },
 });

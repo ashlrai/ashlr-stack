@@ -1,5 +1,7 @@
 import { makeApiKeyProvider } from "./_api-key.ts";
-import { verifyFetch } from "./_helpers.ts";
+import { tryRevealSecret, verifyFetch } from "./_helpers.ts";
+
+const SECRET = "LINEAR_API_KEY";
 
 /**
  * Linear — v1 uses a personal API key (users create one at
@@ -11,7 +13,7 @@ export default makeApiKeyProvider({
   displayName: "Linear",
   category: "tickets",
   docs: "https://developers.linear.app/docs",
-  secretName: "LINEAR_API_KEY",
+  secretName: SECRET,
   howTo: "Create a personal API key at https://linear.app/settings/api",
   dashboard: "https://linear.app",
   mcp: {
@@ -41,6 +43,26 @@ export default makeApiKeyProvider({
       };
     } catch {
       return undefined;
+    }
+  },
+  async healthcheck(ctx) {
+    const key = await tryRevealSecret(SECRET);
+    if (!key) return { kind: "error", detail: `${SECRET} missing from vault` };
+    const start = Date.now();
+    try {
+      const res = await verifyFetch("https://api.linear.app/graphql", {
+        method: "POST",
+        headers: { "content-type": "application/json", Authorization: key },
+        body: JSON.stringify({ query: "{ viewer { id } }" }),
+        signal: ctx.signal,
+      });
+      const latencyMs = Date.now() - start;
+      if (!res.ok) return { kind: "error", detail: `HTTP ${res.status}` };
+      const body = (await res.json()) as { data?: { viewer?: { id?: string } } };
+      if (!body.data?.viewer?.id) return { kind: "error", detail: "token invalid or no viewer.id" };
+      return { kind: "ok", latencyMs };
+    } catch (err) {
+      return { kind: "error", detail: (err as Error).message };
     }
   },
 });

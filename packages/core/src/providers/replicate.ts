@@ -1,5 +1,7 @@
 import { makeApiKeyProvider } from "./_api-key.ts";
-import { verifyFetch } from "./_helpers.ts";
+import { tryRevealSecret, verifyFetch } from "./_helpers.ts";
+
+const SECRET = "REPLICATE_API_TOKEN";
 
 /**
  * Replicate — run open-source ML models via API. v1 accepts a Replicate API
@@ -11,7 +13,7 @@ export default makeApiKeyProvider({
   displayName: "Replicate",
   category: "ai",
   docs: "https://replicate.com/docs/reference/http",
-  secretName: "REPLICATE_API_TOKEN",
+  secretName: SECRET,
   howTo: "Create a token at https://replicate.com/account/api-tokens",
   dashboard: "https://replicate.com",
   async verify(key) {
@@ -25,6 +27,22 @@ export default makeApiKeyProvider({
       return { username: body.username, type: body.type ?? "" };
     } catch {
       return undefined;
+    }
+  },
+  async healthcheck(ctx) {
+    const key = await tryRevealSecret(SECRET);
+    if (!key) return { kind: "error", detail: `${SECRET} missing from vault` };
+    const start = Date.now();
+    try {
+      const res = await verifyFetch(
+        "https://api.replicate.com/v1/account",
+        { headers: { Authorization: `Bearer ${key}` }, signal: ctx.signal },
+      );
+      const latencyMs = Date.now() - start;
+      if (res.ok) return { kind: "ok", latencyMs };
+      return { kind: "error", detail: `HTTP ${res.status}` };
+    } catch (err) {
+      return { kind: "error", detail: (err as Error).message };
     }
   },
 });

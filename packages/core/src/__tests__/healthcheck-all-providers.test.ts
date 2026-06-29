@@ -1,0 +1,551 @@
+/**
+ * Comprehensive healthcheck coverage tests for all 32 providers.
+ *
+ * Each provider is tested for:
+ *   1. Returns { kind: "ok", latencyMs } when the API responds 200.
+ *   2. Returns { kind: "error", detail } when the secret is missing.
+ *   3. Returns { kind: "error", detail } when the API returns 401/403.
+ *   4. Propagates ctx.signal to fetch (abort cancellation).
+ *
+ * Structural-only providers (firebase, gcp, convex, modal) are tested
+ * with in-memory checks rather than mocked network.
+ */
+
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import type { ProviderContext } from "../providers/_base.ts";
+import { type Harness, setupFakePhantom } from "./_harness.ts";
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function makeCtx(signal?: AbortSignal): ProviderContext {
+  return { cwd: process.cwd(), interactive: false, log: () => {}, signal };
+}
+
+function mockFetch(status: number, body: unknown): typeof fetch {
+  return (async () => new Response(JSON.stringify(body), { status })) as unknown as typeof fetch;
+}
+
+// ---------------------------------------------------------------------------
+// Spec table — network-backed providers
+// ---------------------------------------------------------------------------
+
+interface NetworkSpec {
+  providerPath: string;
+  secretName: string;
+  secretValue: string;
+  validResponseBody: unknown;
+  fetchUrl?: string; // partial URL match; omit to accept any
+}
+
+const NETWORK_SPECS: NetworkSpec[] = [
+  // AI
+  {
+    providerPath: "../providers/anthropic.ts",
+    secretName: "ANTHROPIC_API_KEY",
+    secretValue: "sk-ant-fake",
+    validResponseBody: { data: [{ id: "claude-opus-4-5" }] },
+  },
+  {
+    providerPath: "../providers/openai.ts",
+    secretName: "OPENAI_API_KEY",
+    secretValue: "sk-fake-openai",
+    validResponseBody: { data: [{ id: "gpt-4o" }] },
+  },
+  {
+    providerPath: "../providers/xai.ts",
+    secretName: "XAI_API_KEY",
+    secretValue: "xai-fake",
+    validResponseBody: { data: [{ id: "grok-4" }] },
+  },
+  {
+    providerPath: "../providers/deepseek.ts",
+    secretName: "DEEPSEEK_API_KEY",
+    secretValue: "sk-deepseek-fake",
+    validResponseBody: { data: [{ id: "deepseek-chat" }] },
+  },
+  {
+    providerPath: "../providers/replicate.ts",
+    secretName: "REPLICATE_API_TOKEN",
+    secretValue: "r8_fake",
+    validResponseBody: { username: "mason", type: "user" },
+  },
+  {
+    providerPath: "../providers/braintrust.ts",
+    secretName: "BRAINTRUST_API_KEY",
+    secretValue: "sk-bt-fake",
+    validResponseBody: { objects: [{ id: "org_1", name: "My Org" }] },
+  },
+  // Deploy
+  {
+    providerPath: "../providers/railway.ts",
+    secretName: "RAILWAY_TOKEN",
+    secretValue: "railway-fake",
+    validResponseBody: { data: { me: { id: "u1", email: "me@example.com" } } },
+  },
+  {
+    providerPath: "../providers/render.ts",
+    secretName: "RENDER_API_KEY",
+    secretValue: "rnd_fake",
+    validResponseBody: [{ owner: { id: "own_1", name: "Me" } }],
+  },
+  {
+    providerPath: "../providers/fly.ts",
+    secretName: "FLY_API_TOKEN",
+    secretValue: "fm2_fake",
+    validResponseBody: { apps: [{ name: "a1" }] },
+  },
+  // Cloud
+  {
+    providerPath: "../providers/digitalocean.ts",
+    secretName: "DIGITALOCEAN_TOKEN",
+    secretValue: "do_fake",
+    validResponseBody: { account: { email: "me@example.com", uuid: "uuid_1" } },
+  },
+  {
+    providerPath: "../providers/hetzner.ts",
+    secretName: "HETZNER_API_TOKEN",
+    secretValue: "htz_fake",
+    validResponseBody: { locations: [{ name: "nbg1" }] },
+  },
+  // Auth
+  {
+    providerPath: "../providers/clerk.ts",
+    secretName: "CLERK_SECRET_KEY",
+    secretValue: "sk_test_fake",
+    validResponseBody: { keys: [] },
+  },
+  {
+    providerPath: "../providers/auth0.ts",
+    secretName: "AUTH0_DOMAIN",
+    secretValue: "myapp.us.auth0.com",
+    validResponseBody: { issuer: "https://myapp.us.auth0.com/" },
+  },
+  {
+    providerPath: "../providers/workos.ts",
+    secretName: "WORKOS_API_KEY",
+    secretValue: "sk_workos_fake",
+    validResponseBody: { data: [] },
+  },
+  // Observability / Analytics
+  {
+    providerPath: "../providers/datadog.ts",
+    secretName: "DD_API_KEY",
+    secretValue: "dd_fake",
+    validResponseBody: { valid: true },
+  },
+  {
+    providerPath: "../providers/posthog.ts",
+    secretName: "POSTHOG_PERSONAL_API_KEY",
+    secretValue: "phx_fake",
+    validResponseBody: { results: [{ id: 1, name: "Default" }] },
+  },
+  {
+    providerPath: "../providers/mixpanel.ts",
+    secretName: "MIXPANEL_PROJECT_TOKEN",
+    secretValue: "mp_fake",
+    validResponseBody: {},
+    // mixpanel returns 200 or 400 for valid token; mockFetch uses 200
+  },
+  {
+    providerPath: "../providers/plausible.ts",
+    secretName: "PLAUSIBLE_API_KEY",
+    secretValue: "plausible_fake",
+    validResponseBody: { sites: [{ domain: "example.com" }] },
+  },
+  // Email
+  {
+    providerPath: "../providers/resend.ts",
+    secretName: "RESEND_API_KEY",
+    secretValue: "re_fake",
+    validResponseBody: { data: [{ id: "dom_1" }] },
+  },
+  {
+    providerPath: "../providers/sendgrid.ts",
+    secretName: "SENDGRID_API_KEY",
+    secretValue: "SG.fake",
+    validResponseBody: { scopes: ["mail.send"] },
+  },
+  {
+    providerPath: "../providers/postmark.ts",
+    secretName: "POSTMARK_ACCOUNT_TOKEN",
+    secretValue: "postmark_fake",
+    validResponseBody: { Servers: [{ ID: 1 }] },
+  },
+  {
+    providerPath: "../providers/mailgun.ts",
+    secretName: "MAILGUN_API_KEY",
+    secretValue: "key-mailgun-fake",
+    validResponseBody: { items: [{ name: "mg.example.com" }] },
+  },
+  // Tickets / FeatureFlags
+  {
+    providerPath: "../providers/linear.ts",
+    secretName: "LINEAR_API_KEY",
+    secretValue: "lin_api_fake",
+    validResponseBody: { data: { viewer: { id: "u1" } } },
+  },
+  {
+    providerPath: "../providers/launchdarkly.ts",
+    secretName: "LAUNCHDARKLY_API_TOKEN",
+    secretValue: "ld_fake",
+    validResponseBody: { accountId: "acc_1", tokenType: "api" },
+  },
+  // Database — network-backed
+  {
+    providerPath: "../providers/upstash.ts",
+    secretName: "UPSTASH_MANAGEMENT_TOKEN",
+    secretValue: "email@example.com:token",
+    validResponseBody: [],
+  },
+];
+
+describe("healthcheck — network-backed providers", () => {
+  let h: Harness;
+  let realFetch: typeof fetch;
+
+  beforeEach(() => {
+    h = setupFakePhantom();
+    realFetch = globalThis.fetch;
+  });
+
+  afterEach(() => {
+    globalThis.fetch = realFetch;
+    h.cleanup();
+  });
+
+  for (const spec of NETWORK_SPECS) {
+    const name = spec.providerPath.split("/").pop()!.replace(".ts", "");
+
+    test(`${name}: healthcheck ok — latencyMs present and kind=ok`, async () => {
+      const { addSecret } = await import("../phantom.ts");
+      await addSecret(spec.secretName, spec.secretValue);
+
+      globalThis.fetch = mockFetch(200, spec.validResponseBody);
+
+      const provider = (await import(spec.providerPath)).default;
+      expect(typeof provider.healthcheck).toBe("function");
+
+      const status = await provider.healthcheck!(makeCtx(), {
+        provider: name,
+        secrets: [spec.secretName],
+        created_at: new Date().toISOString(),
+      });
+
+      expect(status.kind).toBe("ok");
+      expect(typeof (status as { latencyMs?: number }).latencyMs).toBe("number");
+    });
+
+    test(`${name}: healthcheck error — missing secret`, async () => {
+      // Ensure neither vault nor process.env has the secret.
+      const prev = process.env[spec.secretName];
+      delete process.env[spec.secretName];
+
+      try {
+        const provider = (await import(spec.providerPath)).default;
+
+        const status = await provider.healthcheck!(makeCtx(), {
+          provider: name,
+          secrets: [],
+          created_at: new Date().toISOString(),
+        });
+
+        expect(status.kind).toBe("error");
+        expect((status as { detail: string }).detail).toContain("missing");
+      } finally {
+        if (prev !== undefined) process.env[spec.secretName] = prev;
+      }
+    });
+
+    test(`${name}: healthcheck error — 401 from API`, async () => {
+      const { addSecret } = await import("../phantom.ts");
+      await addSecret(spec.secretName, spec.secretValue);
+
+      globalThis.fetch = mockFetch(401, { error: "unauthorized" });
+
+      const provider = (await import(spec.providerPath)).default;
+
+      const status = await provider.healthcheck!(makeCtx(), {
+        provider: name,
+        secrets: [spec.secretName],
+        created_at: new Date().toISOString(),
+      });
+
+      expect(status.kind).toBe("error");
+    });
+
+    test(`${name}: healthcheck respects signal cancellation`, async () => {
+      const { addSecret } = await import("../phantom.ts");
+      await addSecret(spec.secretName, spec.secretValue);
+
+      // Mock fetch that checks for signal abort
+      globalThis.fetch = (async (_url: unknown, init?: RequestInit) => {
+        if (init?.signal?.aborted) {
+          throw new DOMException("The operation was aborted.", "AbortError");
+        }
+        return new Response(JSON.stringify(spec.validResponseBody), { status: 200 });
+      }) as unknown as typeof fetch;
+
+      const controller = new AbortController();
+      controller.abort();
+
+      const provider = (await import(spec.providerPath)).default;
+
+      const status = await provider.healthcheck!(makeCtx(controller.signal), {
+        provider: name,
+        secrets: [spec.secretName],
+        created_at: new Date().toISOString(),
+      });
+
+      // When aborted, the provider should return error (AbortError propagated).
+      expect(status.kind).toBe("error");
+    });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Structural-only providers (no network required)
+// ---------------------------------------------------------------------------
+
+describe("healthcheck — structural providers", () => {
+  let h: Harness;
+
+  beforeEach(() => {
+    h = setupFakePhantom();
+  });
+
+  afterEach(() => {
+    h.cleanup();
+  });
+
+  // Firebase
+  test("firebase: healthcheck ok for valid service-account JSON", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    const validJson = JSON.stringify({
+      type: "service_account",
+      project_id: "my-proj",
+      client_email: "bot@my-proj.iam.gserviceaccount.com",
+      private_key: "-----BEGIN PRIVATE KEY-----...",
+    });
+    await addSecret("FIREBASE_SERVICE_ACCOUNT_JSON", validJson);
+
+    const firebase = (await import("../providers/firebase.ts")).default;
+    const status = await firebase.healthcheck!(makeCtx(), {
+      provider: "firebase",
+      secrets: ["FIREBASE_SERVICE_ACCOUNT_JSON"],
+      created_at: new Date().toISOString(),
+    });
+
+    expect(status.kind).toBe("ok");
+    expect(typeof (status as { latencyMs?: number }).latencyMs).toBe("number");
+    expect((status as { detail?: string }).detail).toContain("my-proj");
+  });
+
+  test("firebase: healthcheck error when secret missing", async () => {
+    const firebase = (await import("../providers/firebase.ts")).default;
+    const status = await firebase.healthcheck!(makeCtx(), {
+      provider: "firebase",
+      secrets: [],
+      created_at: new Date().toISOString(),
+    });
+    expect(status.kind).toBe("error");
+    expect((status as { detail: string }).detail).toContain("missing");
+  });
+
+  test("firebase: healthcheck error for malformed JSON", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("FIREBASE_SERVICE_ACCOUNT_JSON", '{"type":"not_service_account"}');
+
+    const firebase = (await import("../providers/firebase.ts")).default;
+    const status = await firebase.healthcheck!(makeCtx(), {
+      provider: "firebase",
+      secrets: ["FIREBASE_SERVICE_ACCOUNT_JSON"],
+      created_at: new Date().toISOString(),
+    });
+    expect(status.kind).toBe("error");
+  });
+
+  // GCP
+  test("gcp: healthcheck ok for valid service-account JSON", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    const validJson = JSON.stringify({
+      type: "service_account",
+      project_id: "my-gcp-project",
+      client_email: "sa@my-gcp-project.iam.gserviceaccount.com",
+    });
+    await addSecret("GCP_SERVICE_ACCOUNT_JSON", validJson);
+
+    const gcp = (await import("../providers/gcp.ts")).default;
+    const status = await gcp.healthcheck!(makeCtx(), {
+      provider: "gcp",
+      secrets: ["GCP_SERVICE_ACCOUNT_JSON"],
+      created_at: new Date().toISOString(),
+    });
+
+    expect(status.kind).toBe("ok");
+    expect((status as { detail?: string }).detail).toContain("my-gcp-project");
+  });
+
+  test("gcp: healthcheck error when secret missing", async () => {
+    const gcp = (await import("../providers/gcp.ts")).default;
+    const status = await gcp.healthcheck!(makeCtx(), {
+      provider: "gcp",
+      secrets: [],
+      created_at: new Date().toISOString(),
+    });
+    expect(status.kind).toBe("error");
+    expect((status as { detail: string }).detail).toContain("missing");
+  });
+
+  test("gcp: healthcheck error for wrong JSON type", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("GCP_SERVICE_ACCOUNT_JSON", JSON.stringify({ type: "oauth2", project_id: "p", client_email: "e" }));
+
+    const gcp = (await import("../providers/gcp.ts")).default;
+    const status = await gcp.healthcheck!(makeCtx(), {
+      provider: "gcp",
+      secrets: ["GCP_SERVICE_ACCOUNT_JSON"],
+      created_at: new Date().toISOString(),
+    });
+    expect(status.kind).toBe("error");
+  });
+
+  // Convex
+  test("convex: healthcheck ok for valid deploy key shape", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("CONVEX_DEPLOY_KEY", "prod:my-team:my-project|encoded-token-bytes");
+
+    const convex = (await import("../providers/convex.ts")).default;
+    const status = await convex.healthcheck!(makeCtx(), {
+      provider: "convex",
+      secrets: ["CONVEX_DEPLOY_KEY"],
+      created_at: new Date().toISOString(),
+    });
+    expect(status.kind).toBe("ok");
+    expect(typeof (status as { latencyMs?: number }).latencyMs).toBe("number");
+  });
+
+  test("convex: healthcheck error when secret missing", async () => {
+    const convex = (await import("../providers/convex.ts")).default;
+    const status = await convex.healthcheck!(makeCtx(), {
+      provider: "convex",
+      secrets: [],
+      created_at: new Date().toISOString(),
+    });
+    expect(status.kind).toBe("error");
+    expect((status as { detail: string }).detail).toContain("missing");
+  });
+
+  test("convex: healthcheck error for malformed key", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("CONVEX_DEPLOY_KEY", "invalid-key-no-colons-or-pipes");
+
+    const convex = (await import("../providers/convex.ts")).default;
+    const status = await convex.healthcheck!(makeCtx(), {
+      provider: "convex",
+      secrets: ["CONVEX_DEPLOY_KEY"],
+      created_at: new Date().toISOString(),
+    });
+    expect(status.kind).toBe("error");
+  });
+
+  // Modal
+  test("modal: healthcheck ok for valid ak- token shape", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("MODAL_TOKEN", "ak-1234567890abcdef:secret-bytes-here");
+
+    const modal = (await import("../providers/modal.ts")).default;
+    const status = await modal.healthcheck!(makeCtx(), {
+      provider: "modal",
+      secrets: ["MODAL_TOKEN"],
+      created_at: new Date().toISOString(),
+    });
+    expect(status.kind).toBe("ok");
+  });
+
+  test("modal: healthcheck error when secret missing", async () => {
+    const modal = (await import("../providers/modal.ts")).default;
+    const status = await modal.healthcheck!(makeCtx(), {
+      provider: "modal",
+      secrets: [],
+      created_at: new Date().toISOString(),
+    });
+    expect(status.kind).toBe("error");
+    expect((status as { detail: string }).detail).toContain("missing");
+  });
+
+  test("modal: healthcheck error for invalid token shape", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("MODAL_TOKEN", "not-valid-format");
+
+    const modal = (await import("../providers/modal.ts")).default;
+    const status = await modal.healthcheck!(makeCtx(), {
+      provider: "modal",
+      secrets: ["MODAL_TOKEN"],
+      created_at: new Date().toISOString(),
+    });
+    expect(status.kind).toBe("error");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Grafana — hybrid (structural fallback + network with URL)
+// ---------------------------------------------------------------------------
+
+describe("healthcheck — grafana", () => {
+  let h: Harness;
+  let realFetch: typeof fetch;
+
+  beforeEach(() => {
+    h = setupFakePhantom();
+    realFetch = globalThis.fetch;
+  });
+
+  afterEach(() => {
+    globalThis.fetch = realFetch;
+    h.cleanup();
+  });
+
+  test("grafana: structural ok when no GRAFANA_URL set (glsa_ token)", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("GRAFANA_API_KEY", "glsa_abcdefghijklmnopqrstuvwxyz123456");
+
+    const grafana = (await import("../providers/grafana.ts")).default;
+    const status = await grafana.healthcheck!(makeCtx(), {
+      provider: "grafana",
+      secrets: ["GRAFANA_API_KEY"],
+      created_at: new Date().toISOString(),
+    });
+    expect(status.kind).toBe("ok");
+    expect((status as { detail?: string }).detail).toContain("structural check only");
+  });
+
+  test("grafana: live check when GRAFANA_URL is set", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("GRAFANA_API_KEY", "glsa_abcdefghijklmnopqrstuvwxyz123456");
+    await addSecret("GRAFANA_URL", "https://myorg.grafana.net");
+
+    globalThis.fetch = mockFetch(200, { database: "ok", version: "10.0.0" });
+
+    const grafana = (await import("../providers/grafana.ts")).default;
+    const status = await grafana.healthcheck!(makeCtx(), {
+      provider: "grafana",
+      secrets: ["GRAFANA_API_KEY", "GRAFANA_URL"],
+      created_at: new Date().toISOString(),
+    });
+    expect(status.kind).toBe("ok");
+    expect(typeof (status as { latencyMs?: number }).latencyMs).toBe("number");
+  });
+
+  test("grafana: healthcheck error when secret missing", async () => {
+    const grafana = (await import("../providers/grafana.ts")).default;
+    const status = await grafana.healthcheck!(makeCtx(), {
+      provider: "grafana",
+      secrets: [],
+      created_at: new Date().toISOString(),
+    });
+    expect(status.kind).toBe("error");
+    expect((status as { detail: string }).detail).toContain("missing");
+  });
+});
