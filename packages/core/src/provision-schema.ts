@@ -774,3 +774,726 @@ registerProviderSchema("github", {
     additionalProperties: true,
   },
 });
+
+// ---------------------------------------------------------------------------
+// Built-in schemas: remaining 34 providers
+// ---------------------------------------------------------------------------
+
+// --- Turso ---
+registerProviderSchema("turso", {
+  title: "Turso Database",
+  description: "Response from POST /v1/organizations/:org/databases",
+  mapping: {
+    id: "name",
+    displayName: "name",
+    region: "primary_region",
+    meta: { group: "group", type: "type" },
+  },
+  schema: {
+    type: "object",
+    required: ["name"],
+    properties: {
+      name: { type: "string", description: "Database name", minLength: 1 },
+      primary_region: { type: "string", description: "Primary region slug" },
+      group: { type: "string", description: "Group the database belongs to" },
+      type: { type: "string", description: "Database type (logical, etc.)" },
+      hostname: { type: "string", description: "Database hostname" },
+    },
+    additionalProperties: true,
+  },
+});
+
+// --- Convex ---
+registerProviderSchema("convex", {
+  title: "Convex Deployment",
+  description: "Synthetic resource returned from Convex CLI-based provision",
+  mapping: {
+    id: "id",
+    displayName: "displayName",
+    meta: { slug: "slug" },
+  },
+  schema: {
+    type: "object",
+    required: ["id", "displayName"],
+    properties: {
+      id: { type: "string", description: "Convex deployment id or slug", minLength: 1 },
+      displayName: { type: "string", description: "Human-readable deployment name", minLength: 1 },
+      slug: { type: "string", description: "URL slug" },
+      region: { type: "string", description: "Deployment region" },
+    },
+    additionalProperties: true,
+  },
+});
+
+// --- Railway ---
+registerProviderSchema("railway", {
+  title: "Railway Account",
+  description: "Synthetic resource from Railway API key verification (me.id)",
+  mapping: {
+    id: "id",
+    displayName: "displayName",
+    meta: { email: "email" },
+  },
+  schema: {
+    type: "object",
+    required: ["id", "displayName"],
+    properties: {
+      id: { type: "string", description: "Railway user/team id", minLength: 1 },
+      displayName: { type: "string", description: "Display name (email or Railway displayName)", minLength: 1 },
+      email: { type: "string", description: "Account email" },
+    },
+    additionalProperties: true,
+  },
+});
+
+// --- Fly ---
+registerProviderSchema("fly", {
+  title: "Fly.io Account",
+  description: "Synthetic resource from Fly API key verification",
+  mapping: {
+    id: "id",
+    displayName: "displayName",
+    meta: { email: "email" },
+  },
+  schema: {
+    type: "object",
+    required: ["id", "displayName"],
+    properties: {
+      id: { type: "string", description: "Fly account id or 'default'", minLength: 1 },
+      displayName: { type: "string", description: "Account display name or email", minLength: 1 },
+      email: { type: "string", description: "Account email" },
+    },
+    additionalProperties: true,
+  },
+});
+
+// --- Cloudflare ---
+registerProviderSchema("cloudflare", {
+  title: "Cloudflare Account",
+  description: "Response from GET /client/v4/user or accounts",
+  mapping: {
+    id: "id",
+    displayName: "displayName",
+    meta: { email: "email" },
+  },
+  schema: {
+    type: "object",
+    required: ["id", "displayName"],
+    properties: {
+      id: { type: "string", description: "Cloudflare account/user id", minLength: 1 },
+      displayName: { type: "string", description: "Account name or email", minLength: 1 },
+      email: { type: "string", description: "Account email" },
+    },
+    additionalProperties: true,
+  },
+});
+
+// --- Render ---
+registerProviderSchema("render", {
+  title: "Render Account",
+  description: "Synthetic resource from Render API key verification (/v1/owners)",
+  mapping: {
+    id: "id",
+    displayName: "displayName",
+    meta: { name: "name" },
+  },
+  schema: {
+    type: "object",
+    required: ["id", "displayName"],
+    properties: {
+      id: { type: "string", description: "Render owner id", minLength: 1 },
+      displayName: { type: "string", description: "Owner display name", minLength: 1 },
+      name: { type: "string", description: "Owner name" },
+    },
+    additionalProperties: true,
+  },
+});
+
+// --- Firebase ---
+registerProviderSchema("firebase", {
+  title: "Firebase Project",
+  description: "Synthetic resource from Firebase/GCP CLI-based provision",
+  mapping: {
+    id: "id",
+    displayName: "displayName",
+    meta: { projectId: "projectId" },
+  },
+  schema: {
+    type: "object",
+    required: ["id", "displayName"],
+    properties: {
+      id: { type: "string", description: "Firebase project id or number", minLength: 1 },
+      displayName: { type: "string", description: "Project display name", minLength: 1 },
+      projectId: { type: "string", description: "Firebase project id slug" },
+    },
+    additionalProperties: true,
+  },
+});
+
+// --- Upstash ---
+registerProviderSchema("upstash", {
+  title: "Upstash Account",
+  description: "Synthetic resource from Upstash API key verification",
+  mapping: {
+    id: "id",
+    displayName: "displayName",
+    meta: { email: "email" },
+  },
+  schema: {
+    type: "object",
+    required: ["id", "displayName"],
+    properties: {
+      id: { type: "string", description: "Upstash account id or 'default'", minLength: 1 },
+      displayName: { type: "string", description: "Account name or email", minLength: 1 },
+      email: { type: "string", description: "Account email" },
+    },
+    additionalProperties: true,
+  },
+});
+
+// --- OpenAI ---
+registerProviderSchema("openai", {
+  title: "OpenAI Account",
+  description: "Synthetic resource from OpenAI API key verification (/v1/models)",
+  mapping: {
+    id: "id",
+    displayName: "displayName",
+    meta: { models: "models" },
+  },
+  schema: {
+    type: "object",
+    required: ["id", "displayName"],
+    properties: {
+      id: { type: "string", description: "Account id or 'default'", minLength: 1 },
+      displayName: { type: "string", description: "Account display name", minLength: 1 },
+      models: { type: "string", description: "Number of available models" },
+    },
+    additionalProperties: true,
+  },
+});
+
+// --- Anthropic ---
+registerProviderSchema("anthropic", {
+  title: "Anthropic Account",
+  description: "Synthetic resource from Anthropic API key verification (/v1/models)",
+  mapping: {
+    id: "id",
+    displayName: "displayName",
+    meta: { models: "models" },
+  },
+  schema: {
+    type: "object",
+    required: ["id", "displayName"],
+    properties: {
+      id: { type: "string", description: "Account id or 'default'", minLength: 1 },
+      displayName: { type: "string", description: "Account display name", minLength: 1 },
+      models: { type: "string", description: "Number of available models" },
+    },
+    additionalProperties: true,
+  },
+});
+
+// --- xAI ---
+registerProviderSchema("xai", {
+  title: "xAI Account",
+  description: "Synthetic resource from xAI API key verification",
+  mapping: {
+    id: "id",
+    displayName: "displayName",
+    meta: { models: "models" },
+  },
+  schema: {
+    type: "object",
+    required: ["id", "displayName"],
+    properties: {
+      id: { type: "string", description: "Account id or 'default'", minLength: 1 },
+      displayName: { type: "string", description: "Account display name", minLength: 1 },
+      models: { type: "string", description: "Number of available models" },
+    },
+    additionalProperties: true,
+  },
+});
+
+// --- DeepSeek ---
+registerProviderSchema("deepseek", {
+  title: "DeepSeek Account",
+  description: "Synthetic resource from DeepSeek API key verification",
+  mapping: {
+    id: "id",
+    displayName: "displayName",
+    meta: { models: "models" },
+  },
+  schema: {
+    type: "object",
+    required: ["id", "displayName"],
+    properties: {
+      id: { type: "string", description: "Account id or 'default'", minLength: 1 },
+      displayName: { type: "string", description: "Account display name", minLength: 1 },
+      models: { type: "string", description: "Number of available models" },
+    },
+    additionalProperties: true,
+  },
+});
+
+// --- Replicate ---
+registerProviderSchema("replicate", {
+  title: "Replicate Account",
+  description: "Synthetic resource from Replicate API key verification",
+  mapping: {
+    id: "id",
+    displayName: "displayName",
+    meta: { username: "username" },
+  },
+  schema: {
+    type: "object",
+    required: ["id", "displayName"],
+    properties: {
+      id: { type: "string", description: "Account id or username", minLength: 1 },
+      displayName: { type: "string", description: "Account display name", minLength: 1 },
+      username: { type: "string", description: "Replicate username" },
+    },
+    additionalProperties: true,
+  },
+});
+
+// --- Braintrust ---
+registerProviderSchema("braintrust", {
+  title: "Braintrust Account",
+  description: "Synthetic resource from Braintrust API key verification",
+  mapping: {
+    id: "id",
+    displayName: "displayName",
+    meta: { email: "email" },
+  },
+  schema: {
+    type: "object",
+    required: ["id", "displayName"],
+    properties: {
+      id: { type: "string", description: "Account id or 'default'", minLength: 1 },
+      displayName: { type: "string", description: "Account display name or email", minLength: 1 },
+      email: { type: "string", description: "Account email" },
+    },
+    additionalProperties: true,
+  },
+});
+
+// --- Modal ---
+registerProviderSchema("modal", {
+  title: "Modal Account",
+  description: "Synthetic resource from Modal API key verification",
+  mapping: {
+    id: "id",
+    displayName: "displayName",
+    meta: { email: "email" },
+  },
+  schema: {
+    type: "object",
+    required: ["id", "displayName"],
+    properties: {
+      id: { type: "string", description: "Account id or 'default'", minLength: 1 },
+      displayName: { type: "string", description: "Account display name or email", minLength: 1 },
+      email: { type: "string", description: "Account email" },
+    },
+    additionalProperties: true,
+  },
+});
+
+// --- PostHog ---
+registerProviderSchema("posthog", {
+  title: "PostHog Account",
+  description: "Synthetic resource from PostHog API key verification",
+  mapping: {
+    id: "id",
+    displayName: "displayName",
+    meta: { email: "email" },
+  },
+  schema: {
+    type: "object",
+    required: ["id", "displayName"],
+    properties: {
+      id: { type: "string", description: "Account id or 'default'", minLength: 1 },
+      displayName: { type: "string", description: "Account display name or email", minLength: 1 },
+      email: { type: "string", description: "Account email" },
+    },
+    additionalProperties: true,
+  },
+});
+
+// --- Sentry ---
+registerProviderSchema("sentry", {
+  title: "Sentry Organization",
+  description: "Synthetic resource from Sentry API key verification",
+  mapping: {
+    id: "id",
+    displayName: "displayName",
+    meta: { org_slug: "org_slug" },
+  },
+  schema: {
+    type: "object",
+    required: ["id", "displayName"],
+    properties: {
+      id: { type: "string", description: "Sentry org id or slug", minLength: 1 },
+      displayName: { type: "string", description: "Org display name", minLength: 1 },
+      org_slug: { type: "string", description: "Sentry org slug" },
+    },
+    additionalProperties: true,
+  },
+});
+
+// --- Linear ---
+registerProviderSchema("linear", {
+  title: "Linear Workspace",
+  description: "Synthetic resource from Linear API key verification",
+  mapping: {
+    id: "id",
+    displayName: "displayName",
+    meta: { email: "email" },
+  },
+  schema: {
+    type: "object",
+    required: ["id", "displayName"],
+    properties: {
+      id: { type: "string", description: "Linear team/user id or 'default'", minLength: 1 },
+      displayName: { type: "string", description: "Workspace display name or email", minLength: 1 },
+      email: { type: "string", description: "Account email" },
+    },
+    additionalProperties: true,
+  },
+});
+
+// --- Resend ---
+registerProviderSchema("resend", {
+  title: "Resend Account",
+  description: "Synthetic resource from Resend API key verification",
+  mapping: {
+    id: "id",
+    displayName: "displayName",
+    meta: { email: "email" },
+  },
+  schema: {
+    type: "object",
+    required: ["id", "displayName"],
+    properties: {
+      id: { type: "string", description: "Account id or 'default'", minLength: 1 },
+      displayName: { type: "string", description: "Account display name or email", minLength: 1 },
+      email: { type: "string", description: "Account email" },
+    },
+    additionalProperties: true,
+  },
+});
+
+// --- SendGrid ---
+registerProviderSchema("sendgrid", {
+  title: "SendGrid Account",
+  description: "Synthetic resource from SendGrid API key verification",
+  mapping: {
+    id: "id",
+    displayName: "displayName",
+    meta: { email: "email" },
+  },
+  schema: {
+    type: "object",
+    required: ["id", "displayName"],
+    properties: {
+      id: { type: "string", description: "Account id or 'default'", minLength: 1 },
+      displayName: { type: "string", description: "Account display name or email", minLength: 1 },
+      email: { type: "string", description: "Account email" },
+    },
+    additionalProperties: true,
+  },
+});
+
+// --- Mailgun ---
+registerProviderSchema("mailgun", {
+  title: "Mailgun Account",
+  description: "Synthetic resource from Mailgun API key verification",
+  mapping: {
+    id: "id",
+    displayName: "displayName",
+    meta: { email: "email" },
+  },
+  schema: {
+    type: "object",
+    required: ["id", "displayName"],
+    properties: {
+      id: { type: "string", description: "Account id or 'default'", minLength: 1 },
+      displayName: { type: "string", description: "Account display name or email", minLength: 1 },
+      email: { type: "string", description: "Account email" },
+    },
+    additionalProperties: true,
+  },
+});
+
+// --- Postmark ---
+registerProviderSchema("postmark", {
+  title: "Postmark Account",
+  description: "Synthetic resource from Postmark API key verification",
+  mapping: {
+    id: "id",
+    displayName: "displayName",
+    meta: { email: "email" },
+  },
+  schema: {
+    type: "object",
+    required: ["id", "displayName"],
+    properties: {
+      id: { type: "string", description: "Account id or 'default'", minLength: 1 },
+      displayName: { type: "string", description: "Account display name or email", minLength: 1 },
+      email: { type: "string", description: "Account email" },
+    },
+    additionalProperties: true,
+  },
+});
+
+// --- Clerk ---
+registerProviderSchema("clerk", {
+  title: "Clerk Application",
+  description: "Synthetic resource from Clerk API key verification",
+  mapping: {
+    id: "id",
+    displayName: "displayName",
+    meta: { application_id: "application_id" },
+  },
+  schema: {
+    type: "object",
+    required: ["id", "displayName"],
+    properties: {
+      id: { type: "string", description: "Clerk application id or 'default'", minLength: 1 },
+      displayName: { type: "string", description: "Application display name", minLength: 1 },
+      application_id: { type: "string", description: "Clerk application id" },
+    },
+    additionalProperties: true,
+  },
+});
+
+// --- AWS ---
+registerProviderSchema("aws", {
+  title: "AWS Account",
+  description: "Synthetic resource from AWS credentials verification (STS GetCallerIdentity)",
+  mapping: {
+    id: "id",
+    displayName: "displayName",
+    meta: { account_id: "account_id", arn: "arn" },
+  },
+  schema: {
+    type: "object",
+    required: ["id", "displayName"],
+    properties: {
+      id: { type: "string", description: "AWS account id or user id", minLength: 1 },
+      displayName: { type: "string", description: "Account display name or ARN", minLength: 1 },
+      account_id: { type: "string", description: "AWS account id (12-digit)" },
+      arn: { type: "string", description: "Caller ARN" },
+    },
+    additionalProperties: true,
+  },
+});
+
+// --- Auth0 ---
+registerProviderSchema("auth0", {
+  title: "Auth0 Tenant",
+  description: "Synthetic resource from Auth0 API key verification",
+  mapping: {
+    id: "id",
+    displayName: "displayName",
+    meta: { domain: "domain" },
+  },
+  schema: {
+    type: "object",
+    required: ["id", "displayName"],
+    properties: {
+      id: { type: "string", description: "Auth0 tenant id or domain", minLength: 1 },
+      displayName: { type: "string", description: "Tenant display name or domain", minLength: 1 },
+      domain: { type: "string", description: "Auth0 tenant domain" },
+    },
+    additionalProperties: true,
+  },
+});
+
+// --- Datadog ---
+registerProviderSchema("datadog", {
+  title: "Datadog Account",
+  description: "Synthetic resource from Datadog API key verification",
+  mapping: {
+    id: "id",
+    displayName: "displayName",
+    meta: { site: "site" },
+  },
+  schema: {
+    type: "object",
+    required: ["id", "displayName"],
+    properties: {
+      id: { type: "string", description: "Datadog org id or 'default'", minLength: 1 },
+      displayName: { type: "string", description: "Org display name", minLength: 1 },
+      site: { type: "string", description: "Datadog site (datadoghq.com, etc.)" },
+    },
+    additionalProperties: true,
+  },
+});
+
+// --- DigitalOcean ---
+registerProviderSchema("digitalocean", {
+  title: "DigitalOcean Account",
+  description: "Synthetic resource from DigitalOcean API key verification",
+  mapping: {
+    id: "id",
+    displayName: "displayName",
+    meta: { email: "email" },
+  },
+  schema: {
+    type: "object",
+    required: ["id", "displayName"],
+    properties: {
+      id: { type: "string", description: "Account id or 'default'", minLength: 1 },
+      displayName: { type: "string", description: "Account display name or email", minLength: 1 },
+      email: { type: "string", description: "Account email" },
+    },
+    additionalProperties: true,
+  },
+});
+
+// --- GCP ---
+registerProviderSchema("gcp", {
+  title: "GCP Project",
+  description: "Synthetic resource from GCP credentials verification",
+  mapping: {
+    id: "id",
+    displayName: "displayName",
+    meta: { project_id: "project_id" },
+  },
+  schema: {
+    type: "object",
+    required: ["id", "displayName"],
+    properties: {
+      id: { type: "string", description: "GCP project id or 'default'", minLength: 1 },
+      displayName: { type: "string", description: "Project display name", minLength: 1 },
+      project_id: { type: "string", description: "GCP project id" },
+    },
+    additionalProperties: true,
+  },
+});
+
+// --- Grafana ---
+registerProviderSchema("grafana", {
+  title: "Grafana Cloud Stack",
+  description: "Synthetic resource from Grafana Cloud API key verification",
+  mapping: {
+    id: "id",
+    displayName: "displayName",
+    meta: { orgSlug: "orgSlug" },
+  },
+  schema: {
+    type: "object",
+    required: ["id", "displayName"],
+    properties: {
+      id: { type: "string", description: "Stack/org id or 'default'", minLength: 1 },
+      displayName: { type: "string", description: "Stack display name", minLength: 1 },
+      orgSlug: { type: "string", description: "Grafana Cloud org slug" },
+    },
+    additionalProperties: true,
+  },
+});
+
+// --- Hetzner ---
+registerProviderSchema("hetzner", {
+  title: "Hetzner Cloud Project",
+  description: "Synthetic resource from Hetzner Cloud API key verification",
+  mapping: {
+    id: "id",
+    displayName: "displayName",
+    meta: { datacenter: "datacenter" },
+  },
+  schema: {
+    type: "object",
+    required: ["id", "displayName"],
+    properties: {
+      id: { type: "string", description: "Hetzner project id or 'default'", minLength: 1 },
+      displayName: { type: "string", description: "Project display name", minLength: 1 },
+      datacenter: { type: "string", description: "Primary datacenter" },
+    },
+    additionalProperties: true,
+  },
+});
+
+// --- LaunchDarkly ---
+registerProviderSchema("launchdarkly", {
+  title: "LaunchDarkly Project",
+  description: "Synthetic resource from LaunchDarkly API key verification",
+  mapping: {
+    id: "id",
+    displayName: "displayName",
+    meta: { project_key: "project_key" },
+  },
+  schema: {
+    type: "object",
+    required: ["id", "displayName"],
+    properties: {
+      id: { type: "string", description: "Project id or 'default'", minLength: 1 },
+      displayName: { type: "string", description: "Project display name", minLength: 1 },
+      project_key: { type: "string", description: "LaunchDarkly project key" },
+    },
+    additionalProperties: true,
+  },
+});
+
+// --- Mixpanel ---
+registerProviderSchema("mixpanel", {
+  title: "Mixpanel Project",
+  description: "Synthetic resource from Mixpanel API key verification",
+  mapping: {
+    id: "id",
+    displayName: "displayName",
+    meta: { project_id: "project_id" },
+  },
+  schema: {
+    type: "object",
+    required: ["id", "displayName"],
+    properties: {
+      id: { type: "string", description: "Project id or 'default'", minLength: 1 },
+      displayName: { type: "string", description: "Project display name", minLength: 1 },
+      project_id: { type: "string", description: "Mixpanel project id" },
+    },
+    additionalProperties: true,
+  },
+});
+
+// --- Plausible ---
+registerProviderSchema("plausible", {
+  title: "Plausible Analytics",
+  description: "Synthetic resource from Plausible API key verification",
+  mapping: {
+    id: "id",
+    displayName: "displayName",
+    meta: { email: "email" },
+  },
+  schema: {
+    type: "object",
+    required: ["id", "displayName"],
+    properties: {
+      id: { type: "string", description: "Account id or 'default'", minLength: 1 },
+      displayName: { type: "string", description: "Account display name or email", minLength: 1 },
+      email: { type: "string", description: "Account email" },
+    },
+    additionalProperties: true,
+  },
+});
+
+// --- WorkOS ---
+registerProviderSchema("workos", {
+  title: "WorkOS Application",
+  description: "Synthetic resource from WorkOS API key verification",
+  mapping: {
+    id: "id",
+    displayName: "displayName",
+    meta: { environment_id: "environment_id" },
+  },
+  schema: {
+    type: "object",
+    required: ["id", "displayName"],
+    properties: {
+      id: { type: "string", description: "Application id or 'default'", minLength: 1 },
+      displayName: { type: "string", description: "Application display name", minLength: 1 },
+      environment_id: { type: "string", description: "WorkOS environment id" },
+    },
+    additionalProperties: true,
+  },
+});

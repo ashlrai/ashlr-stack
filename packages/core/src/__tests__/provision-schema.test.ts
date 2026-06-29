@@ -535,3 +535,217 @@ describe("codegen integration — generated validator matches live mocks", () =>
     });
   }
 });
+
+// ---------------------------------------------------------------------------
+// New provider schemas (39 total — all providers have schemas registered)
+// ---------------------------------------------------------------------------
+
+describe("all 39 providers have registered schemas", () => {
+  const allProviders = [
+    "supabase", "neon", "vercel", "stripe", "github",
+    "turso", "convex", "railway", "fly", "cloudflare",
+    "render", "firebase", "upstash", "openai", "anthropic",
+    "xai", "deepseek", "replicate", "braintrust", "modal",
+    "posthog", "sentry", "linear", "resend", "sendgrid",
+    "mailgun", "postmark", "clerk", "aws", "auth0",
+    "datadog", "digitalocean", "gcp", "grafana", "hetzner",
+    "launchdarkly", "mixpanel", "plausible", "workos",
+  ];
+
+  test("every provider has a registered schema", () => {
+    const registered = new Set(listRegisteredSchemas());
+    for (const name of allProviders) {
+      expect(registered.has(name)).toBe(true);
+    }
+  });
+
+  test("every registered schema passes completeness check", () => {
+    for (const name of allProviders) {
+      const result = validateSchemaCompleteness(name);
+      expect(result.hasSchema).toBe(true);
+      expect(result.hasIdMapping).toBe(true);
+      expect(result.hasDisplayNameMapping).toBe(true);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Pipeline-level: PROVISION_SCHEMA_MISMATCH error
+// ---------------------------------------------------------------------------
+
+describe("validateProvisionResponse — happy path / PROVISION_SCHEMA_MISMATCH", () => {
+  // (1) Happy path: schema passes, resource coerced correctly
+  test("turso: happy path — schema passes, resource coerced correctly", () => {
+    const raw = {
+      name: "my-turso-db",
+      primary_region: "iad",
+      group: "default",
+      type: "logical",
+    };
+    const resource = validateProvisionResponse("turso", raw);
+    expect(resource.id).toBe("my-turso-db");
+    expect(resource.displayName).toBe("my-turso-db");
+    expect(resource.region).toBe("iad");
+    expect(resource.meta?.group).toBe("default");
+  });
+
+  test("openai: happy path — synthetic resource coerced correctly", () => {
+    const raw = { id: "default", displayName: "OpenAI", models: "42" };
+    const resource = validateProvisionResponse("openai", raw);
+    expect(resource.id).toBe("default");
+    expect(resource.displayName).toBe("OpenAI");
+    expect(resource.meta?.models).toBe("42");
+  });
+
+  test("anthropic: happy path — synthetic resource coerced correctly", () => {
+    const raw = { id: "default", displayName: "Anthropic", models: "10" };
+    const resource = validateProvisionResponse("anthropic", raw);
+    expect(resource.id).toBe("default");
+    expect(resource.displayName).toBe("Anthropic");
+  });
+
+  test("aws: happy path — account coerced correctly", () => {
+    const raw = {
+      id: "123456789012",
+      displayName: "arn:aws:iam::123456789012:user/dev",
+      account_id: "123456789012",
+      arn: "arn:aws:iam::123456789012:user/dev",
+    };
+    const resource = validateProvisionResponse("aws", raw);
+    expect(resource.id).toBe("123456789012");
+    expect(resource.meta?.account_id).toBe("123456789012");
+    expect(resource.meta?.arn).toBe("arn:aws:iam::123456789012:user/dev");
+  });
+
+  test("sentry: happy path — org coerced correctly", () => {
+    const raw = { id: "my-org", displayName: "My Org", org_slug: "my-org" };
+    const resource = validateProvisionResponse("sentry", raw);
+    expect(resource.id).toBe("my-org");
+    expect(resource.meta?.org_slug).toBe("my-org");
+  });
+
+  // (2) Missing required field — throws PROVISION_SCHEMA_MISMATCH (via ProvisionSchemaValidationError)
+  test("turso: missing required 'name' — throws ProvisionSchemaValidationError", () => {
+    const bad = { primary_region: "iad", group: "default" }; // no name
+    expect(() => validateProvisionResponse("turso", bad)).toThrow(ProvisionSchemaValidationError);
+    try {
+      validateProvisionResponse("turso", bad);
+    } catch (err) {
+      expect(err instanceof ProvisionSchemaValidationError).toBe(true);
+      const pErr = err as ProvisionSchemaValidationError;
+      expect(pErr.provider).toBe("turso");
+      expect(pErr.violations.some((v) => v.path.includes("name"))).toBe(true);
+    }
+  });
+
+  test("openai: missing required 'id' — throws ProvisionSchemaValidationError", () => {
+    const bad = { displayName: "OpenAI" }; // missing id
+    expect(() => validateProvisionResponse("openai", bad)).toThrow(ProvisionSchemaValidationError);
+  });
+
+  test("railway: missing both required fields — throws with violations", () => {
+    const bad = {}; // missing id and displayName
+    expect(() => validateProvisionResponse("railway", bad)).toThrow(ProvisionSchemaValidationError);
+    try {
+      validateProvisionResponse("railway", bad);
+    } catch (err) {
+      const pErr = err as ProvisionSchemaValidationError;
+      expect(pErr.violations.length).toBeGreaterThanOrEqual(2);
+    }
+  });
+
+  test("aws: missing required 'displayName' — throws ProvisionSchemaValidationError", () => {
+    const bad = { id: "123456789012", account_id: "123456789012" }; // missing displayName
+    expect(() => validateProvisionResponse("aws", bad)).toThrow(ProvisionSchemaValidationError);
+  });
+
+  // (3) Malformed response — throws with detail
+  test("turso: entirely non-object response — throws with detail", () => {
+    expect(() => validateProvisionResponse("turso", null)).toThrow(ProvisionSchemaValidationError);
+    try {
+      validateProvisionResponse("turso", null);
+    } catch (err) {
+      const pErr = err as ProvisionSchemaValidationError;
+      expect(pErr.message).toContain("turso");
+      expect(pErr.violations.length).toBeGreaterThan(0);
+    }
+  });
+
+  test("openai: array instead of object — throws with type mismatch detail", () => {
+    expect(() => validateProvisionResponse("openai", ["id", "displayName"])).toThrow(
+      ProvisionSchemaValidationError,
+    );
+    try {
+      validateProvisionResponse("openai", ["id", "displayName"]);
+    } catch (err) {
+      const pErr = err as ProvisionSchemaValidationError;
+      expect(pErr.violations[0].message).toMatch(/expected type object/);
+    }
+  });
+
+  test("anthropic: number instead of object — throws with type mismatch", () => {
+    expect(() => validateProvisionResponse("anthropic", 42)).toThrow(
+      ProvisionSchemaValidationError,
+    );
+  });
+
+  test("sentry: id field is wrong type (number instead of string) — throws with detail", () => {
+    const bad = { id: 999, displayName: "Sentry" }; // id must be string
+    expect(() => validateProvisionResponse("sentry", bad)).toThrow(ProvisionSchemaValidationError);
+    try {
+      validateProvisionResponse("sentry", bad);
+    } catch (err) {
+      const pErr = err as ProvisionSchemaValidationError;
+      // Either required field missing violation or type mismatch
+      expect(pErr.violations.length).toBeGreaterThan(0);
+    }
+  });
+
+  test("cloudflare: id is empty string — throws because mapped id resolves to empty", () => {
+    // validateProvisionResponse throws when mapped id resolves to empty string
+    const bad = { id: "", displayName: "Cloudflare" };
+    expect(() => validateProvisionResponse("cloudflare", bad)).toThrow(
+      ProvisionSchemaValidationError,
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Codegen: generateTypeScript for new providers
+// ---------------------------------------------------------------------------
+
+describe("generateTypeScript — new provider schemas", () => {
+  const newProviders = [
+    "turso", "openai", "anthropic", "aws", "sentry",
+    "railway", "cloudflare", "datadog", "gcp", "auth0",
+  ];
+
+  for (const provider of newProviders) {
+    test(`${provider}: generates valid TypeScript with interface and validators`, () => {
+      const schema = getProviderSchema(provider)!;
+      expect(schema).toBeDefined();
+      const code = generateTypeScript(provider, schema);
+
+      // Must contain AUTO-GENERATED warning
+      expect(code).toContain("AUTO-GENERATED");
+
+      // Must contain the provider-named interface
+      const pascal = provider
+        .split("-")
+        .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+        .join("");
+      expect(code).toContain(`${pascal}ProvisionResponse`);
+
+      // Must contain validator and asserter functions
+      expect(code).toContain(`validate${pascal}ProvisionResponse`);
+      expect(code).toContain(`assert${pascal}ProvisionResponse`);
+
+      // Must import from provision-schema
+      expect(code).toContain("provision-schema");
+
+      // Must be deterministic
+      const code2 = generateTypeScript(provider, schema);
+      expect(code).toBe(code2);
+    });
+  }
+});

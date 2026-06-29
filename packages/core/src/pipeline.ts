@@ -5,6 +5,10 @@ import { mergeMcpEntry, removeMcpEntry } from "./mcp-writer.ts";
 import { addSecret, assertPhantomInstalled, removeSecret } from "./phantom.ts";
 import type { AuthHandle, LogEvent, ProviderContext, Resource } from "./providers/_base.ts";
 import { getProvider } from "./providers/index.ts";
+import {
+  ProvisionSchemaValidationError,
+  validateProvisionResponse,
+} from "./provision-schema.ts";
 
 /** Default wall-clock timeout for each provider step (login / provision / materialize). */
 const DEFAULT_STEP_TIMEOUT_MS = 30_000;
@@ -188,6 +192,33 @@ export async function addService(opts: AddServiceOpts): Promise<AddServiceResult
       } catch {
         /* best-effort */
       }
+    }
+    throw err;
+  }
+
+  // --- Schema validation (M: Provision Response Schema Validation Enforcement) ---
+  // Validate the raw resource returned by provider.provision() against the
+  // registered JSON Schema for this provider. Catches malformed API responses
+  // before they propagate into materialize() or .stack.toml.
+  try {
+    const validated = validateProvisionResponse(provider.name, resource);
+    // Merge validated fields back into resource (coerced id/displayName/region/meta)
+    resource = validated;
+  } catch (err) {
+    if (err instanceof ProvisionSchemaValidationError) {
+      // Attempt best-effort deprovision since the resource was already created
+      if (provider.deprovision) {
+        try {
+          await provider.deprovision(ctx, auth, resource.id);
+        } catch {
+          /* best-effort */
+        }
+      }
+      throw new StackError(
+        "PROVISION_SCHEMA_MISMATCH",
+        `Provider "${provider.name}" returned a malformed provision response: ${err.message}`,
+        { cause: err },
+      );
     }
     throw err;
   }
