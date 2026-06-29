@@ -21,6 +21,7 @@ import { providersCommand } from "./commands/providers.ts";
 import { recommendCommand } from "./commands/recommend.ts";
 import { removeCommand } from "./commands/remove.ts";
 import { replayCommand } from "./commands/replay.ts";
+import { resumeCommand } from "./commands/resume.ts";
 import { scanCommand } from "./commands/scan.ts";
 import { statusCommand } from "./commands/status.ts";
 import { swapCommand } from "./commands/swap.ts";
@@ -31,6 +32,7 @@ import { upgradeCommand } from "./commands/upgrade.ts";
 import { validateSchemaCommand } from "./commands/validate.ts";
 import { probesCommand } from "./commands/probes.ts";
 import { quotaForecastCommand } from "./commands/quota-forecast.ts";
+import { auditPermissionsCommand } from "./commands/audit-permissions.ts";
 import { checkForUpdate } from "./lib/update-check.ts";
 
 // Single source of truth for the CLI version. citty wires this into `--help`
@@ -112,6 +114,7 @@ const main = defineCommand({
     providers: providersCommand,
     recommend: recommendCommand,
     replay: replayCommand,
+    resume: resumeCommand,
     apply: applyCommand,
     projects: projectsCommand,
     ci: ciCommand,
@@ -120,6 +123,7 @@ const main = defineCommand({
     "validate-schema": validateSchemaCommand,
     "quota-forecast": quotaForecastCommand,
     probes: probesCommand,
+    "audit-permissions": auditPermissionsCommand,
   },
 });
 

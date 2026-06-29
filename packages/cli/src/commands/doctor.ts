@@ -75,6 +75,13 @@ export const doctorCommand = defineCommand({
       description:
         "Audit rollback state from prior failed provisions — detect orphaned secrets, MCP entries, and config entries that were not cleaned up.",
     },
+    "audit-permissions": {
+      type: "boolean",
+      default: false,
+      description:
+        "Check that all configured provider credentials are least-privilege. " +
+        "Detects overprivileged tokens/keys and surfaces remediation guidance.",
+    },
   },
   async run({ args }) {
     const json = Boolean(args.json);
@@ -83,6 +90,19 @@ export const doctorCommand = defineCommand({
     // --audit: scan replay sessions for orphaned/dangling state.
     if (args.audit) {
       await runAudit(process.cwd(), json);
+      return;
+    }
+
+    // --audit-permissions: validate credential scopes for all configured providers.
+    if (args["audit-permissions"]) {
+      const { auditPermissionsCommand } = await import("./audit-permissions.ts");
+      // Delegate to the dedicated command, forwarding the --json and --fix flags.
+      const fixArg = Boolean((args as Record<string, unknown>).fix);
+      await auditPermissionsCommand.run!({
+        args: { fix: fixArg, provider: undefined, json },
+        cmd: auditPermissionsCommand,
+        rawArgs: [],
+      } as Parameters<NonNullable<typeof auditPermissionsCommand.run>>[0]);
       return;
     }
 

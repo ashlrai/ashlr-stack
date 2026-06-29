@@ -12,7 +12,14 @@ export { detectPackageManager, installCommand } from "./pm-detect.ts";
 export type { PackageManager } from "./pm-detect.ts";
 export * from "./phantom.ts";
 export * from "./providers/_base.ts";
-export { providers, getProvider, listProviderNames } from "./providers/index.ts";
+export {
+  providers,
+  getProvider,
+  listProviderNames,
+  providerTypeMap,
+  getProviderTypeSource,
+  listCodegenProviders,
+} from "./providers/index.ts";
 export * from "./errors.ts";
 export * from "./templates.ts";
 export {
@@ -124,6 +131,8 @@ export {
   validateProvisionResponse,
   validateSchema,
   validateSchemaCompleteness,
+  coerceProvisionResponse,
+  scanProviderSchemaRegistry,
   type CompiledValidator,
   type JsonSchemaProperty,
   type JsonSchemaType,
@@ -132,6 +141,9 @@ export {
   type SchemaCompletenessResult,
   type SchemaViolation,
   type ValidateOnlyResult,
+  type CoercionResult,
+  type RegistryScanEntry,
+  type RegistryScanResult,
 } from "./provision-schema.ts";
 export {
   captureProvisionError,
@@ -228,3 +240,20 @@ export {
   writeHistogram,
   __setHistogramDirForTesting,
 } from "./probes/index.ts";
+export {
+  validatePermissions,
+  auditPermissions,
+  PERMISSION_SETS,
+  GITHUB_PERMISSION_SET,
+  AWS_PERMISSION_SET,
+  STRIPE_PERMISSION_SET,
+  ANTHROPIC_PERMISSION_SET,
+  GCP_PERMISSION_SET,
+  type PermissionStatus,
+  type PermissionViolation,
+  type PermissionValidationResult,
+  type PermissionAuditReport,
+  type ValidatePermissionsOpts,
+  type Scope,
+  type PermissionSetDefinition,
+} from "./permission-validator.ts";

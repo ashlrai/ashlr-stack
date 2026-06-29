@@ -242,4 +242,21 @@ export interface Provider {
     auth: AuthHandle,
     opts: ConflictCheckOpts,
   ): Promise<ResourceConflictCheckConfig>;
+
+  /**
+   * Validate that the credentials described by `auth` are scoped to least-
+   * privilege. Implementations introspect the actual granted scopes (via API
+   * calls or token inspection) and compare them to the provider's PermissionSet.
+   *
+   * Returns a structured result with status, violations, and optional
+   * remediation instructions. Must never throw — return status "error" instead.
+   *
+   * Optional — providers without an implementation are reported as "skipped"
+   * by the permission-validator engine.
+   */
+  validatePermissions?(
+    ctx: ProviderContext,
+    auth: AuthHandle,
+    opts?: { fix?: boolean; signal?: AbortSignal },
+  ): Promise<import("../permission-validator.ts").PermissionValidationResult>;
 }

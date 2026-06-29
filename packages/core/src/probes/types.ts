@@ -46,6 +46,40 @@ export interface ProbeResult {
    * e.g. "quotaUtilization > 0.80"
    */
   alertThreshold?: string;
+
+  // ---------------------------------------------------------------------------
+  // Permission fields (populated by the permission-validator engine)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Permission validation status for this provider's credential.
+   * Populated when `stack doctor --audit-permissions` or `stack audit-permissions`
+   * runs alongside the probe suite.
+   * "ok"              — scopes are least-privilege
+   * "warn"            — missing a recommended scope
+   * "overprivileged"  — broader access than needed
+   * "error"           — forbidden scopes present
+   * "skipped"         — no PermissionSet defined or credential absent
+   */
+  permissionStatus?: "ok" | "warn" | "overprivileged" | "error" | "skipped";
+
+  /**
+   * Human-readable summary of the permission check outcome.
+   * Mirrors `PermissionValidationResult.detail`.
+   */
+  permissionDetail?: string;
+
+  /**
+   * Scopes/permissions detected from the live credential at probe time.
+   * Empty when `permissionStatus` is "skipped".
+   */
+  grantedScopes?: string[];
+
+  /**
+   * Scope names that are overprivileged or forbidden.
+   * Non-empty when `permissionStatus` is "overprivileged" or "error".
+   */
+  permissionViolations?: string[];
 }
 
 // ---------------------------------------------------------------------------
