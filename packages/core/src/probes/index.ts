@@ -9,9 +9,12 @@
  * `status: "skipped"` rather than failing. All probes run concurrently.
  * Results are persisted to `.stack/telemetry/health-probes.json`.
  *
- * Wires into `stack doctor --probes`.
+ * Wires into `stack doctor --probes` and `stack probes generate-missing`.
  */
 
+import { mkdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { PROVIDERS_REF } from "../catalog.ts";
 import { appendSample, computePercentiles, readHistogram } from "./histogram.ts";
 import probeAnthropic from "./probe-anthropic.ts";
 import probeAws from "./probe-aws.ts";
@@ -27,7 +30,7 @@ import probeVercel from "./probe-vercel.ts";
 import type { Probe, ProbeContext, ProbeResult, ProbeRunSummary } from "./types.ts";
 
 // ---------------------------------------------------------------------------
-// Registry — all 10 built-in probes
+// Registry — all 11 built-in probes
 // ---------------------------------------------------------------------------
 
 export const BUILTIN_PROBES: Probe[] = [
@@ -43,6 +46,219 @@ export const BUILTIN_PROBES: Probe[] = [
   probeLinear,
   probeAws,
 ];
+
+// ---------------------------------------------------------------------------
+// ProbeRegistry — declarative provider-name → Probe map
+// ---------------------------------------------------------------------------
+
+/**
+ * ProbeRegistry maps provider names to their probe implementations.
+ *
+ * Supports:
+ *  - `get(name)` — look up a probe by provider name.
+ *  - `has(name)` — check whether a probe is registered.
+ *  - `registeredNames()` — list all provider names with probes.
+ *  - `missingProviders()` — providers in the catalog that lack a probe.
+ *  - `coverageStats()` — { total, covered, pct, missing }.
+ */
+export class ProbeRegistry {
+  private readonly map: Map<string, Probe>;
+
+  constructor(probes: Probe[] = BUILTIN_PROBES) {
+    this.map = new Map(probes.map((p) => [p.provider, p]));
+  }
+
+  /** Look up a registered probe by provider name. Returns undefined if not found. */
+  get(providerName: string): Probe | undefined {
+    return this.map.get(providerName);
+  }
+
+  /** Returns true when a probe is registered for the given provider name. */
+  has(providerName: string): boolean {
+    return this.map.has(providerName);
+  }
+
+  /** All provider names that have a registered probe. */
+  registeredNames(): string[] {
+    return Array.from(this.map.keys()).sort();
+  }
+
+  /**
+   * All catalog provider names that do NOT have a registered probe.
+   * These are the 32 providers (of 43 total) that need stub generation.
+   */
+  missingProviders(): string[] {
+    const catalogNames = PROVIDERS_REF.map((p) => p.name);
+    return catalogNames.filter((name) => !this.map.has(name)).sort();
+  }
+
+  /**
+   * Coverage statistics against the full provider catalog.
+   *
+   * Returns:
+   *   total   — total providers in the catalog
+   *   covered — providers with a registered probe
+   *   pct     — percentage covered (0–100, rounded)
+   *   missing — provider names without probes
+   */
+  coverageStats(): { total: number; covered: number; pct: number; missing: string[] } {
+    const total = PROVIDERS_REF.length;
+    const missing = this.missingProviders();
+    const covered = total - missing.length;
+    const pct = total > 0 ? Math.round((covered / total) * 100) : 0;
+    return { total, covered, pct, missing };
+  }
+}
+
+/** Singleton registry backed by the built-in probes. */
+export const defaultProbeRegistry = new ProbeRegistry(BUILTIN_PROBES);
+
+// ---------------------------------------------------------------------------
+// Stub code generation
+// ---------------------------------------------------------------------------
+
+/**
+ * Generate a skeleton TypeScript probe file for an unimplemented provider.
+ *
+ * The generated stub follows the same shape as the hand-written probes (e.g.
+ * probe-github.ts) so a contributor only needs to fill in:
+ *   1. The quota/health-check endpoint URL.
+ *   2. The response-parsing logic.
+ *
+ * @param providerName  Matches a `ProviderRef.name` in the catalog (e.g. "turso").
+ * @returns             The TypeScript source code as a string.
+ */
+export function generateProbeStub(providerName: string): string {
+  const ref = PROVIDERS_REF.find((p) => p.name === providerName);
+  const displayName = ref?.displayName ?? providerName;
+  const secrets = ref?.secrets ?? [];
+  const primarySecret = secrets[0] ?? `${providerName.toUpperCase()}_API_KEY`;
+  const docsUrl = ref?.docs ?? `https://docs.${providerName}.com/api`;
+  const dashboardUrl = ref?.dashboard ?? `https://${providerName}.com`;
+
+  return `/**
+ * ${displayName} health-check probe.
+ *
+ * TODO: Implement this stub.
+ *   1. Replace QUOTA_ENDPOINT_URL with the actual health/quota endpoint.
+ *   2. Parse the response body and populate the result fields.
+ *
+ * Reference docs: ${docsUrl}
+ * Dashboard:      ${dashboardUrl}
+ *
+ * Credential(s) required: ${secrets.join(", ") || primarySecret}
+ */
+
+import { tryRevealSecret } from "../providers/_helpers.ts";
+import type { Probe, ProbeContext, ProbeResult } from "./types.ts";
+
+const PROVIDER = "${providerName}";
+const WARN_THRESHOLD = 0.8;
+const ERROR_THRESHOLD = 0.95;
+
+// TODO: Replace with the actual quota or health-check endpoint URL.
+// const QUOTA_ENDPOINT_URL = "https://api.${providerName}.com/TODO/quota";
+
+const probe: Probe = {
+  provider: PROVIDER,
+  label: "${displayName} health-check",
+
+  async run(ctx: ProbeContext): Promise<ProbeResult> {
+    // TODO: Swap out the credential name if the primary secret differs.
+    const token = await tryRevealSecret("${primarySecret}");
+    if (!token) {
+      return {
+        provider: PROVIDER,
+        probedAt: new Date().toISOString(),
+        latencyMs: 0,
+        status: "skipped",
+        detail: "${primarySecret} not in vault — probe skipped",
+      };
+    }
+
+    const start = Date.now();
+    try {
+      // TODO: Replace the URL and adjust headers / auth scheme as required.
+      const res = await fetch("https://api.${providerName}.com/TODO/quota", {
+        headers: {
+          // TODO: Adjust the auth header for ${displayName}'s API.
+          Authorization: \`Bearer \${token}\`,
+          "User-Agent": "ashlr-stack-probe",
+        },
+        signal: ctx.signal,
+      });
+      const latencyMs = Date.now() - start;
+
+      if (!res.ok) {
+        return {
+          provider: PROVIDER,
+          probedAt: new Date().toISOString(),
+          latencyMs,
+          status: "error",
+          detail: \`${displayName} probe returned HTTP \${res.status}\`,
+        };
+      }
+
+      // TODO: Parse the response body.
+      // Example (adapt to the actual shape returned by ${displayName}):
+      //
+      //   const body = await res.json() as { used: number; limit: number };
+      //   const utilization = body.limit > 0 ? body.used / body.limit : 0;
+      //   const status = utilization >= ERROR_THRESHOLD ? "error"
+      //                : utilization >= WARN_THRESHOLD  ? "warn"
+      //                : "ok";
+      //   return {
+      //     provider: PROVIDER,
+      //     probedAt: new Date().toISOString(),
+      //     latencyMs,
+      //     rateLimitCeiling: body.limit,
+      //     quotaUtilization: utilization,
+      //     status,
+      //     alertThreshold: status !== "ok" ? \`quotaUtilization >= \${status === "error" ? ERROR_THRESHOLD : WARN_THRESHOLD}\` : undefined,
+      //     detail: \`\${body.used}/\${body.limit} used\`,
+      //   };
+
+      return {
+        provider: PROVIDER,
+        probedAt: new Date().toISOString(),
+        latencyMs,
+        status: "ok",
+        detail: "TODO: parse response and populate quota fields",
+      };
+    } catch (err) {
+      return {
+        provider: PROVIDER,
+        probedAt: new Date().toISOString(),
+        latencyMs: Date.now() - start,
+        status: "error",
+        detail: \`${displayName} probe failed: \${(err as Error).message}\`,
+      };
+    }
+  },
+};
+
+export default probe;
+`;
+}
+
+// ---------------------------------------------------------------------------
+// Stub file writer (used by the CLI command)
+// ---------------------------------------------------------------------------
+
+/**
+ * Write a generated probe stub to disk.
+ *
+ * @param providerName  Provider to generate a stub for.
+ * @param outputDir     Target directory (created if it does not exist).
+ * @returns             Absolute path of the written file.
+ */
+export function writeProbeStub(providerName: string, outputDir: string): string {
+  mkdirSync(outputDir, { recursive: true });
+  const fileName = `probe-${providerName}.ts`;
+  const filePath = join(outputDir, fileName);
+  writeFileSync(filePath, generateProbeStub(providerName), "utf-8");
+  return filePath;
+}
 
 // ---------------------------------------------------------------------------
 // Runner options

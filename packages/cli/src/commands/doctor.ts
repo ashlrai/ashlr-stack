@@ -1,6 +1,7 @@
 import {
   type ProviderContext,
   addService,
+  defaultProbeRegistry,
   getProvider,
   isPhantomInstalled,
   listProviderNames,
@@ -302,6 +303,10 @@ async function runDoctor(
  * Report healthcheck coverage % across all registered providers.
  * A provider "has coverage" when its loaded instance exposes a `healthcheck`
  * method (either a hand-written one or via makeApiKeyProvider's built-in).
+ *
+ * Also reports probe (health-check probe suite) coverage from the
+ * ProbeRegistry, showing how many of the 43 catalog providers have
+ * a dedicated probe implementation.
  */
 async function runCoverage(json: boolean): Promise<void> {
   const names = listProviderNames();
@@ -321,9 +326,27 @@ async function runCoverage(json: boolean): Promise<void> {
   const pct = total > 0 ? Math.round((covered / total) * 100) : 0;
   const missing = results.filter((r) => !r.hasCoverage).map((r) => r.name);
 
+  // Probe registry coverage (separate from healthcheck adapters)
+  const probeCoverage = defaultProbeRegistry.coverageStats();
+
   if (json) {
     process.stdout.write(
-      `${JSON.stringify({ total, covered, pct, missing }, null, 2)}\n`,
+      `${JSON.stringify(
+        {
+          total,
+          covered,
+          pct,
+          missing,
+          probes: {
+            total: probeCoverage.total,
+            covered: probeCoverage.covered,
+            pct: probeCoverage.pct,
+            missing: probeCoverage.missing,
+          },
+        },
+        null,
+        2,
+      )}\n`,
     );
     return;
   }
@@ -336,6 +359,21 @@ async function runCoverage(json: boolean): Promise<void> {
     console.log(`  ${colors.green("✓")} All providers have healthchecks.`);
   } else {
     console.log(`  ${colors.yellow("⚠")} Missing healthcheck: ${missing.join(", ")}`);
+  }
+
+  console.log();
+  console.log(
+    `  ${colors.bold("Probe coverage:")} ${probeCoverage.covered}/${probeCoverage.total} providers (${colors.bold(`${probeCoverage.pct}%`)})`,
+  );
+  if (probeCoverage.missing.length === 0) {
+    console.log(`  ${colors.green("✓")} All providers have probe stubs.`);
+  } else {
+    console.log(
+      `  ${colors.yellow("⚠")} Missing probes (${probeCoverage.missing.length}): ${probeCoverage.missing.join(", ")}`,
+    );
+    console.log(
+      `  ${colors.dim("→ Run `stack probes generate-missing` to scaffold stubs.")}`,
+    );
   }
   console.log();
 }

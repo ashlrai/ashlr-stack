@@ -29,6 +29,7 @@ import { telemetryCommand } from "./commands/telemetry.ts";
 import { templatesCommand } from "./commands/templates.ts";
 import { upgradeCommand } from "./commands/upgrade.ts";
 import { validateSchemaCommand } from "./commands/validate.ts";
+import { probesCommand } from "./commands/probes.ts";
 import { quotaForecastCommand } from "./commands/quota-forecast.ts";
 import { checkForUpdate } from "./lib/update-check.ts";
 
@@ -118,6 +119,7 @@ const main = defineCommand({
     upgrade: upgradeCommand,
     "validate-schema": validateSchemaCommand,
     "quota-forecast": quotaForecastCommand,
+    probes: probesCommand,
   },
 });
 

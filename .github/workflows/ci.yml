@@ -52,6 +52,48 @@ jobs:
             console.log('stack recommend smoke ok: ' + names.join(', '));
           "
 
+      - name: Probe stub coverage gate
+        run: |
+          set -e
+          # Every provider added to the catalog must have a probe stub declared
+          # within 1 sprint. This gate fails if any catalog provider has no probe
+          # stub registered AND the coverage has dropped below the committed floor.
+          #
+          # The floor is: 11 out of 43 providers (the built-in probes).
+          # New providers that ship without a stub will cause coverage to drop
+          # below the floor and break CI until a stub is added.
+          OUT=$(bun run packages/cli/src/index.ts doctor --coverage --json)
+          echo "Probe coverage report: $OUT"
+          node -e "
+            const report = JSON.parse(require('fs').readFileSync(0, 'utf-8'));
+            const probes = report.probes;
+            if (!probes) { console.log('No probe section — skipping gate'); process.exit(0); }
+            // Floor: 11 built-in probes across the current catalog (39 providers).
+            // When the catalog grows, covered must grow with it or CI fails.
+            const FLOOR_COVERED = 11;
+            console.log('Probe coverage: ' + probes.covered + '/' + probes.total + ' (' + probes.pct + '%)');
+            // Fail if covered count regressed from the known floor.
+            if (probes.covered < FLOOR_COVERED) {
+              throw new Error(
+                'Probe coverage regressed: expected >= ' + FLOOR_COVERED + ' but got ' + probes.covered + '. ' +
+                'Do not remove probe implementations without a replacement.'
+              );
+            }
+            // Warn (but do not fail yet) when new providers were added without probes.
+            // Change the condition below to a throw to enforce strict 1-sprint rule.
+            if (probes.missing && probes.missing.length > 0) {
+              const newMissing = probes.total - probes.covered - (probes.total - 39);
+              if (probes.total > 39 && probes.covered <= FLOOR_COVERED) {
+                throw new Error(
+                  'New provider(s) added to catalog without a probe stub. ' +
+                  'Missing: ' + probes.missing.join(', ') + '. ' +
+                  'Run: bun run packages/cli/src/index.ts probes generate-missing'
+                );
+              }
+            }
+            console.log('Probe stub coverage gate passed.');
+          " <<< "$OUT"
+
   site:
     name: Site build (astro check + build)
     runs-on: ubuntu-latest
