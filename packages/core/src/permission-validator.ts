@@ -179,7 +179,7 @@ const STRIPE_PERMISSION_SET: PermissionSet = {
     { name: "payment_intents:write", description: "Create payment intents", riskLevel: "allowed" },
   ],
   overprivilegedPatterns: [
-    "sk_live_*",   // full live secret key (not a restricted key)
+    "live_secret_key",   // full live secret key (not a restricted key)
     "balance:read",
     "payouts:write",
     "transfers:write",
@@ -318,7 +318,7 @@ async function detectAwsScopes(token: string): Promise<string[]> {
 async function detectStripeScopes(token: string): Promise<string[]> {
   const scopes: string[] = ["account:read"];
   if (token.startsWith("sk_live_")) {
-    scopes.push("sk_live_*"); // triggers overprivileged pattern
+    scopes.push("live_secret_key"); // triggers overprivileged pattern
   } else if (token.startsWith("sk_test_")) {
     scopes.push("charges:read", "customers:read", "subscriptions:read");
   } else if (token.startsWith("rk_")) {
@@ -483,7 +483,7 @@ async function attemptRemediation(
       // we surface a remediation hint (creating a restricted key requires
       // interactive dashboard action — we can't do it fully automated without
       // additional customer scopes).
-      const hasBroadKey = violations.some((v) => v.scope.startsWith("sk_live_"));
+      const hasBroadKey = violations.some((v) => v.scope === "live_secret_key");
       if (hasBroadKey) {
         return {
           applied: false,

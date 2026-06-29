@@ -187,7 +187,7 @@ describe("validatePermissions: stripe", () => {
       ctx,
     );
     expect(result.status).toBe("overprivileged");
-    expect(result.violations.some((v) => v.scope === "sk_live_*")).toBe(true);
+    expect(result.violations.some((v) => v.scope === "live_secret_key")).toBe(true);
   });
 
   test("sk_test_ key returns ok (test keys are low-risk)", async () => {
@@ -399,7 +399,7 @@ describe("PermissionSet definitions", () => {
   });
 
   test("STRIPE_PERMISSION_SET flags sk_live_ as overprivileged", () => {
-    expect(STRIPE_PERMISSION_SET.overprivilegedPatterns.some((p) => p.startsWith("sk_live_"))).toBe(true);
+    expect(STRIPE_PERMISSION_SET.overprivilegedPatterns).toContain("live_secret_key");
   });
 
   test("ANTHROPIC_PERMISSION_SET requires messages:write", () => {
