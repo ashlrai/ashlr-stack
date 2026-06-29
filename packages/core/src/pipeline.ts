@@ -2,8 +2,48 @@ import { type ServiceEntry, type StackConfig, readConfig, writeConfig } from "./
 import { StackError } from "./errors.ts";
 import { mergeMcpEntry, removeMcpEntry } from "./mcp-writer.ts";
 import { addSecret, assertPhantomInstalled, removeSecret } from "./phantom.ts";
-import type { LogEvent, ProviderContext } from "./providers/_base.ts";
+import type { AuthHandle, LogEvent, ProviderContext, Resource } from "./providers/_base.ts";
 import { getProvider } from "./providers/index.ts";
+
+/** Default wall-clock timeout for each provider step (login / provision / materialize). */
+const DEFAULT_STEP_TIMEOUT_MS = 30_000;
+
+/**
+ * Race a promise against a wall-clock timeout driven by an AbortController.
+ * If the timeout fires first, the controller is aborted (so providers that
+ * accept a signal can observe it) and a StackError with code PROVISION_TIMEOUT
+ * is thrown. The promise itself is NOT cancelled — JS has no cooperative
+ * cancellation — but the pipeline stops waiting for it.
+ */
+async function withTimeout<T>(
+  label: string,
+  timeoutMs: number,
+  controller: AbortController,
+  fn: () => Promise<T>,
+): Promise<T> {
+  // Infinity means disabled — run the fn directly with no race.
+  if (!isFinite(timeoutMs)) {
+    return fn();
+  }
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      controller.abort();
+      reject(
+        new StackError(
+          "PROVISION_TIMEOUT",
+          `Provider step "${label}" did not complete within ${timeoutMs / 1000}s. ` +
+            `The pipeline has been aborted. Check your network / API status and retry.`,
+        ),
+      );
+    }, timeoutMs);
+  });
+  try {
+    return await Promise.race([fn(), timeoutPromise]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 export interface AddServiceOpts {
   providerName: string;
@@ -14,6 +54,12 @@ export interface AddServiceOpts {
   log?: (event: LogEvent) => void;
   /** If false, skip persisting to .stack.toml (used by dry-run / preview). */
   persist?: boolean;
+  /**
+   * Wall-clock timeout in milliseconds applied to each provider step
+   * (login, provision, materialize) independently. Defaults to 30 000 ms.
+   * Set to 0 to disable (not recommended in production).
+   */
+  timeoutMs?: number;
 }
 
 export interface AddServiceResult {
@@ -45,18 +91,56 @@ export async function addService(opts: AddServiceOpts): Promise<AddServiceResult
     );
   }
 
+  const timeoutMs =
+    opts.timeoutMs === 0 ? Number.POSITIVE_INFINITY : (opts.timeoutMs ?? DEFAULT_STEP_TIMEOUT_MS);
+
+  // One AbortController per pipeline run — aborted on any step timeout so that
+  // providers accepting a signal (future-proof) can self-cancel.
+  const controller = new AbortController();
+
   const ctx: ProviderContext = {
     cwd,
     interactive: opts.interactive ?? process.stdout.isTTY === true,
     log: opts.log ?? (() => {}),
     hints: opts.hints,
+    signal: controller.signal,
   };
 
-  const auth = await provider.login(ctx);
-  const resource = await provider.provision(ctx, auth, {
-    existingResourceId: opts.existingResourceId,
-    hints: opts.hints,
-  });
+  // --- login ---
+  let auth: AuthHandle;
+  try {
+    auth = await withTimeout("login", timeoutMs, controller, () => provider.login(ctx));
+  } catch (err) {
+    // login timed out or failed — no upstream resource was created, nothing to roll back.
+    throw err;
+  }
+
+  // --- provision ---
+  let resource: Resource;
+  try {
+    resource = await withTimeout("provision", timeoutMs, controller, () =>
+      provider.provision(ctx, auth, {
+        existingResourceId: opts.existingResourceId,
+        hints: opts.hints,
+      }),
+    );
+  } catch (err) {
+    // provision timed out or failed before an upstream resource was confirmed —
+    // if it's a timeout and the provider has deprovision, attempt best-effort rollback.
+    if (
+      err instanceof StackError &&
+      err.code === "PROVISION_TIMEOUT" &&
+      provider.deprovision &&
+      opts.existingResourceId
+    ) {
+      try {
+        await provider.deprovision(ctx, auth, opts.existingResourceId);
+      } catch {
+        /* best-effort */
+      }
+    }
+    throw err;
+  }
 
   // Provision succeeded: from here on, any failure must roll back atomically.
   // Track what has been written so the catch block can undo exactly that.
@@ -64,7 +148,9 @@ export async function addService(opts: AddServiceOpts): Promise<AddServiceResult
   let writtenMcp: string | undefined;
 
   try {
-    const materialized = await provider.materialize(ctx, resource, auth);
+    const materialized = await withTimeout("materialize", timeoutMs, controller, () =>
+      provider.materialize(ctx, resource, auth),
+    );
 
     for (const [key, value] of Object.entries(materialized.secrets)) {
       await addSecret(key, value, cwd);
@@ -119,6 +205,13 @@ export async function addService(opts: AddServiceOpts): Promise<AddServiceResult
     }
     // 3. Tear down the upstream resource (if provider supports it).
     const failStep = writtenSecrets.length > 0 ? "MCP/config write" : "materialize";
+
+    // Timeout errors: rollback (secrets/MCP) already done above — re-throw
+    // the original PROVISION_TIMEOUT so the caller sees the real error code.
+    // Deprovision is still attempted below before we re-throw.
+    const isTimeout =
+      err instanceof StackError && err.code === "PROVISION_TIMEOUT";
+
     if (provider.deprovision) {
       // If deprovision itself throws, we still want to surface the original
       // failure AND note that teardown was incomplete — otherwise the caller
@@ -132,6 +225,8 @@ export async function addService(opts: AddServiceOpts): Promise<AddServiceResult
       const teardownNote = teardownErr
         ? `Attempted automatic teardown but it FAILED (${teardownErr.message}) — resource ${resource.id} may still exist. Clean it up manually on the ${provider.displayName} dashboard.`
         : `Upstream resource ${resource.id} has been torn down.`;
+      // For timeout errors, re-throw the original so callers see PROVISION_TIMEOUT.
+      if (isTimeout) throw err;
       throw new StackError(
         "ADD_SERVICE_ROLLED_BACK",
         `Rolled back ${provider.displayName} after failure at step "${failStep}". ` +
