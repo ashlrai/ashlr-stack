@@ -490,6 +490,591 @@ describe("healthcheck — structural providers", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Network-backed providers that require resource_id or special secrets
+// ---------------------------------------------------------------------------
+
+describe("healthcheck — resource-id providers (neon, sentry, turso, vercel, supabase)", () => {
+  let h: Harness;
+  let realFetch: typeof fetch;
+
+  beforeEach(() => {
+    h = setupFakePhantom();
+    realFetch = globalThis.fetch;
+  });
+
+  afterEach(() => {
+    globalThis.fetch = realFetch;
+    h.cleanup();
+  });
+
+  // ---- Neon ----------------------------------------------------------------
+
+  test("neon: healthcheck ok — latencyMs present and kind=ok", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("NEON_API_KEY", "neon-fake-token");
+
+    globalThis.fetch = mockFetch(200, { project: { id: "proj-1", name: "my-proj", region_id: "aws-us-east-2" } });
+
+    const neon = (await import("../providers/neon.ts")).default;
+    const status = await neon.healthcheck!(makeCtx(), {
+      provider: "neon",
+      secrets: ["NEON_API_KEY"],
+      resource_id: "proj-1",
+      created_at: new Date().toISOString(),
+    });
+
+    expect(status.kind).toBe("ok");
+    expect(typeof (status as { latencyMs?: number }).latencyMs).toBe("number");
+  });
+
+  test("neon: healthcheck error — missing secret", async () => {
+    const prev = process.env.NEON_API_KEY;
+    delete process.env.NEON_API_KEY;
+    try {
+      const neon = (await import("../providers/neon.ts")).default;
+      const status = await neon.healthcheck!(makeCtx(), {
+        provider: "neon",
+        secrets: [],
+        resource_id: "proj-1",
+        created_at: new Date().toISOString(),
+      });
+      expect(status.kind).toBe("error");
+      expect((status as { detail: string }).detail).toContain("missing");
+    } finally {
+      if (prev !== undefined) process.env.NEON_API_KEY = prev;
+    }
+  });
+
+  test("neon: healthcheck error — 401 from API", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("NEON_API_KEY", "neon-fake-token");
+
+    globalThis.fetch = mockFetch(401, { message: "unauthorized" });
+
+    const neon = (await import("../providers/neon.ts")).default;
+    const status = await neon.healthcheck!(makeCtx(), {
+      provider: "neon",
+      secrets: ["NEON_API_KEY"],
+      resource_id: "proj-1",
+      created_at: new Date().toISOString(),
+    });
+    expect(status.kind).toBe("error");
+  });
+
+  test("neon: healthcheck warn — no resource_id", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("NEON_API_KEY", "neon-fake-token");
+
+    const neon = (await import("../providers/neon.ts")).default;
+    const status = await neon.healthcheck!(makeCtx(), {
+      provider: "neon",
+      secrets: ["NEON_API_KEY"],
+      created_at: new Date().toISOString(),
+    });
+    expect(status.kind).toBe("warn");
+  });
+
+  // ---- Sentry --------------------------------------------------------------
+
+  test("sentry: healthcheck ok — latencyMs present and kind=ok", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("SENTRY_AUTH_TOKEN", "sentry-fake-token");
+
+    globalThis.fetch = mockFetch(200, { id: "proj-1", slug: "my-project" });
+
+    const sentry = (await import("../providers/sentry.ts")).default;
+    const status = await sentry.healthcheck!(makeCtx(), {
+      provider: "sentry",
+      secrets: ["SENTRY_AUTH_TOKEN"],
+      resource_id: "myorg/my-project",
+      created_at: new Date().toISOString(),
+    });
+
+    expect(status.kind).toBe("ok");
+    expect(typeof (status as { latencyMs?: number }).latencyMs).toBe("number");
+  });
+
+  test("sentry: healthcheck error — missing secret", async () => {
+    const prev = process.env.SENTRY_AUTH_TOKEN;
+    delete process.env.SENTRY_AUTH_TOKEN;
+    try {
+      const sentry = (await import("../providers/sentry.ts")).default;
+      const status = await sentry.healthcheck!(makeCtx(), {
+        provider: "sentry",
+        secrets: [],
+        resource_id: "myorg/my-project",
+        created_at: new Date().toISOString(),
+      });
+      expect(status.kind).toBe("error");
+      expect((status as { detail: string }).detail).toContain("missing");
+    } finally {
+      if (prev !== undefined) process.env.SENTRY_AUTH_TOKEN = prev;
+    }
+  });
+
+  test("sentry: healthcheck error — 401 from API", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("SENTRY_AUTH_TOKEN", "sentry-fake-token");
+
+    globalThis.fetch = mockFetch(401, { detail: "unauthorized" });
+
+    const sentry = (await import("../providers/sentry.ts")).default;
+    const status = await sentry.healthcheck!(makeCtx(), {
+      provider: "sentry",
+      secrets: ["SENTRY_AUTH_TOKEN"],
+      resource_id: "myorg/my-project",
+      created_at: new Date().toISOString(),
+    });
+    expect(status.kind).toBe("error");
+  });
+
+  test("sentry: healthcheck warn — no resource_id", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("SENTRY_AUTH_TOKEN", "sentry-fake-token");
+
+    const sentry = (await import("../providers/sentry.ts")).default;
+    const status = await sentry.healthcheck!(makeCtx(), {
+      provider: "sentry",
+      secrets: ["SENTRY_AUTH_TOKEN"],
+      created_at: new Date().toISOString(),
+    });
+    expect(status.kind).toBe("warn");
+  });
+
+  // ---- Turso ---------------------------------------------------------------
+
+  test("turso: healthcheck ok — latencyMs present and kind=ok", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("TURSO_PLATFORM_TOKEN", "turso-fake-token");
+
+    globalThis.fetch = mockFetch(200, { name: "my-db", hostname: "my-db-myorg.turso.io" });
+
+    const turso = (await import("../providers/turso.ts")).default;
+    const status = await turso.healthcheck!(makeCtx(), {
+      provider: "turso",
+      secrets: ["TURSO_PLATFORM_TOKEN"],
+      resource_id: "myorg/my-db",
+      created_at: new Date().toISOString(),
+    });
+
+    expect(status.kind).toBe("ok");
+    expect(typeof (status as { latencyMs?: number }).latencyMs).toBe("number");
+  });
+
+  test("turso: healthcheck error — missing secret", async () => {
+    const prev = process.env.TURSO_PLATFORM_TOKEN;
+    delete process.env.TURSO_PLATFORM_TOKEN;
+    try {
+      const turso = (await import("../providers/turso.ts")).default;
+      const status = await turso.healthcheck!(makeCtx(), {
+        provider: "turso",
+        secrets: [],
+        resource_id: "myorg/my-db",
+        created_at: new Date().toISOString(),
+      });
+      expect(status.kind).toBe("error");
+      expect((status as { detail: string }).detail).toContain("missing");
+    } finally {
+      if (prev !== undefined) process.env.TURSO_PLATFORM_TOKEN = prev;
+    }
+  });
+
+  test("turso: healthcheck error — 401 from API", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("TURSO_PLATFORM_TOKEN", "turso-fake-token");
+
+    globalThis.fetch = mockFetch(401, { message: "unauthorized" });
+
+    const turso = (await import("../providers/turso.ts")).default;
+    const status = await turso.healthcheck!(makeCtx(), {
+      provider: "turso",
+      secrets: ["TURSO_PLATFORM_TOKEN"],
+      resource_id: "myorg/my-db",
+      created_at: new Date().toISOString(),
+    });
+    expect(status.kind).toBe("error");
+  });
+
+  // ---- Vercel --------------------------------------------------------------
+
+  test("vercel: healthcheck ok — latencyMs present and kind=ok", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("VERCEL_TOKEN", "vercel-fake-token");
+
+    globalThis.fetch = mockFetch(200, { id: "prj-1", name: "my-project" });
+
+    const vercel = (await import("../providers/vercel.ts")).default;
+    const status = await vercel.healthcheck!(makeCtx(), {
+      provider: "vercel",
+      secrets: ["VERCEL_TOKEN"],
+      resource_id: "prj-1",
+      created_at: new Date().toISOString(),
+    });
+
+    expect(status.kind).toBe("ok");
+    expect(typeof (status as { latencyMs?: number }).latencyMs).toBe("number");
+  });
+
+  test("vercel: healthcheck error — missing secret", async () => {
+    const prev = process.env.VERCEL_TOKEN;
+    delete process.env.VERCEL_TOKEN;
+    try {
+      const vercel = (await import("../providers/vercel.ts")).default;
+      const status = await vercel.healthcheck!(makeCtx(), {
+        provider: "vercel",
+        secrets: [],
+        resource_id: "prj-1",
+        created_at: new Date().toISOString(),
+      });
+      expect(status.kind).toBe("error");
+      expect((status as { detail: string }).detail).toContain("missing");
+    } finally {
+      if (prev !== undefined) process.env.VERCEL_TOKEN = prev;
+    }
+  });
+
+  test("vercel: healthcheck error — 404 project not found", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("VERCEL_TOKEN", "vercel-fake-token");
+
+    globalThis.fetch = mockFetch(404, { error: { code: "not_found" } });
+
+    const vercel = (await import("../providers/vercel.ts")).default;
+    const status = await vercel.healthcheck!(makeCtx(), {
+      provider: "vercel",
+      secrets: ["VERCEL_TOKEN"],
+      resource_id: "prj-1",
+      created_at: new Date().toISOString(),
+    });
+    expect(status.kind).toBe("error");
+  });
+
+  test("vercel: healthcheck warn — no resource_id", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("VERCEL_TOKEN", "vercel-fake-token");
+
+    const vercel = (await import("../providers/vercel.ts")).default;
+    const status = await vercel.healthcheck!(makeCtx(), {
+      provider: "vercel",
+      secrets: ["VERCEL_TOKEN"],
+      created_at: new Date().toISOString(),
+    });
+    expect(status.kind).toBe("warn");
+  });
+
+  // ---- Supabase ------------------------------------------------------------
+
+  test("supabase: healthcheck ok — latencyMs present and kind=ok", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("SUPABASE_ANON_KEY", "eyJfake.anon.key");
+
+    globalThis.fetch = mockFetch(200, {});
+
+    const supabase = (await import("../providers/supabase.ts")).default;
+    const status = await supabase.healthcheck!(makeCtx(), {
+      provider: "supabase",
+      secrets: ["SUPABASE_ANON_KEY"],
+      resource_id: "abcdefghijklmnop",
+      created_at: new Date().toISOString(),
+    });
+
+    expect(status.kind).toBe("ok");
+    expect(typeof (status as { latencyMs?: number }).latencyMs).toBe("number");
+  });
+
+  test("supabase: healthcheck error — missing anon key", async () => {
+    const prev = process.env.SUPABASE_ANON_KEY;
+    delete process.env.SUPABASE_ANON_KEY;
+    try {
+      const supabase = (await import("../providers/supabase.ts")).default;
+      const status = await supabase.healthcheck!(makeCtx(), {
+        provider: "supabase",
+        secrets: [],
+        resource_id: "abcdefghijklmnop",
+        created_at: new Date().toISOString(),
+      });
+      expect(status.kind).toBe("error");
+      expect((status as { detail: string }).detail).toContain("missing");
+    } finally {
+      if (prev !== undefined) process.env.SUPABASE_ANON_KEY = prev;
+    }
+  });
+
+  test("supabase: healthcheck error — missing resource_id", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("SUPABASE_ANON_KEY", "eyJfake.anon.key");
+
+    const supabase = (await import("../providers/supabase.ts")).default;
+    const status = await supabase.healthcheck!(makeCtx(), {
+      provider: "supabase",
+      secrets: ["SUPABASE_ANON_KEY"],
+      created_at: new Date().toISOString(),
+    });
+    expect(status.kind).toBe("error");
+  });
+
+  test("supabase: healthcheck respects signal cancellation", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("SUPABASE_ANON_KEY", "eyJfake.anon.key");
+
+    globalThis.fetch = (async (_url: unknown, init?: RequestInit) => {
+      if (init?.signal?.aborted) {
+        throw new DOMException("The operation was aborted.", "AbortError");
+      }
+      return new Response(JSON.stringify({}), { status: 200 });
+    }) as unknown as typeof fetch;
+
+    const controller = new AbortController();
+    controller.abort();
+
+    const supabase = (await import("../providers/supabase.ts")).default;
+    const status = await supabase.healthcheck!(makeCtx(controller.signal), {
+      provider: "supabase",
+      secrets: ["SUPABASE_ANON_KEY"],
+      resource_id: "abcdefghijklmnop",
+      created_at: new Date().toISOString(),
+    });
+    expect(status.kind).toBe("error");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Network-backed providers using simple token auth (stripe, github, cloudflare, aws)
+// ---------------------------------------------------------------------------
+
+describe("healthcheck — simple-token providers (stripe, github, cloudflare, aws)", () => {
+  let h: Harness;
+  let realFetch: typeof fetch;
+
+  beforeEach(() => {
+    h = setupFakePhantom();
+    realFetch = globalThis.fetch;
+  });
+
+  afterEach(() => {
+    globalThis.fetch = realFetch;
+    h.cleanup();
+  });
+
+  // ---- Stripe --------------------------------------------------------------
+
+  test("stripe: healthcheck ok — latencyMs present and kind=ok", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("STRIPE_SECRET_KEY", "sk_test_fake");
+
+    globalThis.fetch = mockFetch(200, { id: "acct_fake", business_type: "individual" });
+
+    const stripe = (await import("../providers/stripe.ts")).default;
+    const status = await stripe.healthcheck!(makeCtx(), {
+      provider: "stripe",
+      secrets: ["STRIPE_SECRET_KEY"],
+      created_at: new Date().toISOString(),
+    });
+
+    expect(status.kind).toBe("ok");
+    expect(typeof (status as { latencyMs?: number }).latencyMs).toBe("number");
+  });
+
+  test("stripe: healthcheck error — missing secret", async () => {
+    const prev = process.env.STRIPE_SECRET_KEY;
+    delete process.env.STRIPE_SECRET_KEY;
+    try {
+      const stripe = (await import("../providers/stripe.ts")).default;
+      const status = await stripe.healthcheck!(makeCtx(), {
+        provider: "stripe",
+        secrets: [],
+        created_at: new Date().toISOString(),
+      });
+      expect(status.kind).toBe("error");
+      expect((status as { detail: string }).detail).toContain("missing");
+    } finally {
+      if (prev !== undefined) process.env.STRIPE_SECRET_KEY = prev;
+    }
+  });
+
+  test("stripe: healthcheck error — 401 from API", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("STRIPE_SECRET_KEY", "sk_test_fake");
+
+    globalThis.fetch = mockFetch(401, { error: { type: "invalid_request_error" } });
+
+    const stripe = (await import("../providers/stripe.ts")).default;
+    const status = await stripe.healthcheck!(makeCtx(), {
+      provider: "stripe",
+      secrets: ["STRIPE_SECRET_KEY"],
+      created_at: new Date().toISOString(),
+    });
+    expect(status.kind).toBe("error");
+  });
+
+  // ---- GitHub --------------------------------------------------------------
+
+  test("github: healthcheck ok — latencyMs present and kind=ok", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("GITHUB_TOKEN", "ghp_fake");
+
+    globalThis.fetch = mockFetch(200, { login: "mason", id: 1, type: "User" });
+
+    const github = (await import("../providers/github.ts")).default;
+    const status = await github.healthcheck!(makeCtx(), {
+      provider: "github",
+      secrets: ["GITHUB_TOKEN"],
+      created_at: new Date().toISOString(),
+    });
+
+    expect(status.kind).toBe("ok");
+    expect(typeof (status as { latencyMs?: number }).latencyMs).toBe("number");
+  });
+
+  test("github: healthcheck error — missing secret", async () => {
+    const prev = process.env.GITHUB_TOKEN;
+    delete process.env.GITHUB_TOKEN;
+    try {
+      const github = (await import("../providers/github.ts")).default;
+      const status = await github.healthcheck!(makeCtx(), {
+        provider: "github",
+        secrets: [],
+        created_at: new Date().toISOString(),
+      });
+      expect(status.kind).toBe("error");
+      expect((status as { detail: string }).detail).toContain("missing");
+    } finally {
+      if (prev !== undefined) process.env.GITHUB_TOKEN = prev;
+    }
+  });
+
+  test("github: healthcheck error — 401 from API", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("GITHUB_TOKEN", "ghp_fake");
+
+    globalThis.fetch = mockFetch(401, { message: "Bad credentials" });
+
+    const github = (await import("../providers/github.ts")).default;
+    const status = await github.healthcheck!(makeCtx(), {
+      provider: "github",
+      secrets: ["GITHUB_TOKEN"],
+      created_at: new Date().toISOString(),
+    });
+    expect(status.kind).toBe("error");
+  });
+
+  // ---- Cloudflare ----------------------------------------------------------
+
+  test("cloudflare: healthcheck ok — latencyMs present and kind=ok", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("CLOUDFLARE_API_TOKEN", "cf-fake-token");
+
+    globalThis.fetch = mockFetch(200, { result: { id: "tok_1", status: "active" }, success: true });
+
+    const cloudflare = (await import("../providers/cloudflare.ts")).default;
+    const status = await cloudflare.healthcheck!(makeCtx(), {
+      provider: "cloudflare",
+      secrets: ["CLOUDFLARE_API_TOKEN"],
+      created_at: new Date().toISOString(),
+    });
+
+    expect(status.kind).toBe("ok");
+    expect(typeof (status as { latencyMs?: number }).latencyMs).toBe("number");
+  });
+
+  test("cloudflare: healthcheck error — missing secret", async () => {
+    const prev = process.env.CLOUDFLARE_API_TOKEN;
+    delete process.env.CLOUDFLARE_API_TOKEN;
+    try {
+      const cloudflare = (await import("../providers/cloudflare.ts")).default;
+      const status = await cloudflare.healthcheck!(makeCtx(), {
+        provider: "cloudflare",
+        secrets: [],
+        created_at: new Date().toISOString(),
+      });
+      expect(status.kind).toBe("error");
+      expect((status as { detail: string }).detail).toContain("missing");
+    } finally {
+      if (prev !== undefined) process.env.CLOUDFLARE_API_TOKEN = prev;
+    }
+  });
+
+  test("cloudflare: healthcheck error — 403 from API", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("CLOUDFLARE_API_TOKEN", "cf-fake-token");
+
+    globalThis.fetch = mockFetch(403, { success: false, errors: [{ message: "forbidden" }] });
+
+    const cloudflare = (await import("../providers/cloudflare.ts")).default;
+    const status = await cloudflare.healthcheck!(makeCtx(), {
+      provider: "cloudflare",
+      secrets: ["CLOUDFLARE_API_TOKEN"],
+      created_at: new Date().toISOString(),
+    });
+    expect(status.kind).toBe("error");
+  });
+
+  // ---- AWS -----------------------------------------------------------------
+
+  test("aws: healthcheck ok — latencyMs present and kind=ok", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("AWS_ACCESS_KEY_ID", "AKIAFAKE12345678");
+    await addSecret("AWS_SECRET_ACCESS_KEY", "fakesecretaccesskey0000000000000000000000");
+
+    // STS GetCallerIdentity returns XML
+    const stsXml = `<GetCallerIdentityResponse>
+      <GetCallerIdentityResult>
+        <Arn>arn:aws:iam::123456789012:user/mason</Arn>
+        <UserId>AIDAFAKE123</UserId>
+        <Account>123456789012</Account>
+      </GetCallerIdentityResult>
+    </GetCallerIdentityResponse>`;
+    globalThis.fetch = (async () => new Response(stsXml, { status: 200 })) as unknown as typeof fetch;
+
+    const aws = (await import("../providers/aws.ts")).default;
+    const status = await aws.healthcheck!(makeCtx(), {
+      provider: "aws",
+      secrets: ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"],
+      created_at: new Date().toISOString(),
+    });
+
+    expect(status.kind).toBe("ok");
+    expect(typeof (status as { latencyMs?: number }).latencyMs).toBe("number");
+  });
+
+  test("aws: healthcheck error — missing secret", async () => {
+    const prevId = process.env.AWS_ACCESS_KEY_ID;
+    const prevSecret = process.env.AWS_SECRET_ACCESS_KEY;
+    delete process.env.AWS_ACCESS_KEY_ID;
+    delete process.env.AWS_SECRET_ACCESS_KEY;
+    try {
+      const aws = (await import("../providers/aws.ts")).default;
+      const status = await aws.healthcheck!(makeCtx(), {
+        provider: "aws",
+        secrets: [],
+        created_at: new Date().toISOString(),
+      });
+      expect(status.kind).toBe("error");
+      expect((status as { detail: string }).detail).toContain("missing");
+    } finally {
+      if (prevId !== undefined) process.env.AWS_ACCESS_KEY_ID = prevId;
+      if (prevSecret !== undefined) process.env.AWS_SECRET_ACCESS_KEY = prevSecret;
+    }
+  });
+
+  test("aws: healthcheck error — 403 from STS (invalid credentials)", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("AWS_ACCESS_KEY_ID", "AKIAFAKE12345678");
+    await addSecret("AWS_SECRET_ACCESS_KEY", "fakesecretaccesskey0000000000000000000000");
+
+    globalThis.fetch = mockFetch(403, "<ErrorResponse><Error><Code>InvalidClientTokenId</Code></Error></ErrorResponse>");
+
+    const aws = (await import("../providers/aws.ts")).default;
+    const status = await aws.healthcheck!(makeCtx(), {
+      provider: "aws",
+      secrets: ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"],
+      created_at: new Date().toISOString(),
+    });
+    expect(status.kind).toBe("error");
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Grafana — hybrid (structural fallback + network with URL)
 // ---------------------------------------------------------------------------
 

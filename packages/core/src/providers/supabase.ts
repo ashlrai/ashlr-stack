@@ -177,7 +177,7 @@ const supabase: Provider = {
     };
   },
 
-  async healthcheck(_ctx: ProviderContext, entry: ServiceEntry): Promise<HealthStatus> {
+  async healthcheck(ctx: ProviderContext, entry: ServiceEntry): Promise<HealthStatus> {
     if (!entry.resource_id) return { kind: "error", detail: "missing resource_id" };
     const anon = await tryRevealSecret("SUPABASE_ANON_KEY");
     if (!anon) return { kind: "error", detail: "SUPABASE_ANON_KEY missing from vault" };
@@ -186,6 +186,7 @@ const supabase: Provider = {
       // GET against the REST root. Safe to retry on transient 5xx / 429.
       const res = await fetchWithRetry(`https://${entry.resource_id}.supabase.co/rest/v1/`, {
         headers: { apikey: anon, Authorization: `Bearer ${anon}` },
+        signal: ctx.signal,
       });
       const latencyMs = Date.now() - start;
       if (res.ok) return { kind: "ok", latencyMs };
