@@ -27,6 +27,7 @@ import { syncCommand } from "./commands/sync.ts";
 import { telemetryCommand } from "./commands/telemetry.ts";
 import { templatesCommand } from "./commands/templates.ts";
 import { upgradeCommand } from "./commands/upgrade.ts";
+import { validateSchemaCommand } from "./commands/validate.ts";
 import { checkForUpdate } from "./lib/update-check.ts";
 
 // Single source of truth for the CLI version. citty wires this into `--help`
@@ -112,6 +113,7 @@ const main = defineCommand({
     ci: ciCommand,
     completion: completionCommand,
     upgrade: upgradeCommand,
+    "validate-schema": validateSchemaCommand,
   },
 });
 

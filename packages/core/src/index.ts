@@ -80,3 +80,19 @@ export {
   type RateCard,
   type UsageRecord,
 } from "./ai/cost-tracker.ts";
+export {
+  ProvisionSchemaValidationError,
+  generateTypeScript,
+  getProviderSchema,
+  listRegisteredSchemas,
+  registerProviderSchema,
+  resolvePath,
+  validateProvisionResponse,
+  validateSchema,
+  validateSchemaCompleteness,
+  type JsonSchemaProperty,
+  type JsonSchemaType,
+  type ProvisionResponseSchema,
+  type SchemaCompletenessResult,
+  type SchemaViolation,
+} from "./provision-schema.ts";
