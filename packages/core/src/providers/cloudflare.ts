@@ -5,12 +5,14 @@ import { addSecret } from "../phantom.ts";
 import { tryRevealSecret } from "./_helpers.ts";
 import type {
   AuthHandle,
+  ConflictCheckOpts,
   HealthStatus,
   Materialized,
   Provider,
   ProviderContext,
   ProvisionOpts,
   Resource,
+  ResourceConflictCheckConfig,
 } from "./_base.ts";
 
 /**
@@ -92,6 +94,127 @@ const cloudflare: Provider = {
     return entry.resource_id
       ? `https://dash.cloudflare.com/${entry.resource_id}`
       : "https://dash.cloudflare.com";
+  },
+
+  /**
+   * Cloudflare conflict check — lists Workers scripts under the account and
+   * checks whether a script with the requested name already exists.
+   */
+  async checkConflict(
+    auth: AuthHandle,
+    opts: ConflictCheckOpts,
+  ): Promise<ResourceConflictCheckConfig> {
+    const now = new Date().toISOString();
+    const desiredName = opts.desiredName;
+    try {
+      if (!desiredName) {
+        return {
+          requestedName: "(auto)",
+          exists: false,
+          action: "ok",
+          message: "No desired name specified; auto-naming will avoid conflicts.",
+          checkedAt: now,
+        };
+      }
+      // First, resolve account id from hints or fetch it.
+      const accountId = opts.hints?.accountId as string | undefined;
+      if (!accountId) {
+        // No account id: skip the script check, just confirm token works.
+        const accounts = await fetchAccounts(auth.token);
+        if (accounts.length === 0) {
+          return {
+            requestedName: desiredName,
+            exists: undefined,
+            action: "unreachable",
+            message: "Cloudflare API unreachable or token has no account scope during conflict check.",
+            checkedAt: now,
+          };
+        }
+        // Check Workers scripts in the first account.
+        const acctId = accounts[0].id;
+        const res = await fetchWithRetry(`${API}/accounts/${acctId}/workers/scripts`, {
+          headers: { Authorization: `Bearer ${auth.token}` },
+          ...(opts.signal ? { signal: opts.signal } : {}),
+        });
+        if (!res.ok) {
+          return {
+            requestedName: desiredName,
+            exists: undefined,
+            action: "unreachable",
+            message: `Cloudflare API returned ${res.status} during conflict check; proceeding with provision.`,
+            checkedAt: now,
+          };
+        }
+        const body = (await res.json()) as { result?: Array<{ id?: string }> };
+        const scripts = body.result ?? [];
+        const match = scripts.find((s) => s.id === desiredName);
+        if (!match) {
+          return {
+            requestedName: desiredName,
+            exists: false,
+            action: "ok",
+            message: `No Cloudflare Worker named "${desiredName}" found; safe to create.`,
+            checkedAt: now,
+          };
+        }
+        const suffix = Date.now().toString(36);
+        return {
+          requestedName: desiredName,
+          exists: true,
+          existingResourceId: match.id ?? desiredName,
+          existingDisplayName: match.id,
+          suggestedUniqueName: `${desiredName}-${suffix}`,
+          action: "rename",
+          message: `A Cloudflare Worker named "${desiredName}" already exists. You can attach to it or use a unique name.`,
+          checkedAt: now,
+        };
+      }
+      // Account id provided via hints.
+      const res = await fetchWithRetry(`${API}/accounts/${accountId}/workers/scripts`, {
+        headers: { Authorization: `Bearer ${auth.token}` },
+        ...(opts.signal ? { signal: opts.signal } : {}),
+      });
+      if (!res.ok) {
+        return {
+          requestedName: desiredName,
+          exists: undefined,
+          action: "unreachable",
+          message: `Cloudflare API returned ${res.status} during conflict check; proceeding with provision.`,
+          checkedAt: now,
+        };
+      }
+      const body = (await res.json()) as { result?: Array<{ id?: string }> };
+      const scripts = body.result ?? [];
+      const match = scripts.find((s) => s.id === desiredName);
+      if (!match) {
+        return {
+          requestedName: desiredName,
+          exists: false,
+          action: "ok",
+          message: `No Cloudflare Worker named "${desiredName}" found; safe to create.`,
+          checkedAt: now,
+        };
+      }
+      const suffix = Date.now().toString(36);
+      return {
+        requestedName: desiredName,
+        exists: true,
+        existingResourceId: match.id ?? desiredName,
+        existingDisplayName: match.id,
+        suggestedUniqueName: `${desiredName}-${suffix}`,
+        action: "rename",
+        message: `A Cloudflare Worker named "${desiredName}" already exists. You can attach to it or use a unique name.`,
+        checkedAt: now,
+      };
+    } catch {
+      return {
+        requestedName: desiredName ?? "(auto)",
+        exists: undefined,
+        action: "unreachable",
+        message: "Cloudflare API unreachable during conflict check; proceeding with provision.",
+        checkedAt: now,
+      };
+    }
   },
 
   /**

@@ -1,5 +1,6 @@
 import { readConfig, removeSecret, writeConfig } from "@ashlr/stack-core";
 import { removeMcpEntry } from "@ashlr/stack-core/mcp-writer";
+import type { ConflictCheckResult } from "@ashlr/stack-core";
 import { addCommand } from "../commands/add.ts";
 import { colors, prompts } from "../ui.ts";
 
@@ -14,6 +15,45 @@ export interface ProvisionTarget {
 export interface ProvisionLoopResult {
   succeeded: string[];
   failures: Array<{ name: string; message: string }>;
+}
+
+/**
+ * Surface the conflict check action recommendation to the user via the CLI.
+ * Called by the provision loop when a conflict was detected before provision.
+ *
+ * Actions:
+ *   - "attach"      — informs user we are reusing an existing resource
+ *   - "rename"      — informs user a unique name was auto-generated
+ *   - "fail"        — shown as an error (provision will throw)
+ *   - "ok"          — no conflict, nothing to show
+ *   - "skipped"     — conflict checking was disabled, nothing to show
+ *   - "unreachable" — provider was unreachable, shown as a warning
+ */
+export function displayConflictCheckRecommendation(
+  providerName: string,
+  result: ConflictCheckResult,
+): void {
+  const strategy = result.resolvedStrategy;
+  if (strategy === "ok" || strategy === "skipped") return;
+
+  const icon = strategy === "unreachable"
+    ? colors.yellow("⚠")
+    : strategy === "attach"
+    ? colors.cyan("↩")
+    : strategy === "rename"
+    ? colors.cyan("↷")
+    : colors.red("✖");
+
+  const detail =
+    strategy === "attach"
+      ? `  ${icon} ${colors.bold(providerName)}: existing resource detected — attaching to ${colors.bold(result.attachResourceId ?? "(unknown)")}`
+      : strategy === "rename"
+      ? `  ${icon} ${colors.bold(providerName)}: name conflict — using unique name ${colors.bold(result.uniqueName ?? "(auto)")}`
+      : strategy === "unreachable"
+      ? `  ${icon} ${colors.bold(providerName)}: conflict check skipped (provider unreachable) — proceeding`
+      : `  ${icon} ${colors.bold(providerName)}: ${result.check.message}`;
+
+  console.log(detail);
 }
 
 /**

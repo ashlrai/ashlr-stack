@@ -4,11 +4,13 @@ import { StackError } from "../errors.ts";
 import { addSecret } from "../phantom.ts";
 import type {
   AuthHandle,
+  ConflictCheckOpts,
   HealthStatus,
   Materialized,
   Provider,
   ProviderContext,
   Resource,
+  ResourceConflictCheckConfig,
 } from "./_base.ts";
 import { readLine, tryRevealSecret } from "./_helpers.ts";
 
@@ -103,6 +105,81 @@ const aws: Provider = {
 
   dashboardUrl(): string {
     return "https://console.aws.amazon.com";
+  },
+
+  /**
+   * AWS conflict check — calls STS GetCallerIdentity to resolve the account id
+   * and compares it to the desired name. Since v1 provisions at the account
+   * level (no new resource is created), a match means the account is already
+   * configured and we recommend attach.
+   */
+  async checkConflict(
+    auth: AuthHandle,
+    opts: ConflictCheckOpts,
+  ): Promise<ResourceConflictCheckConfig> {
+    const now = new Date().toISOString();
+    const desiredName = opts.desiredName;
+    try {
+      if (!desiredName) {
+        return {
+          requestedName: "(auto)",
+          exists: false,
+          action: "ok",
+          message: "No desired name specified; auto-naming will avoid conflicts.",
+          checkedAt: now,
+        };
+      }
+      const sep = auth.token.indexOf(":");
+      if (sep <= 0) {
+        return {
+          requestedName: desiredName,
+          exists: undefined,
+          action: "unreachable",
+          message: "AWS auth token malformed; skipping conflict check.",
+          checkedAt: now,
+        };
+      }
+      const accessKeyId = auth.token.slice(0, sep);
+      const secretAccessKey = auth.token.slice(sep + 1);
+      const identity = await callStsIdentity(accessKeyId, secretAccessKey, "us-east-1");
+      if (!identity) {
+        return {
+          requestedName: desiredName,
+          exists: undefined,
+          action: "unreachable",
+          message: "AWS STS unreachable during conflict check; proceeding with provision.",
+          checkedAt: now,
+        };
+      }
+      const accountId = identity.Account ?? "";
+      if (accountId === desiredName) {
+        return {
+          requestedName: desiredName,
+          exists: true,
+          existingResourceId: accountId,
+          existingDisplayName: identity.Arn ?? accountId,
+          suggestedUniqueName: desiredName,
+          action: "attach",
+          message: `AWS account "${desiredName}" already exists in this configuration. Attaching to it.`,
+          checkedAt: now,
+        };
+      }
+      return {
+        requestedName: desiredName,
+        exists: false,
+        action: "ok",
+        message: `AWS account id "${accountId}" does not match "${desiredName}"; safe to proceed.`,
+        checkedAt: now,
+      };
+    } catch {
+      return {
+        requestedName: desiredName ?? "(auto)",
+        exists: undefined,
+        action: "unreachable",
+        message: "AWS conflict check failed; proceeding with provision.",
+        checkedAt: now,
+      };
+    }
   },
 
   /**

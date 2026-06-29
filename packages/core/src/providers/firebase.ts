@@ -1,5 +1,5 @@
 import { StackError } from "../errors.ts";
-import type { AuthHandle, ProviderContext } from "./_base.ts";
+import type { AuthHandle, ConflictCheckOpts, ProviderContext, ResourceConflictCheckConfig } from "./_base.ts";
 import { makeApiKeyProvider } from "./_api-key.ts";
 import { tryRevealSecret } from "./_helpers.ts";
 
@@ -103,4 +103,80 @@ async function deprovision(
   // Service-account attachment only — no upstream resource created by Stack.
 }
 
-export default { ..._base, deprovision };
+/**
+ * Firebase conflict check — the auth token is a service-account JSON blob.
+ * We extract the project_id from it and compare to the desired name/id.
+ * The Firebase project is pre-existing (Stack does not create GCP projects),
+ * so we report the project_id as an existing resource if it matches.
+ */
+async function checkConflict(
+  auth: AuthHandle,
+  opts: ConflictCheckOpts,
+): Promise<ResourceConflictCheckConfig> {
+  const now = new Date().toISOString();
+  const desiredName = opts.desiredName;
+  try {
+    if (!desiredName) {
+      return {
+        requestedName: "(auto)",
+        exists: false,
+        action: "ok",
+        message: "No desired name specified; auto-naming will avoid conflicts.",
+        checkedAt: now,
+      };
+    }
+    // Extract project_id from the service-account JSON stored in auth.token.
+    let projectId: string | undefined;
+    try {
+      const parsed = JSON.parse(auth.token) as { project_id?: string };
+      projectId = parsed.project_id;
+    } catch {
+      return {
+        requestedName: desiredName,
+        exists: undefined,
+        action: "unreachable",
+        message: "Firebase service-account JSON is not parseable during conflict check; proceeding with provision.",
+        checkedAt: now,
+      };
+    }
+    if (!projectId) {
+      return {
+        requestedName: desiredName,
+        exists: undefined,
+        action: "unreachable",
+        message: "Firebase service-account JSON missing project_id; proceeding with provision.",
+        checkedAt: now,
+      };
+    }
+    if (projectId === desiredName) {
+      const suffix = Date.now().toString(36);
+      return {
+        requestedName: desiredName,
+        exists: true,
+        existingResourceId: projectId,
+        existingDisplayName: projectId,
+        suggestedUniqueName: `${desiredName}-${suffix}`,
+        action: "attach",
+        message: `Firebase project "${desiredName}" (from service-account JSON) already exists. Attaching to it.`,
+        checkedAt: now,
+      };
+    }
+    return {
+      requestedName: desiredName,
+      exists: false,
+      action: "ok",
+      message: `Service-account project_id "${projectId}" does not match "${desiredName}"; safe to proceed.`,
+      checkedAt: now,
+    };
+  } catch {
+    return {
+      requestedName: desiredName ?? "(auto)",
+      exists: undefined,
+      action: "unreachable",
+      message: "Firebase conflict check failed; proceeding with provision.",
+      checkedAt: now,
+    };
+  }
+}
+
+export default { ..._base, deprovision, checkConflict };

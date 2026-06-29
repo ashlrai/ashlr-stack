@@ -1,5 +1,5 @@
 import { StackError } from "../errors.ts";
-import type { AuthHandle, ProviderContext } from "./_base.ts";
+import type { AuthHandle, ConflictCheckOpts, ProviderContext, ResourceConflictCheckConfig } from "./_base.ts";
 import { makeApiKeyProvider } from "./_api-key.ts";
 import { tryRevealSecret, verifyFetch } from "./_helpers.ts";
 
@@ -84,4 +84,74 @@ async function deprovision(
   // Domain attachment only — no upstream resource created by Stack.
 }
 
-export default { ..._base, deprovision };
+/**
+ * Auth0 conflict check — auth.token is the tenant domain. We check whether
+ * the domain matches the desired name and whether the tenant is reachable via
+ * OIDC discovery. Since one token = one tenant, a reachable tenant with a
+ * matching domain means it already exists.
+ */
+async function checkConflict(
+  auth: AuthHandle,
+  opts: ConflictCheckOpts,
+): Promise<ResourceConflictCheckConfig> {
+  const now = new Date().toISOString();
+  const desiredName = opts.desiredName;
+  try {
+    if (!desiredName) {
+      return {
+        requestedName: "(auto)",
+        exists: false,
+        action: "ok",
+        message: "No desired name specified; auto-naming will avoid conflicts.",
+        checkedAt: now,
+      };
+    }
+    // auth.token is the domain (e.g. "myapp.us.auth0.com").
+    const domain = auth.token;
+    // Check if domain matches the desired name (exact or as prefix).
+    const domainMatches = domain === desiredName || domain.startsWith(`${desiredName}.`);
+    if (!domainMatches) {
+      return {
+        requestedName: desiredName,
+        exists: false,
+        action: "ok",
+        message: `Auth0 domain "${domain}" does not match "${desiredName}"; safe to proceed.`,
+        checkedAt: now,
+      };
+    }
+    // Domain matches — confirm tenant is reachable.
+    const res = await verifyFetch(`https://${domain}/.well-known/openid-configuration`, {
+      ...(opts.signal ? { signal: opts.signal } : {}),
+    });
+    if (!res.ok) {
+      return {
+        requestedName: desiredName,
+        exists: undefined,
+        action: "unreachable",
+        message: `Auth0 tenant "${domain}" not reachable during conflict check; proceeding with provision.`,
+        checkedAt: now,
+      };
+    }
+    const suffix = Date.now().toString(36);
+    return {
+      requestedName: desiredName,
+      exists: true,
+      existingResourceId: domain,
+      existingDisplayName: domain,
+      suggestedUniqueName: `${desiredName}-${suffix}`,
+      action: "attach",
+      message: `Auth0 tenant "${domain}" already exists and is reachable. Attaching to it.`,
+      checkedAt: now,
+    };
+  } catch {
+    return {
+      requestedName: desiredName ?? "(auto)",
+      exists: undefined,
+      action: "unreachable",
+      message: "Auth0 conflict check failed; proceeding with provision.",
+      checkedAt: now,
+    };
+  }
+}
+
+export default { ..._base, deprovision, checkConflict };

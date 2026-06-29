@@ -1,5 +1,5 @@
 import { StackError } from "../errors.ts";
-import type { AuthHandle, ProviderContext } from "./_base.ts";
+import type { AuthHandle, ConflictCheckOpts, ProviderContext, ResourceConflictCheckConfig } from "./_base.ts";
 import { makeApiKeyProvider } from "./_api-key.ts";
 import { tryRevealSecret } from "./_helpers.ts";
 
@@ -76,4 +76,79 @@ async function deprovision(
   // Deploy-key attachment only — no upstream resource created by Stack.
 }
 
-export default { ..._base, deprovision };
+/**
+ * Convex conflict check — the deploy key encodes the project slug as
+ * `<env>:<team>:<project>|<token>`. We extract the project name and compare
+ * to the desired name. No public list endpoint exists, so this is a local
+ * structural check only.
+ */
+async function checkConflict(
+  auth: AuthHandle,
+  opts: ConflictCheckOpts,
+): Promise<ResourceConflictCheckConfig> {
+  const now = new Date().toISOString();
+  const desiredName = opts.desiredName;
+  try {
+    if (!desiredName) {
+      return {
+        requestedName: "(auto)",
+        exists: false,
+        action: "ok",
+        message: "No desired name specified; auto-naming will avoid conflicts.",
+        checkedAt: now,
+      };
+    }
+    // Extract project name from deploy key shape: <env>:<team>:<project>|<token>
+    const key = auth.token;
+    if (!key.includes(":") || !key.includes("|")) {
+      return {
+        requestedName: desiredName,
+        exists: undefined,
+        action: "unreachable",
+        message: "Convex deploy key is malformed; skipping conflict check.",
+        checkedAt: now,
+      };
+    }
+    const [prefix] = key.split("|");
+    const parts = prefix.split(":");
+    if (parts.length < 3) {
+      return {
+        requestedName: desiredName,
+        exists: undefined,
+        action: "unreachable",
+        message: "Convex deploy key missing project component; skipping conflict check.",
+        checkedAt: now,
+      };
+    }
+    const projectName = parts[2];
+    if (projectName === desiredName) {
+      return {
+        requestedName: desiredName,
+        exists: true,
+        existingResourceId: projectName,
+        existingDisplayName: projectName,
+        suggestedUniqueName: desiredName,
+        action: "attach",
+        message: `Convex project "${desiredName}" matches the deploy key. Attaching to existing deployment.`,
+        checkedAt: now,
+      };
+    }
+    return {
+      requestedName: desiredName,
+      exists: false,
+      action: "ok",
+      message: `Convex deploy key project "${projectName}" does not match "${desiredName}"; safe to proceed.`,
+      checkedAt: now,
+    };
+  } catch {
+    return {
+      requestedName: desiredName ?? "(auto)",
+      exists: undefined,
+      action: "unreachable",
+      message: "Convex conflict check failed; proceeding with provision.",
+      checkedAt: now,
+    };
+  }
+}
+
+export default { ..._base, deprovision, checkConflict };

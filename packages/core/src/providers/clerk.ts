@@ -1,5 +1,5 @@
 import { StackError } from "../errors.ts";
-import type { AuthHandle, ProviderContext } from "./_base.ts";
+import type { AuthHandle, ConflictCheckOpts, ProviderContext, ResourceConflictCheckConfig } from "./_base.ts";
 import { makeApiKeyProvider } from "./_api-key.ts";
 import { tryRevealSecret, verifyFetch } from "./_helpers.ts";
 
@@ -86,4 +86,74 @@ async function deprovision(
   // API-key attachment only — no upstream resource created by Stack.
 }
 
-export default { ..._base, deprovision };
+/**
+ * Clerk conflict check — Clerk secret keys are scoped to a single application
+ * (instance). We extract the instance id from the /v1/clients endpoint and
+ * compare against the desired name. Since one secret key = one instance,
+ * any existing key means that application already exists.
+ */
+async function checkConflict(
+  auth: AuthHandle,
+  opts: ConflictCheckOpts,
+): Promise<ResourceConflictCheckConfig> {
+  const now = new Date().toISOString();
+  const desiredName = opts.desiredName;
+  try {
+    if (!desiredName) {
+      return {
+        requestedName: "(auto)",
+        exists: false,
+        action: "ok",
+        message: "No desired name specified; auto-naming will avoid conflicts.",
+        checkedAt: now,
+      };
+    }
+    // Use the /v1/instance endpoint to get the application name.
+    const res = await verifyFetch("https://api.clerk.com/v1/instance", {
+      headers: { Authorization: `Bearer ${auth.token}` },
+      ...(opts.signal ? { signal: opts.signal } : {}),
+    });
+    if (!res.ok) {
+      return {
+        requestedName: desiredName,
+        exists: undefined,
+        action: "unreachable",
+        message: `Clerk API returned ${res.status} during conflict check; proceeding with provision.`,
+        checkedAt: now,
+      };
+    }
+    const body = (await res.json()) as { id?: string; application_name?: string };
+    const appName = body.application_name ?? "";
+    const instanceId = body.id ?? "";
+    if (appName === desiredName || instanceId === desiredName) {
+      const suffix = Date.now().toString(36);
+      return {
+        requestedName: desiredName,
+        exists: true,
+        existingResourceId: instanceId,
+        existingDisplayName: appName || instanceId,
+        suggestedUniqueName: `${desiredName}-${suffix}`,
+        action: "attach",
+        message: `A Clerk application named "${desiredName}" already exists (id: ${instanceId}). Attaching to it.`,
+        checkedAt: now,
+      };
+    }
+    return {
+      requestedName: desiredName,
+      exists: false,
+      action: "ok",
+      message: `Clerk instance application name "${appName}" does not match "${desiredName}"; safe to proceed.`,
+      checkedAt: now,
+    };
+  } catch {
+    return {
+      requestedName: desiredName ?? "(auto)",
+      exists: undefined,
+      action: "unreachable",
+      message: "Clerk API unreachable during conflict check; proceeding with provision.",
+      checkedAt: now,
+    };
+  }
+}
+
+export default { ..._base, deprovision, checkConflict };

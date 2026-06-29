@@ -1,5 +1,5 @@
 import { StackError } from "../errors.ts";
-import type { AuthHandle, ProviderContext } from "./_base.ts";
+import type { AuthHandle, ConflictCheckOpts, ProviderContext, ResourceConflictCheckConfig } from "./_base.ts";
 import { makeApiKeyProvider } from "./_api-key.ts";
 import { tryRevealSecret, verifyFetch } from "./_helpers.ts";
 
@@ -84,4 +84,73 @@ async function deprovision(
   }
 }
 
-export default { ..._base, deprovision };
+/**
+ * Render conflict check — lists services under the first owner (account/team)
+ * and checks whether a service with the requested name already exists.
+ */
+async function checkConflict(
+  auth: AuthHandle,
+  opts: ConflictCheckOpts,
+): Promise<ResourceConflictCheckConfig> {
+  const now = new Date().toISOString();
+  const desiredName = opts.desiredName;
+  try {
+    if (!desiredName) {
+      return {
+        requestedName: "(auto)",
+        exists: false,
+        action: "ok",
+        message: "No desired name specified; auto-naming will avoid conflicts.",
+        checkedAt: now,
+      };
+    }
+    const res = await verifyFetch(
+      `https://api.render.com/v1/services?limit=100&name=${encodeURIComponent(desiredName)}`,
+      {
+        headers: { Authorization: `Bearer ${auth.token}`, Accept: "application/json" },
+        ...(opts.signal ? { signal: opts.signal } : {}),
+      },
+    );
+    if (!res.ok) {
+      return {
+        requestedName: desiredName,
+        exists: undefined,
+        action: "unreachable",
+        message: `Render API returned ${res.status} during conflict check; proceeding with provision.`,
+        checkedAt: now,
+      };
+    }
+    const body = (await res.json()) as Array<{ service?: { id?: string; name?: string } }>;
+    const match = body.find((item) => item.service?.name === desiredName)?.service;
+    if (!match) {
+      return {
+        requestedName: desiredName,
+        exists: false,
+        action: "ok",
+        message: `No Render service named "${desiredName}" found; safe to create.`,
+        checkedAt: now,
+      };
+    }
+    const suffix = Date.now().toString(36);
+    return {
+      requestedName: desiredName,
+      exists: true,
+      existingResourceId: match.id,
+      existingDisplayName: match.name,
+      suggestedUniqueName: `${desiredName}-${suffix}`,
+      action: "rename",
+      message: `A Render service named "${desiredName}" already exists (id: ${match.id}). You can attach to it or use a unique name.`,
+      checkedAt: now,
+    };
+  } catch {
+    return {
+      requestedName: desiredName ?? "(auto)",
+      exists: undefined,
+      action: "unreachable",
+      message: "Render API unreachable during conflict check; proceeding with provision.",
+      checkedAt: now,
+    };
+  }
+}
+
+export default { ..._base, deprovision, checkConflict };

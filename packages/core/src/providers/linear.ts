@@ -1,5 +1,5 @@
 import { StackError } from "../errors.ts";
-import type { AuthHandle, ProviderContext } from "./_base.ts";
+import type { AuthHandle, ConflictCheckOpts, ProviderContext, ResourceConflictCheckConfig } from "./_base.ts";
 import { makeApiKeyProvider } from "./_api-key.ts";
 import { tryRevealSecret, verifyFetch } from "./_helpers.ts";
 
@@ -115,4 +115,75 @@ async function deprovision(
   // API-key attachment only — no upstream resource created by Stack.
 }
 
-export default { ..._base, deprovision };
+/**
+ * Linear conflict check — lists teams via GraphQL and checks whether a team
+ * with the requested name already exists in the workspace.
+ */
+async function checkConflict(
+  auth: AuthHandle,
+  opts: ConflictCheckOpts,
+): Promise<ResourceConflictCheckConfig> {
+  const now = new Date().toISOString();
+  const desiredName = opts.desiredName;
+  try {
+    if (!desiredName) {
+      return {
+        requestedName: "(auto)",
+        exists: false,
+        action: "ok",
+        message: "No desired name specified; auto-naming will avoid conflicts.",
+        checkedAt: now,
+      };
+    }
+    const res = await verifyFetch("https://api.linear.app/graphql", {
+      method: "POST",
+      headers: { "content-type": "application/json", Authorization: auth.token },
+      body: JSON.stringify({ query: "{ teams { nodes { id name } } }" }),
+      ...(opts.signal ? { signal: opts.signal } : {}),
+    });
+    if (!res.ok) {
+      return {
+        requestedName: desiredName,
+        exists: undefined,
+        action: "unreachable",
+        message: `Linear API returned ${res.status} during conflict check; proceeding with provision.`,
+        checkedAt: now,
+      };
+    }
+    const body = (await res.json()) as {
+      data?: { teams?: { nodes?: Array<{ id: string; name: string }> } };
+    };
+    const teams = body.data?.teams?.nodes ?? [];
+    const match = teams.find((t) => t.name === desiredName);
+    if (!match) {
+      return {
+        requestedName: desiredName,
+        exists: false,
+        action: "ok",
+        message: `No Linear team named "${desiredName}" found; safe to create.`,
+        checkedAt: now,
+      };
+    }
+    const suffix = Date.now().toString(36);
+    return {
+      requestedName: desiredName,
+      exists: true,
+      existingResourceId: match.id,
+      existingDisplayName: match.name,
+      suggestedUniqueName: `${desiredName}-${suffix}`,
+      action: "attach",
+      message: `A Linear team named "${desiredName}" already exists (id: ${match.id}). You can attach to it or use a unique name.`,
+      checkedAt: now,
+    };
+  } catch {
+    return {
+      requestedName: desiredName ?? "(auto)",
+      exists: undefined,
+      action: "unreachable",
+      message: "Linear API unreachable during conflict check; proceeding with provision.",
+      checkedAt: now,
+    };
+  }
+}
+
+export default { ..._base, deprovision, checkConflict };

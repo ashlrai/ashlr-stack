@@ -1,5 +1,5 @@
 import { StackError } from "../errors.ts";
-import type { AuthHandle, ProviderContext } from "./_base.ts";
+import type { AuthHandle, ConflictCheckOpts, ProviderContext, ResourceConflictCheckConfig } from "./_base.ts";
 import { makeApiKeyProvider } from "./_api-key.ts";
 import { tryRevealSecret, verifyFetch } from "./_helpers.ts";
 
@@ -88,4 +88,71 @@ async function deprovision(
   // Account attachment only — no upstream resource to delete.
 }
 
-export default { ..._base, deprovision };
+/**
+ * Fly.io conflict check — lists apps visible to the token and checks whether
+ * an app with the requested name already exists.
+ */
+async function checkConflict(
+  auth: AuthHandle,
+  opts: ConflictCheckOpts,
+): Promise<ResourceConflictCheckConfig> {
+  const now = new Date().toISOString();
+  const desiredName = opts.desiredName;
+  try {
+    if (!desiredName) {
+      return {
+        requestedName: "(auto)",
+        exists: false,
+        action: "ok",
+        message: "No desired name specified; auto-naming will avoid conflicts.",
+        checkedAt: now,
+      };
+    }
+    const res = await verifyFetch("https://api.machines.dev/v1/apps?count=200", {
+      headers: { Authorization: `Bearer ${auth.token}` },
+      ...(opts.signal ? { signal: opts.signal } : {}),
+    });
+    if (!res.ok) {
+      return {
+        requestedName: desiredName,
+        exists: undefined,
+        action: "unreachable",
+        message: `Fly.io API returned ${res.status} during conflict check; proceeding with provision.`,
+        checkedAt: now,
+      };
+    }
+    const body = (await res.json()) as { apps?: Array<{ id?: string; name?: string }> };
+    const apps = body.apps ?? [];
+    const match = apps.find((a) => a.name === desiredName);
+    if (!match) {
+      return {
+        requestedName: desiredName,
+        exists: false,
+        action: "ok",
+        message: `No Fly.io app named "${desiredName}" found; safe to create.`,
+        checkedAt: now,
+      };
+    }
+    const suffix = Date.now().toString(36);
+    return {
+      requestedName: desiredName,
+      exists: true,
+      existingResourceId: match.id ?? match.name ?? desiredName,
+      existingDisplayName: match.name,
+      suggestedUniqueName: `${desiredName}-${suffix}`,
+      action: "rename",
+      message: `A Fly.io app named "${desiredName}" already exists. You can attach to it or use a unique name.`,
+      checkedAt: now,
+    };
+  } catch {
+    return {
+      requestedName: desiredName ?? "(auto)",
+      exists: undefined,
+      action: "unreachable",
+      message: "Fly.io API unreachable during conflict check; proceeding with provision.",
+      checkedAt: now,
+    };
+  }
+}
+
+export default { ..._base, deprovision, checkConflict };
