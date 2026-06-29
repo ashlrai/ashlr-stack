@@ -1,5 +1,10 @@
 import { ProviderNotFoundError } from "../errors.ts";
 import type { Provider } from "./_base.ts";
+import {
+  generateTypeScript,
+  getProviderSchema,
+  listRegisteredSchemas,
+} from "../provision-schema.ts";
 
 /**
  * Registry of curated providers. Entries are added in Waves 2–3 as each
@@ -68,4 +73,62 @@ export async function getProvider(name: string): Promise<Provider> {
   const loader = registry[name];
   if (!loader) throw new ProviderNotFoundError(name);
   return loader();
+}
+
+// ---------------------------------------------------------------------------
+// Compile-time TS types — codegenned from all registered provider schemas
+// ---------------------------------------------------------------------------
+
+/**
+ * A map of provider name → generated TypeScript source string.
+ * Each entry is produced by `generateTypeScript(name, schema)` and contains:
+ *   - An `export interface <Provider>ProvisionResponse { ... }` matching the
+ *     registered JSON Schema for that provider's provision response.
+ *   - A `validate<Provider>ProvisionResponse(raw)` function returning violations.
+ *   - An `assert<Provider>ProvisionResponse(raw)` type-guard that throws on bad input.
+ *
+ * This map is generated once at module-load time (all schemas are registered
+ * as side effects of importing provision-schema.ts) and is suitable for:
+ *   - Programmatic inspection of generated types in tests
+ *   - Writing generated files to disk from a build script
+ *   - Verifying that every provider schema round-trips through codegen
+ *
+ * Usage:
+ * ```ts
+ * import { providerTypeMap } from "@ashlr/stack-core/providers";
+ * const supabaseTypes = providerTypeMap.get("supabase");
+ * // write supabaseTypes to packages/core/src/providers/generated/supabase.ts
+ * ```
+ */
+export const providerTypeMap: ReadonlyMap<string, string> = (() => {
+  const m = new Map<string, string>();
+  for (const name of listRegisteredSchemas()) {
+    const schema = getProviderSchema(name);
+    if (schema) {
+      m.set(name, generateTypeScript(name, schema));
+    }
+  }
+  return m;
+})();
+
+/**
+ * Return the codegenned TypeScript source for a single provider.
+ * Returns `undefined` if no schema is registered for `providerName`.
+ *
+ * This is the programmatic equivalent of running:
+ * ```sh
+ * stack codegen --provider supabase --language typescript
+ * ```
+ */
+export function getProviderTypeSource(providerName: string): string | undefined {
+  return providerTypeMap.get(providerName.toLowerCase());
+}
+
+/**
+ * Return the names of all providers that have generated TS types available.
+ * This is a superset of `listProviderNames()` when extra schemas are registered
+ * at runtime.
+ */
+export function listCodegenProviders(): string[] {
+  return [...providerTypeMap.keys()].sort();
 }

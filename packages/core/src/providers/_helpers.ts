@@ -61,6 +61,98 @@ export function verifyFetch(
 }
 
 /**
+ * Extract quota/rate-limit metrics from HTTP response headers.
+ *
+ * Covers the most common header conventions used by major APIs:
+ *   - x-ratelimit-remaining / x-ratelimit-limit (GitHub, OpenAI, Anthropic, etc.)
+ *   - x-ratelimit-requests-remaining / x-ratelimit-requests-limit (OpenAI v2)
+ *   - ratelimit-remaining / ratelimit-limit (IETF draft — Stripe, etc.)
+ *   - x-rate-limit-remaining / x-rate-limit-limit (Twitter-style)
+ *
+ * Returns undefined for any field that could not be determined.
+ */
+export function extractRateLimitMetrics(headers: Headers): {
+  quotaUsedPercent?: number;
+  rateLimitRemaining?: number;
+  estimatedBurnRatePerDay?: string;
+} {
+  // Candidate header pairs (remaining, limit) in priority order.
+  const candidatePairs: [string, string][] = [
+    ["x-ratelimit-remaining", "x-ratelimit-limit"],
+    ["x-ratelimit-requests-remaining", "x-ratelimit-requests-limit"],
+    ["ratelimit-remaining", "ratelimit-limit"],
+    ["x-rate-limit-remaining", "x-rate-limit-limit"],
+  ];
+
+  let remaining: number | undefined;
+  let limit: number | undefined;
+
+  for (const [remKey, limKey] of candidatePairs) {
+    const remVal = headers.get(remKey);
+    const limVal = headers.get(limKey);
+    if (remVal !== null) {
+      const parsed = parseInt(remVal, 10);
+      if (!Number.isNaN(parsed)) {
+        remaining = parsed;
+        if (limVal !== null) {
+          const parsedLim = parseInt(limVal, 10);
+          if (!Number.isNaN(parsedLim) && parsedLim > 0) {
+            limit = parsedLim;
+          }
+        }
+        break;
+      }
+    }
+  }
+
+  if (remaining === undefined) return {};
+
+  const rateLimitRemaining = remaining;
+
+  let quotaUsedPercent: number | undefined;
+  if (limit !== undefined && limit > 0) {
+    const used = limit - remaining;
+    quotaUsedPercent = Math.round((used / limit) * 100);
+    // Clamp to [0, 100].
+    quotaUsedPercent = Math.max(0, Math.min(100, quotaUsedPercent));
+  }
+
+  // Estimate burn rate from x-ratelimit-reset (epoch seconds or relative seconds).
+  let estimatedBurnRatePerDay: string | undefined;
+  if (limit !== undefined && limit > 0) {
+    // Common reset header names.
+    const resetCandidates = [
+      "x-ratelimit-reset",
+      "ratelimit-reset",
+      "x-rate-limit-reset",
+    ];
+    let resetSeconds: number | undefined;
+    for (const key of resetCandidates) {
+      const val = headers.get(key);
+      if (val !== null) {
+        const parsed = parseInt(val, 10);
+        if (!Number.isNaN(parsed)) {
+          // Values > 1_000_000_000 are Unix epoch seconds; otherwise relative seconds.
+          resetSeconds =
+            parsed > 1_000_000_000
+              ? Math.max(0, parsed - Math.floor(Date.now() / 1000))
+              : parsed;
+          break;
+        }
+      }
+    }
+    if (resetSeconds !== undefined && resetSeconds > 0) {
+      const used = limit - remaining;
+      const ratePerSec = used / resetSeconds;
+      const ratePerDay = Math.round(ratePerSec * 86400);
+      estimatedBurnRatePerDay = `${ratePerDay} req/day`;
+    }
+  }
+
+  return { rateLimitRemaining, quotaUsedPercent, estimatedBurnRatePerDay };
+}
+
+/**
  * Redact all but the last `keepLast` characters of a secret for safe display.
  * Always show at least a few asterisks so log lines that include the redacted
  * value still read clearly. Short strings get fully hidden — the suffix alone

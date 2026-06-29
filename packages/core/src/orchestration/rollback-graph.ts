@@ -16,6 +16,8 @@
 
 import { StackError } from "../errors.ts";
 import type { OrchestrationEntry } from "../orchestration.ts";
+export { RollbackGraphVisualizer } from "./graph-visualizer.ts";
+export type { JsonGraphExport, GraphNode, GraphEdge } from "./graph-visualizer.ts";
 
 // ---------------------------------------------------------------------------
 // Public types

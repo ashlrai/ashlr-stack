@@ -9,7 +9,7 @@ import type {
   ProvisionOpts,
   Resource,
 } from "./_base.ts";
-import { readLine, scrub, tryRevealSecret, verifyFetch } from "./_helpers.ts";
+import { extractRateLimitMetrics, readLine, scrub, tryRevealSecret, verifyFetch } from "./_helpers.ts";
 
 /**
  * Stripe provider — two modes:
@@ -245,9 +245,16 @@ const stripeProvider: Provider = {
     const key = await tryRevealSecret(SECRET_KEY_NAME);
     if (!key) return { kind: "error", detail: `${SECRET_KEY_NAME} missing from vault` };
     const start = Date.now();
-    const identity = await verifyKey(key);
-    const latencyMs = Date.now() - start;
-    return identity ? { kind: "ok", latencyMs } : { kind: "error", detail: "key invalid" };
+    try {
+      const res = await verifyFetch("https://api.stripe.com/v1/account", {
+        headers: { Authorization: `Bearer ${key}` },
+      });
+      const latencyMs = Date.now() - start;
+      if (!res.ok) return { kind: "error", detail: `HTTP ${res.status}` };
+      return { kind: "ok", latencyMs, ...extractRateLimitMetrics(res.headers) };
+    } catch (err) {
+      return { kind: "error", detail: (err as Error).message };
+    }
   },
 
   dashboardUrl() {

@@ -199,7 +199,8 @@ export const CLI_COMMANDS: CliCommand[] = [
   {
     name: "stack add",
     description: "Provision a service and wire its secrets + MCP entry.",
-    synopsis: "stack add [service] [--use <id>] [--region <region>] [--dryRun] [--install <mode>]",
+    synopsis:
+      "stack add [service] [--use <id>] [--region <region>] [--dryRun] [--install <mode>] [--webhookEndpoint <webhookEndpoint>] [--events <events>] [--secretKeyFromVault] [--timeout <timeout>] [--trace <trace>]",
     flags: [
       {
         name: "service",
@@ -233,6 +234,42 @@ export const CLI_COMMANDS: CliCommand[] = [
         type: "string",
         default: "ask",
         description: "SDK install behaviour after provisioning: ask (default), always, never.",
+      },
+      {
+        name: "webhookEndpoint",
+        synopsis: "--webhookEndpoint <webhookEndpoint>",
+        type: "string",
+        description:
+          "Stripe only: HTTPS URL to register as a webhook endpoint. Triggers webhook provisioning and stores STRIPE_WEBHOOK_SECRET + STRIPE_WEBHOOK_ENDPOINT_ID in Phantom.",
+      },
+      {
+        name: "events",
+        synopsis: "--events <events>",
+        type: "string",
+        description:
+          "Stripe only: comma-separated list of Stripe events to subscribe to. Defaults to the subscription-lifecycle set when --webhook-endpoint is given.",
+      },
+      {
+        name: "secretKeyFromVault",
+        synopsis: "--secretKeyFromVault",
+        type: "boolean",
+        default: false,
+        description:
+          "Stripe only: skip the interactive sk_… paste and reuse STRIPE_SECRET_KEY already in Phantom.",
+      },
+      {
+        name: "timeout",
+        synopsis: "--timeout <timeout>",
+        type: "string",
+        description:
+          "Wall-clock timeout in seconds for each provider step (login, provision, materialize). Defaults to 30. Pass 0 to disable.",
+      },
+      {
+        name: "trace",
+        synopsis: "--trace <trace>",
+        type: "string",
+        description:
+          "Collect all instrumentation events (step timings, rollbacks, partial failures) to a JSON file. Useful for debugging multi-provider orchestration failures.",
       },
     ],
     examples: [
@@ -313,7 +350,31 @@ export const CLI_COMMANDS: CliCommand[] = [
   {
     name: "stack status",
     description: "Show stack health at a glance.",
-    synopsis: "stack status",
+    synopsis:
+      "stack status [--rollback-plan] [--format <format>] [--failure-point <failure-point>]",
+    flags: [
+      {
+        name: "rollback-plan",
+        synopsis: "--rollback-plan",
+        type: "boolean",
+        default: false,
+        description:
+          "Preview the rollback dependency graph — what would be torn down if the current provision fails.",
+      },
+      {
+        name: "format",
+        synopsis: "--format <format>",
+        type: "string",
+        default: "ascii",
+        description: "Output format for --rollback-plan: ascii | mermaid | json (default: ascii).",
+      },
+      {
+        name: "failure-point",
+        synopsis: "--failure-point <failure-point>",
+        type: "string",
+        description: "Simulate a failure at this provider name to see the partial rollback scope.",
+      },
+    ],
     examples: [{ command: "stack status" }],
   },
   {
@@ -386,8 +447,10 @@ export const CLI_COMMANDS: CliCommand[] = [
   },
   {
     name: "stack doctor",
-    description: "Verify every service is reachable and credentials are valid.",
-    synopsis: "stack doctor [--fix] [--all] [--json] [--reconcile]",
+    description:
+      "Verify every service is reachable and credentials are valid. Use --coverage to report healthcheck coverage across all registered providers.",
+    synopsis:
+      "stack doctor [--fix] [--all] [--json] [--reconcile] [--coverage] [--audit] [--audit-permissions] [--drift]",
     flags: [
       {
         name: "fix",
@@ -416,6 +479,37 @@ export const CLI_COMMANDS: CliCommand[] = [
         type: "boolean",
         default: false,
         description: "Check whether .stack.toml services are still present in source code.",
+      },
+      {
+        name: "coverage",
+        synopsis: "--coverage",
+        type: "boolean",
+        default: false,
+        description: "Report healthcheck coverage % across all registered providers and exit.",
+      },
+      {
+        name: "audit",
+        synopsis: "--audit",
+        type: "boolean",
+        default: false,
+        description:
+          "Audit rollback state from prior failed provisions — detect orphaned secrets, MCP entries, and config entries that were not cleaned up.",
+      },
+      {
+        name: "audit-permissions",
+        synopsis: "--audit-permissions",
+        type: "boolean",
+        default: false,
+        description:
+          "Check that all configured provider credentials are least-privilege. Detects overprivileged tokens/keys and surfaces remediation guidance.",
+      },
+      {
+        name: "drift",
+        synopsis: "--drift",
+        type: "boolean",
+        default: false,
+        description:
+          "Surface stale, deleted, or degraded resources tracked in .stack.local.toml. Use `stack reconcile` to auto-remediate detected drift.",
       },
     ],
     examples: [
@@ -523,7 +617,7 @@ export const CLI_COMMANDS: CliCommand[] = [
     name: "stack recommend",
     description: "Pick the right providers for what you're building (AI-assisted).",
     synopsis:
-      "stack recommend [query] [--k <n>] [--category <category>] [--json] [--save] [--synth]",
+      "stack recommend [query] [--k <n>] [--category <category>] [--json] [--save] [--synth] [--live-pricing]",
     flags: [
       {
         name: "query",
@@ -569,6 +663,14 @@ export const CLI_COMMANDS: CliCommand[] = [
         description:
           "Call the local SLM (LM Studio / Ollama) to synthesize rationales. Silently falls back to retrieval-only when no endpoint is reachable.",
       },
+      {
+        name: "live-pricing",
+        synopsis: "--live-pricing",
+        type: "boolean",
+        required: false,
+        description:
+          "Attempt live MCP calls to each provider's pricing endpoint (Stripe, Vercel, GitHub, Anthropic, OpenAI, AWS). Results are cached 60 s. Falls back to static estimates on timeout.",
+      },
     ],
     examples: [
       { command: 'stack recommend "next.js app with auth and postgres"' },
@@ -578,7 +680,7 @@ export const CLI_COMMANDS: CliCommand[] = [
   {
     name: "stack apply",
     description: "Apply a saved recipe: provision each provider + pre-wire Phantom rotation.",
-    synopsis: "stack apply [id] [--noWire] [--noRollback]",
+    synopsis: "stack apply [id] [--noWire] [--noRollback] [--dryRun] [--costEstimate] [--json]",
     flags: [
       {
         name: "recipeId",
@@ -601,6 +703,30 @@ export const CLI_COMMANDS: CliCommand[] = [
         default: false,
         description:
           "On partial failure, leave successfully-added services in .stack.toml instead of rolling them back.",
+      },
+      {
+        name: "dryRun",
+        synopsis: "--dryRun",
+        type: "boolean",
+        default: false,
+        description:
+          "Preview what would be provisioned without making any upstream API calls, writing secrets, or updating config.",
+      },
+      {
+        name: "costEstimate",
+        synopsis: "--costEstimate",
+        type: "boolean",
+        default: false,
+        description:
+          "When combined with --dry-run, include a monthly cost estimate for each provider (uses static pricing data; Moat 2 live MCP pricing coming in v0.4).",
+      },
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        default: false,
+        description:
+          "Output dry-run report as JSON (useful for CI / programmatic consumption). Implies --dry-run.",
       },
     ],
     examples: [{ command: "stack apply" }, { command: "stack apply my-recipe" }],
@@ -705,7 +831,15 @@ export const CLI_COMMANDS: CliCommand[] = [
   {
     name: "stack upgrade",
     description: "Check npm for a newer @ashlr/stack release.",
-    synopsis: "stack upgrade",
+    synopsis: "stack upgrade [--dryRun]",
+    flags: [
+      {
+        name: "dryRun",
+        synopsis: "--dryRun",
+        type: "boolean",
+        description: "Print what would be installed without running the install command.",
+      },
+    ],
     examples: [{ command: "stack upgrade" }],
     notes:
       "Checks the npm registry for a newer version, prints an install hint — does not auto-install.",

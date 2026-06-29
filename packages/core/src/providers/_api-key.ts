@@ -4,6 +4,7 @@ import { addSecret } from "../phantom.ts";
 import type {
   AuthHandle,
   HealthStatus,
+  HealthStatusWithMetrics,
   Materialized,
   McpServerEntry,
   Provider,
@@ -69,7 +70,7 @@ export interface ApiKeyProviderSpec {
    * Optional health check. Defaults to re-running `verify` against the stored
    * secret, which is the right call for stateless API keys.
    */
-  healthcheck?: (ctx: ProviderContext, entry: ServiceEntry) => Promise<HealthStatus>;
+  healthcheck?: (ctx: ProviderContext, entry: ServiceEntry) => Promise<HealthStatusWithMetrics>;
   /**
    * Optional deprovision spec. When absent, `makeApiKeyProvider` auto-wires a
    * graceful no-op that logs a structured message and returns cleanly — correct

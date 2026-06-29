@@ -1,5 +1,5 @@
 import { makeApiKeyProvider } from "./_api-key.ts";
-import { tryRevealSecret, verifyFetch } from "./_helpers.ts";
+import { extractRateLimitMetrics, tryRevealSecret, verifyFetch } from "./_helpers.ts";
 
 const SECRET = "ANTHROPIC_API_KEY";
 
@@ -41,7 +41,7 @@ export default makeApiKeyProvider({
         { headers: { "x-api-key": key, "anthropic-version": "2023-06-01" }, signal: ctx.signal },
       );
       const latencyMs = Date.now() - start;
-      if (res.ok) return { kind: "ok", latencyMs };
+      if (res.ok) return { kind: "ok", latencyMs, ...extractRateLimitMetrics(res.headers) };
       return { kind: "error", detail: `HTTP ${res.status}` };
     } catch (err) {
       return { kind: "error", detail: (err as Error).message };

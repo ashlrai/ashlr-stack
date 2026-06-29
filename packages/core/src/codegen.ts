@@ -25,6 +25,12 @@ import {
   type JsonSchemaProperty,
   type ProvisionResponseSchema,
 } from "./provision-schema.ts";
+import {
+  generateAllComplianceRulesJson,
+  generateComplianceRulesJson,
+  listComplianceProviders,
+  type ComplianceRulesJson,
+} from "./provision-compliance.ts";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -245,6 +251,39 @@ export function generateTerraformResource(
 // Batch runner — writes files + auto-registers at build time
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Compliance rules codegen
+// ---------------------------------------------------------------------------
+
+export { type ComplianceRulesJson };
+
+/**
+ * Generate a compliance-rules.json descriptor for a single provider and return
+ * it as a formatted JSON string.  Returns undefined when no rules are registered.
+ */
+export function generateComplianceRulesJsonString(provider: string): string | undefined {
+  const descriptor = generateComplianceRulesJson(provider);
+  if (!descriptor) return undefined;
+  return JSON.stringify(descriptor, null, 2);
+}
+
+/**
+ * Generate compliance-rules.json descriptors for ALL providers that have
+ * registered compliance rules and return them as a map of provider → JSON string.
+ */
+export function generateAllComplianceRulesJsonStrings(): Record<string, string> {
+  const all = generateAllComplianceRulesJson();
+  const out: Record<string, string> = {};
+  for (const [provider, descriptor] of Object.entries(all)) {
+    out[provider] = JSON.stringify(descriptor, null, 2);
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------
+// Batch runner opts / result (extended with compliance)
+// ---------------------------------------------------------------------------
+
 export interface CodegenRunnerOpts {
   /**
    * Absolute path to the site's public/ directory.
@@ -261,12 +300,19 @@ export interface CodegenRunnerOpts {
    * providers before codegen runs.
    */
   extraProviders?: Array<{ name: string; schema: ProvisionResponseSchema }>;
+  /**
+   * When true (default), also emit compliance-rules.json files alongside the
+   * OpenAPI and Terraform outputs.  Set to false to skip compliance codegen.
+   */
+  includeCompliance?: boolean;
 }
 
 export interface CodegenRunnerResult {
   providers: string[];
   openApiFiles: string[];
   terraformFiles: string[];
+  /** Paths of written compliance-rules.json files (empty when includeCompliance is false). */
+  complianceFiles: string[];
 }
 
 /**
@@ -312,6 +358,14 @@ export function runCodegenForAllProviders(
   const providers = listRegisteredSchemas();
   const openApiFiles: string[] = [];
   const terraformFiles: string[] = [];
+  const complianceFiles: string[] = [];
+
+  // Compliance dir — only created when compliance codegen is enabled
+  const includeCompliance = opts.includeCompliance !== false;
+  const complianceDir = resolve(publicDir, "compliance");
+  if (includeCompliance && !opts.dryRun) {
+    mkdirSync(complianceDir, { recursive: true });
+  }
 
   for (const providerName of providers) {
     const schema = getProviderSchema(providerName);
@@ -340,5 +394,21 @@ export function runCodegenForAllProviders(
     terraformFiles.push(terraformPath);
   }
 
-  return { providers, openApiFiles, terraformFiles };
+  // Compliance rules JSON — one file per provider that has registered rules
+  if (includeCompliance) {
+    for (const providerName of listComplianceProviders()) {
+      const jsonStr = generateComplianceRulesJsonString(providerName);
+      if (!jsonStr) continue;
+      const compliancePath = resolve(
+        complianceDir,
+        `${providerName}-compliance-rules.json`,
+      );
+      if (!opts.dryRun) {
+        writeFileSync(compliancePath, jsonStr, "utf8");
+      }
+      complianceFiles.push(compliancePath);
+    }
+  }
+
+  return { providers, openApiFiles, terraformFiles, complianceFiles };
 }

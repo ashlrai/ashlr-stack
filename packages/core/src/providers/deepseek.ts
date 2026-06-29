@@ -1,5 +1,5 @@
 import { makeApiKeyProvider } from "./_api-key.ts";
-import { tryRevealSecret, verifyFetch } from "./_helpers.ts";
+import { extractRateLimitMetrics, tryRevealSecret, verifyFetch } from "./_helpers.ts";
 
 const SECRET = "DEEPSEEK_API_KEY";
 
@@ -38,7 +38,7 @@ export default makeApiKeyProvider({
         { headers: { Authorization: `Bearer ${key}` }, signal: ctx.signal },
       );
       const latencyMs = Date.now() - start;
-      if (res.ok) return { kind: "ok", latencyMs };
+      if (res.ok) return { kind: "ok", latencyMs, ...extractRateLimitMetrics(res.headers) };
       return { kind: "error", detail: `HTTP ${res.status}` };
     } catch (err) {
       return { kind: "error", detail: (err as Error).message };

@@ -653,3 +653,179 @@ export function loadProvisionErrorReport(
     return undefined;
   }
 }
+
+// ---------------------------------------------------------------------------
+// Provision Replay Log — crash-recovery harness
+// ---------------------------------------------------------------------------
+
+/**
+ * Status of a single provision replay log entry.
+ *
+ * - "completed"  : step finished successfully; safe to skip on replay.
+ * - "failed"     : step threw; replay should attempt from this step.
+ * - "partial"    : step started writing state before a crash (e.g. secrets
+ *                  written, then process killed before MCP merge). Replay
+ *                  must handle partial writes carefully.
+ * - "in_progress": step was running when the process crashed (no explicit
+ *                  failure recorded). Replay must assume ambiguous upstream
+ *                  state and either re-attach or deprovision+retry.
+ */
+export type ReplayLogStatus = "completed" | "failed" | "partial" | "in_progress";
+
+/**
+ * A single step entry written to the JSONL replay log.
+ *
+ * One line per step; the file is `~/.stack/.replay-logs/<sessionId>.jsonl`.
+ * Each line is a self-contained JSON object so the log is readable even if
+ * the process was killed mid-write.
+ */
+export interface ProvisionReplayLog {
+  /** ISO 8601 wall-clock timestamp. */
+  timestamp: string;
+  /** Step label: "login" | "provision" | "materialize" | "secrets" | "mcp" | "config" */
+  stepName: string;
+  /** Provider identifier. */
+  providerName: string;
+  /** Sanitized inputs passed to the step (no secret values). */
+  input: Record<string, unknown>;
+  /** Sanitized outputs from the step (no secret values). */
+  output: Record<string, unknown>;
+  /** Step outcome. */
+  status: ReplayLogStatus;
+  /** Error message when status is "failed" or "partial". */
+  error?: string;
+  /**
+   * When status is "partial", lists exactly which sub-items were written
+   * so the recovery function can skip or re-attempt them individually.
+   */
+  partialItems?: Array<{ kind: "secret" | "mcp_entry" | "config_entry"; id: string }>;
+}
+
+/**
+ * Session-level metadata prepended as the first line of the JSONL log.
+ * Allows `stack resume` to list sessions without parsing every entry.
+ */
+export interface ReplaySessionMeta {
+  sessionId: string;
+  providerName: string;
+  cwd: string;
+  startedAt: string;
+  /** Populated when the session ends (success or failure). */
+  finishedAt?: string;
+  finalStatus?: "success" | "failed" | "partial_crash";
+}
+
+/**
+ * Resolve the directory that holds replay logs.
+ * Uses `STACK_REPLAY_LOG_DIR` env override for tests; otherwise `~/.stack/.replay-logs`.
+ */
+export function replayLogDir(): string {
+  if (process.env.STACK_REPLAY_LOG_DIR) return process.env.STACK_REPLAY_LOG_DIR;
+  const { homedir } = require("node:os") as typeof import("node:os");
+  return join(homedir(), ".stack", ".replay-logs");
+}
+
+/**
+ * Persist a single {@link ProvisionReplayLog} entry to the session JSONL file.
+ * Always appends; never rewrites. Best-effort: errors are swallowed.
+ */
+export function appendReplayLog(sessionId: string, entry: ProvisionReplayLog): void {
+  try {
+    const dir = replayLogDir();
+    mkdirSync(dir, { recursive: true });
+    const path = join(dir, `${sessionId}.jsonl`);
+    writeFileSync(path, `${JSON.stringify(entry)}\n`, { flag: "a", encoding: "utf-8" });
+  } catch {
+    /* best-effort — never block the pipeline */
+  }
+}
+
+/**
+ * Write or overwrite the session-level metadata line.
+ * The meta is stored as `<sessionId>.meta.json` alongside the JSONL log.
+ */
+export function writeReplaySessionMeta(meta: ReplaySessionMeta): void {
+  try {
+    const dir = replayLogDir();
+    mkdirSync(dir, { recursive: true });
+    const path = join(dir, `${meta.sessionId}.meta.json`);
+    writeFileSync(path, JSON.stringify(meta, null, 2), "utf-8");
+  } catch {
+    /* best-effort */
+  }
+}
+
+/**
+ * Read the session-level metadata for a given sessionId.
+ * Returns undefined when not found.
+ */
+export function readReplaySessionMeta(sessionId: string): ReplaySessionMeta | undefined {
+  const { readFileSync: readFS } = require("node:fs") as typeof import("node:fs");
+  try {
+    const path = join(replayLogDir(), `${sessionId}.meta.json`);
+    return JSON.parse(readFS(path, "utf-8")) as ReplaySessionMeta;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Read all {@link ProvisionReplayLog} entries for a session.
+ * Returns an empty array when the log file is not found or is unreadable.
+ */
+export function readReplayLog(sessionId: string): ProvisionReplayLog[] {
+  const { readFileSync: readFS } = require("node:fs") as typeof import("node:fs");
+  try {
+    const path = join(replayLogDir(), `${sessionId}.jsonl`);
+    const text = readFS(path, "utf-8") as string;
+    return text
+      .split("\n")
+      .filter((line) => line.trim().length > 0)
+      .map((line) => {
+        try {
+          return JSON.parse(line) as ProvisionReplayLog;
+        } catch {
+          return null;
+        }
+      })
+      .filter((e): e is ProvisionReplayLog => e !== null);
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * List all known replay sessions, sorted newest-first.
+ * Returns only sessions whose meta file exists.
+ */
+export function listReplaySessions(): ReplaySessionMeta[] {
+  const { readdirSync, readFileSync: readFS } = require("node:fs") as typeof import("node:fs");
+  try {
+    const dir = replayLogDir();
+    const files = readdirSync(dir).filter((f: string) => f.endsWith(".meta.json"));
+    const sessions: ReplaySessionMeta[] = [];
+    for (const file of files) {
+      try {
+        const raw = readFS(join(dir, file), "utf-8") as string;
+        sessions.push(JSON.parse(raw) as ReplaySessionMeta);
+      } catch {
+        /* skip unreadable */
+      }
+    }
+    // Newest first
+    sessions.sort((a, b) => (b.startedAt > a.startedAt ? 1 : -1));
+    return sessions;
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Generate a session ID for a new provision run.
+ * Format: `<timestamp-ms>-<providerName>-<random6>` — human-readable in ls output.
+ */
+export function generateSessionId(providerName: string): string {
+  const ts = Date.now();
+  const rand = Math.random().toString(36).slice(2, 8);
+  return `${ts}-${providerName}-${rand}`;
+}

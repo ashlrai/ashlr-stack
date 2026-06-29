@@ -323,6 +323,180 @@ export class Instrumentation {
 }
 
 // ---------------------------------------------------------------------------
+// ProvisionProvenance — per-step audit trail
+// ---------------------------------------------------------------------------
+
+/**
+ * The decision taken at a provision step that determined whether a resource
+ * was freshly created or reused from an existing state.
+ */
+export type ProvisionDecision =
+  | "created_new"
+  | "attached_existing"
+  | "skipped_already_exists"
+  | "skipped_dry_run"
+  | "failed";
+
+/**
+ * Records the provenance of a single provision step: what was done, when,
+ * a checksum of the output, and the decision tree reasoning.
+ *
+ * Used to build an audit trail for `stack audit-trail <sessionId>`.
+ */
+export interface ProvenanceStep {
+  /** Stable step label: "login" | "provision" | "materialize" | "deprovision". */
+  stepName: string;
+  /** Provider this step belongs to. */
+  providerName: string;
+  /** ISO 8601 timestamp when the step started. */
+  startedAt: string;
+  /** ISO 8601 timestamp when the step completed (or failed). */
+  completedAt: string;
+  /** Wall-clock duration in milliseconds. */
+  durationMs: number;
+  /** Outcome of the step. */
+  status: StepStatus | "skipped";
+  /** Decision taken at this step. */
+  decision: ProvisionDecision;
+  /**
+   * Human-readable justification for the decision.
+   * e.g. "Resource 'my-db' already existed; attached without recreating."
+   */
+  decisionReason: string;
+  /**
+   * SHA-256 hex checksum of the serialised step output (excluding secrets).
+   * Allows consumers to detect if outputs changed between runs.
+   * Empty string when output is empty or unavailable.
+   */
+  outputChecksum: string;
+  /** Non-secret key/value pairs describing the step output (e.g. resourceId, region). */
+  outputSummary: Record<string, string>;
+  /** Error message if status is "failure". */
+  error?: string;
+  /** StackError.code if available. */
+  errorCode?: string;
+}
+
+/**
+ * Full provenance audit trail for a single provision session.
+ * Carries enough context to reconstruct why every resource was created (or not),
+ * enabling SLA compliance reporting and post-incident analysis.
+ */
+export interface ProvisionProvenance {
+  /** Session ID (nanoid-style, matches the replay log session). */
+  sessionId: string;
+  /** ISO 8601 timestamp when provisioning started. */
+  startedAt: string;
+  /** ISO 8601 timestamp when provisioning completed (or failed). */
+  completedAt: string;
+  /** Total duration of the full provision session in milliseconds. */
+  totalDurationMs: number;
+  /**
+   * Ordered list of provision steps, one per provider sub-step.
+   * Ordered by `startedAt` ascending.
+   */
+  steps: ProvenanceStep[];
+  /**
+   * Providers that were fully provisioned (all steps succeeded).
+   */
+  succeededProviders: string[];
+  /**
+   * Provider that triggered a rollback (if any).
+   */
+  failedProvider?: string;
+  /**
+   * True when a rollback was triggered due to a partial failure.
+   */
+  rolledBack: boolean;
+  /** Metadata tags (e.g. project_id, git_sha, CI environment). */
+  tags: Record<string, string>;
+}
+
+/**
+ * In-memory store for building a ProvisionProvenance during a session.
+ * Call `recordProvenanceStep()` during provisioning and `toProvenance()` at the end.
+ */
+export class ProvenanceCollector {
+  private readonly _sessionId: string;
+  private readonly _startedAt: string;
+  private readonly _steps: ProvenanceStep[] = [];
+  private _tags: Record<string, string> = {};
+
+  constructor(sessionId: string) {
+    this._sessionId = sessionId;
+    this._startedAt = new Date().toISOString();
+  }
+
+  /** Record a completed provision step into the provenance trail. */
+  recordStep(step: ProvenanceStep): void {
+    this._steps.push(step);
+  }
+
+  /** Set metadata tags (e.g. project_id, environment). */
+  setTags(tags: Record<string, string>): void {
+    this._tags = { ...this._tags, ...tags };
+  }
+
+  /**
+   * Finalise and return the ProvisionProvenance.
+   * @param failedProvider Provider name that triggered rollback, if any.
+   * @param rolledBack     Whether rollback was triggered.
+   */
+  toProvenance(failedProvider?: string, rolledBack = false): ProvisionProvenance {
+    const completedAt = new Date().toISOString();
+    const startMs = new Date(this._startedAt).getTime();
+    const endMs = new Date(completedAt).getTime();
+
+    const succeededProviders = [
+      ...new Set(
+        this._steps
+          .filter((s) => s.status === "success" && s.stepName === "provision")
+          .map((s) => s.providerName),
+      ),
+    ];
+
+    return {
+      sessionId: this._sessionId,
+      startedAt: this._startedAt,
+      completedAt,
+      totalDurationMs: endMs - startMs,
+      steps: [...this._steps],
+      succeededProviders,
+      ...(failedProvider !== undefined ? { failedProvider } : {}),
+      rolledBack,
+      tags: { ...this._tags },
+    };
+  }
+
+  /** Access the accumulated steps (useful for tests). */
+  get steps(): ProvenanceStep[] {
+    return this._steps;
+  }
+}
+
+/**
+ * Compute a simple checksum of a JSON-serialisable value (non-cryptographic, fast).
+ * Uses a djb2-style hash over the JSON string, returned as 8 hex chars.
+ * For production integrity checks, callers should use a full SHA-256 via SubtleCrypto.
+ */
+export function checksumOutput(output: unknown): string {
+  if (output === null || output === undefined) return "";
+  let str: string;
+  try {
+    str = JSON.stringify(output);
+  } catch {
+    return "";
+  }
+  // djb2 hash
+  let hash = 5381;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) + hash) ^ str.charCodeAt(i);
+    hash = hash >>> 0; // keep as unsigned 32-bit
+  }
+  return hash.toString(16).padStart(8, "0");
+}
+
+// ---------------------------------------------------------------------------
 // Module-level default instance — shared by pipeline.ts
 // ---------------------------------------------------------------------------
 

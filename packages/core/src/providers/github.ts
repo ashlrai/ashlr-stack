@@ -11,7 +11,7 @@ import type {
   ProviderContext,
   Resource,
 } from "./_base.ts";
-import { readLine, tryRevealSecret } from "./_helpers.ts";
+import { extractRateLimitMetrics, readLine, tryRevealSecret } from "./_helpers.ts";
 
 /**
  * GitHub — OAuth device flow (no local redirect needed, works in SSH/remote
@@ -92,9 +92,10 @@ const github: Provider = {
     const token = await tryRevealSecret(TOKEN_SECRET);
     if (!token) return { kind: "error", detail: `${TOKEN_SECRET} missing from vault` };
     const start = Date.now();
-    const user = await fetchUser(token);
+    const result = await fetchUserWithMetrics(token);
     const latencyMs = Date.now() - start;
-    return user ? { kind: "ok", latencyMs } : { kind: "error", detail: "token invalid" };
+    if (!result) return { kind: "error", detail: "token invalid" };
+    return { kind: "ok", latencyMs, ...result.metrics };
   },
 
   dashboardUrl(): string {
@@ -198,6 +199,28 @@ const github: Provider = {
 };
 
 export default github;
+
+async function fetchUserWithMetrics(
+  token: string,
+): Promise<{ identity: Record<string, string>; metrics: ReturnType<typeof extractRateLimitMetrics> } | undefined> {
+  try {
+    const res = await fetchWithRetry("https://api.github.com/user", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/vnd.github+json",
+        "User-Agent": "ashlr-stack",
+      },
+    });
+    if (!res.ok) return undefined;
+    const body = (await res.json()) as Record<string, unknown>;
+    const identity: Record<string, string> = {};
+    for (const [k, v] of Object.entries(body))
+      if (typeof v === "string" || typeof v === "number") identity[k] = String(v);
+    return { identity, metrics: extractRateLimitMetrics(res.headers) };
+  } catch {
+    return undefined;
+  }
+}
 
 async function fetchUser(token: string): Promise<Record<string, string> | undefined> {
   try {
