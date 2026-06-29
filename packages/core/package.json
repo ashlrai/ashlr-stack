@@ -34,7 +34,8 @@
     "./config": "./src/config.ts",
     "./mcp-writer": "./src/mcp-writer.ts",
     "./dry-run": "./src/dry-run.ts",
-    "./errors/provision-errors": "./src/errors/provision-errors.ts"
+    "./errors/provision-errors": "./src/errors/provision-errors.ts",
+    "./rollback-audit": "./src/rollback-audit.ts"
   },
   "files": [
     "src/**/*",

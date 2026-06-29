@@ -13,6 +13,11 @@ import {
 import { defineCommand } from "citty";
 import { requirePhantom } from "../lib/phantom-preflight.ts";
 import { colors, intro, logEvent, outro, outroError, prompts } from "../ui.ts";
+import {
+  auditAllSessions,
+  formatAuditReport,
+  type MultiSessionAuditReport,
+} from "@ashlr/stack-core/rollback-audit";
 
 interface DoctorReport {
   project: string;
@@ -64,10 +69,22 @@ export const doctorCommand = defineCommand({
       default: false,
       description: "Report healthcheck coverage % across all registered providers and exit.",
     },
+    audit: {
+      type: "boolean",
+      default: false,
+      description:
+        "Audit rollback state from prior failed provisions — detect orphaned secrets, MCP entries, and config entries that were not cleaned up.",
+    },
   },
   async run({ args }) {
     const json = Boolean(args.json);
     const reconcile = Boolean(args.reconcile);
+
+    // --audit: scan replay sessions for orphaned/dangling state.
+    if (args.audit) {
+      await runAudit(process.cwd(), json);
+      return;
+    }
 
     // --coverage: report healthcheck coverage % across all registered providers.
     if (args.coverage) {
@@ -297,6 +314,55 @@ async function runDoctor(
   }
 
   return report;
+}
+
+/**
+ * Audit rollback state from prior failed provisions.
+ * Reads replay logs and cross-checks claimed rollback items against live
+ * filesystem state (Phantom vault, .mcp.json, .stack.toml) to surface
+ * orphaned secrets/entries that were not cleaned up.
+ */
+async function runAudit(cwd: string, json: boolean): Promise<void> {
+  if (!json) {
+    intro("stack doctor --audit");
+    console.log(colors.dim("  Scanning replay sessions for dangling state…\n"));
+  }
+
+  const multiReport: MultiSessionAuditReport = await auditAllSessions(cwd);
+
+  if (json) {
+    process.stdout.write(`${JSON.stringify(multiReport, null, 2)}\n`);
+    process.exitCode = multiReport.totalOrphans > 0 || multiReport.totalStale > 0 ? 1 : 0;
+    return;
+  }
+
+  if (multiReport.sessionCount === 0) {
+    outro(colors.dim("No replay sessions found. Run `stack add <provider>` to create one."));
+    return;
+  }
+
+  console.log(
+    `  ${colors.bold("Sessions audited:")} ${multiReport.sessionCount}  |  ` +
+    `${colors.yellow(`${multiReport.totalOrphans} orphan(s)`)}  |  ` +
+    `${colors.red(`${multiReport.totalStale} stale item(s)`)}`,
+  );
+  console.log();
+
+  if (multiReport.dirty.length === 0) {
+    outro(colors.green("All sessions verified clean — no dangling state detected."));
+    return;
+  }
+
+  console.log(colors.bold(`  ${multiReport.dirty.length} session(s) with issues:\n`));
+  for (const sessionReport of multiReport.dirty) {
+    console.log(formatAuditReport(sessionReport));
+    console.log();
+  }
+
+  process.exitCode = 1;
+  outroError(
+    `${multiReport.dirty.length} session(s) have dangling state. Follow the recommendations above to clean up.`,
+  );
 }
 
 /**
