@@ -1,3 +1,5 @@
+import { StackError } from "../errors.ts";
+import type { AuthHandle, ProviderContext } from "./_base.ts";
 import { makeApiKeyProvider } from "./_api-key.ts";
 import { tryRevealSecret, verifyFetch } from "./_helpers.ts";
 
@@ -8,7 +10,7 @@ const SECRET = "RENDER_API_KEY";
  * v1 accepts a user API key (create at https://dashboard.render.com/u/settings).
  * Verification hits /v1/owners.
  */
-export default makeApiKeyProvider({
+const _base = makeApiKeyProvider({
   name: "render",
   displayName: "Render",
   category: "deploy",
@@ -47,3 +49,39 @@ export default makeApiKeyProvider({
     }
   },
 });
+
+/**
+ * Render deprovision — deletes a service (web service, private service, etc.)
+ * created during provision. resourceId is the Render service id (e.g. "srv-…").
+ * Idempotent: 404 is treated as success (already deleted).
+ */
+async function deprovision(
+  ctx: ProviderContext,
+  auth: AuthHandle,
+  resourceId: string,
+): Promise<void> {
+  try {
+    const res = await fetch(`https://api.render.com/v1/services/${resourceId}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${auth.token}`, Accept: "application/json" },
+      signal: ctx.signal,
+    });
+    if (res.status === 404) return; // already gone — idempotent
+    if (!res.ok) {
+      ctx.log({
+        level: "warn",
+        msg: `Render deprovision returned ${res.status} for service ${resourceId}; resource may need manual cleanup at https://dashboard.render.com.`,
+      });
+    }
+  } catch (err) {
+    if ((err as Error).name === "AbortError") {
+      throw new StackError("RENDER_DEPROVISION_ABORTED", "Render deprovision cancelled.");
+    }
+    ctx.log({
+      level: "warn",
+      msg: `Render deprovision failed for ${resourceId}: ${(err as Error).message}. Resource may need manual cleanup at https://dashboard.render.com.`,
+    });
+  }
+}
+
+export default { ..._base, deprovision };

@@ -1,3 +1,5 @@
+import { StackError } from "../errors.ts";
+import type { AuthHandle, ProviderContext } from "./_base.ts";
 import { makeApiKeyProvider } from "./_api-key.ts";
 import { tryRevealSecret } from "./_helpers.ts";
 
@@ -9,7 +11,7 @@ const SECRET = "CONVEX_DEPLOY_KEY";
  * Settings → Deploy Keys). Creating Convex deployments programmatically
  * requires their deploy CLI with a browser flow — out of scope for v1.
  */
-export default makeApiKeyProvider({
+const _base = makeApiKeyProvider({
   name: "convex",
   displayName: "Convex",
   category: "database",
@@ -43,3 +45,35 @@ export default makeApiKeyProvider({
       : { kind: "error", detail: "deploy key shape invalid; expected <env>:<team>:<project>|<token>" };
   },
 });
+
+/**
+ * Convex deprovision — the v1 provision only stores a deploy key (no Convex
+ * deployment is auto-created by Stack). Deprovision validates the stored key
+ * is structurally sound, then is a no-op. Actual deployment deletion must be
+ * done via the Convex dashboard.
+ */
+async function deprovision(
+  ctx: ProviderContext,
+  auth: AuthHandle,
+  resourceId: string,
+): Promise<void> {
+  if (ctx.signal?.aborted) {
+    throw new StackError("CONVEX_DEPROVISION_ABORTED", "Convex deprovision cancelled.");
+  }
+  // Validate the stored deploy key is still structurally valid.
+  const key = auth.token;
+  const isValid = key.includes(":") && key.includes("|") && (() => {
+    const [prefix] = key.split("|");
+    return prefix.split(":").length >= 3;
+  })();
+  if (!isValid) {
+    throw new StackError(
+      "CONVEX_DEPROVISION_FAILED",
+      `Convex deploy key for resource ${resourceId} is malformed (expected <env>:<team>:<project>|<token>). ` +
+        `Delete manually at https://dashboard.convex.dev.`,
+    );
+  }
+  // Deploy-key attachment only — no upstream resource created by Stack.
+}
+
+export default { ..._base, deprovision };
