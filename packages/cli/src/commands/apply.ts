@@ -1,5 +1,8 @@
 import {
   type Recipe,
+  dryRunProviders,
+  formatDryRunReport,
+  formatDryRunReportJson,
   hasConfig,
   listRecipes,
   readRecipe,
@@ -42,9 +45,29 @@ export const applyCommand = defineCommand({
       description:
         "On partial failure, leave successfully-added services in .stack.toml instead of rolling them back.",
     },
+    dryRun: {
+      type: "boolean",
+      default: false,
+      description:
+        "Preview what would be provisioned without making any upstream API calls, writing secrets, or updating config.",
+    },
+    costEstimate: {
+      type: "boolean",
+      default: false,
+      description:
+        "When combined with --dry-run, include a monthly cost estimate for each provider (uses static pricing data; Moat 2 live MCP pricing coming in v0.4).",
+    },
+    json: {
+      type: "boolean",
+      default: false,
+      description: "Output dry-run report as JSON (useful for CI / programmatic consumption). Implies --dry-run.",
+    },
   },
   async run({ args }) {
-    intro(`stack apply${args.noWire ? colors.dim(" (no-wire)") : ""}`);
+    const isDryRun = Boolean(args.dryRun) || Boolean(args.json);
+    intro(
+      `stack apply${isDryRun ? colors.dim(" (dry-run)") : ""}${args.noWire ? colors.dim(" (no-wire)") : ""}`,
+    );
 
     // The marketed golden path is `stack recommend --save && stack apply <id>`,
     // which must work from a blank directory. Auto-init if no .stack.toml so
@@ -77,6 +100,31 @@ export const applyCommand = defineCommand({
 
     const recipe = await pickRecipe(args.recipeId ? String(args.recipeId) : undefined);
     if (!recipe) return; // pickRecipe already surfaced the error.
+
+    // --- Dry-run path ---
+    if (isDryRun) {
+      const providerNames = recipe.providers.map((p) => p.name);
+      const report = await dryRunProviders(providerNames, {
+        costEstimate: Boolean(args.costEstimate),
+      });
+
+      if (args.json) {
+        // Machine-readable JSON — write directly to stdout, no clack decoration.
+        process.stdout.write(formatDryRunReportJson(report) + "\n");
+      } else {
+        // Human-readable table
+        console.log();
+        console.log(`  ${colors.bold("recipe")}   ${recipe.id}`);
+        console.log(`  ${colors.dim("query")}    ${recipe.query}`);
+        console.log();
+        const table = formatDryRunReport(report);
+        for (const line of table.split("\n")) {
+          console.log(`  ${line}`);
+        }
+        outro(colors.dim("dry-run complete — nothing provisioned."));
+      }
+      return;
+    }
 
     await requirePhantom();
 

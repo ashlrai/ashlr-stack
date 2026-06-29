@@ -32,7 +32,8 @@
     "./providers": "./src/providers/index.ts",
     "./phantom": "./src/phantom.ts",
     "./config": "./src/config.ts",
-    "./mcp-writer": "./src/mcp-writer.ts"
+    "./mcp-writer": "./src/mcp-writer.ts",
+    "./dry-run": "./src/dry-run.ts"
   },
   "files": [
     "src/**/*",

@@ -96,3 +96,16 @@ export {
   type SchemaCompletenessResult,
   type SchemaViolation,
 } from "./provision-schema.ts";
+export {
+  dryRunProvider,
+  dryRunProviders,
+  dryRunAddService,
+  formatDryRunReport,
+  formatDryRunReportJson,
+  getStaticCostEstimate,
+  type CostEstimate,
+  type DryRunResourceResult,
+  type DryRunReport,
+  type DryRunProviderOpts,
+  type DryRunAddServiceOpts,
+} from "./dry-run.ts";

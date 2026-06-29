@@ -8,6 +8,11 @@ import {
   installCommand,
   listProviderNames,
 } from "@ashlr/stack-core";
+import {
+  dryRunProvider,
+  formatDryRunReport,
+  formatDryRunReportJson,
+} from "@ashlr/stack-core";
 import { defineCommand } from "citty";
 import { requirePhantom } from "../lib/phantom-preflight.ts";
 import { colors, intro, logEvent, outro, outroError, prompts } from "../ui.ts";
@@ -56,6 +61,11 @@ export const addCommand = defineCommand({
       default: false,
       description:
         "Stripe only: skip the interactive sk_… paste and reuse STRIPE_SECRET_KEY already in Phantom.",
+    },
+    timeout: {
+      type: "string",
+      description:
+        "Wall-clock timeout in seconds for each provider step (login, provision, materialize). Defaults to 30. Pass 0 to disable.",
     },
   },
   async run({ args }) {
@@ -120,36 +130,38 @@ export const addCommand = defineCommand({
       return;
     }
 
-    // Dry-run: describe what the flow would do without executing any step.
+    // Dry-run: use the dry-run engine to produce a realistic preview.
     if (args.dryRun) {
-      const provider = await getProvider(service);
+      const hints = buildHints(args);
+      const result = await dryRunProvider(service, {
+        existingResourceId: args.use ? String(args.use) : undefined,
+        hints,
+        costEstimate: false,
+      });
+
+      // Always emit the structured table report
+      const report = formatDryRunReport({
+        generatedAt: new Date().toISOString(),
+        providers: [result],
+        totalSecrets: Object.keys(result.secrets).length,
+        totalMcpEntries: result.mcpEntry ? 1 : 0,
+      });
+
       console.log();
-      console.log(
-        `  ${colors.bold(provider.displayName)} ${colors.dim(`(${provider.category} · ${provider.authKind})`)}`,
-      );
-      console.log(
-        `    ${colors.dim("1.")} login       ${colors.dim("(prompt for PAT or run OAuth)")}`,
-      );
-      console.log(
-        `    ${colors.dim("2.")} provision   ${args.use ? `attach to existing resource ${colors.dim(String(args.use))}` : colors.dim("create a new upstream resource")}`,
-      );
-      console.log(
-        `    ${colors.dim("3.")} materialize ${colors.dim("fetch credentials for the resource")}`,
-      );
-      console.log(
-        `    ${colors.dim("4.")} persist     ${colors.dim("write secrets to Phantom + MCP + .stack.toml")}`,
-      );
+      for (const line of report.split("\n")) {
+        console.log(`  ${line}`);
+      }
+
+      // SDK packages hint
       const dryRef = findProviderRef(service);
       const dryPkgs = dryRef?.sdkPackages ?? [];
       if (dryPkgs.length > 0) {
+        console.log();
         console.log(
-          `    ${colors.dim("5.")} sdk install ${colors.dim(`install ${dryPkgs.join(", ")} (or skip if --install=never)`)}`,
-        );
-      } else {
-        console.log(
-          `    ${colors.dim("5.")} sdk install ${colors.dim("(skipped — no sdk packages for this provider)")}`,
+          `  ${colors.dim("sdk:")} would offer to install ${colors.bold(dryPkgs.join(", "))}`,
         );
       }
+
       console.log();
       outro(colors.dim("dry-run complete — nothing written."));
       return;
@@ -158,11 +170,15 @@ export const addCommand = defineCommand({
     const spinner = prompts.spinner();
     try {
       spinner.start(`Wiring ${service}…`);
+      const timeoutMs = args.timeout !== undefined
+        ? Number(args.timeout) * 1000
+        : undefined;
       const result = await addService({
         providerName: service,
         existingResourceId: args.use ? String(args.use) : undefined,
         hints: buildHints(args),
         interactive: process.stdout.isTTY === true,
+        timeoutMs,
         log: (event) => {
           spinner.stop();
           logEvent(event);

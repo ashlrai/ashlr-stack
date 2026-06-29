@@ -1,4 +1,5 @@
 import { type ServiceEntry, type StackConfig, readConfig, writeConfig } from "./config.ts";
+import { type DryRunAddServiceOpts, dryRunAddService } from "./dry-run.ts";
 import { StackError } from "./errors.ts";
 import { mergeMcpEntry, removeMcpEntry } from "./mcp-writer.ts";
 import { addSecret, assertPhantomInstalled, removeSecret } from "./phantom.ts";
@@ -60,6 +61,18 @@ export interface AddServiceOpts {
    * Set to 0 to disable (not recommended in production).
    */
   timeoutMs?: number;
+  /**
+   * When true, skip all upstream API calls, secret writes, MCP edits, and
+   * config writes. Returns a synthetic but realistic result from the dry-run
+   * engine instead. No Phantom installation required.
+   */
+  dryRun?: boolean;
+  /**
+   * When true (and dryRun is also true), attach a cost estimate to the result
+   * from the static cost registry (Moat 2 groundwork — will be replaced by
+   * live provider MCP calls in a future release).
+   */
+  costEstimate?: boolean;
 }
 
 export interface AddServiceResult {
@@ -69,14 +82,51 @@ export interface AddServiceResult {
   secretCount: number;
   mcpWired: boolean;
   entry: ServiceEntry;
+  /** Present only when the call was made with dryRun: true */
+  dryRun?: true;
 }
 
 /**
  * Full add-service pipeline: login → provision → materialize → write secrets
  * → merge .mcp.json → update .stack.toml. Used by both `stack add` and
  * `stack templates apply` so behaviour stays in lockstep.
+ *
+ * When `opts.dryRun` is true the function short-circuits into the dry-run
+ * engine: no upstream API calls, no Phantom writes, no MCP or config changes.
+ * Returns a result whose shape is compatible with the real path so callers
+ * can render it uniformly.
  */
 export async function addService(opts: AddServiceOpts): Promise<AddServiceResult> {
+  // --- Dry-run short-circuit ---
+  if (opts.dryRun) {
+    const dryOpts: DryRunAddServiceOpts = {
+      providerName: opts.providerName,
+      existingResourceId: opts.existingResourceId,
+      hints: opts.hints,
+      costEstimate: opts.costEstimate,
+    };
+    const dryResult = await dryRunAddService(dryOpts);
+    // Return a shape that satisfies AddServiceResult — entry is synthesised so
+    // callers that only inspect providerName/resourceId/displayName/counts work.
+    return {
+      providerName: dryResult.providerName,
+      resourceId: dryResult.resourceId,
+      displayName: dryResult.displayName,
+      secretCount: dryResult.secretCount,
+      mcpWired: dryResult.mcpWired,
+      dryRun: true,
+      entry: {
+        provider: dryResult.providerName,
+        resource_id: dryResult.resourceId,
+        secrets: Object.keys(dryResult.report.secrets),
+        mcp: dryResult.report.mcpEntry?.name,
+        meta: dryResult.report.resource.meta,
+        created_at: new Date().toISOString(),
+        created_by: "stack add --dry-run",
+      },
+    };
+  }
+
   await assertPhantomInstalled();
   const provider = await getProvider(opts.providerName);
   const cwd = opts.cwd ?? process.cwd();
