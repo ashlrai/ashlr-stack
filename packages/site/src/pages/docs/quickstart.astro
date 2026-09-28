@@ -15,7 +15,7 @@ const howTo = howToSchema({
   steps: [
     {
       name: "Install Stack",
-      text: "Install the @ashlr/stack CLI via curl, bun, npm, or Homebrew so the `stack` binary is on your PATH.",
+      text: "Install the @ashlr/stack CLI via curl, bun or npm so the `stack` binary is on your PATH.",
       url: `${pageUrl}#1-install-stack`,
     },
     {
@@ -84,9 +84,7 @@ const howTo = howToSchema({
   <Code
     code={`bun add -g @ashlr/stack
 # or
-npm i -g @ashlr/stack
-# or (macOS)
-brew install ashlrai/stack/stack`}
+npm i -g @ashlr/stack`}
     lang="bash"
     theme="github-dark-dimmed"
   />

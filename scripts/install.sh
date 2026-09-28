@@ -79,7 +79,7 @@ if ! command -v phantom >/dev/null 2>&1; then
   installed=0
   # Prefer Homebrew on systems that have it (best UX for updates).
   if command -v brew >/dev/null 2>&1; then
-    if brew tap ashlrai/phantom >/dev/null 2>&1 && brew install phantom >/dev/null 2>&1; then
+    if brew tap ashlrai/phantom >/dev/null 2>&1 && brew install ashlrai/phantom/phantom >/dev/null 2>&1; then
       installed=1
     fi
   fi
