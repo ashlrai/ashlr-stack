@@ -101,7 +101,7 @@ curl -fsSL stack.ashlr.ai/install.sh | bash
 ### Package managers (pre-alpha)
 
 ```bash
-brew tap ashlrai/phantom && brew install phantom   # prerequisite
+brew install ashlrai/phantom/phantom               # prerequisite
 bun add -g @ashlr/stack ashlr-stack-mcp            # or: npm i -g
 ```
 

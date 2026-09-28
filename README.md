@@ -10,12 +10,7 @@
 
 ## Install
 
-Four ways, pick one:
-
-```bash
-# Homebrew (macOS / Linux — installs Phantom Secrets as a dependency)
-brew install ashlrai/ashlr/stack
-```
+Three ways, pick one:
 
 ```bash
 # One-liner, macOS / Linux (also installs Phantom Secrets if missing)

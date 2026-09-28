@@ -32,7 +32,7 @@ Ashlr Stack (short name: "Stack") collapses the hour of tab-hopping after `creat
 
 ## What Stack is
 
-- A CLI: `stack` (Node/Bun, distributed via `npm i -g @ashlr/stack` or `brew install ashlrai/stack`).
+- A CLI: `stack` (Node/Bun, distributed via `npm i -g @ashlr/stack` or the `stack.ashlr.ai/install.sh` one-liner).
 - An MCP server: `ashlr-stack-mcp`. Every CLI command is exposed as an MCP tool, so any MCP-aware agent (Claude Code, Cursor, etc.) can drive Stack.
 - A Claude Code plugin: `ashlrai/stack-plugin`. Ships commands `/stack:add`, `/stack:doctor`, `/stack:list`, `/stack:status`.
 
@@ -45,7 +45,7 @@ Stack is the **control plane**. [Phantom Secrets](https://phantom.ashlr.ai) is t
 curl -fsSL stack.ashlr.ai/install.sh | bash
 
 # Package managers (pre-alpha):
-brew tap ashlrai/phantom && brew install phantom   # prerequisite
+brew install ashlrai/phantom/phantom               # prerequisite
 bun add -g @ashlr/stack ashlr-stack-mcp            # or: npm i -g
 
 # Dev install (from source):
