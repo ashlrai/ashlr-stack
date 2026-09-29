@@ -8,6 +8,24 @@
 
 **Status:** pre‑alpha, active development.
 
+## Try it in 30 seconds
+
+These read-only commands need no accounts or API keys. The CLI runs on [Bun](https://bun.sh).
+
+```bash
+bunx @ashlr/stack providers                                         # the 29-provider catalog
+bunx @ashlr/stack recommend "B2B SaaS with auth, AI, and payments"  # ranked provider picks with rationales
+bunx @ashlr/stack scan                                              # in an existing repo: detect services (writes nothing)
+```
+
+To provision a real service, install Stack (below) and run `stack add <provider>`.
+
+## Why Stack
+
+- **One command instead of ten dashboards.** Stack creates the upstream resource and wires its secrets, `.env` and `.mcp.json` for you.
+- **Secrets stay in a vault.** Every credential goes through [Phantom](https://phm.dev), so real values stay on your machine.
+- **Agent-native.** The same catalog and actions are available as MCP tools (`ashlr-stack-mcp`) for Claude Code and other MCP clients.
+
 ## Install
 
 Three ways, pick one:
