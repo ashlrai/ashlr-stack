@@ -333,7 +333,5 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add Formula/stack.rb
           git diff --cached --quiet && echo "No formula changes — already up to date." && exit 0
-          git commit -m "feat: stack v${VERSION}
-
-Assisted-By: ashlr-plugin <https://plugin.ashlr.ai>"
+          git commit -m "feat: stack v${VERSION}" -m "Assisted-By: ashlr-plugin <https://plugin.ashlr.ai>"
           git push
