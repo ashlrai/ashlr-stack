@@ -4,27 +4,42 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 [![npm version](https://img.shields.io/npm/v/@ashlr/stack.svg)](https://www.npmjs.com/package/@ashlr/stack)
 
-> The control plane for your entire dev stack. One command to provision, wire, and operate every third‑party service in your project.
+**Provision and wire every service in your project with one command, from your terminal or your AI agent.** Stack creates the Supabase project, the Vercel token, the Sentry DSN, stores every secret in [Phantom](https://phm.dev) and writes `.env` and `.mcp.json` for you.
 
-**Status:** pre‑alpha, active development.
+**Status:** pre-alpha, active development. The CLI runs on [Bun](https://bun.sh).
+
+<!-- Demo GIF: record with vhs, see docs/ -->
 
 ## Try it in 30 seconds
 
-These read-only commands need no accounts or API keys. The CLI runs on [Bun](https://bun.sh).
+Read-only, no accounts or API keys needed:
 
 ```bash
-bunx @ashlr/stack providers                                         # the 29-provider catalog
-bunx @ashlr/stack recommend "B2B SaaS with auth, AI, and payments"  # ranked provider picks with rationales
-bunx @ashlr/stack scan                                              # in an existing repo: detect services (writes nothing)
+npx -y -p @ashlr/stack stack providers                                         # the provider catalog
+npx -y -p @ashlr/stack stack recommend "B2B SaaS with auth, AI, and payments"  # ranked picks with rationales
+npx -y -p @ashlr/stack stack scan                                              # detect services in an existing repo (writes nothing)
 ```
 
 To provision a real service, install Stack (below) and run `stack add <provider>`.
 
+## Connect your agent (MCP)
+
+```bash
+claude mcp add ashlr-stack -- npx -y ashlr-stack-mcp    # Claude Code
+codex mcp add ashlr-stack -- npx -y ashlr-stack-mcp     # Codex
+```
+
+Cursor (`~/.cursor/mcp.json`):
+
+```json
+{ "mcpServers": { "ashlr-stack": { "command": "npx", "args": ["-y", "ashlr-stack-mcp"] } } }
+```
+
 ## Why Stack
 
-- **One command instead of ten dashboards.** Stack creates the upstream resource and wires its secrets, `.env` and `.mcp.json` for you.
-- **Secrets stay in a vault.** Every credential goes through [Phantom](https://phm.dev), so real values stay on your machine.
-- **Agent-native.** The same catalog and actions are available as MCP tools (`ashlr-stack-mcp`) for Claude Code and other MCP clients.
+- **One command instead of ten dashboards.** Stack creates the upstream resource and wires its secrets, `.env` and `.mcp.json`.
+- **Secrets stay in a vault.** Every credential goes through Phantom, so real values stay on your machine.
+- **Agent-native.** The same catalog and actions are MCP tools for Claude Code, Codex and Cursor.
 
 ## Install
 
