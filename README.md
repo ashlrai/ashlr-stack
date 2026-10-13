@@ -80,6 +80,7 @@ stack init --template nextjs-supabase-posthog-sentry
 ## How it relates to the rest of Ashlr
 
 - **[Phantom Secrets](https://phm.dev)** — the vault. Real secret values never leave your machine. Stack writes every credential through Phantom.
+- **[Locus](https://github.com/ashlrai/locus)** — the identity plane. Run `locus run -b <binding> -- stack add …` so provider CLIs act only in the pinned personal / company / client account. See [docs/phantom-locus.md](./docs/phantom-locus.md).
 - **ashlr-plugin** — token-efficiency layer for Claude Code. Orthogonal to Stack.
 - **ashlrcode** — multi-provider AI coding CLI. Orthogonal.
 

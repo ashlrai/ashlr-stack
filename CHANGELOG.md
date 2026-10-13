@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.2.1 (2026-10-12)
+
+- **Release workflow repaired.** A multi-line `git commit -m` in the Homebrew job ended the YAML block early and left a stray top-level key, so GitHub rejected `release.yml` on every push and the v0.2.0 npm publish never ran.
+- **Docs: Phantom Secrets + Locus.** New `docs/phantom-locus.md` explains how Stack stores keys through Phantom and runs provider CLIs inside a Locus-pinned account (personal / company / client).
+
 ### Bug fixes
 
 - **Kebab-case flags now parse (`--dry-run`, `--keep-from`, `--all-orphans`, …)** — citty 0.1.6 silently dropped the documented kebab spelling of multi-word flags: a boolean arg with `default: false` shadowed the kebab-parsed value, so `--dry-run` was ignored while only `--dryRun` worked. For `stack add` this was high-severity — the documented "safe preview" form fell through to the **real** provisioning flow (live OAuth/network/vault writes). Raw argv is now normalized (`--dry-run` → `--dryRun`) before parsing, fixing every command at once while preserving camelCase, `--no-*` negation, and `--` passthrough. (`packages/cli/src/lib/normalize-args.ts`)
