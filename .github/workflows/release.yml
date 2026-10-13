@@ -99,17 +99,14 @@ jobs:
     # patch release once the token is set and this job fires.
     if: ${{ !cancelled() }}
     steps:
-      - name: Gate on NPM_TOKEN
+      # npm trusted publishing (OIDC): with id-token: write and npm >= 11.5.1,
+      # npm exchanges the workflow identity for a short-lived publish token.
+      # No NPM_TOKEN or OTP needed once each package (@ashlr/stack-core,
+      # @ashlr/stack-mcp, @ashlr/stack) lists ashlrai/ashlr-stack release.yml
+      # as a trusted publisher on npmjs.com. NPM_TOKEN remains a fallback.
+      - name: Enable npm publish
         id: gate
-        run: |
-          if [ -z "${{ secrets.NPM_TOKEN }}" ]; then
-            echo "⚠ NPM_TOKEN not configured — skipping npm publish."
-            echo "  Set it with: gh secret set NPM_TOKEN"
-            echo "  Binaries + GitHub Release will still be produced."
-            echo "enabled=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "enabled=true" >> "$GITHUB_OUTPUT"
-          fi
+        run: echo "enabled=true" >> "$GITHUB_OUTPUT"
 
       - if: steps.gate.outputs.enabled == 'true'
         uses: actions/checkout@v4
@@ -124,8 +121,12 @@ jobs:
       - if: steps.gate.outputs.enabled == 'true'
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           registry-url: 'https://registry.npmjs.org/'
+
+      - if: steps.gate.outputs.enabled == 'true'
+        name: Use an npm CLI that supports trusted publishing
+        run: npm install -g "npm@^11.5.1" && npm --version
 
       - if: steps.gate.outputs.enabled == 'true'
         name: Install deps
