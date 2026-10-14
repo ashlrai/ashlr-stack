@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import {
   chmodSync,
   lstatSync,
@@ -16,6 +16,76 @@ import { join, resolve } from "node:path";
 
 const sourceScript = resolve(import.meta.dir, "../../../../scripts/publish.sh");
 const mutatingCommands = ["npm", "node", "git", "cp", "mv"];
+
+// Bun 1.2's sync facade mislabels nonzero exits and ignores its timeout/buffer
+// options. Own both bounds and await close so each copied fixture is reaped.
+function runFixture(command: string, args: string[], cwd: string, env: Record<string, string>) {
+  return new Promise<{
+    status: number | null;
+    signal: NodeJS.Signals | null;
+    error?: Error;
+    stdout: string;
+    stderr: string;
+    timedOut: boolean;
+    outputLimitExceeded: boolean;
+  }>((resolve) => {
+    let child: ReturnType<typeof spawn>;
+    try {
+      child = spawn(command, args, { cwd, env, stdio: ["ignore", "pipe", "pipe"] });
+    } catch (error) {
+      // Bun 1.2 throws launch errors synchronously; newer runtimes emit error.
+      resolve({
+        status: null,
+        signal: null,
+        error: error instanceof Error ? error : new Error("fixture launch failed"),
+        stdout: "",
+        stderr: "",
+        timedOut: false,
+        outputLimitExceeded: false,
+      });
+      return;
+    }
+    const stdout: Buffer[] = [];
+    const stderr: Buffer[] = [];
+    let bytes = 0;
+    let timedOut = false;
+    let outputLimitExceeded = false;
+    let error: Error | undefined;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      child.kill("SIGKILL");
+    }, 1500);
+    function capture(chunks: Buffer[], chunk: Buffer) {
+      if (outputLimitExceeded) return;
+      const remaining = 64 * 1024 - bytes;
+      const retained = chunk.subarray(0, remaining);
+      chunks.push(Buffer.from(retained));
+      bytes += retained.length;
+      if (chunk.length > remaining) {
+        outputLimitExceeded = true;
+        child.kill("SIGKILL");
+      }
+    }
+    child.stdout?.on("data", (chunk: Buffer) => capture(stdout, chunk));
+    child.stderr?.on("data", (chunk: Buffer) => capture(stderr, chunk));
+    child.once("error", (failure) => {
+      error = failure;
+      if (child.pid) child.kill("SIGKILL");
+    });
+    child.once("close", (status, signal) => {
+      clearTimeout(timer);
+      resolve({
+        status,
+        signal,
+        error,
+        stdout: Buffer.concat(stdout).toString("utf8"),
+        stderr: Buffer.concat(stderr).toString("utf8"),
+        timedOut,
+        outputLimitExceeded,
+      });
+    });
+  });
+}
 
 describe("publish script early parser (copied script, inert commands)", () => {
   let root: string;
@@ -79,15 +149,16 @@ describe("publish script early parser (copied script, inert commands)", () => {
     rmSync(root, { recursive: true, force: true });
   });
 
-  function run(args: string[]) {
-    const result = spawnSync("/bin/bash", ["--noprofile", "--norc", script, ...args], {
-      cwd: root,
+  async function run(args: string[]) {
+    const result = await runFixture(
+      "/bin/bash",
+      ["--noprofile", "--norc", script, ...args],
+      root,
       env,
-      encoding: "utf8",
-      timeout: 1500,
-      maxBuffer: 64 * 1024,
-    });
+    );
     expect(result.error).toBeUndefined();
+    expect(result.timedOut).toBe(false);
+    expect(result.outputLimitExceeded).toBe(false);
     expect(result.signal).toBeNull();
     expect(readFileSync(trace, "utf8")).toBe("");
     for (const file of preserved) expect(readFileSync(file.path).equals(file.bytes)).toBe(true);
@@ -121,24 +192,24 @@ describe("publish script early parser (copied script, inert commands)", () => {
   ];
 
   for (const fixture of unknownCases) {
-    test(`${fixture.name} refuses safely before any operation`, () => {
-      const result = run(fixture.args);
+    test(`${fixture.name} refuses safely before any operation`, async () => {
+      const result = await run(fixture.args);
       expect(result.status).toBe(1);
       expect(result.output).not.toContain(fixture.sentinel);
       expect(result.output).toContain("unknown argument (try --help)");
     });
   }
 
-  test("help exits successfully before any operation", () => {
-    const result = run(["--help"]);
+  test("help exits successfully before any operation", async () => {
+    const result = await run(["--help"]);
     expect(result.status).toBe(0);
     expect(result.output).toContain("Usage: scripts/publish.sh");
     expect(result.output).toContain("--version");
     expect(result.output).toContain("--yes");
   });
 
-  test("known flags followed by short help retain early success", () => {
-    const result = run(["--version", "0.2.1", "--yes", "-h"]);
+  test("known flags followed by short help retain early success", async () => {
+    const result = await run(["--version", "0.2.1", "--yes", "-h"]);
     expect(result.status).toBe(0);
     expect(result.output).toContain("Usage: scripts/publish.sh");
   });
@@ -169,19 +240,16 @@ describe("publish script early parser (copied script, inert commands)", () => {
     return { ...identity, bytes: readFileSync(path).toString("hex") };
   }
 
-  function runBackupCase() {
-    const result = spawnSync(
+  async function runBackupCase() {
+    const result = await runFixture(
       "/bin/bash",
       ["--noprofile", "--norc", script, "--version", "0.2.1", "--yes"],
-      {
-        cwd: root,
-        env,
-        encoding: "utf8",
-        timeout: 1500,
-        maxBuffer: 64 * 1024,
-      },
+      root,
+      env,
     );
     expect(result.error).toBeUndefined();
+    expect(result.timedOut).toBe(false);
+    expect(result.outputLimitExceeded).toBe(false);
     expect(result.signal).toBeNull();
     for (const file of preserved.filter((file) => file.path.endsWith("package.json"))) {
       expect(readFileSync(file.path).equals(file.bytes)).toBe(true);
@@ -192,7 +260,7 @@ describe("publish script early parser (copied script, inert commands)", () => {
   const backupKinds = ["regular", "directory", "symlink", "dangling symlink"] as const;
   for (const name of ["core", "mcp", "cli"]) {
     for (const kind of backupKinds) {
-      test(`pre-existing ${name} ${kind} backup refuses before any operation`, () => {
+      test(`pre-existing ${name} ${kind} backup refuses before any operation`, async () => {
         // Only this position has a backup, so an earlier-package check cannot mask it.
         removeFixtureBackups();
         const backup = join(root, "packages", name, "package.json.bak");
@@ -216,7 +284,7 @@ describe("publish script early parser (copied script, inert commands)", () => {
         }
         const before = backupSnapshot(backup);
         const targetBefore = backupSnapshot(target);
-        const result = runBackupCase();
+        const result = await runBackupCase();
         expect(result.status).toBe(1);
         expect(result.output).toContain("existing package backup; refusing to overwrite");
         expect(readFileSync(trace, "utf8")).toBe("");
@@ -226,19 +294,19 @@ describe("publish script early parser (copied script, inert commands)", () => {
     }
   }
 
-  test("all three existing backups remain intact on refusal", () => {
+  test("all three existing backups remain intact on refusal", async () => {
     const backups = ["core", "mcp", "cli"].map((name) =>
       join(root, "packages", name, "package.json.bak"),
     );
     const before = backups.map(backupSnapshot);
-    const result = runBackupCase();
+    const result = await runBackupCase();
     expect(result.status).toBe(1);
     expect(result.output).toContain("existing package backup; refusing to overwrite");
     expect(readFileSync(trace, "utf8")).toBe("");
     expect(backups.map(backupSnapshot)).toEqual(before);
   });
 
-  test("without backups a valid version reaches the original inert copy boundary", () => {
+  test("without backups a valid version reaches the original inert copy boundary", async () => {
     removeFixtureBackups();
     // A natural first-copy failure has the same final exit on supported Bash versions.
     writeFileSync(
@@ -246,7 +314,7 @@ describe("publish script early parser (copied script, inert commands)", () => {
       `#!/bin/bash\nprintf '%s\\n' 'cp' >> "$SCRIPT_FIXTURE_TRACE"\nexit 1\n`,
       { mode: 0o700 },
     );
-    const result = runBackupCase();
+    const result = await runBackupCase();
     expect(result.status).toBe(1);
     expect(readFileSync(trace, "utf8")).toBe("cp\n");
     expect(result.output).not.toContain("existing package backup; refusing to overwrite");
