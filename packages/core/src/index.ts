@@ -13,6 +13,7 @@ export type { PackageManager } from "./pm-detect.ts";
 export * from "./phantom.ts";
 export * from "./providers/_base.ts";
 export { providers, getProvider, listProviderNames } from "./providers/index.ts";
+export { takeRevealRefusals } from "./providers/_helpers.ts";
 export * from "./errors.ts";
 export * from "./templates.ts";
 export * from "./pipeline.ts";

@@ -1,5 +1,6 @@
 import {
   type ProviderContext,
+  type ServiceEntry,
   addService,
   getProvider,
   isPhantomInstalled,
@@ -7,21 +8,32 @@ import {
   listSecrets,
   readConfig,
   scanSource,
+  takeRevealRefusals,
 } from "@ashlr/stack-core";
 import { defineCommand } from "citty";
 import { requirePhantom } from "../lib/phantom-preflight.ts";
 import { colors, intro, logEvent, outro, outroError, prompts, spinnerBridge } from "../ui.ts";
 
+export interface ServiceCheck {
+  name: string;
+  status: "ok" | "warn" | "error" | "unchecked";
+  detail?: string;
+  latencyMs?: number;
+}
+
 interface DoctorReport {
   project: string;
   path: string;
-  services: Array<{
-    name: string;
-    status: "ok" | "warn" | "error" | "unchecked";
-    detail?: string;
-    latencyMs?: number;
-  }>;
+  services: ServiceCheck[];
 }
+
+/**
+ * Phantom Secrets >= 0.7.3 reveals values only into an attached terminal, so a
+ * healthcheck that needs a stored token cannot read it from here. Such a
+ * service is reported `unchecked` (stored, not verified), never "missing".
+ */
+export const UNREADABLE_DETAIL =
+  "stored in Phantom; live check skipped because Phantom reveals values only in an attached terminal (run `phantom validate --check-all` there)";
 
 export interface ReconcileReport {
   configured: string[];
@@ -207,35 +219,29 @@ async function runDoctor(
     log: json ? () => {} : logEvent,
   };
 
+  // Names only. Unknown inventory (older Phantom, uninitialized project)
+  // leaves every verdict to the provider's own healthcheck.
+  const inventory = await listSecrets(cwd)
+    .then((names) => new Set(names))
+    .catch(() => undefined);
+
   const failingNames: string[] = [];
   for (const [name, entry] of services) {
     const spinner = json ? undefined : prompts.spinner();
     spinner?.start(`Checking ${name}…`);
-    try {
-      const provider = await getProvider(name);
-      if (!provider.healthcheck) {
-        report.services.push({ name, status: "unchecked" });
-        spinner?.stop(colors.dim(`  ${name}: no healthcheck implemented`));
-        continue;
-      }
-      const status = await provider.healthcheck(ctx, entry);
-      if (status.kind === "ok") {
-        report.services.push({ name, status: "ok", latencyMs: status.latencyMs });
-        spinner?.stop(
-          `  ${colors.green("●")} ${name}${status.latencyMs ? colors.dim(` (${status.latencyMs}ms)`) : ""}`,
-        );
-      } else if (status.kind === "warn") {
-        report.services.push({ name, status: "warn", detail: status.detail });
-        spinner?.stop(`  ${colors.yellow("●")} ${name}: ${status.detail}`);
-      } else {
-        failingNames.push(name);
-        report.services.push({ name, status: "error", detail: status.detail });
-        spinner?.stop(`  ${colors.red("●")} ${name}: ${status.detail}`);
-      }
-    } catch (err) {
-      failingNames.push(name);
-      report.services.push({ name, status: "error", detail: (err as Error).message });
-      spinner?.stop(`  ${colors.red("●")} ${name}: ${(err as Error).message}`);
+    const check = await checkService(name, entry, ctx, inventory);
+    report.services.push(check);
+    if (check.status === "error") failingNames.push(name);
+    if (check.status === "ok") {
+      spinner?.stop(
+        `  ${colors.green("●")} ${name}${check.latencyMs ? colors.dim(` (${check.latencyMs}ms)`) : ""}`,
+      );
+    } else if (check.status === "warn") {
+      spinner?.stop(`  ${colors.yellow("●")} ${name}: ${check.detail}`);
+    } else if (check.status === "unchecked") {
+      spinner?.stop(colors.dim(`  ${name}: ${check.detail ?? "no healthcheck implemented"}`));
+    } else {
+      spinner?.stop(`  ${colors.red("●")} ${name}: ${check.detail}`);
     }
   }
 
@@ -293,4 +299,34 @@ async function runDoctor(
   }
 
   return report;
+}
+
+/**
+ * One service's doctor verdict. `inventory` is the set of names in the
+ * Phantom vault, or undefined when it could not be read.
+ */
+export async function checkService(
+  name: string,
+  entry: ServiceEntry,
+  ctx: ProviderContext,
+  inventory: Set<string> | undefined,
+): Promise<ServiceCheck> {
+  try {
+    const provider = await getProvider(name);
+    if (!provider.healthcheck) {
+      return { name, status: "unchecked", detail: "no healthcheck implemented" };
+    }
+    takeRevealRefusals();
+    const status = await provider.healthcheck(ctx, entry);
+    const refused = takeRevealRefusals();
+    if (status.kind === "ok") return { name, status: "ok", latencyMs: status.latencyMs };
+    if (status.kind === "warn") return { name, status: "warn", detail: status.detail };
+    // The provider could not read a token Phantom holds: unverified, not broken.
+    if (inventory && refused.length > 0 && refused.every((secret) => inventory.has(secret))) {
+      return { name, status: "unchecked", detail: `${refused.join(", ")} ${UNREADABLE_DETAIL}` };
+    }
+    return { name, status: "error", detail: status.detail };
+  } catch (err) {
+    return { name, status: "error", detail: (err as Error).message };
+  }
 }

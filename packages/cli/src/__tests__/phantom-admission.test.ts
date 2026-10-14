@@ -57,8 +57,13 @@ describe("CLI Phantom admission with an inert producer", () => {
   afterEach(() => rmSync(root, { recursive: true, force: true }));
 
   function producer(
-    opts: { list?: "known" | "failed" | "malformed" | "wrongshape"; initialized?: boolean } = {},
+    opts: {
+      list?: "known" | "failed" | "malformed" | "wrongshape";
+      initialized?: boolean;
+      names?: string[];
+    } = {},
   ): void {
+    const known = JSON.stringify((opts.names ?? ["OPENAI_API_KEY"]).map((name) => ({ name })));
     const list =
       opts.list === "failed"
         ? "exit 9"
@@ -66,7 +71,7 @@ describe("CLI Phantom admission with an inert producer", () => {
           ? "echo not-json"
           : opts.list === "wrongshape"
             ? "echo '[\"OPENAI_API_KEY\"]'"
-            : `if [ "$PWD" = ${quote(target)} ]; then echo '[{"name":"OPENAI_API_KEY"}]'; else echo '[]'; fi`;
+            : `if [ "$PWD" = ${quote(target)} ]; then echo ${quote(known)}; else echo '[]'; fi`;
     const script = `#!/bin/sh
 printf '%s\\n' "$1" >> ${quote(log)}
 case "$1" in
@@ -102,11 +107,27 @@ esac
     return { code: result.status, output: result.stdout + result.stderr };
   }
 
-  test("doctor --all --fix screens the target vault, not the launch directory", () => {
+  test("doctor reports a stored token it cannot reveal as unchecked, not failed", () => {
     producer();
     const result = run(["doctor", "--all", "--fix"], launch);
+    expect(result.code).toBe(0);
+    expect(result.output).toContain("OPENAI_API_KEY stored in Phantom; live check skipped");
+    expect(result.output).not.toContain("missing from vault");
+    expect(result.output).not.toContain("Attempting remediation");
+    expect(readFileSync(log, "utf8")).not.toMatch(/^add$|^init$/m);
+  });
+
+  test("doctor --all --fix screens the target vault, not the launch directory", () => {
+    // OPENAI_API_KEY is absent (a real failure); OPENAI_ORG_ID is still stored,
+    // so re-running setup would collide with create-only Phantom.
+    writeFileSync(
+      join(target, ".stack.toml"),
+      '[stack]\nversion = "1"\n[services.openai]\nprovider = "openai"\nsecrets = ["OPENAI_API_KEY", "OPENAI_ORG_ID"]\n',
+    );
+    producer({ names: ["OPENAI_ORG_ID"] });
+    const result = run(["doctor", "--all", "--fix"], launch);
     expect(result.code).toBe(1);
-    expect(result.output).toContain("skipped — still stored in Phantom: OPENAI_API_KEY");
+    expect(result.output).toContain("skipped — still stored in Phantom: OPENAI_ORG_ID");
     expect(result.output).not.toContain("Re-running openai");
     expect(readFileSync(log, "utf8")).not.toMatch(/^add$|^init$/m);
   });
