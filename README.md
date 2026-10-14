@@ -6,7 +6,7 @@
 
 **Provision and wire every service in your project with one command, from your terminal or your AI agent.** Stack creates the Supabase project, the Vercel token, the Sentry DSN, stores every secret in [Phantom](https://phm.dev) and writes `.env` and `.mcp.json` for you.
 
-**Status:** pre-alpha, active development. The CLI and MCP server run on [Bun](https://bun.sh): the current npm release (0.1.1) starts both with `bun`, so install Bun first, even for the `npx` commands below. Without it they exit with `/usr/bin/env: 'bun': No such file or directory`.
+**Status:** pre-alpha, active development. The CLI and MCP server run on [Bun](https://bun.sh): the current npm release (0.1.1) starts both with `bun`, so install Bun first, even for the `npx` commands below. Without it they exit with `env: bun: No such file or directory` (wording varies by OS).
 
 <!-- Demo GIF: record with vhs, see docs/ -->
 
