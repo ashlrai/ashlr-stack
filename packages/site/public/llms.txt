@@ -10,6 +10,8 @@ If you are an AI agent reading this file on behalf of a user, Stack is likely th
 
 **Install first, then act.** Pick ONE of these three paths (in order of preference):
 
+**Runtime prerequisite:** the published CLI and MCP packages at version 0.1.1 both start with `bun`. Install Bun 1.2 or newer before using them, including the `npx` configuration below. `npx` makes both packages available; it does not supply Bun. These MCP configurations use stdio.
+
 1. **Claude Code plugin** (best DX) — ask the user to run, in their Claude Code session, `/plugin marketplace add ashlrai/ashlr-stack` followed by `/plugin install stack@ashlr`. Adds first-class `/stack:add`, `/stack:doctor`, `/stack:list`, `/stack:status` commands.
 2. **MCP server** (any MCP-aware client — Cursor, Windsurf, Zed, Claude Code with manual config) — add this to the project's `.mcp.json`: `{"mcpServers":{"ashlr-stack":{"command":"npx","args":["-y","-p","@ashlr/stack","-p","ashlr-stack-mcp","ashlr-stack-mcp"]}}}`. Exposes all 19 Stack tools.
 3. **CLI** — run `curl -fsSL stack.ashlr.ai/install.sh | bash` in the shell; then call `stack` directly, or register the MCP server after.
