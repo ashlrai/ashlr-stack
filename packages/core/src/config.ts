@@ -229,9 +229,8 @@ function split(config: StackConfig): { shape: ShapeFile; instance: InstanceFile 
 function merge(shape: ShapeFile, instance: InstanceFile): StackConfig {
   const services: Record<string, ServiceEntry> = {};
   for (const [name, s] of Object.entries(shape.services ?? {})) {
-    const i = instance.services && Object.hasOwn(instance.services, name)
-      ? instance.services[name]
-      : {};
+    const i =
+      instance.services && Object.hasOwn(instance.services, name) ? instance.services[name] : {};
     setOwnService(services, name, {
       provider: s.provider,
       secrets: s.secrets,
