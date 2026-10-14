@@ -3,7 +3,7 @@ import { resolveOAuthClientId } from "../env.ts";
 import { StackError } from "../errors.ts";
 import { fetchWithRetry } from "../http.ts";
 import { runPkceFlow } from "../oauth.ts";
-import { addSecret, exec as phantomExec } from "../phantom.ts";
+import { exec as phantomExec } from "../phantom.ts";
 import type {
   AuthHandle,
   HealthStatus,
@@ -13,6 +13,11 @@ import type {
   ProvisionOpts,
   Resource,
 } from "./_base.ts";
+import {
+  acceptVerifiedExisting,
+  carryResourceCredential,
+  storeProviderSecret,
+} from "./_credential-stage.ts";
 import { promptSecret, tryRevealSecret } from "./_helpers.ts";
 
 /**
@@ -37,10 +42,11 @@ const supabase: Provider = {
     const clientId = resolveOAuthClientId("supabase", process.env.SUPABASE_STACK_CLIENT_ID);
 
     // Path A — cached PAT from a previous login
-    const cached = await tryRevealSecret(STACK_PAT_SECRET);
+    const cached = await tryRevealSecret(STACK_PAT_SECRET, ctx);
     if (cached) {
       const identity = await fetchIdentity(cached);
       if (identity) {
+        acceptVerifiedExisting(ctx, STACK_PAT_SECRET, cached);
         ctx.log({
           level: "info",
           msg: `Reusing cached Supabase token for ${identity.email ?? identity.id}`,
@@ -59,8 +65,10 @@ const supabase: Provider = {
         tokenUrl: `${API}/v1/oauth/token`,
       });
       const token = tokenResponse.access_token;
-      await addSecret(STACK_PAT_SECRET, token);
       const identity = await fetchIdentity(token);
+      if (!identity)
+        throw new StackError("SUPABASE_AUTH_INVALID", "Supabase rejected that access token.");
+      await storeProviderSecret(ctx, STACK_PAT_SECRET, token);
       return {
         token,
         identity,
@@ -88,7 +96,7 @@ const supabase: Provider = {
     const identity = await fetchIdentity(token);
     if (!identity)
       throw new StackError("SUPABASE_AUTH_INVALID", "Supabase rejected that access token.");
-    await addSecret(STACK_PAT_SECRET, token);
+    await storeProviderSecret(ctx, STACK_PAT_SECRET, token);
     return { token, identity };
   },
 
@@ -139,13 +147,13 @@ const supabase: Provider = {
       );
     }
     const project = (await res.json()) as SupabaseProject;
-    // Stash the DB password as a secret too — it's otherwise unrecoverable.
-    await addSecret(`SUPABASE_DB_PASSWORD_${project.id}`, dbPass);
-    return toResource(project);
+    const resource = toResource(project);
+    await carryResourceCredential(ctx, resource, `SUPABASE_DB_PASSWORD_${project.id}`, dbPass);
+    return resource;
   },
 
   async materialize(
-    _ctx: ProviderContext,
+    ctx: ProviderContext,
     resource: Resource,
     auth: AuthHandle,
   ): Promise<Materialized> {
@@ -178,9 +186,9 @@ const supabase: Provider = {
     };
   },
 
-  async healthcheck(_ctx: ProviderContext, entry: ServiceEntry): Promise<HealthStatus> {
+  async healthcheck(ctx: ProviderContext, entry: ServiceEntry): Promise<HealthStatus> {
     if (!entry.resource_id) return { kind: "error", detail: "missing resource_id" };
-    const anon = await tryRevealSecret("SUPABASE_ANON_KEY");
+    const anon = await tryRevealSecret("SUPABASE_ANON_KEY", ctx);
     if (!anon) return { kind: "error", detail: "SUPABASE_ANON_KEY missing from vault" };
     const start = Date.now();
     try {
@@ -200,25 +208,26 @@ const supabase: Provider = {
     return entry.resource_id ? dashboardUrl(entry.resource_id) : "https://supabase.com/dashboard";
   },
 
-  async deprovision(ctx: ProviderContext, auth: AuthHandle, resourceId: string): Promise<void> {
+  async deprovision(_ctx: ProviderContext, auth: AuthHandle, resourceId: string): Promise<void> {
+    let res: Response;
     try {
-      const res = await fetch(`${API}/v1/projects/${resourceId}`, {
+      res = await fetch(`${API}/v1/projects/${resourceId}`, {
         method: "DELETE",
         headers: authHeaders(auth.token),
       });
-      if (res.status === 404) return; // already gone — treat as success
-      if (!res.ok) {
-        ctx.log({
-          level: "warn",
-          msg: `Supabase deprovision returned ${res.status} for project ${resourceId}; resource may need manual cleanup.`,
-        });
-      }
-    } catch (err) {
-      ctx.log({
-        level: "warn",
-        msg: `Supabase deprovision failed for ${resourceId}: ${(err as Error).message}. Resource may need manual cleanup.`,
-      });
+    } catch {
+      throw new StackError(
+        "SUPABASE_DELETE_UNCONFIRMED",
+        "Supabase resource deletion could not be confirmed.",
+      );
     }
+    // Admit only documented completion statuses; other 2xx/404 are unconfirmed.
+    // https://supabase.com/docs/reference/api/v1-delete-a-project
+    if (res.status === 200) return;
+    throw new StackError(
+      "SUPABASE_DELETE_FAILED",
+      `Supabase resource deletion failed (HTTP ${res.status}).`,
+    );
   },
 };
 

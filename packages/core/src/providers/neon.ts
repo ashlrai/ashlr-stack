@@ -1,7 +1,6 @@
 import type { ServiceEntry } from "../config.ts";
 import { StackError } from "../errors.ts";
 import { fetchWithRetry } from "../http.ts";
-import { addSecret } from "../phantom.ts";
 import type {
   AuthHandle,
   HealthStatus,
@@ -11,6 +10,7 @@ import type {
   ProvisionOpts,
   Resource,
 } from "./_base.ts";
+import { acceptVerifiedExisting, storeProviderSecret } from "./_credential-stage.ts";
 import { promptSecret, tryRevealSecret } from "./_helpers.ts";
 
 /**
@@ -33,10 +33,13 @@ const neon: Provider = {
   docs: "https://neon.tech/docs/reference/api-reference",
 
   async login(ctx: ProviderContext): Promise<AuthHandle> {
-    const cached = await tryRevealSecret(TOKEN_SECRET);
+    const cached = await tryRevealSecret(TOKEN_SECRET, ctx);
     if (cached) {
       const identity = await fetchIdentity(cached);
-      if (identity) return { token: cached, identity };
+      if (identity) {
+        acceptVerifiedExisting(ctx, TOKEN_SECRET, cached);
+        return { token: cached, identity };
+      }
       ctx.log({ level: "warn", msg: "Cached Neon key invalid; re-entering." });
     }
     if (!ctx.interactive)
@@ -47,7 +50,7 @@ const neon: Provider = {
     });
     const identity = await fetchIdentity(token);
     if (!identity) throw new StackError("NEON_AUTH_INVALID", "Neon rejected that API key.");
-    await addSecret(TOKEN_SECRET, token);
+    await storeProviderSecret(ctx, TOKEN_SECRET, token);
     return { token, identity };
   },
 
@@ -77,18 +80,12 @@ const neon: Provider = {
       project: NeonProject;
       connection_uris?: Array<{ connection_uri: string }>;
     };
-    // Stash the fresh connection URI keyed by project id so it isn't confused
-    // with another project's DATABASE_URL. The canonical DATABASE_URL slot is
-    // written once, by the pipeline from materialize(): Phantom never replaces
-    // a stored name, and this point is outside the pipeline's rollback.
-    if (body.connection_uris?.[0]?.connection_uri) {
-      const uri = body.connection_uris[0].connection_uri;
-      await addSecret(`NEON_DATABASE_URL_${body.project.id}`, uri);
-    }
+    // Return the created resource before any vault write. materialize() obtains
+    // its fresh URI from the API; the pipeline owns persistence and rollback.
     return toResource(body.project);
   },
 
-  async materialize(_ctx, resource, auth): Promise<Materialized> {
+  async materialize(ctx, resource, auth): Promise<Materialized> {
     // Always fetch the connection URI from the API — the vault's DATABASE_URL
     // is a generic key that may belong to another project or another provider.
     // Don't trust it as a cache here.
@@ -107,8 +104,8 @@ const neon: Provider = {
     };
   },
 
-  async healthcheck(_ctx, entry: ServiceEntry): Promise<HealthStatus> {
-    const token = await tryRevealSecret(TOKEN_SECRET);
+  async healthcheck(ctx, entry: ServiceEntry): Promise<HealthStatus> {
+    const token = await tryRevealSecret(TOKEN_SECRET, ctx);
     if (!token) return { kind: "error", detail: `${TOKEN_SECRET} missing from vault` };
     if (!entry.resource_id) return { kind: "warn", detail: "no resource_id" };
     const start = Date.now();
@@ -123,25 +120,26 @@ const neon: Provider = {
       : "https://console.neon.tech";
   },
 
-  async deprovision(ctx: ProviderContext, auth: AuthHandle, resourceId: string): Promise<void> {
+  async deprovision(_ctx: ProviderContext, auth: AuthHandle, resourceId: string): Promise<void> {
+    let res: Response;
     try {
-      const res = await fetch(`${API}/projects/${resourceId}`, {
+      res = await fetch(`${API}/projects/${resourceId}`, {
         method: "DELETE",
         headers: authHeaders(auth.token),
       });
-      if (res.status === 404) return; // already gone
-      if (!res.ok) {
-        ctx.log({
-          level: "warn",
-          msg: `Neon deprovision returned ${res.status} for project ${resourceId}; resource may need manual cleanup.`,
-        });
-      }
-    } catch (err) {
-      ctx.log({
-        level: "warn",
-        msg: `Neon deprovision failed for ${resourceId}: ${(err as Error).message}. Resource may need manual cleanup.`,
-      });
+    } catch {
+      // Transport details can contain credentials; absence is unconfirmed.
+      throw new StackError(
+        "NEON_DELETE_UNCONFIRMED",
+        "Neon resource deletion could not be confirmed.",
+      );
     }
+    if (res.status === 404 || res.ok) return;
+    // Keep the bounded status, never the remote response body or secret values.
+    throw new StackError(
+      "NEON_DELETE_FAILED",
+      `Neon resource deletion failed (HTTP ${res.status}).`,
+    );
   },
 };
 

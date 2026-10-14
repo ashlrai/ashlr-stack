@@ -50,7 +50,7 @@ describe("phantom wrapper against the fake harness", () => {
     expect((await readVault(h.dir)).DIRECT_KEY).toBe("first");
   });
 
-  test("signal-terminated add fails and never mints an idempotence digest", async () => {
+  test("signal-terminated add fails and never authorizes a later collision", async () => {
     const bin = join(h.dir, "phantom");
     const original = readFileSync(bin, "utf8");
     writeFileSync(
@@ -68,7 +68,7 @@ describe("phantom wrapper against the fake harness", () => {
     expect((await readVault(h.dir)).NEW_KEY).toBe("foreign");
   });
 
-  test("signal-terminated remove reports failure and preserves this process's digest", async () => {
+  test("signal-terminated remove reports failure; subsequent collision still refuses", async () => {
     await addSecret("NEW_KEY", "same");
     const bin = join(h.dir, "phantom");
     const original = readFileSync(bin, "utf8");
@@ -77,11 +77,13 @@ describe("phantom wrapper against the fake harness", () => {
     expect(result).toMatchObject({ code: 1, signal: "SIGTERM", completion: "signal" });
     expect(await removeSecret("NEW_KEY")).toBe(false);
     writeFileSync(bin, original);
-    await expect(addSecret("NEW_KEY", "same")).resolves.toBeUndefined();
+    await expect(addSecret("NEW_KEY", "same")).rejects.toMatchObject({
+      code: "PHANTOM_SECRET_EXISTS",
+    });
     expect((await readVault(h.dir)).NEW_KEY).toBe("same");
   });
 
-  test("collision wording from a killed cached repeat never becomes idempotent success", async () => {
+  test("collision wording from a killed repeat never becomes confirmed success", async () => {
     await addSecret("NEW_KEY", "same");
     const bin = join(h.dir, "phantom");
     const original = readFileSync(bin, "utf8");
@@ -91,7 +93,9 @@ describe("phantom wrapper against the fake harness", () => {
       message: "Phantom add did not complete; secret storage is unconfirmed.",
     });
     writeFileSync(bin, original);
-    await expect(addSecret("NEW_KEY", "same")).resolves.toBeUndefined();
+    await expect(addSecret("NEW_KEY", "same")).rejects.toMatchObject({
+      code: "PHANTOM_SECRET_EXISTS",
+    });
     expect((await readVault(h.dir)).NEW_KEY).toBe("same");
   });
 
@@ -127,9 +131,11 @@ describe("phantom wrapper against the fake harness", () => {
     expect((await readVault(h.dir)).EXISTING_KEY).toBe("preset-value");
   });
 
-  test("addSecret repeating this process's identical write is a no-op", async () => {
+  test("addSecret refuses identical and different completed repeats", async () => {
     await addSecret("NEW_KEY", "same");
-    await addSecret("NEW_KEY", "same");
+    await expect(addSecret("NEW_KEY", "same")).rejects.toMatchObject({
+      code: "PHANTOM_SECRET_EXISTS",
+    });
     await expect(addSecret("NEW_KEY", "different")).rejects.toMatchObject({
       code: "PHANTOM_SECRET_EXISTS",
     });

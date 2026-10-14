@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { emptyConfig, readConfig, writeConfig } from "../config.ts";
@@ -311,5 +311,199 @@ describe("addService rollback", () => {
     expect(vault.HAPPY_KEY).toBe("happy-val");
 
     Reflect.deleteProperty(providers, "happysvc");
+  });
+  for (const supportsTeardown of [true, false]) {
+    test(`preserves explicitly attached upstream even when returned ID differs (teardown=${supportsTeardown})`, async () => {
+      const name = "attachedfixture";
+      const config = await readConfig(cwd);
+      config.services[name] = {
+        provider: name,
+        resource_id: "existing-resource",
+        secrets: [],
+        created_at: "2026-01-01T00:00:00.000Z",
+      };
+      await writeConfig(config, cwd);
+      const shapeBefore = readFileSync(join(cwd, ".stack.toml"));
+      const instanceBefore = readFileSync(join(cwd, ".stack.local.toml"));
+      let deleted = 0;
+      let requested: string | undefined;
+      const opts = {
+        providerName: name,
+        cwd,
+        interactive: false,
+        existingResourceId: "existing-resource",
+      };
+      const provider: Provider = {
+        name,
+        displayName: "Attached Fixture",
+        category: "database",
+        authKind: "api_key",
+        async login() {
+          opts.existingResourceId = "mutated-after-await";
+          return { token: "synthetic-key" };
+        },
+        async provision(_ctx, _auth, provisionOpts) {
+          requested = provisionOpts.existingResourceId;
+          return { id: "different-returned-id", displayName: "existing" };
+        },
+        async materialize() {
+          throw new Error("synthetic original materialize failure");
+        },
+        ...(supportsTeardown
+          ? {
+              async deprovision() {
+                deleted++;
+              },
+            }
+          : {}),
+      };
+      providers[name] = async () => provider;
+      try {
+        const error = await addService(opts).catch((err: Error) => err);
+        expect(error).toMatchObject({ code: "ADD_SERVICE_PARTIAL_FAILURE" });
+        expect((error as Error).message).toContain("preserved");
+        expect((error as Error).message).toContain("synthetic original materialize failure");
+        expect((error as Error).message).not.toMatch(/torn down|delete it manually|created/);
+        expect(deleted).toBe(0);
+        expect(requested).toBe("existing-resource");
+        expect(readFileSync(join(cwd, ".stack.toml"))).toEqual(shapeBefore);
+        expect(readFileSync(join(cwd, ".stack.local.toml"))).toEqual(instanceBefore);
+      } finally {
+        Reflect.deleteProperty(providers, name);
+      }
+    });
+  }
+
+  test("attached secret collision preserves upstream and names the new secret kept headlessly", async () => {
+    const name = "attachedcollision";
+    writeFileSync(h.vaultPath, JSON.stringify({ EXISTING_SLOT: "preexisting-synthetic-value" }));
+    const shapeBefore = readFileSync(join(cwd, ".stack.toml"));
+    const instanceBefore = readFileSync(join(cwd, ".stack.local.toml"));
+    let deleted = 0;
+    providers[name] = async () => ({
+      name,
+      displayName: "Attached Collision",
+      category: "database",
+      authKind: "api_key",
+      async login() {
+        return { token: "synthetic-key" };
+      },
+      async provision() {
+        return { id: "attached-resource", displayName: "existing" };
+      },
+      async materialize() {
+        return { secrets: { NEW_SLOT: "new-synthetic-value", EXISTING_SLOT: "must-not-replace" } };
+      },
+      async deprovision() {
+        deleted++;
+      },
+    });
+    try {
+      const error = await addService({
+        providerName: name,
+        cwd,
+        interactive: false,
+        existingResourceId: "attached-resource",
+      }).catch((err: Error) => err);
+      expect(error).toMatchObject({ code: "ADD_SERVICE_PARTIAL_FAILURE" });
+      expect((error as Error).message).toContain("preserved");
+      expect((error as Error).message).toContain("Phantom kept NEW_SLOT");
+      expect(deleted).toBe(0);
+      expect(await readVault(h.dir)).toEqual({
+        EXISTING_SLOT: "preexisting-synthetic-value",
+        NEW_SLOT: "new-synthetic-value",
+      });
+      expect(readFileSync(join(cwd, ".stack.toml"))).toEqual(shapeBefore);
+      expect(readFileSync(join(cwd, ".stack.local.toml"))).toEqual(instanceBefore);
+    } finally {
+      Reflect.deleteProperty(providers, name);
+    }
+  });
+
+  test("created resource teardown failure is partial and retains the original operation error", async () => {
+    const name = "failedteardown";
+    let deleted = 0;
+    providers[name] = async () => ({
+      name,
+      displayName: "Created Fixture",
+      category: "database",
+      authKind: "api_key",
+      async login() {
+        return { token: "synthetic-key" };
+      },
+      async provision(_ctx, _auth, opts) {
+        expect(opts.existingResourceId).toBe("");
+        return { id: "created-resource", displayName: "new" };
+      },
+      async materialize() {
+        throw new Error("original operation failed");
+      },
+      async deprovision() {
+        deleted++;
+        throw new Error("teardown unconfirmed");
+      },
+    });
+    try {
+      const error = await addService({
+        providerName: name,
+        cwd,
+        interactive: false,
+        existingResourceId: "",
+      }).catch((err: Error) => err);
+      expect(error).toMatchObject({ code: "ADD_SERVICE_PARTIAL_FAILURE" });
+      expect((error as Error).message).toContain("original operation failed");
+      expect((error as Error).message).toContain("teardown unconfirmed");
+      expect((error as Error).message).toContain("may still exist");
+      expect((error as Error).message).not.toContain("has been torn down");
+      expect(deleted).toBe(1);
+      expect((await readConfig(cwd)).services[name]).toBeUndefined();
+    } finally {
+      Reflect.deleteProperty(providers, name);
+    }
+  });
+  test("URI-like attachment identifiers are forwarded but never printed in the failure message", async () => {
+    const name = "attachedurifixture";
+    const existingResourceId =
+      "postgresql://fixture-user:password-sentinel@db.example.invalid/inert?credential=query-sentinel";
+    let requested: string | undefined;
+    let deleted = 0;
+    providers[name] = async () => ({
+      name,
+      displayName: "Attached URI Fixture",
+      category: "database",
+      authKind: "api_key",
+      async login() {
+        return { token: "synthetic-key" };
+      },
+      async provision(_ctx, _auth, opts) {
+        requested = opts.existingResourceId;
+        return { id: "safe-other-project", displayName: "existing" };
+      },
+      async materialize() {
+        throw new Error("synthetic upstream read failure");
+      },
+      async deprovision() {
+        deleted++;
+      },
+    });
+    try {
+      const error = await addService({
+        providerName: name,
+        cwd,
+        interactive: false,
+        existingResourceId,
+      }).catch((err: Error) => err);
+      expect(requested).toBe(existingResourceId);
+      expect(deleted).toBe(0);
+      expect(error).toMatchObject({ code: "ADD_SERVICE_PARTIAL_FAILURE" });
+      expect((error as Error).message).toContain("preserved");
+      expect((error as Error).message).toContain("synthetic upstream read failure");
+      expect((error as Error).message).not.toContain(existingResourceId);
+      expect((error as Error).message).not.toContain("password-sentinel");
+      expect((error as Error).message).not.toContain("query-sentinel");
+      expect((error as Error).message).not.toContain("fixture-user");
+    } finally {
+      Reflect.deleteProperty(providers, name);
+    }
   });
 });

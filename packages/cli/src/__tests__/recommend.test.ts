@@ -53,6 +53,14 @@ describe("stack recommend --json", () => {
     expect(hitNames.some((n: string) => ["clerk", "supabase"].includes(n))).toBe(true);
     expect(typeof payload.guidance).toBe("string");
     expect(payload.byCategory).toBeDefined();
+    const commandSection: string | undefined = payload.guidance
+      .split("Apply a chosen set with: ")[1]
+      ?.split(" (")[0];
+    expect(commandSection).toBeDefined();
+    const commands = commandSection?.split(" && ").map((command) => command.trim().split(/\s+/));
+    expect(commands).toEqual(
+      payload.hits.slice(0, 3).map((hit: { name: string }) => ["stack", "add", hit.name]),
+    );
   });
 
   it("narrows to a category filter", () => {

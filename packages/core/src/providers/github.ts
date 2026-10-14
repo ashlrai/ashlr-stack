@@ -2,7 +2,6 @@ import type { ServiceEntry } from "../config.ts";
 import { resolveOAuthClientId } from "../env.ts";
 import { StackError } from "../errors.ts";
 import { fetchWithRetry } from "../http.ts";
-import { addSecret } from "../phantom.ts";
 import type {
   AuthHandle,
   HealthStatus,
@@ -11,6 +10,7 @@ import type {
   ProviderContext,
   Resource,
 } from "./_base.ts";
+import { acceptVerifiedExisting, storeProviderSecret } from "./_credential-stage.ts";
 import { promptSecret, tryRevealSecret } from "./_helpers.ts";
 
 /**
@@ -32,10 +32,13 @@ const github: Provider = {
   docs: "https://docs.github.com/en/rest",
 
   async login(ctx: ProviderContext): Promise<AuthHandle> {
-    const cached = await tryRevealSecret(TOKEN_SECRET);
+    const cached = await tryRevealSecret(TOKEN_SECRET, ctx);
     if (cached) {
       const identity = await fetchUser(cached);
-      if (identity) return { token: cached, identity };
+      if (identity) {
+        acceptVerifiedExisting(ctx, TOKEN_SECRET, cached);
+        return { token: cached, identity };
+      }
       ctx.log({ level: "warn", msg: "Cached GitHub token invalid; re-authenticating." });
     }
 
@@ -48,7 +51,7 @@ const github: Provider = {
           "GITHUB_AUTH_INVALID",
           "GitHub accepted the code but rejected the token.",
         );
-      await addSecret(TOKEN_SECRET, token);
+      await storeProviderSecret(ctx, TOKEN_SECRET, token);
       return { token, identity };
     }
 
@@ -61,7 +64,7 @@ const github: Provider = {
     });
     const identity = await fetchUser(token);
     if (!identity) throw new StackError("GITHUB_AUTH_INVALID", "GitHub rejected that token.");
-    await addSecret(TOKEN_SECRET, token);
+    await storeProviderSecret(ctx, TOKEN_SECRET, token);
     return { token, identity };
   },
 
@@ -75,7 +78,7 @@ const github: Provider = {
     return { id: login, displayName: `@${login}` };
   },
 
-  async materialize(_ctx, _resource, auth): Promise<Materialized> {
+  async materialize(ctx, _resource, auth): Promise<Materialized> {
     return {
       secrets: { [TOKEN_SECRET]: auth.token },
       mcp: {
@@ -88,8 +91,8 @@ const github: Provider = {
     };
   },
 
-  async healthcheck(_ctx, _entry: ServiceEntry): Promise<HealthStatus> {
-    const token = await tryRevealSecret(TOKEN_SECRET);
+  async healthcheck(ctx, _entry: ServiceEntry): Promise<HealthStatus> {
+    const token = await tryRevealSecret(TOKEN_SECRET, ctx);
     if (!token) return { kind: "error", detail: `${TOKEN_SECRET} missing from vault` };
     const start = Date.now();
     const user = await fetchUser(token);

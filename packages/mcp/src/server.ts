@@ -18,6 +18,7 @@ import {
   ListToolsRequestSchema,
   ReadResourceRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
+import packageManifest from "../package.json";
 
 interface ToolDef {
   name: string;
@@ -303,12 +304,14 @@ function runStack(args: string[]): Promise<{ stdout: string; stderr: string; cod
           : (err as Error).message;
       resolve({ stdout: "", stderr: hint, code: 127 });
     });
-    child.on("close", (code) => resolve({ stdout, stderr, code: code ?? 0 }));
+    child.on("close", (code, signal) =>
+      resolve({ stdout, stderr, code: signal || code === null ? 1 : code }),
+    );
   });
 }
 
 const server = new Server(
-  { name: "ashlr-stack", version: "0.2.0" },
+  { name: "ashlr-stack", version: packageManifest.version },
   { capabilities: { tools: {}, resources: {} } },
 );
 

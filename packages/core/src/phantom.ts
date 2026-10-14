@@ -1,6 +1,4 @@
 import { spawn } from "node:child_process";
-import { createHash } from "node:crypto";
-import { resolve } from "node:path";
 import { PhantomNotInstalledError, StackError } from "./errors.ts";
 
 /**
@@ -110,27 +108,11 @@ export async function exec(args: string[], opts: ExecOptions = {}): Promise<Phan
 }
 
 /**
- * Digests of values this process stored, keyed by project dir + name. A
- * provider's `login()` persists a key and `materialize()` / the pipeline
- * store the same key again; Phantom is create-only, so the repeat must be a
- * no-op when (and only when) the value is identical. Digests, never values.
- */
-const storedThisProcess = new Map<string, string>();
-
-function storedKey(key: string, cwd?: string): string {
-  return `${resolve(cwd ?? process.cwd())}\0${key}`;
-}
-
-function digest(value: string): string {
-  return createHash("sha256").update(value).digest("hex");
-}
-
-/**
  * Store a NEW secret. The value goes over stdin (`phantom add KEY --stdin`):
  * Phantom Secrets >= 0.7.3 rejects a positional value because argv is visible
  * to process inspection. Phantom never replaces an existing name, so a
- * collision surfaces as `PHANTOM_SECRET_EXISTS` instead of a silent overwrite,
- * unless this process already stored the identical value under that name.
+ * every completed collision surfaces as `PHANTOM_SECRET_EXISTS`. Historical
+ * input equality is never evidence that the current vault still has that value.
  */
 export async function addSecret(key: string, value: string, cwd?: string): Promise<void> {
   // Phantom 0.7.9 reads one stdin line and strips CR/LF. Refuse values it
@@ -142,10 +124,9 @@ export async function addSecret(key: string, value: string, cwd?: string): Promi
     );
   }
   await assertPhantomInstalled();
-  const id = storedKey(key, cwd);
   const result = await exec(["add", key, "--stdin"], { cwd, stdin: value, allowFailure: true });
   // Collision wording from an interrupted child cannot attest a completed
-  // create-only refusal, even when our historical digest matches the input.
+  // create-only refusal.
   if (result.completion !== "exited") {
     throw new StackError(
       "PHANTOM_EXEC_FAILED",
@@ -153,12 +134,10 @@ export async function addSecret(key: string, value: string, cwd?: string): Promi
     );
   }
   if (result.code === 0) {
-    storedThisProcess.set(id, digest(value));
     return;
   }
   const detail = result.stderr.trim() || result.stdout.trim();
   if (/already protected|already exists/i.test(detail)) {
-    if (storedThisProcess.get(id) === digest(value)) return;
     throw new StackError(
       "PHANTOM_SECRET_EXISTS",
       `${key} is already stored in Phantom, and Phantom never replaces a stored secret. Run \`phantom remove ${key}\` in your terminal, then retry.`,
@@ -189,7 +168,6 @@ export async function removeSecret(
     interactive: opts.interactive === true,
   });
   const removed = result.code === 0 && result.completion === "exited";
-  if (removed) storedThisProcess.delete(storedKey(key, cwd));
   return removed;
 }
 
@@ -319,7 +297,6 @@ export async function syncToPlatform(
  */
 export function __resetPhantomCache(): void {
   cachedInstalled = undefined;
-  storedThisProcess.clear();
 }
 
 /**

@@ -105,11 +105,23 @@ describe.skipIf(!enabled)("phantom CLI contract (real binary)", () => {
     expect((await listSecrets(project)).sort()).toEqual(vaultNames());
   });
 
-  test("re-storing this process's identical value is a no-op (login → materialize → pipeline)", async () => {
+  test("completed identical creates refuse with typed errors and preserve the full name inventory", async () => {
     await addSecret("STACK_CONTRACT_C", SYNTHETIC_VALUE, project);
-    await addSecret("STACK_CONTRACT_C", SYNTHETIC_VALUE, project);
-    await addSecret("STACK_CONTRACT_C", SYNTHETIC_VALUE, project);
-    expect(vaultNames()).toContain("STACK_CONTRACT_C");
+    const names = vaultNames();
+    expect(names).toContain("STACK_CONTRACT_C");
+    for (let repeat = 0; repeat < 2; repeat++) {
+      let caught: unknown;
+      try {
+        await addSecret("STACK_CONTRACT_C", SYNTHETIC_VALUE, project);
+      } catch (err) {
+        caught = err;
+      }
+      expect(caught).toBeInstanceOf(StackError);
+      if (!(caught instanceof StackError)) throw new Error("Expected a typed collision.");
+      expect(caught.code).toBe("PHANTOM_SECRET_EXISTS");
+      expect(caught.message).not.toContain(SYNTHETIC_VALUE);
+      expect(vaultNames()).toEqual(names);
+    }
   });
 
   // Phantom offers no headless read, so only the name's survival is observable.

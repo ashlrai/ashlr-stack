@@ -8,10 +8,12 @@
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
-import { existsSync } from "node:fs";
+import { chmodSync, existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import packageManifest from "../package.json";
 
 const SERVER_PATH = join(import.meta.dir, "..", "dist", "server.js");
 
@@ -79,6 +81,10 @@ afterAll(async () => {
 });
 
 describe("MCP server smoke tests", () => {
+  test("initialize reports the source package version", () => {
+    expect(client.getServerVersion()?.version).toBe(packageManifest.version);
+  });
+
   test("tools/list returns a non-empty tools array", async () => {
     const response = await client.listTools();
     expect(Array.isArray(response.tools)).toBe(true);
@@ -128,6 +134,36 @@ describe("MCP server smoke tests", () => {
       const required = (tool.inputSchema as { required?: string[] }).required!;
       expect(Array.isArray(required)).toBe(true);
       expect(required.length).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe("MCP CLI completion", () => {
+  test.each([
+    { label: "completed success", script: "echo inert; exit 0", isError: false },
+    { label: "completed failure", script: "echo inert; exit 9", isError: true },
+    { label: "signal termination", script: "echo inert; kill -TERM $$", isError: true },
+  ])("$label is reported truthfully", async ({ script, isError }) => {
+    const root = mkdtempSync(join(tmpdir(), "stack-mcp-completion-"));
+    const fake = join(root, "stack");
+    writeFileSync(fake, `#!/bin/sh\n${script}\n`);
+    chmodSync(fake, 0o700);
+    const fixtureClient = new Client({ name: "inert-completion-test", version: "0.0.1" });
+    const fixtureTransport = new StdioClientTransport({
+      command: "node", args: [SERVER_PATH],
+      env: {
+        STACK_BIN: fake, HOME: root, TMPDIR: root,
+        PATH: process.env.PATH ?? "",
+      },
+    });
+    try {
+      await fixtureClient.connect(fixtureTransport);
+      const result = await fixtureClient.callTool({ name: "stack_providers", arguments: {} });
+      expect(result.isError).toBe(isError);
+      expect(result.content).toEqual([{ type: "text", text: "inert" }]);
+    } finally {
+      await fixtureClient.close();
+      rmSync(root, { recursive: true, force: true });
     }
   });
 });
