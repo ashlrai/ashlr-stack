@@ -1,7 +1,8 @@
-import { readConfig, removeSecret, writeConfig } from "@ashlr/stack-core";
+import { readConfig, writeConfig } from "@ashlr/stack-core";
 import { removeMcpEntry } from "@ashlr/stack-core/mcp-writer";
 import { addCommand } from "../commands/add.ts";
 import { colors, prompts } from "../ui.ts";
+import { removeVaultSecrets } from "./phantom-preflight.ts";
 
 /**
  * Minimal description of a provider to provision.
@@ -102,13 +103,8 @@ export async function rollbackProviders(names: string[]): Promise<void> {
     for (const name of names) {
       const entry = config.services[name];
       if (!entry) continue;
-      for (const secret of entry.secrets) {
-        try {
-          await removeSecret(secret);
-        } catch {
-          /* secret may already be gone; keep going */
-        }
-      }
+      // Rollback runs under a spinner: never hand Phantom the terminal here.
+      await removeVaultSecrets(entry.secrets, { interactive: false });
       if (entry.mcp) {
         try {
           await removeMcpEntry(entry.mcp);

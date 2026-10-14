@@ -5,14 +5,13 @@ import {
   findSwap,
   hasConfig,
   readConfig,
-  removeSecret,
   revealSecret,
   suggestSwaps,
   writeConfig,
 } from "@ashlr/stack-core";
 import { removeMcpEntry } from "@ashlr/stack-core/mcp-writer";
 import { defineCommand } from "citty";
-import { requirePhantom } from "../lib/phantom-preflight.ts";
+import { removeVaultSecrets, requirePhantom } from "../lib/phantom-preflight.ts";
 import { colors, intro, outro, outroError, prompts, spinnerBridge } from "../ui.ts";
 
 export const swapCommand = defineCommand({
@@ -217,13 +216,7 @@ export const swapCommand = defineCommand({
         const freshConfig = await readConfig();
         const entry = freshConfig.services[from];
         if (entry) {
-          for (const secret of entry.secrets) {
-            try {
-              await removeSecret(secret);
-            } catch {
-              /* best-effort */
-            }
-          }
+          await removeVaultSecrets(entry.secrets);
           if (entry.mcp) {
             try {
               await removeMcpEntry(entry.mcp);

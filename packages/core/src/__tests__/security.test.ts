@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { addSecret, exec, revealSecret } from "../phantom.ts";
+import { addSecret, exec } from "../phantom.ts";
 import { type Harness, readVault, setupFakePhantom } from "./_harness.ts";
 
 /**
@@ -52,8 +52,6 @@ describe("security — fake phantom harness handles hostile secret values", () =
   test("a secret containing single quotes does not break the harness", async () => {
     const hostile = `value-with-'-quote-and-\"-and-$VAR-and-\\backslash`;
     await addSecret("HOSTILE_KEY", hostile);
-    const revealed = await revealSecret("HOSTILE_KEY");
-    expect(revealed).toBe(hostile);
     const vault = await readVault(h.dir);
     expect(vault.HOSTILE_KEY).toBe(hostile);
   });

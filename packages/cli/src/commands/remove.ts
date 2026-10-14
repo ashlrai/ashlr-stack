@@ -1,7 +1,7 @@
-import { readConfig, removeSecret, scanSource, writeConfig } from "@ashlr/stack-core";
+import { readConfig, scanSource, writeConfig } from "@ashlr/stack-core";
 import { removeMcpEntry } from "@ashlr/stack-core/mcp-writer";
 import { defineCommand } from "citty";
-import { requirePhantom } from "../lib/phantom-preflight.ts";
+import { removeVaultSecrets, requirePhantom } from "../lib/phantom-preflight.ts";
 import { colors, intro, outro, outroError, prompts } from "../ui.ts";
 
 export const removeCommand = defineCommand({
@@ -100,10 +100,8 @@ async function runRemoveAllOrphans(keepRemote: boolean): Promise<void> {
   let totalSecrets = 0;
   for (const name of orphans) {
     const entry = config.services[name];
-    for (const secret of entry.secrets) {
-      await removeSecret(secret);
-      totalSecrets++;
-    }
+    const kept = await removeVaultSecrets(entry.secrets);
+    totalSecrets += entry.secrets.length - kept.length;
     if (entry.mcp) await removeMcpEntry(entry.mcp);
     delete config.services[name];
   }
@@ -137,9 +135,7 @@ async function runRemoveOne(serviceName: string, keepRemote: boolean): Promise<v
   }
 
   if (entry.secrets.length > 0) await requirePhantom();
-  for (const secret of entry.secrets) {
-    await removeSecret(secret);
-  }
+  await removeVaultSecrets(entry.secrets);
   if (entry.mcp) await removeMcpEntry(entry.mcp);
   delete config.services[serviceName];
   await writeConfig(config);
@@ -191,13 +187,14 @@ async function runRemoveAll(keepRemote: boolean): Promise<void> {
   }
 
   if (totalSecrets > 0) await requirePhantom();
+  let removedSecrets = 0;
   for (const name of serviceNames) {
     const entry = config.services[name];
-    for (const secret of entry.secrets) await removeSecret(secret);
+    removedSecrets += entry.secrets.length - (await removeVaultSecrets(entry.secrets)).length;
     if (entry.mcp) await removeMcpEntry(entry.mcp);
     delete config.services[name];
   }
   await writeConfig(config);
 
-  outro(colors.green(`Removed ${serviceNames.length} service(s), ${totalSecrets} secret(s).`));
+  outro(colors.green(`Removed ${serviceNames.length} service(s), ${removedSecrets} secret(s).`));
 }
