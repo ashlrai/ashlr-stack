@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   addSecret,
+  assertProjectInitialized,
+  completionForClose,
+  exec,
   isPhantomInstalled,
   listSecrets,
   removeSecret,
@@ -27,6 +32,92 @@ describe("phantom wrapper against the fake harness", () => {
     await addSecret("NEW_KEY", "new-value");
     expect((await readVault(h.dir)).NEW_KEY).toBe("new-value");
     expect(h.callsTo("add")).toEqual([{ cmd: "add", args: ["NEW_KEY", "--stdin"] }]);
+  });
+
+  test.each(["one\ntwo", "one\rtwo", "one\r\ntwo", "one\n", "one\r"])(
+    "addSecret refuses unsupported CR/LF input before spawning (%j)",
+    async (value) => {
+      await expect(addSecret("NEW_KEY", value)).rejects.toMatchObject({
+        code: "PHANTOM_SECRET_VALUE_UNSUPPORTED",
+      });
+      expect(h.calls()).toEqual([]);
+      expect((await readVault(h.dir)).NEW_KEY).toBeUndefined();
+    },
+  );
+
+  test("the inert producer fixture matches 0.7.9 read_line and CR/LF stripping", async () => {
+    await exec(["add", "DIRECT_KEY", "--stdin"], { stdin: "first\r\nsecond" });
+    expect((await readVault(h.dir)).DIRECT_KEY).toBe("first");
+  });
+
+  test("signal-terminated add fails and never mints an idempotence digest", async () => {
+    const bin = join(h.dir, "phantom");
+    const original = readFileSync(bin, "utf8");
+    writeFileSync(
+      bin,
+      '#!/bin/sh\ncase "$1" in --version) echo fixture;; *) kill -TERM $$;; esac\n',
+    );
+    await expect(addSecret("NEW_KEY", "same")).rejects.toMatchObject({
+      code: "PHANTOM_EXEC_FAILED",
+    });
+    writeFileSync(h.vaultPath, JSON.stringify({ NEW_KEY: "foreign" }));
+    writeFileSync(bin, original);
+    await expect(addSecret("NEW_KEY", "same")).rejects.toMatchObject({
+      code: "PHANTOM_SECRET_EXISTS",
+    });
+    expect((await readVault(h.dir)).NEW_KEY).toBe("foreign");
+  });
+
+  test("signal-terminated remove reports failure and preserves this process's digest", async () => {
+    await addSecret("NEW_KEY", "same");
+    const bin = join(h.dir, "phantom");
+    const original = readFileSync(bin, "utf8");
+    writeFileSync(bin, "#!/bin/sh\nkill -TERM $$\n");
+    const result = await exec(["remove", "NEW_KEY"], { allowFailure: true });
+    expect(result).toMatchObject({ code: 1, signal: "SIGTERM", completion: "signal" });
+    expect(await removeSecret("NEW_KEY")).toBe(false);
+    writeFileSync(bin, original);
+    await expect(addSecret("NEW_KEY", "same")).resolves.toBeUndefined();
+    expect((await readVault(h.dir)).NEW_KEY).toBe("same");
+  });
+
+  test("collision wording from a killed cached repeat never becomes idempotent success", async () => {
+    await addSecret("NEW_KEY", "same");
+    const bin = join(h.dir, "phantom");
+    const original = readFileSync(bin, "utf8");
+    writeFileSync(bin, "#!/bin/sh\necho 'already protected' >&2\nkill -TERM $$\n");
+    await expect(addSecret("NEW_KEY", "same")).rejects.toMatchObject({
+      code: "PHANTOM_EXEC_FAILED",
+      message: "Phantom add did not complete; secret storage is unconfirmed.",
+    });
+    writeFileSync(bin, original);
+    await expect(addSecret("NEW_KEY", "same")).resolves.toBeUndefined();
+    expect((await readVault(h.dir)).NEW_KEY).toBe("same");
+  });
+
+  test("null close fields remain unknown without a signal; signals never attest completion", () => {
+    expect(completionForClose(null, null)).toBe("unknown");
+    expect(completionForClose(null, "SIGTERM")).toBe("signal");
+    expect(completionForClose(0, "SIGTERM")).toBe("signal");
+    expect(completionForClose(0, null)).toBe("exited");
+    expect(completionForClose(9, null)).toBe("exited");
+  });
+
+  test("initialization preflight consumes only metadata status", async () => {
+    await assertProjectInitialized(h.dir);
+    expect(h.callsTo("status")).toEqual([{ cmd: "status", args: ["--json"] }]);
+    expect(h.callsTo("list")).toEqual([]);
+    expect(h.callsTo("init")).toEqual([]);
+    expect(h.callsTo("reveal")).toEqual([]);
+    expect(h.callsTo("add")).toEqual([]);
+  });
+
+  test("failed inventory stays unknown instead of appearing empty", async () => {
+    writeFileSync(
+      join(h.dir, "phantom"),
+      '#!/bin/sh\ncase "$1" in --version) echo fixture;; *) exit 9;; esac\n',
+    );
+    await expect(listSecrets()).rejects.toMatchObject({ code: "PHANTOM_METADATA_UNAVAILABLE" });
   });
 
   test("addSecret of an existing name fails with PHANTOM_SECRET_EXISTS", async () => {

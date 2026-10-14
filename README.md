@@ -119,6 +119,14 @@ Stack is the *control plane*. [Phantom](https://phm.dev) is the *vault*. ashlr-p
 
 ## Usage
 
+Before `stack add`, `stack apply`, or a writing `stack import`, check
+`phantom status --json` from the project directory. Phantom Secrets 0.7.9
+reports `initialized: true` when its project configuration is readable and valid; this
+is metadata, not vault or provider health. For a new project that is not yet
+configured, run `phantom init --empty` in a trusted terminal, then retry.
+These write flows stop before provider login or provisioning when initialization
+is unknown or missing, and do not initialize Phantom automatically.
+
 ```bash
 stack init                    # interactive template picker
 stack add supabase            # OAuth → new project → secrets → .mcp.json

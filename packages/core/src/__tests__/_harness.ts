@@ -27,6 +27,8 @@ export interface Harness {
 }
 
 export interface HarnessOptions {
+  /** Synthetic config observation; never claims vault readiness or authority. */
+  initialized?: boolean;
   /**
    * Let `reveal` print values to a pipe, as Phantom did before 0.7.3. Real
    * Phantom Secrets 0.7.9 refuses this, so production Stack can never read a
@@ -70,7 +72,11 @@ case "\${1:-}" in
     echo "phantom fake 0.0.1"
     ;;
   status)
-    echo "ok"
+    if [ "\${2:-}" = "--json" ]; then
+      echo '{"schema_version":1,"initialized":${options.initialized !== false},"inspection":"metadata-only","managed_dotenv":{"inspected":false},"vault":{"inspected":false},"proxy":{"lifecycle_lock":"not-inspected","listener_authenticated":false},"issues":[]}'
+    else
+      echo "ok"
+    fi
     ;;
   add)
     # Phantom Secrets >= 0.7.3: values only via --stdin, create-only names.
@@ -89,7 +95,7 @@ with open(sys.argv[1]) as f: v = json.load(f)
 if sys.argv[2] in v:
     sys.stderr.write("Error: Secret %r is already protected. phantom add creates new names only and refuses replacement before reading a value.\\n" % sys.argv[2])
     sys.exit(1)
-value = sys.stdin.read()
+value = sys.stdin.readline().rstrip("\\r\\n")
 if not value:
     sys.stderr.write("Error: Received empty value on stdin\\n")
     sys.exit(1)

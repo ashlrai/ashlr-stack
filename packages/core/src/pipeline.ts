@@ -1,7 +1,12 @@
 import { type ServiceEntry, type StackConfig, readConfig, writeConfig } from "./config.ts";
 import { StackError } from "./errors.ts";
 import { mergeMcpEntry, removeMcpEntry } from "./mcp-writer.ts";
-import { addSecret, assertPhantomInstalled, removeSecret } from "./phantom.ts";
+import {
+  addSecret,
+  assertPhantomInstalled,
+  assertProjectInitialized,
+  removeSecret,
+} from "./phantom.ts";
 import type { LogEvent, PromptRequest, ProviderContext } from "./providers/_base.ts";
 import { getProvider } from "./providers/index.ts";
 
@@ -46,6 +51,10 @@ export async function addService(opts: AddServiceOpts): Promise<AddServiceResult
       `${provider.displayName} is already in this stack. Pass existingResourceId to re-attach, or remove it first.`,
     );
   }
+
+  // Refuse unreadable/uninitialized project metadata before login, credential
+  // verification or provisioning. This observation does not authorize a vault.
+  await assertProjectInitialized(cwd);
 
   const ctx: ProviderContext = {
     cwd,

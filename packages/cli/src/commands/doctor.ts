@@ -245,7 +245,14 @@ async function runDoctor(
     // Phantom never replaces a stored secret, and re-running setup writes the
     // service's secrets again, so a service whose secrets are still stored
     // cannot be re-wired until they are removed.
-    const vaultNames = new Set(await listSecrets().catch(() => [] as string[]));
+    let vaultNames: Set<string>;
+    try {
+      vaultNames = new Set(await listSecrets(cwd));
+    } catch {
+      if (!json)
+        console.log(colors.yellow("  Phantom inventory is unavailable; remediation skipped."));
+      return report;
+    }
     for (const name of failingNames) {
       const entry = config.services[name];
       const stored = entry.secrets.filter((secret) => vaultNames.has(secret));

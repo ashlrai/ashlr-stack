@@ -13,6 +13,16 @@ export interface PhantomExecResult {
   stdout: string;
   stderr: string;
   code: number;
+  signal?: NodeJS.Signals;
+  completion?: "exited" | "signal" | "unknown";
+}
+
+/** Interpret close fields only; this does not attest provider or vault state. */
+export function completionForClose(
+  code: number | null,
+  signal: NodeJS.Signals | null,
+): NonNullable<PhantomExecResult["completion"]> {
+  return signal ? "signal" : code === null ? "unknown" : "exited";
 }
 
 let cachedInstalled: boolean | undefined;
@@ -21,7 +31,7 @@ export async function isPhantomInstalled(): Promise<boolean> {
   if (cachedInstalled !== undefined) return cachedInstalled;
   try {
     const result = await exec(["--version"], { allowFailure: true });
-    cachedInstalled = result.code === 0;
+    cachedInstalled = result.code === 0 && result.completion === "exited";
   } catch {
     cachedInstalled = false;
   }
@@ -74,13 +84,22 @@ export async function exec(args: string[], opts: ExecOptions = {}): Promise<Phan
       reject(err);
     });
 
-    child.on("close", (code) => {
-      const result: PhantomExecResult = { stdout, stderr, code: code ?? 0 };
-      if (code !== 0 && !opts.allowFailure) {
+    child.on("close", (code, signal) => {
+      // A signal/unknown exit is not evidence that a vault mutation committed.
+      const result: PhantomExecResult = {
+        stdout,
+        stderr,
+        code: signal ? code || 1 : (code ?? 1),
+        completion: completionForClose(code, signal),
+        ...(signal ? { signal } : {}),
+      };
+      if (result.code !== 0 && !opts.allowFailure) {
         reject(
           new StackError(
             "PHANTOM_EXEC_FAILED",
-            `phantom ${formatArgsForError(args)} failed (exit ${code}): ${stderr.trim() || stdout.trim()}`,
+            result.completion === "exited"
+              ? `phantom ${formatArgsForError(args)} failed (exit ${result.code}): ${stderr.trim() || stdout.trim()}`
+              : `phantom ${formatArgsForError(args)} did not complete (${result.completion}); result unconfirmed`,
           ),
         );
         return;
@@ -114,9 +133,25 @@ function digest(value: string): string {
  * unless this process already stored the identical value under that name.
  */
 export async function addSecret(key: string, value: string, cwd?: string): Promise<void> {
+  // Phantom 0.7.9 reads one stdin line and strips CR/LF. Refuse values it
+  // cannot preserve before any subprocess, rather than silently truncating.
+  if (/[\r\n]/.test(value)) {
+    throw new StackError(
+      "PHANTOM_SECRET_VALUE_UNSUPPORTED",
+      "Phantom Secrets accepts one line per secret; CR/LF values cannot be stored unchanged.",
+    );
+  }
   await assertPhantomInstalled();
   const id = storedKey(key, cwd);
   const result = await exec(["add", key, "--stdin"], { cwd, stdin: value, allowFailure: true });
+  // Collision wording from an interrupted child cannot attest a completed
+  // create-only refusal, even when our historical digest matches the input.
+  if (result.completion !== "exited") {
+    throw new StackError(
+      "PHANTOM_EXEC_FAILED",
+      "Phantom add did not complete; secret storage is unconfirmed.",
+    );
+  }
   if (result.code === 0) {
     storedThisProcess.set(id, digest(value));
     return;
@@ -153,8 +188,9 @@ export async function removeSecret(
     allowFailure: true,
     interactive: opts.interactive === true,
   });
-  if (result.code === 0) storedThisProcess.delete(storedKey(key, cwd));
-  return result.code === 0;
+  const removed = result.code === 0 && result.completion === "exited";
+  if (removed) storedThisProcess.delete(storedKey(key, cwd));
+  return removed;
 }
 
 /**
@@ -164,7 +200,12 @@ export async function removeSecret(
 export async function listSecrets(cwd?: string): Promise<string[]> {
   await assertPhantomInstalled();
   const { stdout, code } = await exec(["list", "--json"], { cwd, allowFailure: true });
-  if (code !== 0) return [];
+  if (code !== 0) {
+    throw new StackError(
+      "PHANTOM_METADATA_UNAVAILABLE",
+      "Phantom secret inventory is unavailable; stored names are unknown.",
+    );
+  }
   let parsed: unknown;
   try {
     parsed = JSON.parse(stdout);
@@ -180,11 +221,59 @@ export async function listSecrets(cwd?: string): Promise<string[]> {
       "phantom list --json did not return an array.",
     );
   }
-  return parsed
-    .map((entry) =>
-      entry && typeof entry === "object" ? (entry as { name?: unknown }).name : undefined,
-    )
-    .filter((name): name is string => typeof name === "string" && name.length > 0);
+  const names: string[] = [];
+  for (const entry of parsed) {
+    if (
+      !entry ||
+      typeof entry !== "object" ||
+      Array.isArray(entry) ||
+      !("name" in entry) ||
+      typeof entry.name !== "string" ||
+      entry.name.length === 0
+    ) {
+      throw new StackError(
+        "PHANTOM_OUTPUT_UNRECOGNIZED",
+        "phantom list --json contains unrecognized secret-name metadata.",
+      );
+    }
+    names.push(entry.name);
+  }
+  return names;
+}
+
+/** Configuration observation only: no vault access, initialization or grants. */
+export async function assertProjectInitialized(cwd?: string): Promise<void> {
+  await assertPhantomInstalled();
+  const result = await exec(["status", "--json"], { cwd, allowFailure: true });
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(result.stdout);
+  } catch {
+    parsed = undefined;
+  }
+  if (
+    result.code !== 0 ||
+    !parsed ||
+    typeof parsed !== "object" ||
+    Array.isArray(parsed) ||
+    !("schema_version" in parsed) ||
+    parsed.schema_version !== 1 ||
+    !("inspection" in parsed) ||
+    parsed.inspection !== "metadata-only" ||
+    !("initialized" in parsed) ||
+    typeof parsed.initialized !== "boolean"
+  ) {
+    throw new StackError(
+      "PHANTOM_METADATA_UNAVAILABLE",
+      "Phantom project initialization is unknown. Use Phantom Secrets 0.7.9 or newer and check its metadata status before retrying.",
+    );
+  }
+  if (!parsed.initialized) {
+    throw new StackError(
+      "PHANTOM_PROJECT_NOT_INITIALIZED",
+      "Phantom project is not initialized or its configuration is unreadable. Review `phantom status --json`; for a new project run `phantom init --empty` in a trusted terminal, then retry.",
+    );
+  }
 }
 
 /**

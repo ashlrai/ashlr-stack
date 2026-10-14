@@ -4,6 +4,7 @@ import { join } from "node:path";
 import {
   addSecret,
   assertPhantomInstalled,
+  assertProjectInitialized,
   emptyConfig,
   groupByProvider,
   hasConfig,
@@ -96,6 +97,7 @@ export const importCommand = defineCommand({
     // 1. Store every secret in Phantom (provider-matched + orphans alike).
     //    Phantom never replaces a stored name, so names already in the vault
     //    are skipped and reported instead of aborting the import half-way.
+    await assertProjectInitialized(process.cwd());
     const existing = new Set(await listSecrets());
     const skipped: string[] = [];
     let stored = 0;
