@@ -1,6 +1,6 @@
 # @ashlr/stack
 
-> The `stack` CLI — one command to provision, wire, and operate every third-party service in your project. 23 providers, MCP-native, Phantom-backed.
+> The `stack` CLI — one command to provision, wire, and operate every third-party service in your project. 39 providers, MCP-native, Phantom-backed.
 
 Part of [Ashlr Stack](https://stack.ashlr.ai). See the monorepo at [ashlrai/ashlr-stack](https://github.com/ashlrai/ashlr-stack).
 
@@ -9,7 +9,7 @@ Part of [Ashlr Stack](https://stack.ashlr.ai). See the monorepo at [ashlrai/ashl
 `stack` collapses the "spin up ten services" phase of a project into a single command. Instead of tab-hopping between Supabase, Vercel, Sentry, Neon, etc. to create projects and paste secrets into `.env`, you run:
 
 ```bash
-stack init --template nextjs-supabase-posthog-sentry
+stack init --template nextjs-supabase-posthog
 ```
 
 Stack does the OAuth dance per provider, creates the upstream resource, stores every secret in [Phantom Secrets](https://phantom.ashlr.ai), writes `.env` + `.mcp.json`, and hands you a project ready for `bun dev`.
@@ -70,7 +70,7 @@ stack exec -- bun dev
 
 ## Commands
 
-22 commands total. A cheat sheet:
+26 commands total. A cheat sheet:
 
 | Command | What it does |
 | --- | --- |
@@ -98,7 +98,7 @@ Full reference with flags, subcommands, and examples: **[stack.ashlr.ai/docs/cli
 
 ## MCP integration
 
-`stack add` writes to your project's `.mcp.json` so Claude Code / Cursor / Windsurf can use the provider's MCP server immediately. See [ashlr-stack-mcp](https://www.npmjs.com/package/ashlr-stack-mcp) for Stack's own MCP server (17 tools + 3 resources) and [stack.ashlr.ai/docs/mcp](https://stack.ashlr.ai/docs/mcp) for wiring docs.
+`stack add` writes to your project's `.mcp.json` so Claude Code / Cursor / Windsurf can use the provider's MCP server immediately. See [ashlr-stack-mcp](https://www.npmjs.com/package/ashlr-stack-mcp) for Stack's own MCP server (19 tools + up to 3 resources) and [stack.ashlr.ai/docs/mcp](https://stack.ashlr.ai/docs/mcp) for wiring docs.
 
 ## Configuration
 

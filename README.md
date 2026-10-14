@@ -6,7 +6,7 @@
 
 **Provision and wire every service in your project with one command, from your terminal or your AI agent.** Stack creates the Supabase project, the Vercel token, the Sentry DSN, stores every secret in [Phantom](https://phm.dev) and writes `.env` and `.mcp.json` for you.
 
-**Status:** pre-alpha, active development. The CLI runs on [Bun](https://bun.sh).
+**Status:** pre-alpha, active development. The CLI and MCP server run on [Bun](https://bun.sh): the current npm release (0.1.1) starts both with `bun`, so install Bun first, even for the `npx` commands below. Without it they exit with `/usr/bin/env: 'bun': No such file or directory`.
 
 <!-- Demo GIF: record with vhs, see docs/ -->
 
@@ -17,23 +17,27 @@ Read-only, no accounts or API keys needed:
 ```bash
 npx -y -p @ashlr/stack stack providers                                         # the provider catalog
 npx -y -p @ashlr/stack stack recommend "B2B SaaS with auth, AI, and payments"  # ranked picks with rationales
-npx -y -p @ashlr/stack stack scan                                              # detect services in an existing repo (writes nothing)
+npx -y -p @ashlr/stack stack scan                                              # detect services in an existing repo (writes nothing; add --json in agents and CI)
 ```
 
 To provision a real service, install Stack (below) and run `stack add <provider>`.
 
 ## Connect your agent (MCP)
 
+Every MCP tool runs the `stack` CLI, so the server needs `stack` on its PATH (or `STACK_BIN` set to it). These snippets fetch both packages in one `npx`, which puts `stack` on the server's PATH:
+
 ```bash
-claude mcp add ashlr-stack -- npx -y ashlr-stack-mcp    # Claude Code
-codex mcp add ashlr-stack -- npx -y ashlr-stack-mcp     # Codex
+claude mcp add ashlr-stack -- npx -y -p @ashlr/stack -p ashlr-stack-mcp ashlr-stack-mcp   # Claude Code
+codex mcp add ashlr-stack -- npx -y -p @ashlr/stack -p ashlr-stack-mcp ashlr-stack-mcp    # Codex
 ```
 
 Cursor (`~/.cursor/mcp.json`):
 
 ```json
-{ "mcpServers": { "ashlr-stack": { "command": "npx", "args": ["-y", "ashlr-stack-mcp"] } } }
+{ "mcpServers": { "ashlr-stack": { "command": "npx", "args": ["-y", "-p", "@ashlr/stack", "-p", "ashlr-stack-mcp", "ashlr-stack-mcp"] } } }
 ```
+
+With only `ashlr-stack-mcp`, the server starts and lists its tools, but every call returns "The 'stack' CLI is not on PATH".
 
 ## Why Stack
 
@@ -84,7 +88,7 @@ In a Claude‑Code‑native world, the friction in starting a project isn't writ
 Stack collapses that hour into one command:
 
 ```bash
-stack init --template nextjs-supabase-posthog-sentry
+stack init --template nextjs-supabase-posthog
 # Stack does the OAuth dance per provider,
 # creates the upstream resource,
 # stores every secret in Phantom,
@@ -115,14 +119,14 @@ Stack is the *control plane*. [Phantom](https://phm.dev) is the *vault*. ashlr-p
 **Email** — Resend
 **Auth** — Clerk
 
-29 providers total. Run `stack providers` to see the live catalog.
+Run `stack providers` to see the live catalog: 39 providers across 13 categories on `main`, 29 in the npm 0.1.1 release. `stack templates list` shows the starter templates.
 
 ## Usage
 
 ```bash
 stack init                    # interactive template picker
 stack add supabase            # OAuth → new project → secrets → .mcp.json
-stack providers               # full catalog (29 services across 11 categories)
+stack providers               # full provider catalog
 stack doctor --fix            # verify every service; re-run setup for anything broken
 stack exec -- bun dev         # run with Phantom's secret proxy active
 ```
