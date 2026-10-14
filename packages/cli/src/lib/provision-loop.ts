@@ -115,7 +115,11 @@ export async function rollbackProviders(names: string[]): Promise<void> {
       delete config.services[name];
     }
     await writeConfig(config);
-    console.log(colors.dim("  rollback complete — re-run to retry."));
+    console.log(
+      colors.dim(
+        "  rollback complete — remove any secrets Phantom kept (listed above), then re-run.",
+      ),
+    );
   } catch (err) {
     console.log(colors.yellow(`  ⚠ rollback failed: ${(err as Error).message}`));
   }

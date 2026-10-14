@@ -103,14 +103,23 @@ export async function addService(opts: AddServiceOpts): Promise<AddServiceResult
     };
   } catch (err) {
     // --- Atomic rollback ---
-    // 1. Remove any Phantom secrets already written.
+    // 1. Remove any Phantom secrets already written. Phantom only removes in
+    //    an attached terminal, so headless rollback usually keeps them; name
+    //    them in the error so the next attempt does not collide unexplained.
+    const keptSecrets: string[] = [];
     for (const key of writtenSecrets) {
+      let removed = false;
       try {
-        await removeSecret(key, cwd);
+        removed = await removeSecret(key, cwd);
       } catch {
         /* best-effort */
       }
+      if (!removed) keptSecrets.push(key);
     }
+    const keptNote =
+      keptSecrets.length > 0
+        ? ` Phantom kept ${keptSecrets.join(", ")}; run \`phantom remove <NAME>\` in a terminal for each before retrying.`
+        : "";
     // 2. Remove the MCP entry if it was written.
     if (writtenMcp) {
       try {
@@ -138,7 +147,7 @@ export async function addService(opts: AddServiceOpts): Promise<AddServiceResult
         "ADD_SERVICE_ROLLED_BACK",
         `Rolled back ${provider.displayName} after failure at step "${failStep}". ` +
           `${teardownNote} ` +
-          `Original error: ${(err as Error).message}`,
+          `Original error: ${(err as Error).message}${keptNote}`,
       );
     }
     // No deprovision support — warn and direct to manual cleanup.
@@ -151,7 +160,7 @@ export async function addService(opts: AddServiceOpts): Promise<AddServiceResult
       "ADD_SERVICE_PARTIAL_FAILURE",
       `Adding ${provider.displayName} failed at step "${failStep}" after the upstream resource was created. ` +
         `Resource ID: ${resource.id}. ` +
-        `Clean it up manually on the ${provider.displayName} dashboard, then run \`stack doctor --fix\`.`,
+        `Clean it up manually on the ${provider.displayName} dashboard, then run \`stack doctor --fix\`.${keptNote}`,
     );
     // .stack.toml is intentionally NOT written — the add was not atomic.
   }

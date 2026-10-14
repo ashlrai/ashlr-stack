@@ -27,6 +27,8 @@ import { tryRevealSecret } from "../providers/_helpers.ts";
  *
  * The vault is an isolated encrypted-file vault under a temp HOME, unlocked
  * with a throwaway passphrase. No keychain, network or real credential is used.
+ * Tests share that vault and run in order: later tests rely on names stored
+ * by earlier ones.
  */
 
 const realBin = process.env.STACK_PHANTOM_CONTRACT_BIN;
@@ -91,7 +93,9 @@ describe.skipIf(!enabled)("phantom CLI contract (real binary)", () => {
     expect(await isPhantomInstalled()).toBe(true);
   });
 
-  test("addSecret stores a new name without putting the value in argv", async () => {
+  // Argv is asserted against the fake in phantom-harness.test.ts; the real
+  // binary rejects a positional value, so storing at all proves stdin.
+  test("addSecret stores a new name", async () => {
     await addSecret("STACK_CONTRACT_A", SYNTHETIC_VALUE, project);
     expect(vaultNames()).toContain("STACK_CONTRACT_A");
   });
@@ -108,7 +112,8 @@ describe.skipIf(!enabled)("phantom CLI contract (real binary)", () => {
     expect(vaultNames()).toContain("STACK_CONTRACT_C");
   });
 
-  test("addSecret on an existing name fails with a typed error and keeps the old value", async () => {
+  // Phantom offers no headless read, so only the name's survival is observable.
+  test("addSecret on an existing name fails with a typed error and keeps the name", async () => {
     let caught: unknown;
     try {
       await addSecret("STACK_CONTRACT_A", "replacement-value", project);

@@ -54,6 +54,9 @@ describe("neon provider (mocked fetch)", () => {
     // Provision stores a project-scoped copy so other providers can't stomp it.
     const vault = await readVault(h.dir);
     expect(vault[`NEON_DATABASE_URL_${projectId}`]).toBe(connectionUri);
+    // DATABASE_URL is written once, by the pipeline from materialize(): Phantom
+    // never replaces a stored name, so provision must not claim it first.
+    expect(vault.DATABASE_URL).toBeUndefined();
   });
 
   test("healthcheck returns error when the project 404s", async () => {

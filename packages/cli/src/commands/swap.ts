@@ -201,8 +201,14 @@ export const swapCommand = defineCommand({
             console.log(colors.yellow(`  ⚠ ${newKey} has no value — alias ${oldKey} not written.`));
           }
         } catch (err) {
+          const unreadable =
+            (err as { code?: string }).code === "PHANTOM_TRUSTED_TERMINAL_REQUIRED";
           console.log(
-            colors.yellow(`  ⚠ Could not mirror ${newKey} → ${oldKey}: ${(err as Error).message}`),
+            colors.yellow(
+              unreadable
+                ? `  ⚠ Phantom does not hand stored values to Stack, so alias ${oldKey} was not written. Add it yourself: \`phantom add ${oldKey}\` and paste the ${newKey} value.`
+                : `  ⚠ Could not mirror ${newKey} → ${oldKey}: ${(err as Error).message}`,
+            ),
           );
         }
       }

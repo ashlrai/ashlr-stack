@@ -78,12 +78,12 @@ const neon: Provider = {
       connection_uris?: Array<{ connection_uri: string }>;
     };
     // Stash the fresh connection URI keyed by project id so it isn't confused
-    // with another project's DATABASE_URL. Also write the canonical slot (the
-    // current project's materialize call will overwrite it).
+    // with another project's DATABASE_URL. The canonical DATABASE_URL slot is
+    // written once, by the pipeline from materialize(): Phantom never replaces
+    // a stored name, and this point is outside the pipeline's rollback.
     if (body.connection_uris?.[0]?.connection_uri) {
       const uri = body.connection_uris[0].connection_uri;
       await addSecret(`NEON_DATABASE_URL_${body.project.id}`, uri);
-      await addSecret("DATABASE_URL", uri);
     }
     return toResource(body.project);
   },

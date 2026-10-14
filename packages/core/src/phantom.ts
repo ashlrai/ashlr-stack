@@ -58,6 +58,9 @@ export async function exec(args: string[], opts: ExecOptions = {}): Promise<Phan
         stderr += chunk.toString();
       });
       if (opts.stdin !== undefined) {
+        // Phantom may refuse (e.g. an existing name) and exit before reading
+        // stdin; the exit code reports that, so a broken pipe is not fatal.
+        child.stdin?.on("error", () => {});
         child.stdin?.write(opts.stdin);
         child.stdin?.end();
       }
@@ -150,6 +153,7 @@ export async function removeSecret(
     allowFailure: true,
     interactive: opts.interactive === true,
   });
+  if (result.code === 0) storedThisProcess.delete(storedKey(key, cwd));
   return result.code === 0;
 }
 

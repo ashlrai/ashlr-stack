@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { emptyConfig, readConfig, writeConfig } from "../config.ts";
@@ -143,6 +143,38 @@ describe("addService rollback", () => {
     expect(config.services.secretrollback).toBeUndefined();
 
     Reflect.deleteProperty(providers, "secretrollback");
+  });
+
+  test("secrets Phantom keeps after a headless rollback are named in the error", async () => {
+    // Phantom (fake and real 0.7.9) refuses a second value for SECRET_TWO and
+    // refuses headless removal, so SECRET_ONE survives the rollback.
+    writeFileSync(h.vaultPath, JSON.stringify({ SECRET_TWO: "someone-elses" }));
+    providers.keptsecret = async () => ({
+      name: "keptsecret",
+      displayName: "Kept Secret",
+      category: "database",
+      authKind: "api_key",
+      async login() {
+        return { token: "tok" };
+      },
+      async provision() {
+        return { id: "res-kept", displayName: "db" };
+      },
+      async materialize() {
+        return { secrets: { SECRET_ONE: "val1", SECRET_TWO: "val2" } };
+      },
+      async deprovision() {},
+    });
+
+    let err: Error | undefined;
+    await addService({ providerName: "keptsecret", cwd, interactive: false }).catch((e: Error) => {
+      err = e;
+    });
+    expect(err?.message).toMatch(/Rolled back Kept Secret/);
+    expect(err?.message).toMatch(/Phantom kept SECRET_ONE/);
+    expect((await readVault(h.dir)).SECRET_TWO).toBe("someone-elses");
+
+    Reflect.deleteProperty(providers, "keptsecret");
   });
 
   test("deprovision failure is logged but does not mask original error", async () => {

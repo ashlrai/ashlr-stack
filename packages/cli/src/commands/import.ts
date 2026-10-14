@@ -8,6 +8,7 @@ import {
   groupByProvider,
   hasConfig,
   listProviderNames,
+  listSecrets,
   parseEnv,
   readConfig,
   toServiceEntry,
@@ -93,11 +94,26 @@ export const importCommand = defineCommand({
     }
 
     // 1. Store every secret in Phantom (provider-matched + orphans alike).
+    //    Phantom never replaces a stored name, so names already in the vault
+    //    are skipped and reported instead of aborting the import half-way.
+    const existing = new Set(await listSecrets());
+    const skipped: string[] = [];
     let stored = 0;
     for (const { key, value } of entries) {
       if (value.length === 0) continue;
+      if (existing.has(key)) {
+        skipped.push(key);
+        continue;
+      }
       await addSecret(key, value);
       stored += 1;
+    }
+    if (skipped.length > 0) {
+      console.log(
+        colors.yellow(
+          `  ⚠ Already in Phantom, left unchanged: ${skipped.join(", ")}. Run \`phantom remove <NAME>\` first to replace one.`,
+        ),
+      );
     }
 
     // 2. Update .stack.toml — create one if missing, then populate service entries.

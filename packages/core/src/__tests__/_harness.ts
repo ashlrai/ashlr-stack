@@ -99,7 +99,7 @@ with open(sys.argv[1], "w") as f: json.dump(v, f)
     ;;
   remove)
     # Phantom Secrets >= 0.7.3: typed confirmation in an attached terminal.
-    if [ ! -t 0 ]; then
+    if [ ! -t 0 ] || [ ! -t 1 ] || [ ! -t 2 ]; then
       echo "Error: phantom remove requires attached stdin, stdout, and stderr terminals and cannot run headlessly." >&2
       exit 1
     fi
@@ -122,7 +122,7 @@ else:
     ;;
   reveal)
     # Phantom Secrets >= 0.7.3: plaintext only into an attached terminal.
-    if [ ! -t 0 ] && [ "$LEGACY_HEADLESS_REVEAL" != 1 ]; then
+    if { [ ! -t 0 ] || [ ! -t 2 ]; } && [ "$LEGACY_HEADLESS_REVEAL" != 1 ]; then
       echo "Error: Refusing to reveal a secret without attached stdin and stderr terminals" >&2
       exit 1
     fi
