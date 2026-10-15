@@ -16,6 +16,8 @@ No build step for the CLI — Bun runs `.ts` directly.
 
 ## Adding a provider
 
+Step-by-step guide with every file to touch: [docs/adding-a-provider.md](./docs/adding-a-provider.md).
+
 Every curated provider implements `Provider` (`packages/core/src/providers/_base.ts`):
 
 - `login(ctx)` — obtain and verify the adapter's auth inputs. Use `_api-key.ts`'s `makeApiKeyProvider` factory for its supported supplied-input flows, or `oauth.ts`'s `runPkceFlow` for an implemented OAuth path. Auth0 currently checks a domain's discovery response rather than authenticating an account.
