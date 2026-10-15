@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 import { emitTelemetry } from "@ashlr/stack-core";
-import { defineCommand, runMain } from "citty";
+import { defineCommand } from "citty";
 import { addCommand } from "./commands/add.ts";
 import { applyCommand } from "./commands/apply.ts";
 import { ciCommand } from "./commands/ci.ts";
@@ -28,6 +28,7 @@ import { telemetryCommand } from "./commands/telemetry.ts";
 import { templatesCommand } from "./commands/templates.ts";
 import { upgradeCommand } from "./commands/upgrade.ts";
 import { normalizeKebabFlags } from "./lib/normalize-args.ts";
+import { runCli } from "./lib/run-cli.ts";
 import { checkForUpdate } from "./lib/update-check.ts";
 
 // Single source of truth for the CLI version. citty wires this into `--help`
@@ -120,7 +121,7 @@ const _startMs = Date.now();
 void checkForUpdate(VERSION);
 // Normalize kebab-case flags (`--dry-run`) to the camelCase keys our commands
 // declare (`dryRun`) before citty parses them — see lib/normalize-args.ts.
-runMain(main, { rawArgs: normalizeKebabFlags(process.argv.slice(2)) }).finally(() => {
+runCli(main, normalizeKebabFlags(process.argv.slice(2))).finally(() => {
   void emitTelemetry({
     type: "command",
     command: process.argv[2] ?? "unknown",
