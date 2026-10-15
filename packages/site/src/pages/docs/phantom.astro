@@ -47,57 +47,57 @@ import PhantomBadge from "~/components/PhantomBadge.astro";
 
   <div class="not-prose my-8 panel rounded-2xl p-6">
     <div class="grid gap-6 md:grid-cols-2">
-      <div>
+      <div class="min-w-0">
         <div class="text-[11px] font-semibold uppercase tracking-[0.14em] text-magenta-400 mb-2">
           Stack (control plane)
         </div>
         <ul class="space-y-1.5 text-[13px] text-ink-300">
           <li class="flex items-start gap-2">
             <span class="text-magenta-400 mt-0.5">●</span>
-            Drives provider OAuth / API flows
+            <span class="min-w-0">Drives provider OAuth / API flows</span>
           </li>
           <li class="flex items-start gap-2">
             <span class="text-magenta-400 mt-0.5">●</span>
-            Creates or attaches resources according to the adapter
+            <span class="min-w-0">Creates or attaches resources according to the adapter</span>
           </li>
           <li class="flex items-start gap-2">
             <span class="text-magenta-400 mt-0.5">●</span>
-            Tracks which secrets each service needs (<em>slot names</em>)
+            <span class="min-w-0">Tracks which secrets each service needs (<em>slot names</em>)</span>
           </li>
           <li class="flex items-start gap-2">
             <span class="text-magenta-400 mt-0.5">●</span>
-            Exports empty-key <code class="mono text-[12px]">.env.example</code> skeletons separately; writes available <code class="mono text-[12px]">.mcp.json</code> descriptors
+            <span class="min-w-0">Exports empty-key <code class="mono text-[12px]">.env.example</code> skeletons separately; writes available <code class="mono text-[12px]">.mcp.json</code> descriptors</span>
           </li>
           <li class="flex items-start gap-2 text-ink-500">
             <span class="mt-0.5">○</span>
-            Handles credential values during setup
+            <span class="min-w-0">Handles credential values during setup</span>
           </li>
         </ul>
       </div>
-      <div>
+      <div class="min-w-0">
         <div class="text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-300 mb-2">
           Phantom (vault)
         </div>
         <ul class="space-y-1.5 text-[13px] text-ink-300">
           <li class="flex items-start gap-2">
             <span class="text-cyan-300 mt-0.5">●</span>
-            Provides the installed credential-persistence interface
+            <span class="min-w-0">Provides the installed credential-persistence interface</span>
           </li>
           <li class="flex items-start gap-2">
             <span class="text-cyan-300 mt-0.5">●</span>
-            Owns supported execution; <code class="mono text-[12px]">phm_*</code> strings are not generally resolved by Stack
+            <span class="min-w-0">Owns supported execution; <code class="mono text-[12px]">phm_*</code> strings are not generally resolved by Stack</span>
           </li>
           <li class="flex items-start gap-2">
             <span class="text-cyan-300 mt-0.5">●</span>
-            Requires separately qualified sync and CI configuration
+            <span class="min-w-0">Requires separately qualified sync and CI configuration</span>
           </li>
           <li class="flex items-start gap-2">
             <span class="text-cyan-300 mt-0.5">●</span>
-            Controls credential access through its installed interface
+            <span class="min-w-0">Controls credential access through its installed interface</span>
           </li>
           <li class="flex items-start gap-2 text-ink-500">
             <span class="mt-0.5">○</span>
-            Has no opinion on what the keys mean
+            <span class="min-w-0">Has no opinion on what the keys mean</span>
           </li>
         </ul>
       </div>
@@ -114,12 +114,7 @@ import PhantomBadge from "~/components/PhantomBadge.astro";
 
   <Code
     code={`$ stack add supabase
-┌  stack add supabase
-│
-└  Phantom is not installed. Install it first:
-     brew install ashlrai/phantom/phantom
-   or
-     npm i -g phantom-secrets`}
+Phantom Secrets isn't installed.`}
     lang="text"
     theme="github-dark-dimmed"
   />
@@ -218,7 +213,7 @@ phantom --help`}
 
   <h2>Which Stack commands talk to Phantom</h2>
 
-  <table>
+  <table tabindex="0" aria-label="Stack commands and Phantom usage">
     <thead>
       <tr>
         <th style="width: 28%">Command</th>
@@ -276,17 +271,17 @@ phantom --help`}
   </table>
 
   <h2>Installing Phantom</h2>
+  <p>
+    Follow the <a href="https://phm.dev/secrets">Phantom Secrets setup guidance</a>
+    for your platform and verify its credential and execution interfaces.
+    Stack source and this example do not establish an installed version or
+    completed vault setup.
+  </p>
 
   <Code
-    code={`# macOS
-brew install ashlrai/phantom/phantom
-
-# Package installation; verify native platform support separately
-npm i -g phantom-secrets
-
-# verify
+    code={`# Inspect the installed product before configuring Stack
 phantom --version
-phantom status`}
+phantom --help`}
     lang="bash"
     theme="github-dark-dimmed"
   />

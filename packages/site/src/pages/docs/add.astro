@@ -96,8 +96,10 @@ stack add supabase --install=ask`}
 
   <div class="callout callout-warn">
     Use <code>--dryRun</code> to inspect the add plan before provider setup.
-    The add parser has no rollback-disable flag; a failed real setup is not
-    proof that all earlier effects were undone.
+    The add parser has no rollback-disable flag. Multi-service
+    <code>stack init --template</code>, <code>stack apply</code> and
+    <code>stack swap</code> accept <code>--noRollback</code>, but a failed real
+    setup or cleanup attempt is not proof that all earlier effects were undone.
   </div>
 
   <p>

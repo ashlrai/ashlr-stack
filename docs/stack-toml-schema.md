@@ -2,13 +2,14 @@
 
 Stack separates a project's configuration into a committed shape and a local
 instance. Callers of `readConfig` work with their merged `StackConfig` view;
-`writeConfig` splits that view into the two files below. The JSON-like
+`writeConfig` in `packages/core/src/config.ts` splits that view into the two files below. The JSON-like
 `StackToml` component in the static OpenAPI discovery catalog describes the
 parsed committed output, not raw TOML, every accepted input, or an HTTP API.
 
 ## Committed shape: `.stack.toml`
 
 ```toml
+# .stack.toml (committed)
 [stack]
 version = "1"
 template = "fixture-template" # optional

@@ -373,6 +373,14 @@ $ stack apply b2b-saas-with-auth
           still occur; this flag is not a dry run.
         </td>
       </tr>
+      <tr>
+        <td><code>--noRollback</code></td>
+        <td>
+          Skip the multi-service cleanup attempt after partial failure.
+          Existing provider resources, credentials or partial writes may remain;
+          this flag is not a dry run or a guarantee about upstream deletion.
+        </td>
+      </tr>
     </tbody>
   </table>
 

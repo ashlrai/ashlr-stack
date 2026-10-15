@@ -164,15 +164,15 @@ stack scan --json --confidence medium`}
     <tbody>
       <tr>
         <td><code>--json</code></td>
-        <td>Emit a machine-readable JSON report instead of interactive output. Suitable for parsing in downstream steps.</td>
+        <td>Emit a machine-readable JSON report and exit 0. No prompts, and nothing is added even with <code>--yes</code>. Suitable for parsing in downstream steps.</td>
       </tr>
       <tr>
         <td><code>--yes</code></td>
-        <td>Without --json, enables automatic add attempts without confirmation. With --json, scan reports hits and returns before adding services.</td>
+        <td>Without <code>--json</code>, implies <code>--auto</code> and enables add attempts at or above the confidence tier without confirmation. With <code>--json</code>, scan reports hits and returns before adding services. Without either flag, a non-TTY run prints a hint.</td>
       </tr>
       <tr>
         <td><code>--confidence &lt;low|medium|high&gt;</code></td>
-        <td>Filter by the named confidence tier. The default is medium, or high with --yes; the example explicitly selects medium.</td>
+        <td>Filter by the named tier. The default is medium, or high with <code>--yes</code>; the example explicitly selects medium.</td>
       </tr>
     </tbody>
   </table>
@@ -182,8 +182,8 @@ stack scan --json --confidence medium`}
   <Code
     code={`{
   "hits": [
-    { "provider": "supabase", "confidence": "high", "sources": ["package.json: @supabase/supabase-js"] },
-    { "provider": "resend", "confidence": "medium", "sources": ["source import: resend"] }
+    { "provider": "resend", "confidence": "high", "sources": ["package.json:resend"] },
+    { "provider": "supabase", "confidence": "high", "sources": ["package.json:@supabase/supabase-js"] }
   ]
 }`}
     lang="json"
