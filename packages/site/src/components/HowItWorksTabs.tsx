@@ -129,7 +129,7 @@ export default function HowItWorksTabs() {
                 setActive(i);
                 setAuto(false);
               }}
-              className={`shrink-0 lg:shrink text-left panel p-4 transition-all min-w-[220px] lg:min-w-0 ${
+              className={`w-[220px] lg:w-auto shrink-0 lg:shrink text-left panel p-4 transition-all min-w-[220px] lg:min-w-0 ${
                 isActive
                   ? "ring-1 ring-[color:var(--color-blade-500)]"
                   : "opacity-80 hover:opacity-100"
