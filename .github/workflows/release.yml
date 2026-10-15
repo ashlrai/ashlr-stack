@@ -102,7 +102,7 @@ jobs:
       # npm trusted publishing (OIDC): with id-token: write and npm >= 11.5.1,
       # npm exchanges the workflow identity for a short-lived publish token.
       # No NPM_TOKEN or OTP needed once each package (@ashlr/stack-core,
-      # @ashlr/stack-mcp, @ashlr/stack) lists ashlrai/ashlr-stack release.yml
+      # @ashlr/stack, ashlr-stack-mcp) lists ashlrai/ashlr-stack release.yml
       # as a trusted publisher on npmjs.com. NPM_TOKEN remains a fallback.
       - name: Enable npm publish
         id: gate
@@ -151,7 +151,7 @@ jobs:
         run: node scripts/inject-client-ids.mjs
 
       - if: steps.gate.outputs.enabled == 'true'
-        name: Publish @ashlr/stack-core + @ashlr/stack-mcp + @ashlr/stack
+        name: Publish @ashlr/stack-core + @ashlr/stack + ashlr-stack-mcp
         id: npm_publish
         continue-on-error: true
         env:

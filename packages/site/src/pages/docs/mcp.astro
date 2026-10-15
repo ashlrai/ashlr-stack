@@ -17,7 +17,7 @@ import { MCP_TOOLS, MCP_RESOURCES } from "~/lib/mcp-ref";
   <ul>
     <li>
       <strong>Producer:</strong> Stack itself is an MCP server
-      (<code>@ashlr/stack-mcp</code>). It exposes {MCP_TOOLS.length} tools so
+      (<code>ashlr-stack-mcp</code>). It exposes {MCP_TOOLS.length} tools so
       an LLM editor can call <code>stack add</code>, <code>stack doctor</code>,
       etc. without a terminal.
     </li>
@@ -52,7 +52,7 @@ import { MCP_TOOLS, MCP_RESOURCES } from "~/lib/mcp-ref";
   "mcpServers": {
     "ashlr-stack": {
       "command": "npx",
-      "args": ["-y", "@ashlr/stack-mcp"],
+      "args": ["-y", "ashlr-stack-mcp"],
       "env": {}
     }
   }

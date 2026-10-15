@@ -4,7 +4,7 @@ Release cuts are fully automated by `.github/workflows/release.yml`.
 
 ## Prerequisites (one-time)
 
-1. **`NPM_TOKEN`** repository secret — an npm access token with publish rights to `@ashlr/stack`, `@ashlr/stack-core`, and `@ashlr/stack-mcp`. Set at `https://github.com/ashlrai/ashlr-stack/settings/secrets/actions`.
+1. **`NPM_TOKEN`** repository secret — an npm access token with publish rights to `@ashlr/stack`, `@ashlr/stack-core`, and `ashlr-stack-mcp`. Set at `https://github.com/ashlrai/ashlr-stack/settings/secrets/actions`.
 2. Your local working tree matches `main` and `bun install` succeeds.
 
 ## Cutting a release
@@ -28,8 +28,8 @@ The tag push triggers `.github/workflows/release.yml`, which:
    - Each gets a companion `.sha256` file.
 2. **Publishes to npm** (`scripts/publish.sh --version X.Y.Z --yes`):
    - `@ashlr/stack-core`
-   - `@ashlr/stack-mcp`
    - `@ashlr/stack`
+   - `ashlr-stack-mcp` (depends on `@ashlr/stack`, so it publishes last)
 3. **Creates a GitHub Release** with all 8 assets + auto-generated changelog.
 
 Prerelease tags (e.g. `v0.1.0-rc.1`) are automatically marked as pre-releases and get the `next` dist-tag on npm.
