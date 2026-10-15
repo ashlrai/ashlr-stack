@@ -1,8 +1,8 @@
 import {
   type StackConfig,
+  countSecrets,
   hasConfig,
   isPhantomInstalled,
-  listSecrets,
   readConfig,
 } from "@ashlr/stack-core";
 import { defineCommand } from "citty";
@@ -86,18 +86,14 @@ export const statusCommand = defineCommand({
         );
         process.exit(1);
       }
-      const secretCount = phantomOk
-        ? await listSecrets()
-            .then((keys) => keys.length)
-            .catch(() => null)
-        : null;
+      const secretCount = phantomOk ? await countSecrets() : null;
       const report = buildStatusReport({ config, phantomInstalled: phantomOk, secretCount });
       process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
       return;
     }
 
     const config = hasStack ? await readConfig() : undefined;
-    const vaultKeys = phantomOk ? await listSecrets().catch(() => []) : [];
+    const vaultCount = phantomOk ? ((await countSecrets()) ?? 0) : 0;
 
     console.log();
     console.log(colors.bold("  Ashlr Stack"));
@@ -106,7 +102,7 @@ export const statusCommand = defineCommand({
       `  ${statusDot(hasStack)} .stack.toml       ${hasStack ? colors.dim(config?.stack.project_id) : colors.dim("missing — run `stack init`")}`,
     );
     console.log(
-      `  ${statusDot(phantomOk)} phantom           ${phantomOk ? colors.dim(`${vaultKeys.length} secrets in vault`) : colors.dim("not installed")}`,
+      `  ${statusDot(phantomOk)} phantom           ${phantomOk ? colors.dim(`${vaultCount} secrets in vault`) : colors.dim("not installed")}`,
     );
     console.log(
       `  ${statusDot(hasStack && Object.keys(config?.services ?? {}).length > 0)} services          ${colors.dim(`${Object.keys(config?.services ?? {}).length} configured`)}`,

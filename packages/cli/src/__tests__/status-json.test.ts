@@ -22,41 +22,81 @@ function tmp(prefix: string): string {
   return d;
 }
 
+type VaultMode = "two" | "empty" | "error";
+
 /**
  * A bin dir holding only an optional fake `phantom`, so the result does not
- * depend on whether the host has Phantom Secrets installed. The fake answers
- * both `phantom list` (names, one per line) and `phantom list --json`.
+ * depend on whether the host has Phantom Secrets installed. The fake mirrors
+ * real Phantom Secrets output (crates/phantom-cli/src/commands/list.rs):
+ * `phantom list` prints a `-> N secret(s) in vault (...)` header, indented
+ * names and a trailing note, or `! No secrets stored.`; `phantom list --json`
+ * prints a pretty JSON array. Mode "error" is the no-.phantom.toml case:
+ * an error on stderr and exit 1.
  */
-function binDir(withPhantom: boolean): string {
+function binDir(vault: VaultMode | false): string {
   const dir = tmp("stack-status-bin-");
-  if (withPhantom) {
-    const fake = join(dir, "phantom");
-    writeFileSync(
-      fake,
-      [
-        "#!/bin/sh",
-        'if [ "$1" = "--version" ]; then echo "phantom 0.7.9"; exit 0; fi',
-        'if [ "$1" = "list" ]; then',
-        '  case " $* " in *" --json "*) echo \'[{"name":"OPENAI_API_KEY"},{"name":"SUPABASE_URL"}]\';;',
-        "  *) printf 'OPENAI_API_KEY\\nSUPABASE_URL\\n';; esac",
+  if (vault) {
+    const human =
+      vault === "two"
+        ? [
+            "-> 2 secret(s) in vault (keychain):",
+            "",
+            "   - OPENAI_API_KEY  (openai)",
+            "   - SUPABASE_URL",
+            "",
+            "note Values are never displayed. Use phantom add/remove to manage.",
+          ]
+        : ["! No secrets stored."];
+    const json =
+      vault === "two"
+        ? [
+            "[",
+            "  {",
+            '    "name": "OPENAI_API_KEY",',
+            '    "detected_service": "openai"',
+            "  },",
+            "  {",
+            '    "name": "SUPABASE_URL",',
+            '    "detected_service": null',
+            "  }",
+            "]",
+          ]
+        : ["[]"];
+    const lines = [
+      "#!/bin/sh",
+      'if [ "$1" = "--version" ]; then echo "phantom 0.7.9"; exit 0; fi',
+      'if [ "$1" = "list" ]; then',
+    ];
+    if (vault === "error") {
+      lines.push("  echo 'Error: No .phantom.toml found. Run phantom init first.' >&2", "  exit 1");
+    } else {
+      lines.push(
+        `  case " $* " in *" --json "*) cat <<'EOF'`,
+        ...json,
+        "EOF",
+        "  ;;",
+        "  *) cat <<'EOF'",
+        ...human,
+        "EOF",
+        "  ;; esac",
         "  exit 0",
-        "fi",
-        "exit 1",
-        "",
-      ].join("\n"),
-    );
+      );
+    }
+    lines.push("fi", "exit 1", "");
+    const fake = join(dir, "phantom");
+    writeFileSync(fake, lines.join("\n"));
     chmodSync(fake, 0o755);
   }
   return dir;
 }
 
-function runStatus(cwd: string, args: string[], withPhantom: boolean) {
+function runStatus(cwd: string, args: string[], vault: VaultMode | false) {
   const home = tmp("stack-status-home-");
   const result = spawnSync(process.execPath, [CLI_ENTRY, "status", ...args], {
     encoding: "utf8",
     cwd,
     env: {
-      PATH: [binDir(withPhantom), dirname(process.execPath), "/usr/bin", "/bin"].join(":"),
+      PATH: [binDir(vault), dirname(process.execPath), "/usr/bin", "/bin"].join(":"),
       HOME: home,
       NO_COLOR: "1",
       CI: "1",
@@ -103,7 +143,7 @@ function project(): string {
 
 describe("stack status --json", () => {
   test("emits services as {name,...} objects plus config and phantom fields", () => {
-    const { stdout, code } = runStatus(project(), ["--json"], true);
+    const { stdout, code } = runStatus(project(), ["--json"], "two");
     expect(code).toBe(0);
     const report = JSON.parse(stdout);
     expect(report.schema).toBe("ashlr.stack.status/v1");
@@ -131,7 +171,7 @@ describe("stack status --json", () => {
 
   test("matches the consumer contract: services[].name is parseable", () => {
     // Mirrors Phantom's stackStatus() parser (src/core/integrations/stack.ts).
-    const { stdout } = runStatus(project(), ["--json"], true);
+    const { stdout } = runStatus(project(), ["--json"], "two");
     const parsed = JSON.parse(stdout.trim()) as Record<string, unknown>;
     const raw = parsed.services;
     expect(Array.isArray(raw)).toBe(true);
@@ -139,6 +179,18 @@ describe("stack status --json", () => {
       .map((s) => s.name)
       .filter((s): s is string => typeof s === "string" && s.length > 0);
     expect(names).toEqual(["supabase", "openai"]);
+  });
+
+  test("empty vault reports secret_count 0", () => {
+    const { stdout, code } = runStatus(project(), ["--json"], "empty");
+    expect(code).toBe(0);
+    expect(JSON.parse(stdout).phantom).toEqual({ installed: true, secret_count: 0 });
+  });
+
+  test("unreadable vault (phantom list exits 1) reports secret_count null", () => {
+    const { stdout, code } = runStatus(project(), ["--json"], "error");
+    expect(code).toBe(0);
+    expect(JSON.parse(stdout).phantom).toEqual({ installed: true, secret_count: null });
   });
 
   test("no .stack.toml: exits 0 with empty services and present=false", () => {
@@ -160,7 +212,7 @@ describe("stack status --json", () => {
   });
 
   test("human output is unchanged without --json", () => {
-    const { stdout, code } = runStatus(project(), [], true);
+    const { stdout, code } = runStatus(project(), [], "two");
     expect(code).toBe(0);
     expect(() => JSON.parse(stdout)).toThrow();
     expect(stdout).toContain("Ashlr Stack");
