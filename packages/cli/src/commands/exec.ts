@@ -1,7 +1,16 @@
 import { spawn } from "node:child_process";
 import { assertPhantomInstalled, hasConfig } from "@ashlr/stack-core";
 import { defineCommand } from "citty";
-import { colors, intro, outroError } from "../ui.ts";
+import { colors } from "../ui.ts";
+
+/**
+ * stdout belongs to the wrapped command (`stack exec -- cmd > out.json`), so
+ * every message from stack itself goes to stderr.
+ */
+function fail(message: string): void {
+  process.stderr.write(`${colors.red(`[stack exec] ${message}`)}\n`);
+  process.exit(1);
+}
 
 /**
  * `stack exec -- <cmd>` — run a command with Phantom's proxy active so env
@@ -18,17 +27,15 @@ export const execCommand = defineCommand({
     _: { type: "positional", required: false, description: "Command to run after --" },
   },
   async run({ rawArgs }) {
-    intro("stack exec");
-
     if (!hasConfig()) {
-      outroError("No .stack.toml found. Run `stack init` first.");
+      fail("No .stack.toml found. Run `stack init` first.");
       return;
     }
 
     try {
       await assertPhantomInstalled();
     } catch (err) {
-      outroError((err as Error).message);
+      fail((err as Error).message);
       return;
     }
 
@@ -36,7 +43,7 @@ export const execCommand = defineCommand({
     const sep = rawArgs.indexOf("--");
     const forwarded = sep >= 0 ? rawArgs.slice(sep + 1) : rawArgs;
     if (forwarded.length === 0) {
-      outroError("Nothing to run. Usage: stack exec -- <command>");
+      fail("Nothing to run. Usage: stack exec -- <command>");
       return;
     }
 
@@ -48,7 +55,7 @@ export const execCommand = defineCommand({
       process.exitCode = code ?? 0;
     });
     child.on("error", (err) => {
-      outroError((err as Error).message);
+      fail((err as Error).message);
     });
   },
 });
