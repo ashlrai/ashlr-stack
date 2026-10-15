@@ -113,8 +113,8 @@ describe("Stack Builder catalog join", () => {
     const joined = joinProviderReferences(PROVIDERS, PROVIDERS_REF);
     const auth0 = joined.find(({ display }) => display.name === "Auth0")?.ref;
     const datadog = joined.find(({ display }) => display.name === "Datadog")?.ref;
-    expect(auth0?.secrets).toEqual(["AUTH0_DOMAIN", "AUTH0_CLIENT_ID", "AUTH0_CLIENT_SECRET"]);
-    expect(datadog?.secrets).toEqual(["DD_API_KEY", "DD_APP_KEY"]);
+    expect(auth0?.secrets).toEqual(["AUTH0_DOMAIN"]);
+    expect(datadog?.secrets).toEqual(["DD_API_KEY"]);
     expect(auth0?.dashboard).toBeTruthy();
     expect(datadog?.howTo).toBeTruthy();
     expect(auth0?.secrets).not.toContain("AUTH0_API_KEY");

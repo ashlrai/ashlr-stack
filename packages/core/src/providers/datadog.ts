@@ -8,7 +8,7 @@ export default makeApiKeyProvider({
   docs: "https://docs.datadoghq.com/api/latest/",
   secretName: "DD_API_KEY",
   howTo:
-    "Create an API key at https://app.datadoghq.com/organization-settings/api-keys and an Application key at https://app.datadoghq.com/organization-settings/application-keys.",
+    "Create an API key at https://app.datadoghq.com/organization-settings/api-keys. This adapter validates and stores that key only.",
   dashboard: "https://app.datadoghq.com",
   async verify(key) {
     try {
