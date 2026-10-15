@@ -56,7 +56,7 @@
           { "name": "noInteractive", "in": "query", "schema": { "type": "boolean", "default": false }, "description": "Skip the template picker; an explicitly supplied template can still be used." }
         ],
         "responses": {
-          "200": { "description": "Project scaffolded.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/StackToml" } } } }
+          "200": { "description": "Parsed committed-file reference after scaffolding, not literal CLI JSON stdout or an HTTP response. stack init prints human-facing messages; this catalog retains the JSON media entry only to describe the file representation.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/StackToml" } } } }
         }
       }
     },
@@ -113,7 +113,7 @@
           { "name": "dryRun", "in": "query", "schema": { "type": "boolean", "default": false }, "description": "Preview; no network calls, no vault writes, no MCP edits." }
         ],
         "responses": {
-          "200": { "description": "Service wired.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ServiceEntry" } } } }
+          "200": { "description": "Internal merged ServiceEntry reference from the addService library pipeline, not literal CLI JSON stdout or an HTTP response. stack add prints human-facing messages; the reference does not attest current provider health or credential usability.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ServiceEntry" } } } }
         }
       }
     },
@@ -345,40 +345,60 @@
     "schemas": {
       "StackToml": {
         "type": "object",
-        "title": ".stack.toml",
-        "description": "Committed shape of a project's stack. Per-clone instance data lives in .stack.local.toml.",
-        "required": ["version", "project"],
+        "title": ".stack.toml (canonical committed shape)",
+        "description": "JSON-like representation of the parsed committed .stack.toml produced by writeConfig, not raw TOML text, the merged readConfig result, or every input the permissive reader accepts. Per-clone instance data lives in .stack.local.toml. This reference does not add runtime schema validation.",
+        "required": ["stack", "services", "environments"],
         "properties": {
-          "version": { "type": "string", "const": "1", "description": "Schema version." },
-          "project": {
+          "stack": {
             "type": "object",
-            "required": ["name"],
+            "required": ["version"],
             "properties": {
-              "name": { "type": "string", "description": "Human-readable project name." },
-              "template": { "type": "string", "description": "Optional: template slug this project was scaffolded from." }
+              "version": { "type": "string", "example": "1", "description": "emptyConfig starts at version 1; writeConfig preserves the supplied string. The reader does not enforce a version enum or migration promise." },
+              "template": { "type": "string", "description": "Optional template slug." }
             }
           },
           "services": {
             "type": "object",
-            "description": "Map from service slot name (usually the provider name) to its ServiceEntry.",
-            "additionalProperties": { "$ref": "#/components/schemas/ServiceEntry" }
+            "description": "Map from logical service slot name to its committed provider, secret names and optional MCP entry name. Instance fields are not written here.",
+            "additionalProperties": {
+              "type": "object",
+              "required": ["provider", "secrets"],
+              "properties": {
+                "provider": { "type": "string", "description": "Provider key; readConfig does not validate it against the provider registry." },
+                "secrets": { "type": "array", "items": { "type": "string" }, "description": "Secret slot names, not the corresponding credential values. An empty array is allowed." },
+                "mcp": { "type": "string", "description": "Optional MCP server entry name; its presence alone does not attest a running server." }
+              }
+            }
+          },
+          "environments": {
+            "type": "array",
+            "description": "Environment entries preserved by writeConfig, including an empty array. This schema does not enforce exactly one default or promise expansion of overrides.",
+            "items": {
+              "type": "object",
+              "required": ["name"],
+              "properties": {
+                "name": { "type": "string" },
+                "default": { "type": "boolean" },
+                "overrides": { "type": "object", "additionalProperties": { "type": "string" }, "description": "Optional per-environment string map." }
+              }
+            }
           }
         }
       },
       "ServiceEntry": {
         "type": "object",
-        "title": "Service entry",
-        "description": "One wired service inside a stack.",
-        "required": ["provider"],
+        "title": "Merged internal service entry",
+        "description": "Internal ServiceEntry returned by readConfig and the addService library pipeline, combining committed shape with per-clone instance fields. It is not the committed service subset or a literal stack add JSON response. Freeform metadata is not a redaction or secret-storage boundary.",
+        "required": ["provider", "secrets", "created_at"],
         "properties": {
-          "provider": { "type": "string", "description": "Provider name (matches `stack add <name>`)." },
-          "secrets": {
-            "type": "array",
-            "description": "Secret slot names written into Phantom.",
-            "items": { "type": "string" }
-          },
-          "mcp": { "type": "string", "description": "MCP server id wired into .mcp.json, if any." },
-          "region": { "type": "string", "description": "Region for region-scoped providers." }
+          "provider": { "type": "string", "description": "Provider key; the service map key is the logical slot name." },
+          "secrets": { "type": "array", "items": { "type": "string" }, "description": "Secret slot names associated with this service." },
+          "created_at": { "type": "string", "description": "Instance timestamp string; this reference does not add date-format validation." },
+          "mcp": { "type": "string", "description": "Optional MCP server entry name." },
+          "resource_id": { "type": "string", "description": "Opaque provider-side instance identifier." },
+          "region": { "type": "string", "description": "Optional instance region." },
+          "meta": { "type": "object", "description": "Optional freeform provider-specific instance metadata; values are not generally redacted or moved into Phantom." },
+          "created_by": { "type": "string", "description": "Optional instance creator label." }
         }
       },
       "RecommendOutput": {
