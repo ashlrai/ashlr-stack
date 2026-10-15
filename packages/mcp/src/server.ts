@@ -140,8 +140,16 @@ const TOOLS: ToolDef[] = [
   {
     name: "stack_status",
     description: "Show Phantom + services + config at a glance.",
-    inputSchema: { type: "object", properties: {} },
-    cliArgs: () => ["status"],
+    inputSchema: {
+      type: "object",
+      properties: {
+        json: {
+          type: "boolean",
+          description: "Machine-readable JSON (schema ashlr.stack.status/v1).",
+        },
+      },
+    },
+    cliArgs: (input) => (input.json ? ["status", "--json"] : ["status"]),
   },
   {
     name: "stack_env_show",
