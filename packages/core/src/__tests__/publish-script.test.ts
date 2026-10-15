@@ -630,7 +630,7 @@ fi
   }
 
   test("actual npm caller quotes one version, supplies no OTP and propagates failure", async () => {
-    const block = workflowBlock("Publish @ashlr/stack-core + ashlr-stack-mcp + @ashlr/stack");
+    const block = workflowBlock("Publish @ashlr/stack-core + @ashlr/stack + ashlr-stack-mcp");
     const argv = join(root, "caller-argv");
     writeFileSync(
       join(root, "bin/bash"),

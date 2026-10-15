@@ -24,7 +24,7 @@ Even without `--yes`, it temporarily rewrites all three manifest versions and
 publication hooks can build output before the confirmation prompt. There is no
 standalone read-only preview mode.
 
-Confirmation, or `--yes`, publishes core, MCP, then CLI, creates a tag if absent,
+Confirmation, or `--yes`, publishes core, CLI, then MCP (`ashlr-stack-mcp` depends on `@ashlr/stack`), creates a tag if absent,
 and attempts to push it. The exit trap restores the original manifests, including
 their versions; no source version commit is made. Existing tag targets are not
 checked against the publishing source. Tag push failure produces a warning.
