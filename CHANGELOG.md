@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Docs
+
+- **Adding a provider** — [docs/adding-a-provider.md](docs/adding-a-provider.md) lists every file a new provider touches, and `provider-parity.test.ts` fails when the loader registry, the catalog and `docs/provider-auth-matrix.md` disagree (#18).
+
 ### Bug fixes
 
 - **Command errors are one line.** A command that fails outside a Stack project (`stack list`, `deps`, `info`, `remove`, ...) now prints `✗ No .stack.toml at <path>. Run \`stack init\` first.` on stderr and exits 1, instead of a stack trace followed by the same message again. `STACK_DEBUG=1` adds the stack. Usage errors still print usage. (`packages/cli/src/lib/run-cli.ts`, #19)
