@@ -7,10 +7,15 @@ The table below mirrors the provider registry in `packages/core/src/providers/`
 whether the provider implements `deprovision`, which `stack add` uses to roll
 back a resource it created when a later step fails.
 
-Only Supabase (`oauth_pkce`) and GitHub (`oauth_device`) have an OAuth flow,
-and both use it only when an OAuth client ID is configured (see below);
-otherwise they fall back to a pasted token. GitHub requests the scopes
-`repo,read:org,read:user`. Every other provider uses a pasted PAT or API key.
+Only Supabase (`oauth_pkce`) and GitHub (`oauth_device`) implement OAuth
+flows, selected when an effective client ID is configured (see below);
+otherwise their login paths can prompt for a token. GitHub requests
+`repo,read:org,read:user`. Other adapters generally prompt for supplied
+credentials, but `authKind` is routing metadata, not a promise of account
+authentication: Auth0 currently accepts only `AUTH0_DOMAIN` and checks OIDC
+discovery, not M2M credentials. Datadog validates only `DD_API_KEY`, not an
+application key. AWS accepts an access-key/secret-key pair. A limited verifier
+result does not prove every account permission or application use.
 
 | Provider | Category | Auth kind | Deprovision | API docs |
 |----------|----------|-----------|-------------|----------|
@@ -54,9 +59,11 @@ otherwise they fall back to a pasted token. GitHub requests the scopes
 | workos | auth | api_key | no | https://workos.com/docs/reference/api |
 | xai | ai | api_key | no | https://docs.x.ai/api |
 
-## OAuth app registration checklist
+## OAuth app registration checklist (operator planning)
 
-For each provider requiring an OAuth app, Ashlr registers a single "Ashlr Stack" application at `https://stack.ashlr.ai`:
+These are source-supported configuration points for an owner-approved OAuth
+commissioning procedure, not proof that an app is registered, approved or
+usable in the installed package:
 
 1. **Homepage**: `https://stack.ashlr.ai`
 2. **Redirect URL**: `http://127.0.0.1:8787/callback`. The PKCE loopback server (`packages/core/src/oauth.ts`) listens on port 8787 first and falls back to a random OS-assigned port only when 8787 is in use.
@@ -65,7 +72,7 @@ For each provider requiring an OAuth app, Ashlr registers a single "Ashlr Stack"
 5. **Logo**: Ashlr Stack mark
 6. **Scopes**: minimum required for provision + materialize + healthcheck (never more)
 
-### v0.1 target providers
+### Source-supported OAuth providers
 
 | Provider | Registration URL | Client ID goes to |
 |----------|-----------------|-------------------|
@@ -74,15 +81,21 @@ For each provider requiring an OAuth app, Ashlr registers a single "Ashlr Stack"
 
 ### Where the client IDs live
 
-Client IDs are **public values** (they travel in browser redirect URLs; only the client secret needs protection). Stack bakes them into the published npm tarball at release time via `scripts/inject-client-ids.mjs`, which is triggered by `.github/workflows/release.yml` and reads from the `OAUTH_*_CLIENT_ID` GitHub Actions secrets.
+Client IDs are public OAuth identifiers. The source release workflow can run
+`scripts/inject-client-ids.mjs` using `OAUTH_*_CLIENT_ID` inputs to stamp
+`packages/core/src/env.ts`. Repository defaults are empty. This mechanism does
+not establish actual registry configuration, injected public-package bytes,
+provider approval or a completed login.
 
 The resolution precedence at runtime (see `packages/core/src/env.ts`):
 
-1. `process.env.<PROVIDER>_STACK_CLIENT_ID` — per-user override (e.g. a fork with its own OAuth app)
-2. `OAUTH_DEFAULTS.<provider>` — Ashlr-registered default baked in at publish
-3. Neither set — provider falls back to interactive PAT paste
+1. `process.env.<PROVIDER>_STACK_CLIENT_ID` when present (an empty override disables the ID).
+2. Otherwise `OAUTH_DEFAULTS.<provider>` from the selected artifact.
+3. No nonempty effective ID — the provider can use its interactive token path.
 
-Client secrets stay at the provider (PKCE + device flows don't require a client secret on the user side). If a provider requires a confidential flow later (Stripe Connect), the secret would live in an Ashlr-hosted backend, not on user machines.
+The implemented PKCE/device paths do not take a client secret. A future
+confidential flow would require a separate reviewed design and commissioning;
+no hosted credential backend is established here.
 
 ### To register a new provider
 
@@ -91,4 +104,4 @@ Client secrets stay at the provider (PKCE + device flows don't require a client 
 3. Add it as a GitHub Actions secret: `Settings → Secrets and variables → Actions → New repository secret`, name: `OAUTH_<PROVIDER>_CLIENT_ID`.
 4. Add the provider key to `OAUTH_DEFAULTS` in `packages/core/src/env.ts` and to `SOURCES` in `scripts/inject-client-ids.mjs`.
 5. Update the relevant `packages/core/src/providers/<name>.ts` to call `resolveOAuthClientId(...)`.
-6. Cut the next release tag — the workflow injects the ID automatically.
+6. Follow the separately authorized release process and verify actual package bytes and provider login. Editing source or configuring a GitHub input does not complete publication or OAuth commissioning.

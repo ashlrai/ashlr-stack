@@ -1,24 +1,24 @@
 # ashlr-stack (Claude Code plugin)
 
-Thin Claude Code plugin (`stack`) that registers the `ashlr-stack` MCP server, a SessionStart hook that notes when a `.stack.toml` is present, and a handful of slash commands:
+Thin Claude Code plugin (`stack`) with six slash-command files, an MCP
+entrypoint, and a SessionStart hook that prints a notice when `.stack.toml`
+is present:
 
-- `/stack:add <service>` — provision and wire a new service
+- `/stack:add <service>` — run one provider setup, creating or attaching as its adapter supports
 - `/stack:list` — show configured services
-- `/stack:status` — health + Phantom + services at a glance
-- `/stack:doctor` — verify every service is reachable
-- `/stack:recommend <query>` — AI picks providers for a goal and saves a reusable recipe
-- `/stack:apply <recipe-id>` — provision every provider in a recipe and wire secrets
+- `/stack:status` — inspect local Stack and Phantom metadata
+- `/stack:doctor` — report available provider checks and unchecked services
+- `/stack:recommend <query>` — retrieve catalog matches and save a reusable recipe
+- `/stack:apply <recipe-id>` — replay provider setup and attempt optional wiring; inspect failures
 
-The plugin starts the MCP server through `scripts/mcp-entrypoint.sh`, which runs `ashlr-stack-mcp` from PATH or, in a monorepo checkout, `bun run ../mcp/src/server.ts`. The server shells out to the `stack` CLI (override with `STACK_BIN`). The CLI is the canonical implementation.
+The plugin starts the MCP server through `scripts/mcp-entrypoint.sh`. It prefers `ashlr-stack-mcp` on PATH; otherwise it locates the monorepo server source relative to the script and runs it with Bun. The server shells out to the `stack` CLI (override with `STACK_BIN`). The CLI is the canonical implementation. The startup notice does not run a health check or configure a provider.
 
 ## Install
 
 ```bash
-# Install the CLI first (provides `stack` on PATH)
-npm i -g @ashlr/stack
-
-# Optional global MCP binary (faster than bun-run-from-source)
-npm i -g ashlr-stack-mcp
+# Illustrative public 0.1.1 package setup; requires Bun 1.2+
+# Installs the CLI and separate stdio server, not provider accounts
+npm i -g @ashlr/stack@0.1.1 ashlr-stack-mcp@0.1.1
 
 # Then inside Claude Code (the plugin is named `stack` in the `ashlr`
 # marketplace defined at the repo root, .claude-plugin/marketplace.json):
@@ -36,4 +36,4 @@ ashlr-stack MCP server  ──spawn──►  stack CLI  ──spawn──►  p
          (stdio)                   (TypeScript)            (Rust)
 ```
 
-All three are shipped under the Ashlr brand and compose cleanly.
+The server inherits its working directory and forwards CLI output as MCP text. Configure the intended project directory and check the actual client tool list. The recorded public packages are 0.1.1; reviewed source 0.2.1 and historical native release 0.2.0 are separate artifacts. Plugin installation is not provider, credential or installed-runtime acceptance.

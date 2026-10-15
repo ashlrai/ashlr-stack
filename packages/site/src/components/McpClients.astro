@@ -12,12 +12,14 @@ import McpClientsGrid from "./McpClientsGrid";
 
   <header class="max-w-[760px] mb-10" data-reveal>
     <h2 class="display text-[color:var(--color-ink-50)]" style="font-size: clamp(30px, 4.2vw, 50px);">
-      Every MCP-capable agent, <span class="display-accent">out of the box.</span>
+      Connect an MCP-capable agent, <span class="display-accent">with explicit setup.</span>
     </h2>
     <p class="mt-5 text-[15px] leading-[1.6] text-[color:var(--color-ink-300)] max-w-[620px]">
-      Stack's MCP server drops into Claude Code, Cursor, Windsurf, Codex, or ashlrcode with
-      the same <code class="mono text-[color:var(--color-blade-400)]">stack mcp serve</code>
-      entry point. Click a client to see the exact config Stack writes — path + JSON.
+      The <code class="mono text-[color:var(--color-blade-400)]">ashlr-stack-mcp</code>
+      stdio server also needs the Stack CLI and the runtime required by your installed versions.
+      Public 0.1.1 packages require Bun 1.2+; reviewed source 0.2.1 is not a publication claim.
+      Click a client for a canonical server-entry example, then adapt it to that client's
+      configuration format and launch it in your project directory.
     </p>
   </header>
 
@@ -33,6 +35,6 @@ import McpClientsGrid from "./McpClientsGrid";
       modelcontextprotocol.io
     </a>
     <span class="text-[color:var(--color-ink-600)]">·</span>
-    <span>17 tools · 3 resources · stdio + SSE</span>
+    <span>Source: 19 tools · up to 3 raw-file resources · stdio</span>
   </div>
 </section>

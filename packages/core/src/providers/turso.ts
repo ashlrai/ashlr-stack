@@ -1,7 +1,6 @@
 import type { ServiceEntry } from "../config.ts";
 import { StackError } from "../errors.ts";
 import { fetchWithRetry } from "../http.ts";
-import { addSecret, revealSecret } from "../phantom.ts";
 import type {
   AuthHandle,
   HealthStatus,
@@ -11,7 +10,8 @@ import type {
   ProvisionOpts,
   Resource,
 } from "./_base.ts";
-import { promptSecret } from "./_helpers.ts";
+import { acceptVerifiedExisting, storeProviderSecret } from "./_credential-stage.ts";
+import { promptSecret, tryRevealSecret } from "./_helpers.ts";
 
 /**
  * Turso — LibSQL-backed edge database. v1 uses a user-created Platform API
@@ -32,10 +32,13 @@ const turso: Provider = {
   docs: "https://docs.turso.tech",
 
   async login(ctx: ProviderContext): Promise<AuthHandle> {
-    const cached = await tryRevealSecret(PLATFORM_TOKEN_SECRET);
+    const cached = await tryRevealSecret(PLATFORM_TOKEN_SECRET, ctx);
     if (cached) {
       const identity = await fetchIdentity(cached);
-      if (identity) return { token: cached, identity };
+      if (identity) {
+        acceptVerifiedExisting(ctx, PLATFORM_TOKEN_SECRET, cached);
+        return { token: cached, identity };
+      }
       ctx.log({ level: "warn", msg: "Cached Turso token invalid." });
     }
     if (!ctx.interactive)
@@ -46,7 +49,7 @@ const turso: Provider = {
     });
     const identity = await fetchIdentity(token);
     if (!identity) throw new StackError("TURSO_AUTH_INVALID", "Turso rejected that token.");
-    await addSecret(PLATFORM_TOKEN_SECRET, token);
+    await storeProviderSecret(ctx, PLATFORM_TOKEN_SECRET, token);
     return { token, identity };
   },
 
@@ -91,7 +94,7 @@ const turso: Provider = {
     };
   },
 
-  async materialize(_ctx, resource, auth): Promise<Materialized> {
+  async materialize(ctx, resource, auth): Promise<Materialized> {
     const [orgSlug, dbName] = resource.id.split("/");
     const dbToken = await mintDbToken(auth.token, orgSlug, dbName);
     const hostname =
@@ -107,8 +110,8 @@ const turso: Provider = {
     };
   },
 
-  async healthcheck(_ctx, entry: ServiceEntry): Promise<HealthStatus> {
-    const token = await tryRevealSecret(PLATFORM_TOKEN_SECRET);
+  async healthcheck(ctx, entry: ServiceEntry): Promise<HealthStatus> {
+    const token = await tryRevealSecret(PLATFORM_TOKEN_SECRET, ctx);
     if (!token) return { kind: "error", detail: `${PLATFORM_TOKEN_SECRET} missing` };
     if (!entry.resource_id) return { kind: "warn", detail: "no resource_id" };
     const [orgSlug, dbName] = entry.resource_id.split("/");
@@ -127,34 +130,34 @@ const turso: Provider = {
     return `https://app.turso.tech/${orgSlug}/databases/${dbName}`;
   },
 
-  async deprovision(ctx: ProviderContext, auth: AuthHandle, resourceId: string): Promise<void> {
-    // resourceId is "orgSlug/dbName"
+  async deprovision(_ctx: ProviderContext, auth: AuthHandle, resourceId: string): Promise<void> {
+    // Retain the original org/db selector; extra segments remain a separate routing risk.
     const [orgSlug, dbName] = resourceId.split("/");
     if (!orgSlug || !dbName) {
-      ctx.log({
-        level: "warn",
-        msg: `Turso deprovision: invalid resourceId format "${resourceId}". Expected "orgSlug/dbName".`,
-      });
-      return;
+      throw new StackError(
+        "TURSO_DELETE_ID_INVALID",
+        "Turso resource deletion requires an organization and database.",
+      );
     }
+    let res: Response;
     try {
-      const res = await fetch(`${API}/organizations/${orgSlug}/databases/${dbName}`, {
+      res = await fetch(`${API}/organizations/${orgSlug}/databases/${dbName}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${auth.token}` },
       });
-      if (res.status === 404) return; // already gone
-      if (!res.ok) {
-        ctx.log({
-          level: "warn",
-          msg: `Turso deprovision returned ${res.status} for ${resourceId}; resource may need manual cleanup.`,
-        });
-      }
-    } catch (err) {
-      ctx.log({
-        level: "warn",
-        msg: `Turso deprovision failed for ${resourceId}: ${(err as Error).message}. Resource may need manual cleanup.`,
-      });
+    } catch {
+      throw new StackError(
+        "TURSO_DELETE_UNCONFIRMED",
+        "Turso resource deletion could not be confirmed.",
+      );
     }
+    // Admit documented HTTP200 completion or HTTP404 absence; other statuses remain unconfirmed.
+    // https://docs.turso.tech/api-reference/databases/delete
+    if (res.status === 200 || res.status === 404) return;
+    throw new StackError(
+      "TURSO_DELETE_FAILED",
+      `Turso resource deletion failed (HTTP ${res.status}).`,
+    );
   },
 };
 
@@ -202,13 +205,4 @@ async function mintDbToken(
     );
   const body = (await res.json()) as { jwt: string };
   return body.jwt;
-}
-
-async function tryRevealSecret(key: string): Promise<string | undefined> {
-  try {
-    const v = await revealSecret(key);
-    return v.length > 0 ? v : undefined;
-  } catch {
-    return undefined;
-  }
 }

@@ -5,14 +5,13 @@ import {
   findSwap,
   hasConfig,
   readConfig,
-  removeSecret,
   revealSecret,
   suggestSwaps,
   writeConfig,
 } from "@ashlr/stack-core";
 import { removeMcpEntry } from "@ashlr/stack-core/mcp-writer";
 import { defineCommand } from "citty";
-import { requirePhantom } from "../lib/phantom-preflight.ts";
+import { removeVaultSecrets, requirePhantom } from "../lib/phantom-preflight.ts";
 import { colors, intro, outro, outroError, prompts, spinnerBridge } from "../ui.ts";
 
 export const swapCommand = defineCommand({
@@ -202,8 +201,14 @@ export const swapCommand = defineCommand({
             console.log(colors.yellow(`  ⚠ ${newKey} has no value — alias ${oldKey} not written.`));
           }
         } catch (err) {
+          const unreadable =
+            (err as { code?: string }).code === "PHANTOM_TRUSTED_TERMINAL_REQUIRED";
           console.log(
-            colors.yellow(`  ⚠ Could not mirror ${newKey} → ${oldKey}: ${(err as Error).message}`),
+            colors.yellow(
+              unreadable
+                ? `  ⚠ Phantom does not hand stored values to Stack, so alias ${oldKey} was not written. Add it yourself: \`phantom add ${oldKey}\` and paste the ${newKey} value.`
+                : `  ⚠ Could not mirror ${newKey} → ${oldKey}: ${(err as Error).message}`,
+            ),
           );
         }
       }
@@ -217,13 +222,7 @@ export const swapCommand = defineCommand({
         const freshConfig = await readConfig();
         const entry = freshConfig.services[from];
         if (entry) {
-          for (const secret of entry.secrets) {
-            try {
-              await removeSecret(secret);
-            } catch {
-              /* best-effort */
-            }
-          }
+          await removeVaultSecrets(entry.secrets);
           if (entry.mcp) {
             try {
               await removeMcpEntry(entry.mcp);

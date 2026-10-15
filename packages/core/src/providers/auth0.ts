@@ -8,7 +8,7 @@ export default makeApiKeyProvider({
   docs: "https://auth0.com/docs/api/management/v2",
   secretName: "AUTH0_DOMAIN",
   howTo:
-    "Create a Machine-to-Machine app in Auth0 → Applications. You will be prompted for domain, client ID, and client secret.",
+    "Enter your Auth0 tenant domain, such as your-tenant.us.auth0.com. This adapter checks its discovery response and stores only that domain.",
   dashboard: "https://manage.auth0.com",
   async verify(key) {
     // `key` here is the domain (e.g. "myapp.us.auth0.com").

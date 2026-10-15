@@ -1,10 +1,11 @@
 import { useState } from "react";
 import CopyBtn from "~/components/primitives/CopyBtn";
+import { formatOptionalStackMcp } from "~/lib/stack-builder-output";
 
 /**
  * McpClientsGrid — five MCP-capable agent clients. Click a card to inline-
- * expand the real config snippet Stack writes (path + contents) for that
- * client. Hand-authored SVG marks kept from the previous static version.
+ * expand a canonical server-entry example to adapt to that
+ * client. This does not attest client-specific config paths or acceptance. Hand-authored SVG marks kept from the previous static version.
  */
 
 interface Client {
@@ -12,11 +13,11 @@ interface Client {
   url: string;
   color: string;
   meta: string;
-  /** Config file path Stack patches. */
+  /** Client-specific configuration guidance. */
   configPath: string;
-  /** JSON or text Stack appends to that file. */
+  /** Canonical JSON example; adapt to the client. */
   configSnippet: string;
-  /** How to kick the client into re-reading config after install. */
+  /** Setup prerequisites; no universal reload command. */
   reloadTip: string;
 }
 
@@ -26,85 +27,50 @@ const CLIENTS: Client[] = [
     url: "https://claude.com/claude-code",
     color: "#D97757",
     meta: "Anthropic · MCP native",
-    configPath: ".mcp.json  (project root) · or ~/.claude/settings.json (global)",
-    configSnippet: `{
-  "mcpServers": {
-    "stack": {
-      "command": "stack",
-      "args": ["mcp", "serve"],
-      "env": { "STACK_PHANTOM_BIN": "phantom" }
-    }
-  }
-}`,
-    reloadTip: "/mcp reconnect  — or restart the CLI",
+    configPath: "Canonical server-entry example · adapt to your client settings",
+    configSnippet: formatOptionalStackMcp(true),
+    reloadTip:
+      "Install both Stack commands with their required runtime on PATH; select the project cwd, adapt this entry to your client, then inspect its advertised tools.",
   },
   {
     name: "Cursor",
     url: "https://cursor.com",
     color: "#e96b2a",
     meta: "IDE · MCP",
-    configPath: "~/.cursor/mcp.json",
-    configSnippet: `{
-  "mcpServers": {
-    "stack": {
-      "command": "stack",
-      "args": ["mcp", "serve"]
-    }
-  }
-}`,
-    reloadTip: "Cmd-Shift-P → 'MCP: Reload servers'",
+    configPath: "Canonical server-entry example · adapt to your client settings",
+    configSnippet: formatOptionalStackMcp(true),
+    reloadTip:
+      "Install both Stack commands with their required runtime on PATH; select the project cwd, adapt this entry to your client, then inspect its advertised tools.",
   },
   {
     name: "Windsurf",
     url: "https://codeium.com/windsurf",
     color: "#2BC4B6",
     meta: "Codeium · MCP",
-    configPath: "~/.codeium/windsurf-next/mcp_config.json",
-    configSnippet: `{
-  "mcpServers": {
-    "stack": {
-      "command": "stack",
-      "args": ["mcp", "serve"],
-      "transport": "stdio"
-    }
-  }
-}`,
-    reloadTip: "Cascade panel → Plugins → ↻ Refresh",
+    configPath: "Canonical server-entry example · adapt to your client settings",
+    configSnippet: formatOptionalStackMcp(true),
+    reloadTip:
+      "Install both Stack commands with their required runtime on PATH; select the project cwd, adapt this entry to your client, then inspect its advertised tools.",
   },
   {
     name: "OpenAI Codex",
     url: "https://openai.com/codex",
     color: "#10A37F",
     meta: "OpenAI · tool use",
-    configPath: "~/.codex/config.json",
-    configSnippet: `{
-  "tools": [
-    {
-      "type": "mcp",
-      "name": "stack",
-      "command": "stack",
-      "args": ["mcp", "serve"]
-    }
-  ]
-}`,
-    reloadTip: "codex config reload",
+    configPath: "Canonical server-entry example · adapt to your client settings",
+    configSnippet: formatOptionalStackMcp(true),
+    reloadTip:
+      "Install both Stack commands with their required runtime on PATH; select the project cwd, adapt this entry to your client, then inspect its advertised tools.",
   },
   {
     name: "ashlrcode",
     url: "https://github.com/ashlrai/ashlrcode",
     color: "#f5883e",
     meta: "Ashlr · multi-model",
-    configPath: ".ashlrcode/mcp.json  (per-project)",
-    configSnippet: `{
-  "servers": {
-    "stack": {
-      "command": "stack",
-      "args": ["mcp", "serve"],
-      "scope": "project"
-    }
-  }
-}`,
-    reloadTip: "/reload mcp — in-chat slash command",
+    configPath: "Canonical server-entry example · adapt to your client settings",
+    configSnippet: formatOptionalStackMcp(true),
+    reloadTip:
+      "Install both Stack commands with their required runtime on PATH; select the project cwd, adapt this entry to your client, then inspect its advertised tools.",
   },
 ];
 
@@ -239,7 +205,7 @@ export default function McpClientsGrid() {
           <div className="flex items-start justify-between gap-4 mb-4">
             <div>
               <div className="mono text-[10px] tracking-[0.18em] uppercase text-[color:var(--color-ink-500)] mb-1">
-                § · config for {activeClient.name}
+                § · server entry for {activeClient.name}
               </div>
               <h4 className="text-xl text-[color:var(--color-ink-50)] tracking-tight font-medium">
                 {activeClient.name}
@@ -261,7 +227,7 @@ export default function McpClientsGrid() {
           <div className="panel p-3" style={{ borderLeft: "2px solid var(--color-blade-500)" }}>
             <div className="flex items-center justify-between mb-2">
               <span className="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--color-ink-500)]">
-                what stack writes
+                example · adapt to client
               </span>
               <CopyBtn text={activeClient.configSnippet} compact />
             </div>
@@ -272,7 +238,7 @@ export default function McpClientsGrid() {
 
           <div className="mt-3 flex items-start gap-2">
             <span className="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--color-blade-400)] shrink-0 pt-1">
-              reload
+              setup
             </span>
             <span className="text-[13px] text-[color:var(--color-ink-200)] mono">
               {activeClient.reloadTip}

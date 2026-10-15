@@ -88,10 +88,10 @@ function buildGuidance(hits: RetrievalHit[], categories: string[]): string {
     );
   }
   parts.push(
-    `Apply a chosen set with: stack add ${hits
+    `Apply a chosen set with: ${hits
       .slice(0, 3)
-      .map((h) => h.provider.name)
-      .join(" ")} (or supply your own list).`,
+      .map((h) => `stack add ${h.provider.name}`)
+      .join(" && ")} (one command per service; choose other providers as needed).`,
   );
   return parts.join(" ");
 }

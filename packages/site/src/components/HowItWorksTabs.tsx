@@ -6,8 +6,8 @@ import { usePrefersReducedMotion } from "~/lib/use-prefers-reduced-motion";
  * HowItWorksTabs — interactive three-step explainer.
  *
  * One tab per surface Stack coordinates (CLI / Vault / Files). Clicking
- * a tab reveals a realistic terminal capture + a short note on what
- * that surface guarantees. Auto-advances every ~6s until the user
+ * a tab reveals an illustrative terminal example + a short note on what
+ * to inspect. Auto-advances every ~6s until the user
  * clicks a tab manually, then stops.
  */
 
@@ -32,24 +32,25 @@ const TABS: Tab[] = [
     n: "01",
     title: "CLI orchestrates",
     blurb:
-      "You run stack add. The CLI drives provider OAuth, creates the upstream resource, and picks sane defaults — region, plan, project name — inferred from your repo.",
-    guarantee: "Every upstream change is idempotent + reversible. Re-running stack add is safe.",
+      "Run stack add for a supported provider. Account approval, resource creation or attachment, and available defaults depend on that adapter and your access.",
+    guarantee:
+      "Inspect each result. A failed setup can leave upstream or vault state that needs manual cleanup.",
     lines: [
       { kind: "prompt", text: "stack add supabase" },
       { kind: "out", text: "▲ stack  adding Supabase" },
       { kind: "dim", text: "  auth · OAuth (PKCE) via the Ashlr Stack app" },
       {
         kind: "work",
-        text: "OAuth browser flow",
-        detail: "signed in as mason@evero-consulting.com",
+        text: "browser approval, if requested",
+        detail: "example account only",
       },
       {
         kind: "work",
-        text: "provisioning project raven-prod · us-east-1",
-        detail: "db.abc123def.supabase.co",
+        text: "creating or attaching an example project",
+        detail: "actual resource depends on your account",
       },
       { kind: "work", text: "fetching SUPABASE_URL · ANON_KEY · SERVICE_ROLE_KEY" },
-      { kind: "ok", text: "✓ supabase ready · 4.2s" },
+      { kind: "ok", text: "Review setup result before using the service" },
     ],
   },
   {
@@ -57,39 +58,42 @@ const TABS: Tab[] = [
     n: "02",
     title: "Phantom stores",
     blurb:
-      "Every secret is written through Phantom. Stack never holds the values — it holds the slot names and lets Phantom's E2E-encrypted vault do the key-material work.",
+      "After a successful add, Stack passes returned credentials to Phantom and records the slot names in local configuration. Inspect the result for this provider.",
     guarantee:
-      "Secrets never touch disk in plaintext. Stack code paths only ever reference phantom:// slots.",
+      "Credential values pass through setup in memory. Review Phantom storage and any files your own app writes.",
     lines: [
-      { kind: "prompt", text: "phantom status" },
-      { kind: "out", text: "phantom  v0.4.1" },
-      { kind: "dim", text: "  vault: ~/.phantom  ·  E2E encrypted · unlocked" },
-      { kind: "work", text: "  SUPABASE_URL                    stored · rotated 0 times" },
-      { kind: "work", text: "  SUPABASE_ANON_KEY               stored · rotated 0 times" },
-      { kind: "work", text: "  SUPABASE_SERVICE_ROLE_KEY       stored · rotated 0 times" },
-      { kind: "ok", text: "✓ 3 slots managed by phantom" },
+      { kind: "prompt", text: "stack info supabase" },
+      { kind: "out", text: "example service record · no secret values shown" },
+      { kind: "dim", text: "  Phantom holds returned credentials if setup succeeded" },
+      { kind: "work", text: "  SUPABASE_URL                    declared slot" },
+      { kind: "work", text: "  SUPABASE_ANON_KEY               declared slot" },
+      { kind: "work", text: "  SUPABASE_SERVICE_ROLE_KEY       declared slot" },
+      { kind: "ok", text: "Verify stored slots separately in your vault" },
     ],
   },
   {
     id: "files",
     n: "03",
-    title: "Files wired everywhere",
+    title: "Review local files",
     blurb:
-      "Stack patches .env.local, .mcp.json, and .stack.toml. Your dev server, editor, and Claude Code all read the same slot names — values are resolved at read-time via Phantom.",
+      "Stack records successful services in .stack.toml and merges a provider MCP entry when one is supplied. Generate an optional empty-key .env.example; wire your app separately.",
     guarantee:
-      "One source of truth. Revoking a key in Phantom instantly invalidates it across every consumer.",
+      "Inspect .stack.toml and any MCP entry. Check each app consumer after changing or revoking a credential.",
     lines: [
-      { kind: "prompt", text: "cat .env.local" },
-      { kind: "out", text: "# Ashlr Stack — managed block (do not edit)" },
-      { kind: "out", text: "SUPABASE_URL=<phantom://supabase/SUPABASE_URL>" },
-      { kind: "out", text: "SUPABASE_ANON_KEY=<phantom://supabase/SUPABASE_ANON_KEY>" },
+      { kind: "prompt", text: "stack env export --example --stdout" },
+      { kind: "out", text: "# Optional .env.example skeleton; values remain empty" },
+      { kind: "out", text: "SUPABASE_URL=" },
+      { kind: "out", text: "SUPABASE_ANON_KEY=" },
       {
         kind: "out",
-        text: "SUPABASE_SERVICE_ROLE_KEY=<phantom://supabase/SUPABASE_SERVICE_ROLE_KEY>",
+        text: "SUPABASE_SERVICE_ROLE_KEY=",
       },
-      { kind: "dim", text: "# end managed block" },
+      { kind: "dim", text: "# no credentials exported" },
       { kind: "prompt", text: "stack exec -- bun dev" },
-      { kind: "ok", text: "✓ 3 tokens resolved · starting Next.js 15 on http://localhost:3000" },
+      {
+        kind: "ok",
+        text: "stack exec forwards to Phantom; verify your app receives its required values",
+      },
     ],
   },
 ];
@@ -191,7 +195,7 @@ export default function HowItWorksTabs() {
             <span className="w-2 h-2 rounded-full bg-[color:var(--color-steel-500)]" />
             <span className="w-2 h-2 rounded-full bg-[color:var(--color-blade-500)]" />
             <span className="ml-3 mono text-[11px] tracking-[0.14em] uppercase text-[color:var(--color-ink-400)]">
-              STK · {current.n} · {current.title}
+              ILLUSTRATIVE · {current.n} · {current.title}
             </span>
           </div>
           <span className="mono text-[10px] tracking-[0.12em] uppercase text-[color:var(--color-ink-500)]">
@@ -242,7 +246,7 @@ export default function HowItWorksTabs() {
           style={{ backgroundColor: "rgba(10, 12, 16, 0.4)" }}
         >
           <span className="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--color-blade-400)] shrink-0">
-            guarantee
+            to verify
           </span>
           <span className="text-[12px] text-[color:var(--color-ink-200)] leading-[1.5]">
             {linkifyPhantom(current.guarantee)}

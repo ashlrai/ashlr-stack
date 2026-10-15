@@ -22,17 +22,16 @@ describe("ai/phantom-wire", () => {
     providers: [{ name: "stripe" }],
   };
 
-  it("calls `phantom add STRIPE_SECRET_KEY` and writes a webhook stub", async () => {
+  it("attempts `phantom add STRIPE_SECRET_KEY`, stores no placeholder, and writes a webhook stub", async () => {
     const result = await wirePhantomForRecipe(STRIPE_RECIPE, { cwd: harness.dir });
 
-    expect(result.envelopes).toContain("stripe:STRIPE_SECRET_KEY");
-
-    // Fake phantom treats `--rotate` as an unknown arg and succeeds anyway
-    // (our fake echoes success for unknown cases via the `*` branch exit 0),
-    // but we always log the call — so the `add` log should mention the key.
+    // Phantom Secrets >= 0.7.3 rejects `--rotate` and positional values, so the
+    // placeholder envelope never lands (see phantom-contract.test.ts).
+    expect(result.envelopes).toEqual([]);
     const adds = harness.callsTo("add");
     const keys = adds.flatMap((c) => c.args);
     expect(keys).toContain("STRIPE_SECRET_KEY");
+    expect(JSON.parse(readFileSync(harness.vaultPath, "utf-8"))).toEqual({});
 
     const stubPath = join(harness.dir, ".stack/webhooks/stripe.ts");
     expect(existsSync(stubPath)).toBe(true);
@@ -54,7 +53,7 @@ describe("ai/phantom-wire", () => {
     expect(harness.callsTo("add")).toEqual([]);
   });
 
-  it("creates envelopes for every secret on a multi-secret provider", async () => {
+  it("writes no placeholder envelopes for a multi-secret provider", async () => {
     const recipe: Recipe = {
       id: "supa",
       query: "database",
@@ -62,10 +61,14 @@ describe("ai/phantom-wire", () => {
       providers: [{ name: "supabase" }],
     };
     const result = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
-    expect(result.envelopes).toEqual([
-      "supabase:SUPABASE_URL",
-      "supabase:SUPABASE_ANON_KEY",
-      "supabase:SUPABASE_SERVICE_ROLE_KEY",
+    expect(result.envelopes).toEqual([]);
+    expect(harness.callsTo("add").map((c) => c.args[0])).toEqual([
+      "SUPABASE_URL",
+      "SUPABASE_URL",
+      "SUPABASE_ANON_KEY",
+      "SUPABASE_ANON_KEY",
+      "SUPABASE_SERVICE_ROLE_KEY",
+      "SUPABASE_SERVICE_ROLE_KEY",
     ]);
     // Supabase is webhook-capable in our moat list.
     expect(result.webhooks).toHaveLength(1);
@@ -80,6 +83,7 @@ describe("ai/phantom-wire", () => {
     };
     const result = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
     expect(result.webhooks).toEqual([]);
-    expect(result.envelopes.length).toBeGreaterThan(0);
+    expect(result.envelopes).toEqual([]);
+    expect(harness.callsTo("add").length).toBeGreaterThan(0);
   });
 });

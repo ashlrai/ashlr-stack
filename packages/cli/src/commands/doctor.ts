@@ -4,6 +4,7 @@ import {
   getProvider,
   isPhantomInstalled,
   listProjects,
+  listSecrets,
   readConfig,
   scanSource,
 } from "@ashlr/stack-core";
@@ -241,8 +242,26 @@ async function runDoctor(
   if (fix && failingNames.length > 0 && !json) {
     console.log();
     prompts.log.info(colors.bold("  Attempting remediation…"));
+    // Phantom never replaces a stored secret, and re-running setup writes the
+    // service's secrets again, so a service whose secrets are still stored
+    // cannot be re-wired until they are removed.
+    let vaultNames: Set<string>;
+    try {
+      vaultNames = new Set(await listSecrets(cwd));
+    } catch {
+      if (!json)
+        console.log(colors.yellow("  Phantom inventory is unavailable; remediation skipped."));
+      return report;
+    }
     for (const name of failingNames) {
       const entry = config.services[name];
+      const stored = entry.secrets.filter((secret) => vaultNames.has(secret));
+      if (stored.length > 0) {
+        console.log(
+          `  ${colors.dim("·")} ${name}: skipped — still stored in Phantom: ${stored.join(", ")}. Run \`phantom remove <NAME>\` for each in a terminal, then \`stack doctor --fix\`.`,
+        );
+        continue;
+      }
       // Confirm before re-running, because `addService` may trigger a browser
       // OAuth flow or provision new upstream resources. Doing that silently
       // during a routine `doctor --fix` surprises users.

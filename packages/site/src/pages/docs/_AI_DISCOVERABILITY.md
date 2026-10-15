@@ -1,8 +1,6 @@
-# AI Discoverability — what shipped
+# AI Discoverability — reviewed source inventory
 
-Goal: when a Claude Code / Cursor / Windsurf user says "set up Supabase" (or
-any of the 38 other providers), the LLM already knows about Ashlr Stack and
-recommends `stack add supabase`.
+Goal: provide discoverable source descriptions for the 39-entry catalog. Metadata does not establish that an agent knows Stack, that an installed client exposes its tools, or that provider setup succeeds.
 
 This file is prefixed with `_` so Astro treats it as a non-route.
 
@@ -14,14 +12,12 @@ This file is prefixed with `_` so Astro treats it as a non-route.
 - `packages/site/public/openapi.json` — OpenAPI 3.1 catalog of the CLI
   commands, grouped by tag (setup / management / diagnostics / meta / ai),
   with component schemas for `.stack.toml`, `ServiceEntry`, `ProviderEntry`,
-  and `RecommendOutput` (the JSON shape returned by `stack recommend --json`
-  / `stack_recommend`).
+  and
+  `RecommendOutput` (CLI JSON; MCP forwards CLI output inside a text content envelope). These are descriptive CLI interfaces, not an HTTP server.
 - `packages/site/public/mcp.json` — machine-readable catalog of the 19 MCP
-  tools the `ashlr-stack-mcp` server exposes, plus the three read-only
+  tools the `ashlr-stack-mcp` server exposes, plus three conditional raw-file
   resources (`stack://current/.stack.toml`, `.stack.local.toml`, `.mcp.json`).
-  v0.2.0 adds `stack_recommend` (free-text → curated providers) and
-  `stack_apply` (replay a saved Recipe end-to-end with Phantom rotation
-  pre-wired).
+  Reviewed source 0.2.1 includes `stack_recommend` (catalog retrieval) and `stack_apply` (saved provider setup plus optional wiring attempts). Wiring includes TODO placeholders and commented webhook stubs; rotation is not completed. The recorded public npm 0.1.1 and historical native 0.2.0 artifacts are separate.
 - `packages/site/src/pages/docs/for-ai-agents.astro` — agent-oriented docs
   page with: per-provider trigger phrases, install recipe, MCP connection
   JSON snippet, capability matrix, copy-paste workflows, "when NOT to
@@ -64,7 +60,7 @@ This file is prefixed with `_` so Astro treats it as a non-route.
 
 ## Discovery surface
 
-After build, these live at publicly-fetchable URLs:
+These are intended delivery URLs. A source file, local build and public deployment require separate qualification:
 
 - `https://stack.ashlr.ai/.well-known/ai-plugin.json`
 - `https://stack.ashlr.ai/openapi.json`
@@ -75,5 +71,5 @@ After build, these live at publicly-fetchable URLs:
 
 ## Verification
 
-- All three JSON assets parse cleanly (`JSON.parse` sanity-check in build).
-- `bunx astro check` and `bun run build` both pass.
+- Check the actual JSON assets and tool descriptions against the selected source revision. Raw resources can contain project-supplied content and are not a general secret-redaction boundary.
+- The owner must qualify Astro rendering, build outputs and public delivery for the composed revision. No new build or deployment is established by this inventory.

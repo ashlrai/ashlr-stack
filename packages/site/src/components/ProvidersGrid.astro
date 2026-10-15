@@ -21,9 +21,8 @@ const iconPaths: Record<string, string | null> = Object.fromEntries(
     </h2>
     <p class="mt-5 text-[15px] leading-[1.6] text-[color:var(--color-ink-300)] max-w-[620px]">
       Click any provider to inspect the real <span class="mono text-[color:var(--color-ink-100)]">stack add</span>
-      invocation, every env var it writes, and — where present — the MCP entry Stack drops
-      into <span class="mono text-[color:var(--color-ink-100)]">.mcp.json</span>. Tick as many as you want
-      and export the whole recipe.
+      invocation, declared empty-key <span class="mono text-[color:var(--color-ink-100)]">.env.example</span> slots,
+      and optional MCP metadata. Select providers to plan a recipe; actual entries depend on successful setup.
     </p>
   </header>
 
@@ -34,6 +33,6 @@ const iconPaths: Record<string, string | null> = Object.fromEntries(
   <p class="mt-14 text-xs text-[color:var(--color-ink-500)] max-w-2xl">
     Brand marks provided by <a class="underline decoration-white/20 underline-offset-2 hover:text-[color:var(--color-ink-300)]" href="https://simpleicons.org" rel="noopener noreferrer" target="_blank">simple-icons</a>
     and used for identification. All trademarks are property of their respective owners.
-    Secret values never leave your machine — Phantom resolves <span class="mono">phantom://</span> slots locally at read-time.
+    Stack stores returned credentials through Phantom after successful setup. Review your app's environment and each consumer separately.
   </p>
 </section>

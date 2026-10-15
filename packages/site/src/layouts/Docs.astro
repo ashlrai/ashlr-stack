@@ -83,7 +83,7 @@ const allExtraSchemas: Record<string, unknown>[] = [techArticle, ...extraSchemas
   <DocsHeader />
 
   <div class="mx-auto max-w-[1400px] px-5 sm:px-8 pt-8 sm:pt-10 pb-24">
-    <div class="flex items-start gap-10">
+    <div class="flex flex-col items-stretch gap-10 lg:flex-row lg:items-start">
       <DocsSidebar current={pathname} />
 
       <div class="flex-1 min-w-0 flex items-start gap-10">
@@ -330,14 +330,16 @@ const allExtraSchemas: Record<string, unknown>[] = [techArticle, ...extraSchemas
   }
 
   .docs-prose table {
+    display: block;
     width: 100%;
+    max-width: 100%;
     margin: 1.5em 0;
     border-collapse: separate;
     border-spacing: 0;
     font-size: 14px;
     border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: 10px;
-    overflow: hidden;
+    overflow-x: auto;
   }
 
   .docs-prose thead th {

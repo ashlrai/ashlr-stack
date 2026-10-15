@@ -9,38 +9,37 @@ const pageUrl = `${SITE_URL}/docs/quickstart/`;
 const howTo = howToSchema({
   name: "Install Ashlr Stack and provision Supabase",
   description:
-    "From a fresh terminal to a provisioned Supabase project with MCP wired into Claude Code.",
-  totalTime: "PT5M",
+    "Install the tools, initialize a project, attempt one provider setup and inspect its results.",
   url: pageUrl,
   steps: [
     {
       name: "Install Stack",
-      text: "Install the @ashlr/stack CLI via curl, bun or npm so the `stack` binary is on your PATH.",
+      text: "Install the @ashlr/stack CLI and its required runtime; check the installed version and help.",
       url: `${pageUrl}#1-install-stack`,
     },
     {
       name: "Verify the install",
-      text: "Run `stack status` to confirm the CLI is reachable and Phantom is detected.",
+      text: "Run `stack --version` and `stack status` to inspect the installed version and local metadata.",
       url: `${pageUrl}#2-verify-the-install`,
     },
     {
       name: "Initialise a project",
-      text: "Run `stack init` inside your repo to write .stack.toml (committed) and .stack.local.toml (gitignored).",
+      text: "Run `stack init --noInteractive` in the intended project to write blank split config; inspect the files and ignore entry.",
       url: `${pageUrl}#3-initialise-a-project`,
     },
     {
       name: "Add your first service",
-      text: "Run `stack add supabase` to provision a Supabase project, store secrets in Phantom, and wire .mcp.json.",
+      text: "Authorize `stack add supabase` for provider setup and credential/MCP/config writes; inspect failures and partial effects.",
       url: `${pageUrl}#4-add-your-first-service`,
     },
     {
       name: "Sanity-check with doctor",
-      text: "Run `stack doctor` to verify every provider is reachable and its stored credentials are still valid.",
+      text: "Run `stack doctor` to inspect implemented adapter checks and services without a check.",
       url: `${pageUrl}#5-sanity-check-with-doctor`,
     },
     {
-      name: "Run your app with secrets injected",
-      text: "Run your dev server via `stack exec -- bun dev` so Phantom's local proxy injects real secret values into outgoing API requests.",
+      name: "Forward your app command to Phantom",
+      text: "Use `stack exec -- bun dev` to forward startup to installed Phantom exec; verify app inputs separately.",
       url: `${pageUrl}#6-run-your-app-with-secrets-injected`,
     },
   ],
@@ -49,7 +48,7 @@ const howTo = howToSchema({
 
 <Docs
   title="Quickstart"
-  description="From a fresh terminal to a provisioned Supabase project with MCP wired into Claude Code — in about five minutes."
+  description="Install, initialize, attempt one provider setup and inspect the app and MCP configuration."
   eyebrow="Getting started"
   extraSchemas={[howTo]}
 >
@@ -61,12 +60,14 @@ const howTo = howToSchema({
 
   <ul>
     <li>
-      <strong><a href="/docs/phantom/">Phantom Secrets</a></strong> — holds every
-      secret. Stack refuses to run <code>stack add</code> without it.
+      <strong><a href="/docs/phantom/">Phantom Secrets</a></strong> — handles credential persistence.
+      Real <code>stack add</code> needs its supported project setup.
     </li>
     <li>
-      <strong>Node 20+</strong> or <strong>Bun 1.1+</strong> — for the CLI itself
-      and for the MCP <code>npx</code> shims certain providers wire up.
+      <strong>Bun 1.2+</strong> — required by the recorded public CLI/MCP
+      packages <strong>0.1.1</strong>. Reviewed source <strong>0.2.1</strong>
+      and historical native <strong>0.2.0</strong> are separate artifacts.
+      Node/npm/npx alone do not prove the public binaries can run.
     </li>
   </ul>
 
@@ -82,9 +83,9 @@ const howTo = howToSchema({
   <p>Or via your package manager:</p>
 
   <Code
-    code={`bun add -g @ashlr/stack
-# or
-npm i -g @ashlr/stack`}
+    code={`bun add -g @ashlr/stack@0.1.1
+# or (Bun 1.2+ still required)
+npm i -g @ashlr/stack@0.1.1`}
     lang="bash"
     theme="github-dark-dimmed"
   />
@@ -102,12 +103,14 @@ npm i -g phantom-secrets`}
   <h2>2. Verify the install</h2>
 
   <Code
-    code={`stack status`}
+    code={`stack --version
+stack --help
+stack status`}
     lang="bash"
     theme="github-dark-dimmed"
   />
 
-  <p>You should see something like:</p>
+  <p>Illustrative local status; inspect your actual report:</p>
 
   <Code
     code={`  Ashlr Stack
@@ -120,8 +123,8 @@ npm i -g phantom-secrets`}
   />
 
   <p>
-    Two red dots — that's fine. We haven't initialised anything yet. Phantom
-    showing a green dot means Stack can talk to the vault.
+    Status reports local metadata and slot presence. An indicator alone
+    does not prove provider access or usable application credentials.
   </p>
 
   <h2>3. Initialise a project</h2>
@@ -129,14 +132,16 @@ npm i -g phantom-secrets`}
 
   <Code
     code={`cd path/to/your-app
-stack init`}
+stack init --noInteractive`}
     lang="bash"
     theme="github-dark-dimmed"
   />
 
   <p>
-    Stack prompts for a starter template. Pick <strong>blank</strong> for now —
-    we'll add services one at a time. Output:
+    This writes a blank config; add services one at a time. Interactive
+    <code>stack init</code> offers a template picker. A selected template
+    runs provider setup by default unless <code>--noProvision</code> is supplied.
+    Illustrative interactive output:
   </p>
 
   <Code
@@ -163,8 +168,8 @@ stack init`}
   </ul>
 
   <p>
-    Stack also appends <code>.stack.local.toml</code> to your <code>.gitignore</code>
-    so you can't accidentally commit it. See the <a href="/docs/config/">config
+    Stack attempts to append <code>.stack.local.toml</code> to your <code>.gitignore</code>.
+    Writes can partially fail; inspect files before sharing. See the <a href="/docs/config/">config
     reference</a> for the full schema.
   </p>
 
@@ -178,18 +183,18 @@ stack init`}
     theme="github-dark-dimmed"
   />
 
-  <p>Stack will:</p>
+  <p>For authorized Supabase setup, the adapter attempts:</p>
 
   <ol>
-    <li>Pop a browser window for Supabase OAuth (PKCE — no secrets pasted).</li>
-    <li>Create a new project in your default org.</li>
-    <li>Generate a DB password, store it in Phantom.</li>
+    <li>Authenticate using the available Supabase OAuth or PAT branch.</li>
+    <li>Create a project in an accessible organization, or attach to a requested existing resource.</li>
+    <li>Handle resource-critical credentials through managed persistence phases.</li>
     <li>Fetch the anon + service-role keys and route them into Phantom.</li>
-    <li>Add a <code>supabase</code> MCP entry to <code>.mcp.json</code> scoped to the new project.</li>
+    <li>Write an available <code>supabase</code> MCP descriptor to <code>.mcp.json</code>; client startup and credential setup remain separate.</li>
     <li>Write the service into <code>.stack.toml</code> + <code>.stack.local.toml</code>.</li>
   </ol>
 
-  <p>You'll see something like:</p>
+  <p>Illustrative successful output, not a provider acceptance receipt:</p>
 
   <Code
     code={`┌  stack add supabase
@@ -202,16 +207,17 @@ stack init`}
   />
 
   <div class="callout">
-    <strong>No Phantom prompts?</strong> Good. Stack wrote the secrets through
-    Phantom's programmatic API — you'll never see the real values. See <a
+    <strong>Review the persistence result.</strong> Phantom can refuse setup,
+    existing names or cleanup. Stack handles values in memory and may retain
+    partial effects; local files are not a general redaction boundary. See <a
     href="/docs/phantom/">Phantom</a> for the full story.
   </div>
 
   <h2>5. Sanity-check with <code>doctor</code></h2>
   <p>
-    Before you move on, verify everything is reachable. <code>stack doctor</code>
-    hits each configured provider and confirms the stored credentials still
-    work:
+    Before you move on, run <code>stack doctor</code> and inspect the checks
+    it implements. Some adapters have no health check; a successful report
+    does not prove every provider or app works:
   </p>
 
   <Code
@@ -223,7 +229,7 @@ stack init`}
   <Code
     code={`┌  stack doctor
 │
-◇  ● supabase (218ms)
+◇  ● supabase (illustrative check result)
 │
 └  All services healthy.`}
     lang="text"
@@ -233,15 +239,16 @@ stack init`}
   <p>
     Run this before deploys, after a stale laptop comes out of a drawer, or any
     time something feels off. In CI, use <code>stack doctor --json</code> —
-    exit code <code>0</code> if healthy, <code>1</code> if any service fails.
+    exit code <code>0</code> if no reported errors, <code>1</code> for reported failures.
+    Unchecked services still need separate verification.
     See <a href="/docs/ci/">CI integration</a>.
   </p>
 
-  <h2>6. Run your app with secrets injected</h2>
+  <h2 id="6-run-your-app-with-secrets-injected">6. Forward your app command to Phantom</h2>
   <p>
     Instead of <code>bun dev</code>, run <code>stack exec -- bun dev</code>.
-    Phantom's proxy injects real secret values for any <code>phm_</code> tokens
-    at the network layer:
+    The wrapper forwards the command to installed Phantom. Configure the
+    app's required inputs and verify them separately:
   </p>
 
   <Code
@@ -251,11 +258,10 @@ stack init`}
   />
 
   <p>
-    Your app's environment holds <code>phm_</code> placeholders, not real keys.
-    Supported SDKs are pointed at Phantom's local proxy through
-    <code>*_BASE_URL</code> variables, and the proxy adds the real value to
-    each outgoing request — no plaintext secret touches disk or the process
-    environment.
+    Your app may need <code>SUPABASE_URL</code>, <code>SUPABASE_ANON_KEY</code>,
+    and <code>SUPABASE_SERVICE_ROLE_KEY</code>. Stack does not automatically
+    write populated env files or guarantee those values reach the app.
+    Use <code>stack env export --example</code> for an empty-key skeleton.
   </p>
 
   <h2>What now?</h2>

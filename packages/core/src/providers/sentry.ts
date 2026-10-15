@@ -1,7 +1,6 @@
 import type { ServiceEntry } from "../config.ts";
 import { StackError } from "../errors.ts";
 import { fetchWithRetry } from "../http.ts";
-import { addSecret } from "../phantom.ts";
 import type {
   AuthHandle,
   HealthStatus,
@@ -11,6 +10,7 @@ import type {
   ProvisionOpts,
   Resource,
 } from "./_base.ts";
+import { acceptVerifiedExisting, storeProviderSecret } from "./_credential-stage.ts";
 import { promptSecret, tryRevealSecret } from "./_helpers.ts";
 
 /**
@@ -33,10 +33,13 @@ const sentry: Provider = {
   docs: "https://docs.sentry.io/api/",
 
   async login(ctx: ProviderContext): Promise<AuthHandle> {
-    const cached = await tryRevealSecret(TOKEN_SECRET);
+    const cached = await tryRevealSecret(TOKEN_SECRET, ctx);
     if (cached) {
       const identity = await fetchIdentity(cached);
-      if (identity) return { token: cached, identity };
+      if (identity) {
+        acceptVerifiedExisting(ctx, TOKEN_SECRET, cached);
+        return { token: cached, identity };
+      }
       ctx.log({ level: "warn", msg: "Cached Sentry token invalid." });
     }
     if (!ctx.interactive) throw new StackError("SENTRY_AUTH_REQUIRED", "No valid Sentry token.");
@@ -47,7 +50,7 @@ const sentry: Provider = {
     });
     const identity = await fetchIdentity(token);
     if (!identity) throw new StackError("SENTRY_AUTH_INVALID", "Sentry rejected that token.");
-    await addSecret(TOKEN_SECRET, token);
+    await storeProviderSecret(ctx, TOKEN_SECRET, token);
     return { token, identity };
   },
 
@@ -80,7 +83,7 @@ const sentry: Provider = {
     return { id: `${orgSlug}/${project.slug}`, displayName: project.name };
   },
 
-  async materialize(_ctx, resource, auth): Promise<Materialized> {
+  async materialize(ctx, resource, auth): Promise<Materialized> {
     const [orgSlug, projectSlug] = resource.id.split("/");
     const dsn = await fetchDsn(auth.token, orgSlug, projectSlug);
     const secrets: Record<string, string> = { SENTRY_AUTH_TOKEN: auth.token };
@@ -103,8 +106,8 @@ const sentry: Provider = {
     };
   },
 
-  async healthcheck(_ctx, entry: ServiceEntry): Promise<HealthStatus> {
-    const token = await tryRevealSecret(TOKEN_SECRET);
+  async healthcheck(ctx, entry: ServiceEntry): Promise<HealthStatus> {
+    const token = await tryRevealSecret(TOKEN_SECRET, ctx);
     if (!token) return { kind: "error", detail: `${TOKEN_SECRET} missing from vault` };
     if (!entry.resource_id) return { kind: "warn", detail: "no resource_id" };
     const [orgSlug, projectSlug] = entry.resource_id.split("/");

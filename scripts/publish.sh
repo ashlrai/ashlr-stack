@@ -64,7 +64,7 @@ while [[ $# -gt 0 ]]; do
     --version) VERSION="${2:-}"; shift 2 ;;
     --yes|-y)  AUTO_YES=1; shift ;;
     -h|--help) usage; exit 0 ;;
-    *)         die "unknown argument: $1 (try --help)" ;;
+    *)         die "unknown argument (try --help)" ;;
   esac
 done
 
@@ -81,6 +81,13 @@ command -v node >/dev/null 2>&1 || die "node is required for the JSON rewrites."
 command -v git  >/dev/null 2>&1 || die "git is required to tag the release."
 
 # ---- backup + restore -----------------------------------------------------
+
+# Refuse every pre-existing backup before the restore trap can consume one.
+for pkg in "${PKG_ORDER[@]}"; do
+  if [[ -e "$pkg/package.json.bak" || -L "$pkg/package.json.bak" ]]; then
+    die "existing package backup; refusing to overwrite"
+  fi
+done
 
 BACKED_UP=()
 

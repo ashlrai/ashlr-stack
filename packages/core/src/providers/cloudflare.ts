@@ -1,7 +1,6 @@
 import type { ServiceEntry } from "../config.ts";
 import { StackError } from "../errors.ts";
 import { fetchWithRetry } from "../http.ts";
-import { addSecret, revealSecret } from "../phantom.ts";
 import type {
   AuthHandle,
   HealthStatus,
@@ -11,7 +10,8 @@ import type {
   ProvisionOpts,
   Resource,
 } from "./_base.ts";
-import { promptSecret } from "./_helpers.ts";
+import { acceptVerifiedExisting, storeProviderSecret } from "./_credential-stage.ts";
+import { promptSecret, tryRevealSecret } from "./_helpers.ts";
 
 /**
  * Cloudflare — Workers / Pages / R2 / D1 / KV all hang off one Account API
@@ -32,10 +32,13 @@ const cloudflare: Provider = {
   docs: "https://developers.cloudflare.com/api",
 
   async login(ctx: ProviderContext): Promise<AuthHandle> {
-    const cached = await tryRevealSecret(TOKEN_SECRET);
+    const cached = await tryRevealSecret(TOKEN_SECRET, ctx);
     if (cached) {
       const identity = await verifyToken(cached);
-      if (identity) return { token: cached, identity };
+      if (identity) {
+        acceptVerifiedExisting(ctx, TOKEN_SECRET, cached);
+        return { token: cached, identity };
+      }
       ctx.log({ level: "warn", msg: "Cached Cloudflare token invalid." });
     }
     if (!ctx.interactive)
@@ -48,7 +51,7 @@ const cloudflare: Provider = {
     const identity = await verifyToken(token);
     if (!identity)
       throw new StackError("CLOUDFLARE_AUTH_INVALID", "Cloudflare rejected that token.");
-    await addSecret(TOKEN_SECRET, token);
+    await storeProviderSecret(ctx, TOKEN_SECRET, token);
     return { token, identity };
   },
 
@@ -70,7 +73,7 @@ const cloudflare: Provider = {
     };
   },
 
-  async materialize(_ctx, resource, auth): Promise<Materialized> {
+  async materialize(ctx, resource, auth): Promise<Materialized> {
     return {
       secrets: {
         CLOUDFLARE_API_TOKEN: auth.token,
@@ -80,8 +83,8 @@ const cloudflare: Provider = {
     };
   },
 
-  async healthcheck(_ctx, _entry: ServiceEntry): Promise<HealthStatus> {
-    const token = await tryRevealSecret(TOKEN_SECRET);
+  async healthcheck(ctx, _entry: ServiceEntry): Promise<HealthStatus> {
+    const token = await tryRevealSecret(TOKEN_SECRET, ctx);
     if (!token) return { kind: "error", detail: `${TOKEN_SECRET} missing from vault` };
     const start = Date.now();
     const identity = await verifyToken(token);
@@ -121,13 +124,4 @@ async function fetchAccounts(token: string): Promise<Array<{ id: string; name: s
   if (!res.ok) return [];
   const body = (await res.json()) as { result?: Array<{ id: string; name: string }> };
   return body.result ?? [];
-}
-
-async function tryRevealSecret(key: string): Promise<string | undefined> {
-  try {
-    const v = await revealSecret(key);
-    return v.length > 0 ? v : undefined;
-  } catch {
-    return undefined;
-  }
 }

@@ -1,10 +1,26 @@
 # @ashlr/stack-site
 
-Marketing site for Ashlr Stack. Deploys to **stack.ashlr.ai**.
+Marketing site source for Ashlr Stack, targeting **stack.ashlr.ai**. Deployment is qualified separately.
 
-**Polished:** hero + animated terminal, one-command before/after comparison (Framer Motion tabs), 39-provider grid (real simple-icons brand marks, hover → brand color), how-it-works triptych, five template cards with real `stack init --template` commands, mock Claude Code chat showing `/stack:add supabase` end-to-end (MCP tool call + streamed result), Ashlr constellation diagram, footer with giant wordmark. Dark-first with Ashlr magenta (`#d946ef`) accent, full reduced-motion + keyboard-nav support, WCAG-AA contrast on body copy, tuned for `max-w-[1200px]` desktops and collapses cleanly to mobile.
+## Source and verification boundary
 
-**Placeholder / honest caveats:** the `curl | bash` install URL (`stack.ashlr.ai/install.sh`) resolves only once this site ships with that script at the root. GitHub links point at `github.com/ashlrai/ashlr-stack`. Sibling links (`phantom.ashlr.ai`, `plugin.ashlr.ai`, `code.ashlr.ai`, `workbench.ashlr.ai`) are aspirational; redirect or stub them server-side. `convex` and `deepseek` don't have entries in simple-icons v13, so they render with minimal custom geometric marks — clearly labeled with their name next to them, but a designer may want to swap these out. The mock Claude Code chat shows one scripted flow; we aren't lying about capability, but no live LLM is running there.
+The site combines Astro pages and React demos with the shared 39-provider
+catalog. Terminal and Claude Code sequences are illustrative browser demos;
+they do not run an attached client or prove provider provisioning, credential
+storage or application acceptance. Scripts build static output for separate
+preview and production qualification.
+
+The source includes responsive layouts, keyboard interactions and
+reduced-motion branches. Accessibility, contrast, viewport fit and animated
+behavior must be verified against the exact built artifact; this README is
+not a universal WCAG or mobile-support receipt. Public delivery, provider
+activation and the installed CLI/MCP runtime are separate checks.
+
+GitHub links use `github.com/ashlrai/ashlr-stack`. `build` copies the reviewed
+root install scripts into public output and synchronizes the selected
+Phantom branding; source presence does not prove those URLs are deployed or
+that an installer has been executed successfully. Check current public
+package/runtime instructions before using any installation example.
 
 ## Run
 
@@ -45,7 +61,7 @@ src/
     Constellation.astro       # 4-node platform map
     Footer.astro              # CTA block + giant wordmark
   lib/
-    providers.ts              # curated catalog (source of truth for grid + templates)
+    providers.ts              # display metadata matched to the shared catalog identities
     icons.ts                  # reads simple-icons SVG `d` attrs at build time
   styles/global.css           # Tailwind theme + component utilities
 public/
@@ -55,20 +71,16 @@ public/
 
 ## Design notes
 
-- **No fake social proof.** No logos from companies that don't use Stack,
-  no "used by 10,000 devs". The project is pre-alpha and says so in the hero chip.
-- **Every terminal string is a real command** defined in `packages/cli/src/commands/`.
-  If you add or rename a CLI command, grep this site for stale copy.
-- **Secrets are never shown.** The `stack add supabase` demo says "stored 3 secrets in
-  phantom" — it never displays a fake key.
-- **Reduced motion.** Both the hero `<Terminal />` and the Claude Code demo fall back to
-  fully-rendered static content when `prefers-reduced-motion: reduce` is set.
-
-## Provider catalog
-
-See `src/lib/providers.ts`. This file is the single source of truth for both the grid
-and the template cards. Adding a provider is a two-line change; removing one automatically
-updates category counts.
+- Keep sample output visibly illustrative and tied to actual command syntax.
+  Review copied examples when commands or flags change.
+- Do not turn catalog descriptions, mock counts or simulated outcomes into
+  customer, provider or runtime acceptance claims.
+- Keep credential values out of examples. Dedicated config slots refer to
+  names, but user-supplied text and metadata still need review before sharing.
+- Preserve reduced-motion and keyboard paths, and verify their behavior on
+  the final built artifact.
+- Catalog identities come from `packages/core/src/catalog.ts`; category
+  counts should follow its current category list rather than old prose.
 
 ## License
 

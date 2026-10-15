@@ -4,9 +4,9 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 [![npm version](https://img.shields.io/npm/v/@ashlr/stack.svg)](https://www.npmjs.com/package/@ashlr/stack)
 
-**Provision and wire every service in your project with one command, from your terminal or your AI agent.** Stack creates the Supabase project, the Vercel token, the Sentry DSN, stores every secret in [Phantom](https://phm.dev) and writes `.env` and `.mcp.json` for you.
+**Configure supported services from your terminal or your AI agent.** Stack uses provider-specific OAuth or supplied credentials, provisions where the adapter supports it, and records selected credentials in [Phantom Secrets](https://phm.dev/secrets), Stack configuration and provider MCP entries. Vercel requires an existing personal access token; Stack does not create that token. Export an empty `.env.example` separately with `stack env export --example`.
 
-**Status:** pre-alpha, active development. The CLI runs on [Bun](https://bun.sh).
+**Status:** pre-alpha, active development. This checkout describes source version 0.2.1; registry metadata checked on October 14, 2026 reported 0.1.1 for the CLI and MCP packages. That published release starts both with [Bun](https://bun.sh), so install Bun first, even for the `npx` commands below. Check `stack --version`, `stack --help` and `stack providers` for your installed release. Source changes do not establish package publication or provider readiness.
 
 <!-- Demo GIF: record with vhs, see docs/ -->
 
@@ -17,29 +17,33 @@ Read-only, no accounts or API keys needed:
 ```bash
 npx -y -p @ashlr/stack stack providers                                         # the provider catalog
 npx -y -p @ashlr/stack stack recommend "B2B SaaS with auth, AI, and payments"  # ranked picks with rationales
-npx -y -p @ashlr/stack stack scan                                              # detect services in an existing repo (writes nothing)
+npx -y -p @ashlr/stack stack scan                                              # detect services in an existing repo (writes nothing; add --json in agents and CI)
 ```
 
 To provision a real service, install Stack (below) and run `stack add <provider>`.
 
 ## Connect your agent (MCP)
 
+Every MCP tool runs the `stack` CLI, so the server needs `stack` on its PATH (or `STACK_BIN` set to it). These snippets fetch both packages in one `npx`, which puts `stack` on the server's PATH:
+
 ```bash
-claude mcp add ashlr-stack -- npx -y ashlr-stack-mcp    # Claude Code
-codex mcp add ashlr-stack -- npx -y ashlr-stack-mcp     # Codex
+claude mcp add ashlr-stack -- npx -y -p @ashlr/stack -p ashlr-stack-mcp ashlr-stack-mcp   # Claude Code
+codex mcp add ashlr-stack -- npx -y -p @ashlr/stack -p ashlr-stack-mcp ashlr-stack-mcp    # Codex
 ```
 
 Cursor (`~/.cursor/mcp.json`):
 
 ```json
-{ "mcpServers": { "ashlr-stack": { "command": "npx", "args": ["-y", "ashlr-stack-mcp"] } } }
+{ "mcpServers": { "ashlr-stack": { "command": "npx", "args": ["-y", "-p", "@ashlr/stack", "-p", "ashlr-stack-mcp", "ashlr-stack-mcp"] } } }
 ```
+
+With only `ashlr-stack-mcp`, the server starts and lists its tools, but every call returns "The 'stack' CLI is not on PATH".
 
 ## Why Stack
 
-- **One command instead of ten dashboards.** Stack creates the upstream resource and wires its secrets, `.env` and `.mcp.json`.
-- **Secrets stay in a vault.** Every credential goes through Phantom, so real values stay on your machine.
-- **Agent-native.** The same catalog and actions are MCP tools for Claude Code, Codex and Cursor.
+- **One workflow for supported services.** Stack authenticates, provisions where supported, and updates vault entries, Stack configuration and MCP wiring.
+- **Phantom-backed credentials.** Stack handles credentials during setup and persists selected entries through Phantom Secrets. Provider requests, project files and CLI output have their own data boundaries.
+- **Agent-native.** MCP exposes selected catalog and setup actions for Claude Code, Codex and Cursor.
 
 ## Install
 
@@ -84,22 +88,21 @@ In a Claude‑Code‑native world, the friction in starting a project isn't writ
 Stack collapses that hour into one command:
 
 ```bash
-stack init --template nextjs-supabase-posthog-sentry
-# Stack does the OAuth dance per provider,
-# creates the upstream resource,
-# stores every secret in Phantom,
-# writes .env + .mcp.json,
-# and hands you a project ready for `bun dev`.
+stack init --template nextjs-supabase-posthog
+# Run from your application's directory. Stack writes its configuration,
+# then provisions template services with provider-specific authentication.
+# It does not generate application code or automatically write .env.
+stack env export --example    # separate empty KEY= skeleton in .env.example
 ```
 
 ## How it relates to the rest of Ashlr
 
-- **[Phantom Secrets](https://phm.dev)** — the vault. Real secret values never leave your machine. Stack writes every credential through Phantom.
+- **[Phantom Secrets](https://phm.dev/secrets)** — the vault. Stack uses its CLI for selected credential storage and runtime operations; provider authentication still uses credentials.
 - **[Locus](https://github.com/ashlrai/locus)** — the identity plane. Run `locus run -b <binding> -- stack add …` so provider CLIs act only in the pinned personal / company / client account. See [docs/phantom-locus.md](./docs/phantom-locus.md).
 - **ashlr-plugin** — token-efficiency layer for Claude Code. Orthogonal to Stack.
 - **ashlrcode** — multi-provider AI coding CLI. Orthogonal.
 
-Stack is the *control plane*. [Phantom](https://phm.dev) is the *vault*. ashlr-plugin is the *context compressor*. They compose.
+Stack is the *control plane*. [Phantom Secrets](https://phm.dev/secrets) is the *vault*. ashlr-plugin is the *context compressor*. They compose.
 
 ## Curated v1 provider catalog
 
@@ -115,15 +118,23 @@ Stack is the *control plane*. [Phantom](https://phm.dev) is the *vault*. ashlr-p
 **Email** — Resend
 **Auth** — Clerk
 
-29 providers total. Run `stack providers` to see the live catalog.
+Run `stack providers` to see your installed catalog. This source checkout registers 39 providers across 13 categories; the examples above are a subset. `stack templates list` shows the starter presets. Registration does not establish account access or provider acceptance.
 
 ## Usage
 
+Before `stack add`, `stack apply`, or a writing `stack import`, check
+`phantom status --json` from the project directory. Phantom Secrets 0.7.9
+reports `initialized: true` when its project configuration is readable and valid; this
+is metadata, not vault or provider health. For a new project that is not yet
+configured, run `phantom init --empty` in a trusted terminal, then retry.
+These write flows stop before provider login or provisioning when initialization
+is unknown or missing, and do not initialize Phantom automatically.
+
 ```bash
 stack init                    # interactive template picker
-stack add supabase            # OAuth → new project → secrets → .mcp.json
-stack providers               # full catalog (29 services across 11 categories)
-stack doctor --fix            # verify every service; re-run setup for anything broken
+stack add supabase            # provider authentication → setup → vault/config/MCP
+stack providers               # full provider catalog
+stack doctor --fix            # inspect the report and attempt supported remediation
 stack exec -- bun dev         # run with Phantom's secret proxy active
 ```
 
@@ -139,9 +150,9 @@ stack recommend "serverless postgres" --save
 # → freezes a Recipe to .stack/recipes/<id>.toml
 
 stack apply <recipe-id>
-# → runs `stack add` for each provider + pre-wires Phantom rotating envelopes
-#   + drops webhook stubs for Stripe / Clerk / Supabase / GitHub
-#   (add --noWire to opt out of the Phantom auto-wiring)
+# → provisions recipe providers, then attempts optional Phantom wiring
+#   and writes webhook stub files; successful rotation is not guaranteed
+#   (add --noWire to skip the optional wiring layer)
 ```
 
 Inside Claude Code, the same flow is one tool call:
@@ -164,7 +175,7 @@ stack scan --auto             # scans, then interactively runs `stack add` for e
 stack import                  # or: inhale an existing .env straight into Phantom + .stack.toml
 
 # Clone someone else's project:
-stack clone github.com/org/repo
+stack clone https://github.com/your-org/your-repo
 # → git clone + scans the checkout + prints next steps
 
 # Across every project on this machine:
@@ -179,7 +190,7 @@ Stack splits its config into two files so you can commit the shape of a stack wi
 - `.stack.toml` — committed. Names of services, their secret slots, MCP wirings.
 - `.stack.local.toml` — gitignored automatically. `project_id`, `resource_id`, timestamps. Unique to each clone.
 
-Another developer cloning the repo runs `stack doctor --fix` and Stack re-authenticates / re-provisions each service for them, writing a fresh `.stack.local.toml`.
+Another developer can inspect `stack doctor` and use `stack doctor --fix` for supported remediation. Review its report; existing vault names can cause remediation to be skipped, and metadata presence does not establish valid credentials or a healthy provider.
 
 ## Monorepo layout
 
@@ -198,13 +209,7 @@ docs/       — auth matrix, schema reference
 
 Three packages ship to npm: `@ashlr/stack-core`, `ashlr-stack-mcp`, `@ashlr/stack`. For monorepo dev, `@ashlr/stack` depends on `@ashlr/stack-core` via `workspace:*` — that's what lets `bun install` link the local checkout. A plain `npm install @ashlr/stack` from outside the workspace **cannot resolve `workspace:*`**, so the publish flow has to rewrite those ranges to an actual version (e.g. `^0.1.0`) right before `npm publish`.
 
-Don't hand-edit the `workspace:*` entries in `packages/*/package.json` — dev needs them. Use the publish script instead:
-
-```bash
-scripts/publish.sh --version 0.1.0
-```
-
-It bumps each package's `version`, swaps `workspace:*` → `^<version>`, runs `npm publish --dry-run` for verification, asks for explicit confirmation, publishes in dep order (`core` → `mcp` → `cli`), restores `workspace:*` so local dev keeps working, and tags the release. See the script header for details.
+Don't hand-edit the `workspace:*` entries in `packages/*/package.json` — dev needs them. Release owners should follow [docs/RELEASE.md](./docs/RELEASE.md), which describes the current script, its limitations and separate package, native and website acceptance gates.
 
 ## Landing page
 

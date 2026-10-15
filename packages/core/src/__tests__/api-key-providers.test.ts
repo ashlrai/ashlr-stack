@@ -163,7 +163,8 @@ describe("api-key providers — verify + materialize", () => {
   let realFetch: typeof fetch;
 
   beforeEach(() => {
-    h = setupFakePhantom();
+    // Provider logic after a token is read; real Phantom 0.7.9 refuses headless reveal.
+    h = setupFakePhantom({}, { legacyHeadlessReveal: true });
     realFetch = globalThis.fetch;
   });
 

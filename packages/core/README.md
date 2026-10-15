@@ -2,15 +2,19 @@
 
 > Shared library behind the [Ashlr Stack](https://stack.ashlr.ai) CLI and MCP server. Provider adapters, `.stack.toml` config, Phantom integration, source/env detection.
 
-**You probably don't want to install this directly.** If you want the CLI, install [`@ashlr/stack`](https://www.npmjs.com/package/@ashlr/stack). This package exists so the CLI and the [`ashlr-stack-mcp`](https://www.npmjs.com/package/ashlr-stack-mcp) server can share a single implementation.
+This workspace package shares source between the [`@ashlr/stack`](https://www.npmjs.com/package/@ashlr/stack) CLI and [`ashlr-stack-mcp`](https://www.npmjs.com/package/ashlr-stack-mcp) server. Its export points at TypeScript source. The examples below target the reviewed workspace; they do not establish a separately published core package or Node-only execution support.
 
-## Install
+## Use in this workspace
+
+From the repository root, prepare the workspace dependencies with Bun 1.2+:
 
 ```bash
-bun add @ashlr/stack-core
-# or
-npm i @ashlr/stack-core
+bun install
 ```
+
+Use the selected CLI/MCP artifact and its documented runtime when installing
+those products. Source version `0.2.1` is distinct from recorded public
+CLI/MCP `0.1.1` packages; verify actual package contents separately.
 
 ## Public API
 
@@ -18,7 +22,7 @@ Selected exports — see `src/index.ts` for the full surface.
 
 | Export | Purpose |
 | --- | --- |
-| `addService({ providerName, ... })` | End-to-end pipeline: login → provision → materialize → persist secrets + MCP entry |
+| `addService({ providerName, ... })` | Attempt login → create/attach → materialize → named-secret/MCP/config writes; inspect failures and partial state |
 | `readConfig(cwd)` / `writeConfig(cfg, cwd)` | Read/write `.stack.toml` + `.stack.local.toml` |
 | `listProviderNames()` / `getProvider(name)` | Introspect the built-in 39-provider registry (`getProvider` is async) |
 | `scanSource(cwd)` | Detect providers from `package.json`, configs, `.env.example` |
@@ -35,8 +39,8 @@ import {
   scanSource,
 } from "@ashlr/stack-core";
 
-// Pipeline: provisions a new Supabase project, writes secrets through Phantom,
-// merges the MCP entry, and updates .stack.toml + .stack.local.toml.
+// With explicit user approval for provider and credential effects, attempt
+// Supabase setup, named-secret/MCP writes, and split-config persistence.
 await addService({ providerName: "supabase", cwd: process.cwd() });
 
 const cfg = await readConfig();
@@ -44,8 +48,15 @@ console.log(Object.keys(cfg.services));
 
 // Scan an existing checkout for providers already wired up.
 const detections = await scanSource(process.cwd());
-console.log(listProviderNames().length); // 39
+console.log(detections);
+console.log(listProviderNames().length); // 39 in this source snapshot
 ```
+
+The setup path can contact providers and write credentials, MCP entries and
+split config. It handles values in memory; writes and rollback are not an
+atomic transaction. Examples describe reviewed source and require the selected
+artifact, runtime, project directory, user authorization and provider access.
+A package installation does not establish those later steps.
 
 ## Links
 
@@ -54,4 +65,4 @@ console.log(listProviderNames().length); // 39
 
 ## License
 
-MIT. See [LICENSE](./LICENSE).
+MIT. See [LICENSE](../../LICENSE).

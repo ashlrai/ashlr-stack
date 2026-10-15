@@ -1,6 +1,5 @@
 import type { ServiceEntry } from "../config.ts";
 import { StackError } from "../errors.ts";
-import { addSecret } from "../phantom.ts";
 import type {
   AuthHandle,
   HealthStatus,
@@ -11,6 +10,7 @@ import type {
   ProviderContext,
   Resource,
 } from "./_base.ts";
+import { acceptVerifiedExisting, storeProviderSecret } from "./_credential-stage.ts";
 import { promptSecret, tryRevealSecret } from "./_helpers.ts";
 
 /**
@@ -54,10 +54,13 @@ export function makeApiKeyProvider(spec: ApiKeyProviderSpec): Provider {
     docs: spec.docs,
 
     async login(ctx: ProviderContext): Promise<AuthHandle> {
-      const cached = await tryRevealSecret(spec.secretName);
+      const cached = await tryRevealSecret(spec.secretName, ctx);
       if (cached) {
         const identity = await spec.verify(cached);
-        if (identity) return { token: cached, identity };
+        if (identity) {
+          acceptVerifiedExisting(ctx, spec.secretName, cached);
+          return { token: cached, identity };
+        }
         ctx.log({ level: "warn", msg: `Cached ${spec.displayName} key invalid; re-entering.` });
       }
       if (!ctx.interactive) {
@@ -78,11 +81,8 @@ export function makeApiKeyProvider(spec: ApiKeyProviderSpec): Provider {
           `${spec.name.toUpperCase()}_AUTH_INVALID`,
           `${spec.displayName} rejected that key.`,
         );
-      // Persist the verified key immediately. Previously we deferred to
-      // `materialize()`, so if any step after `login()` threw (e.g. a
-      // provision-side API error) the user would have to re-paste their key.
-      // Matches the hand-written providers (supabase, neon, vercel, github, sentry).
-      await addSecret(spec.secretName, key);
+      // Explicit login writes now; addService owns deferred credential inputs.
+      await storeProviderSecret(ctx, spec.secretName, key);
       return { token: key, identity };
     },
 
@@ -98,8 +98,8 @@ export function makeApiKeyProvider(spec: ApiKeyProviderSpec): Provider {
       };
     },
 
-    async materialize(_ctx, _resource, auth): Promise<Materialized> {
-      await addSecret(spec.secretName, auth.token);
+    async materialize(ctx, _resource, auth): Promise<Materialized> {
+      await storeProviderSecret(ctx, spec.secretName, auth.token);
       return {
         secrets: { [spec.secretName]: auth.token },
         ...(spec.mcp ? { mcp: spec.mcp } : {}),
@@ -108,7 +108,7 @@ export function makeApiKeyProvider(spec: ApiKeyProviderSpec): Provider {
 
     async healthcheck(ctx, entry) {
       if (spec.healthcheck) return spec.healthcheck(ctx, entry);
-      const key = await tryRevealSecret(spec.secretName);
+      const key = await tryRevealSecret(spec.secretName, ctx);
       if (!key) return { kind: "error", detail: `${spec.secretName} missing from vault` };
       const start = Date.now();
       const identity = await spec.verify(key);

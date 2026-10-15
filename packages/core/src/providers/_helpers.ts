@@ -1,6 +1,7 @@
 import { type RetryOptions, fetchWithRetry } from "../http.ts";
 import { revealSecret } from "../phantom.ts";
 import type { ProviderContext } from "./_base.ts";
+import { readProviderSecret } from "./_credential-stage.ts";
 
 /**
  * Shared helpers for every hand-written provider. Before this existed, each
@@ -8,9 +9,12 @@ import type { ProviderContext } from "./_base.ts";
  * one source of truth keeps behaviour consistent.
  */
 
-export async function tryRevealSecret(key: string): Promise<string | undefined> {
+export async function tryRevealSecret(
+  key: string,
+  ctx?: ProviderContext,
+): Promise<string | undefined> {
   try {
-    const value = await revealSecret(key);
+    const value = ctx ? await readProviderSecret(ctx, key) : await revealSecret(key);
     return value.length > 0 ? value : undefined;
   } catch {
     return undefined;

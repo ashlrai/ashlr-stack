@@ -25,7 +25,7 @@ const TIMELINE: Array<{ at: number; msg: Message }> = [
     msg: {
       role: "assistant",
       content:
-        "I'll add Supabase to this project. Running `stack add supabase` via the MCP server — it'll handle OAuth, create the project, store secrets in Phantom, and wire up .mcp.json for me.",
+        "Illustrative flow: I can call stack_add for Supabase. Approve any account sign-in, then inspect which resource, secrets, and MCP entry the provider actually returns.",
     },
   },
   {
@@ -34,7 +34,7 @@ const TIMELINE: Array<{ at: number; msg: Message }> = [
       role: "tool",
       kind: "tool_use",
       content: "stack_add",
-      detail: ['provider: "supabase"', 'project: "raven"'],
+      detail: ['service: "supabase"'],
       pending: true,
     },
   },
@@ -43,13 +43,13 @@ const TIMELINE: Array<{ at: number; msg: Message }> = [
     msg: {
       role: "tool",
       kind: "tool_result",
-      content: "stack_add ✓ 4.2s",
+      content: "stack_add · example result",
       detail: [
-        "✓ OAuth complete (signed in as mason@evero-consulting.com)",
-        "✓ Created supabase project raven-prod · us-east-1",
-        "✓ Stored 3 secrets in phantom (URL, ANON_KEY, SERVICE_ROLE_KEY)",
-        "✓ Patched .env.local · .mcp.json · .stack.toml",
-        "✓ Installed @supabase/supabase-js",
+        "→ Account authorization may be requested",
+        "→ Create or attach a project if setup succeeds",
+        "→ Store returned credentials through Phantom",
+        "→ Record .stack.toml; MCP entry only if supplied",
+        "→ Choose whether to install the SDK",
       ],
     },
   },
@@ -58,7 +58,7 @@ const TIMELINE: Array<{ at: number; msg: Message }> = [
     msg: {
       role: "assistant",
       content:
-        "Supabase is provisioned and wired. Restart Claude Code to pick up the new MCP server, then you can query the database directly from chat. Want me to scaffold an auth page next?",
+        "After setup, review the Stack result and your MCP client configuration. Verify database access in your own project before building on it.",
     },
   },
 ];
@@ -99,7 +99,7 @@ export default function ClaudeCodeDemo() {
         </div>
         <div className="flex-1 flex items-center justify-center gap-1.5 text-xs text-ink-400">
           <span className="mono text-ink-500">◇</span>
-          <span className="font-medium">Claude Code</span>
+          <span className="font-medium">Claude Code · illustrative</span>
           <span className="text-ink-600 mx-1">·</span>
           <span className="mono text-ink-500">raven</span>
         </div>

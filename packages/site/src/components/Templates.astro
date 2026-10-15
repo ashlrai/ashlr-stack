@@ -81,14 +81,12 @@ const templates: Template[] = TEMPLATES.map((t) => ({
 
   <header class="max-w-[760px] mb-12" data-reveal>
     <h2 class="display text-[color:var(--color-ink-50)]" style="font-size: clamp(32px, 4.4vw, 56px);">
-      Opinionated starters, <span class="display-accent">wired end-to-end.</span>
+      Opinionated starters, <span class="display-accent">ready to explore.</span>
     </h2>
     <p class="mt-5 text-[15px] leading-[1.6] text-[color:var(--color-ink-300)] max-w-[620px]">
-      Each template is a real stack — not a boilerplate dump. Pick one; see the exact
-      <code class="mono text-[color:var(--color-ink-100)]">stack add</code> invocations,
-      every env var that lands in <code class="mono text-[color:var(--color-ink-100)]">.env</code>,
-      and the <code class="mono text-[color:var(--color-ink-100)]">.mcp.json</code> your
-      Claude Code session will see.
+      Explore an illustrative starter recipe, supported <code class="mono text-[color:var(--color-ink-100)]">stack add</code> commands,
+      optional empty-key <code class="mono text-[color:var(--color-ink-100)]">.env.example</code> entries,
+      and MCP possibilities. Actual files and provider results depend on successful setup.
     </p>
   </header>
 
@@ -98,6 +96,6 @@ const templates: Template[] = TEMPLATES.map((t) => ({
 
   <div class="mt-8 flex items-center gap-3 text-sm text-[color:var(--color-ink-400)]">
     <span class="w-1 h-1 rounded-full bg-[color:var(--color-ink-500)]"></span>
-    Don't see your stack? <code class="mono text-[color:var(--color-ink-200)]">stack init</code> opens an interactive picker — tick providers, stack provisions them.
+    Don't see your stack? In an interactive terminal, <code class="mono text-[color:var(--color-ink-200)]">stack init</code> offers blank or a starter template. Choosing a template attempts setup for its listed services by default; use <code class="mono text-[color:var(--color-ink-200)]">--noProvision</code> with a template to write config only.
   </div>
 </section>

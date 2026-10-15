@@ -85,35 +85,24 @@ describe("recommend → apply e2e", () => {
     // 4) Wire envelopes via the fake Phantom CLI.
     const result = await wirePhantomForRecipe(loaded, { cwd: projectDir });
 
-    // Every provider's declared catalog secrets must be envelope-added.
-    // (neon / openai / anthropic are all api_key providers with known secrets.)
-    expect(result.envelopes).toEqual(
-      expect.arrayContaining([
-        "neon:NEON_API_KEY",
-        "openai:OPENAI_API_KEY",
-        "anthropic:ANTHROPIC_API_KEY",
-      ]),
-    );
+    // Phantom Secrets >= 0.7.3 rejects placeholder envelopes (`--rotate` and
+    // positional values), so nothing lands in the vault and nothing blocks the
+    // later create-only `stack add` (see phantom-contract.test.ts).
+    expect(result.envelopes).toEqual([]);
     expect(result.skipped).toEqual([]);
 
     // No webhook stubs for these providers — none are in the webhook-capable set.
     expect(result.webhooks).toEqual([]);
 
-    // 5) Inspect the fake Phantom call log — every secret should have been
-    // shelled out as `phantom add <KEY> <placeholder>`.
+    // 5) Every catalog secret was still attempted against Phantom.
     const adds = harness.callsTo("add");
     const addedKeys = adds.flatMap((c) => c.args);
     expect(addedKeys).toContain("NEON_API_KEY");
     expect(addedKeys).toContain("OPENAI_API_KEY");
     expect(addedKeys).toContain("ANTHROPIC_API_KEY");
 
-    // The placeholder is intentional — `stack add <provider>` would replace it
-    // with the real secret. Stopping here is the "noWire: false but no OAuth"
-    // boundary: the vault now holds placeholders, not real credentials.
     const vault = JSON.parse(readFileSync(harness.vaultPath, "utf-8")) as Record<string, string>;
-    expect(Object.keys(vault)).toEqual(
-      expect.arrayContaining(["NEON_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY"]),
-    );
+    expect(vault).toEqual({});
   });
 
   it("noWire: true performs zero phantom envelope calls and writes no webhook stubs", async () => {
