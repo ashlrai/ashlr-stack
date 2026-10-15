@@ -257,7 +257,7 @@ export default function UseCases() {
         {CASES.map((x, i) => {
           const isActive = i === active;
           return (
-            <li key={x.id} className="shrink-0 lg:shrink">
+            <li key={x.id} className="w-[220px] shrink-0 lg:w-auto lg:shrink">
               <button
                 type="button"
                 onClick={() => setActive(i)}
