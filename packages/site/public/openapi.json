@@ -4,7 +4,7 @@
     "title": "Ashlr Stack CLI",
     "version": "0.1.0",
     "summary": "Machine-readable catalog of the Ashlr Stack CLI (and MCP tool surface).",
-    "description": "This OpenAPI document treats each `stack` CLI command as a GET operation for the benefit of AI agents, LLM editors, and documentation pipelines that want to reason about Stack programmatically. It is NOT served as a real HTTP API — Stack is a local CLI. Consume this file alongside `/mcp.json` (the MCP tool catalog) and `/.well-known/ai-plugin.json` (discovery manifest).\n\nSource of truth: `packages/cli/src/commands/*.ts` (citty `defineCommand` calls), mirrored into `packages/site/src/lib/cli-ref.ts`. When a command changes there, update this file too.",
+    "description": "This static documentation catalog represents selected local stack CLI commands as GET operations for discovery; it is not a running HTTP API or an exhaustive CLI surface. Source of truth is packages/cli/src/commands/*.ts, mirrored in packages/site/src/lib/cli-ref.generated.ts. The catalog version label does not establish a published or installed package version. Reviewed source is 0.2.1; public CLI and MCP packages recorded at 0.1.1 require Bun 1.2 or newer on PATH even when installed with npm. Launching the MCP server also requires stack on PATH or STACK_BIN; the MCP setup example is in /mcp.json. Inspect actual installed help, advertised tools and returned results. MCP forwards CLI stdout and any nonempty stderr as text; it is not a sandbox or redaction layer. Local MCP resources, when present in the server cwd, return raw file text; emitted provider credential placeholders are literal, not generally expanded by Stack.",
     "contact": {
       "name": "Ashlr",
       "email": "mason@evero-consulting.com",
@@ -18,7 +18,7 @@
   "servers": [
     {
       "url": "https://stack.ashlr.ai",
-      "description": "Documentation and discovery surface. The CLI itself runs locally via `stack` or `bunx ashlr-stack-mcp`."
+      "description": "Documentation and discovery location only; these paths are not HTTP endpoints. The stack CLI runs locally; MCP setup requires both CLI/server commands and the runtime appropriate to the installed versions."
     }
   ],
   "tags": [
@@ -49,11 +49,11 @@
         "tags": ["setup"],
         "operationId": "stack_init",
         "summary": "Scaffold a .stack.toml in the current directory.",
-        "description": "Creates `.stack.toml` (committed) and `.stack.local.toml` (gitignored). Offers an interactive template picker unless `--template` or `--noInteractive` is given. Warns (but proceeds) when Phantom is not on PATH — Phantom is only required for commands that touch secrets.",
+        "description": "Creates local .stack.toml and .stack.local.toml files; this does not attest Git commit or ignore state. A selected template can also run provider setup. --noInteractive skips the picker but does not override an explicitly selected template. Phantom requirements depend on subsequent operations.",
         "parameters": [
           { "name": "template", "in": "query", "schema": { "type": "string" }, "description": "Starter template slug (e.g. nextjs-supabase-posthog)." },
           { "name": "force", "in": "query", "schema": { "type": "boolean", "default": false }, "description": "Overwrite an existing .stack.toml." },
-          { "name": "noInteractive", "in": "query", "schema": { "type": "boolean", "default": false }, "description": "Skip the template picker; always create a blank .stack.toml." }
+          { "name": "noInteractive", "in": "query", "schema": { "type": "boolean", "default": false }, "description": "Skip the template picker; an explicitly supplied template can still be used." }
         ],
         "responses": {
           "200": { "description": "Project scaffolded.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/StackToml" } } } }
@@ -65,7 +65,7 @@
         "tags": ["setup"],
         "operationId": "stack_import",
         "summary": "Import an existing .env into Phantom + .stack.toml.",
-        "description": "Routes every secret into Phantom, then best-guesses which provider each belongs to and writes matching service entries into .stack.toml.",
+        "description": "Attempts to store nonempty new variables in Phantom, leaves existing vault names unchanged, and records detected services in local Stack configuration. Inspect skipped names and failures.",
         "parameters": [
           { "name": "from", "in": "query", "schema": { "type": "string", "default": ".env" }, "description": "Path to the .env file to import." },
           { "name": "dryRun", "in": "query", "schema": { "type": "boolean", "default": false }, "description": "Print what would happen without writing anything." }
@@ -122,13 +122,13 @@
         "tags": ["management"],
         "operationId": "stack_remove",
         "summary": "Remove a service from the stack.",
-        "description": "Removes the service from .stack.toml, deletes its vault entries, and cleans up .mcp.json. Optionally leaves the upstream resource intact.",
+        "description": "Removes local service and MCP configuration and attempts Phantom secret cleanup. Upstream resources are kept in every mode; --keepRemote is a compatibility flag. Headless cleanup or refused terminal confirmation can leave secrets stored. Inspect reported leftovers; command completion does not prove complete teardown.",
         "parameters": [
           { "name": "service", "in": "query", "schema": { "type": "string" }, "description": "Service name. Omit with --all to remove every service in this stack." },
-          { "name": "all", "in": "query", "schema": { "type": "boolean", "default": false }, "description": "Remove every service. Requires typing `remove all` to confirm." },
-          { "name": "keepRemote", "in": "query", "schema": { "type": "boolean", "default": false }, "description": "Leave the provider-side resource untouched." }
+          { "name": "all", "in": "query", "schema": { "type": "boolean", "default": false }, "description": "Remove local entries for every configured service; typed confirmation is requested only in a terminal. Phantom secret cleanup can be partial." },
+          { "name": "keepRemote", "in": "query", "schema": { "type": "boolean", "default": false }, "description": "Accepted compatibility flag; upstream resources are kept regardless of this flag." }
         ],
-        "responses": { "200": { "description": "Removal summary." } }
+        "responses": { "200": { "description": "Local removal report; inspect any kept secrets or failures. Upstream resources are not deleted." } }
       }
     },
     "/cli/list": {
@@ -144,7 +144,7 @@
         "tags": ["diagnostics"],
         "operationId": "stack_info",
         "summary": "Show everything Stack knows about a configured service.",
-        "description": "Prints provider, resource id, region, secret slots (with vault presence), MCP wiring, dashboard URL, and runs a fresh healthcheck.",
+        "description": "Prints configured provider/resource/region/auth and MCP metadata plus secret-name inventory; attempts a fresh healthcheck only when the adapter implements one. Metadata and name presence are not credential validity or universal health proof.",
         "parameters": [
           { "name": "service", "in": "query", "required": true, "schema": { "type": "string" }, "description": "Service name." }
         ],
@@ -185,11 +185,11 @@
       "get": {
         "tags": ["diagnostics"],
         "operationId": "stack_doctor",
-        "summary": "Verify every service is reachable and credentials are valid.",
-        "description": "Exit code: 0 if all healthy, 1 if any service failed. With --fix, asks before re-running `stack add` for failing services.",
+        "summary": "Inspect supported configured-service healthchecks and their report.",
+        "description": "Reports checked, unchecked, warning and error states. --fix attempts setup for eligible failures but can skip stored vault names; inventory presence does not prove credential validity. Setup confirmation depends on the terminal, and headless setup can proceed without that prompt. --all uses recorded local registry projects, not a whole-machine scan. Inspect the report and failures.",
         "parameters": [
-          { "name": "fix", "in": "query", "schema": { "type": "boolean", "default": false }, "description": "Attempt auto-remediation by re-running `stack add` for failing services." },
-          { "name": "all", "in": "query", "schema": { "type": "boolean", "default": false }, "description": "Run doctor across every registered project on this machine." },
+          { "name": "fix", "in": "query", "schema": { "type": "boolean", "default": false }, "description": "Attempt supported setup remediation for eligible failures; stored vault names can cause skips." },
+          { "name": "all", "in": "query", "schema": { "type": "boolean", "default": false }, "description": "Run doctor for projects recorded in the local Stack registry." },
           { "name": "json", "in": "query", "schema": { "type": "boolean", "default": false }, "description": "Emit machine-readable JSON to stdout." }
         ],
         "responses": { "200": { "description": "Health report." } }
@@ -200,7 +200,7 @@
         "tags": ["management"],
         "operationId": "stack_exec",
         "summary": "Run a command with Phantom's secret proxy active.",
-        "description": "Thin wrapper over `phantom exec` so env vars with phm_ tokens get swapped for real secrets at the network layer.",
+        "description": "Forwards the command after -- to phantom exec. Secret availability and execution behavior depend on the installed Phantom and project setup; this wrapper does not prove credential injection or grant provider access.",
         "parameters": [
           { "name": "command", "in": "query", "required": true, "schema": { "type": "string" }, "description": "Command to run after the literal `--` separator." }
         ],
@@ -310,7 +310,7 @@
         "tags": ["ai"],
         "operationId": "stack_recommend",
         "summary": "Pick the right providers for a free-text project description.",
-        "description": "Takes a natural-language description of what the user is building (e.g. 'B2B SaaS with auth, AI, and payments') and returns a scored, per-category ranking of curated providers. Default path is pure BM25 retrieval — instant, zero-IO, no LLM. Pass `--save` to freeze the result as a Recipe at `.stack/recipes/<id>.toml` so you can follow up with `stack apply`. Pass `--synth` to route candidates through the local SLM (LM Studio / Ollama) for model-authored rationales. `--json` emits the same `RecommendOutput` shape the `stack_recommend` MCP tool returns.",
+        "description": "Returns scored curated-provider hits and per-category ranking for a project description. The default selection is pure BM25 retrieval without LLM inference. --save writes a Recipe; --synth attempts optional model-authored rationales. --json prints the CLI RecommendOutput payload, which the MCP server forwards as text rather than a structured MCP result. Inspect completion and output; this is not a latency or zero-I/O guarantee.",
         "parameters": [
           { "name": "query", "in": "query", "schema": { "type": "string" }, "description": "Free-text description (positional in the CLI; omit for usage hint)." },
           { "name": "k", "in": "query", "schema": { "type": "integer", "default": 6 }, "description": "Max top-level hits to return." },
@@ -331,11 +331,11 @@
       "get": {
         "tags": ["management"],
         "operationId": "stack_apply",
-        "summary": "Apply a saved recipe: replay `stack add` per provider + pre-wire Phantom rotation.",
-        "description": "Replays a frozen Recipe (authored by `stack recommend --save` or synthesized by an agent) through the add pipeline, then pre-wires Phantom envelopes + webhook stubs so provider-specific flows land real credentials into already-rotating slots. Pass `--noWire` to skip the Phantom-wire layer and stay pure-provisioning. Requires a `.stack.toml` (run `stack init` first).",
+        "summary": "Apply a saved recipe through provider setup and optional Phantom wiring attempts.",
+        "description": "Runs the saved Recipe through provider setup, then attempts optional Phantom wiring and writes webhook stubs. Inspect failures and skips; rotating slots and complete setup are not guaranteed. --noWire skips the optional wiring layer, not provider credential writes. Requires local Stack configuration; partial failures can require manual cleanup.",
         "parameters": [
           { "name": "recipeId", "in": "query", "schema": { "type": "string" }, "description": "Recipe id (filename stem in .stack/recipes/). Omit for an interactive picker." },
-          { "name": "noWire", "in": "query", "schema": { "type": "boolean", "default": false }, "description": "Skip Phantom envelope + webhook pre-wiring." }
+          { "name": "noWire", "in": "query", "schema": { "type": "boolean", "default": false }, "description": "Skip optional Phantom wiring and webhook stubs; provider credential writes remain." }
         ],
         "responses": { "200": { "description": "Apply summary (each provider's add result + phantom-wire counts)." } }
       }
@@ -384,7 +384,7 @@
       "RecommendOutput": {
         "type": "object",
         "title": "RecommendOutput",
-        "description": "JSON shape returned by `stack recommend --json` (and the `stack_recommend` MCP tool).",
+        "description": "CLI JSON payload printed by stack recommend --json; the MCP server forwards that output as text. This schema is documentation, not a structured MCP result or installed-version attestation.",
         "required": ["query", "hits", "byCategory", "guidance"],
         "properties": {
           "query": { "type": "string", "description": "The exact free-text query that was scored." },

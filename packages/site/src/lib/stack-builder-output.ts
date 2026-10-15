@@ -1,3 +1,40 @@
+import type { Provider } from "./providers";
+import type { ProviderRef } from "./providers-ref";
+
+export interface JoinedProvider {
+  display: Provider;
+  ref: ProviderRef | null;
+}
+
+/** Join display art to the catalog without guessing credential names on drift. */
+export function joinProviderReferences(
+  displays: readonly Provider[],
+  refs: readonly ProviderRef[],
+): JoinedProvider[] {
+  const displayCounts = new Map<string, number>();
+  const canonicalNameCounts = new Map<string, number>();
+  const byDisplayName = new Map<string, ProviderRef | null>();
+  for (const display of displays) {
+    displayCounts.set(display.name, (displayCounts.get(display.name) ?? 0) + 1);
+  }
+  for (const ref of refs) {
+    canonicalNameCounts.set(ref.name, (canonicalNameCounts.get(ref.name) ?? 0) + 1);
+    byDisplayName.set(ref.displayName, byDisplayName.has(ref.displayName) ? null : ref);
+  }
+  return displays.map((display) => {
+    const candidate = byDisplayName.get(display.name);
+    return {
+      display,
+      ref:
+        displayCounts.get(display.name) === 1 &&
+        candidate &&
+        canonicalNameCounts.get(candidate.name) === 1
+          ? candidate
+          : null,
+    };
+  });
+}
+
 /** Copyable Stack control-plane MCP bootstrap, independent of provider selection. */
 const STACK_MCP_BOOTSTRAP = JSON.stringify(
   { mcpServers: { "ashlr-stack": { command: "ashlr-stack-mcp" } } },
@@ -38,4 +75,18 @@ export function planStackAddCommands(
   }
 
   return { commands: commands.join(" && "), unsupported };
+}
+
+/** A missing catalog match stays planning-only even if its label resembles a command. */
+export function planJoinedProviderCommands(
+  selected: readonly JoinedProvider[],
+  supportedNames: ReadonlySet<string>,
+): StackAddPlan {
+  const known = selected.flatMap(({ ref }) => (ref ? [ref.name] : []));
+  const plan = planStackAddCommands(known, supportedNames);
+  const unsupported = new Set(plan.unsupported);
+  for (const { display, ref } of selected) {
+    if (!ref) unsupported.add(display.name);
+  }
+  return { commands: plan.commands, unsupported: [...unsupported] };
 }

@@ -7,7 +7,8 @@ import { colors, intro, outro, outroError, prompts } from "../ui.ts";
 export const removeCommand = defineCommand({
   meta: {
     name: "remove",
-    description: "Remove a service from the stack (vault entries and MCP config).",
+    description:
+      "Remove local service config and MCP wiring; attempt Phantom secret removal (headless runs may retain secrets).",
   },
   args: {
     service: {
@@ -18,18 +19,18 @@ export const removeCommand = defineCommand({
     all: {
       type: "boolean",
       default: false,
-      description: "Remove every service in this stack (with confirmation).",
+      description: "Remove every local service entry; prompt for confirmation in a terminal.",
     },
     allOrphans: {
       type: "boolean",
       default: false,
       description:
-        "Detect services configured in .stack.toml but no longer present in source, then remove them.",
+        "Detect services in .stack.toml no longer present in source, then remove their local entries.",
     },
     keepRemote: {
       type: "boolean",
       default: false,
-      description: "Leave the provider-side resource untouched (don't deprovision).",
+      description: "Compatibility flag; upstream resources are kept for every removal.",
     },
   },
   async run({ args }) {
@@ -82,7 +83,7 @@ async function runRemoveAllOrphans(keepRemote: boolean): Promise<void> {
   const isTTY = process.stdout.isTTY === true;
   const confirmed = isTTY
     ? await prompts.confirm({
-        message: `Remove ${orphans.length} orphaned service(s) and their secrets?`,
+        message: `Remove ${orphans.length} orphaned local service(s) and attempt to remove their Phantom secrets? Upstream resources remain.`,
         initialValue: true,
       })
     : true;
@@ -109,7 +110,7 @@ async function runRemoveAllOrphans(keepRemote: boolean): Promise<void> {
 
   outro(
     colors.green(
-      `Removed ${orphans.length} orphaned service(s), ${totalSecrets} secret(s).${keepRemote ? " (upstream resources kept)" : ""}`,
+      `Removed ${orphans.length} orphaned local service(s), ${totalSecrets} Phantom secret(s).${keepRemote ? " (upstream resources kept; --keepRemote selected)" : " (upstream resources kept)"}`,
     ),
   );
 }
@@ -125,7 +126,7 @@ async function runRemoveOne(serviceName: string, keepRemote: boolean): Promise<v
 
   const confirmed = process.stdout.isTTY
     ? await prompts.confirm({
-        message: `Remove ${serviceName} from .stack.toml, delete its ${entry.secrets.length} secret(s), and ${keepRemote ? "keep" : "deprovision"} the upstream resource?`,
+        message: `Remove ${serviceName} from .stack.toml, attempt to remove its ${entry.secrets.length} Phantom secret(s), and remove its MCP entry if present? ${keepRemote ? "Upstream resource kept (--keepRemote selected)" : "Upstream resource kept"}.`,
         initialValue: false,
       })
     : true;
@@ -140,7 +141,7 @@ async function runRemoveOne(serviceName: string, keepRemote: boolean): Promise<v
   delete config.services[serviceName];
   await writeConfig(config);
 
-  outro(colors.green(`Removed ${serviceName}.`));
+  outro(colors.green(`Removed ${serviceName} locally (upstream resource kept).`));
 }
 
 async function runRemoveAll(keepRemote: boolean): Promise<void> {
@@ -167,7 +168,7 @@ async function runRemoveAll(keepRemote: boolean): Promise<void> {
   // Two-step confirmation — large blast radius.
   if (process.stdout.isTTY) {
     const confirmed = await prompts.confirm({
-      message: `Delete ${serviceNames.length} service(s), ${totalSecrets} secret(s), and strip MCP entries? ${keepRemote ? "(keeping upstream)" : "(deprovisioning upstream)"}`,
+      message: `Remove ${serviceNames.length} local service(s), attempt to remove ${totalSecrets} Phantom secret(s), and strip MCP entries? ${keepRemote ? "(upstream resources kept; --keepRemote selected)" : "(upstream resources kept)"}`,
       initialValue: false,
     });
     if (!confirmed || prompts.isCancel(confirmed)) {
@@ -196,5 +197,9 @@ async function runRemoveAll(keepRemote: boolean): Promise<void> {
   }
   await writeConfig(config);
 
-  outro(colors.green(`Removed ${serviceNames.length} service(s), ${removedSecrets} secret(s).`));
+  outro(
+    colors.green(
+      `Removed ${serviceNames.length} local service(s), ${removedSecrets} Phantom secret(s) (upstream resources kept).`,
+    ),
+  );
 }

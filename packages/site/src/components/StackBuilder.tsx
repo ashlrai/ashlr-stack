@@ -6,6 +6,8 @@ import { PROVIDERS_REF, type ProviderRef } from "~/lib/providers-ref";
 import {
   STACK_MCP_PREREQUISITES,
   formatOptionalStackMcp,
+  joinProviderReferences,
+  planJoinedProviderCommands,
   planStackAddCommands,
 } from "~/lib/stack-builder-output";
 import {
@@ -50,58 +52,12 @@ interface RecommendResponse {
   guidance: string;
 }
 
-const SLUG_TO_REF_NAME: Record<string, string> = {
-  supabase: "supabase",
-  neon: "neon",
-  turso: "turso",
-  convex: "convex",
-  upstash: "upstash",
-  firebase: "firebase",
-  vercel: "vercel",
-  railway: "railway",
-  flydotio: "fly",
-  cloudflare: "cloudflare",
-  render: "render",
-  modal: "modal",
-  amazonwebservices: "aws",
-  openai: "openai",
-  anthropic: "anthropic",
-  x: "xai",
-  deepseek: "deepseek",
-  replicate: "replicate",
-  braintrust: "braintrust",
-  posthog: "posthog",
-  sentry: "sentry",
-  stripe: "stripe",
-  github: "github",
-  linear: "linear",
-  resend: "resend",
-  clerk: "clerk",
-};
-
-function stubRef(p: Provider): ProviderRef {
-  const key = p.name.toLowerCase().replace(/[^a-z0-9]/g, "_");
-  const secretName = `${key.toUpperCase()}_API_KEY`;
-  return {
-    name: key,
-    displayName: p.name,
-    category: p.category,
-    authKind: "api_key",
-    secrets: [secretName],
-    blurb: p.blurb,
-    dashboard: "",
-    docs: "",
-    howTo: "",
-  };
-}
-
 function mergeCatalog(iconPaths: Record<string, string | null>): Merged[] {
-  const byName = new Map(PROVIDERS_REF.map((r) => [r.name, r]));
-  return PROVIDERS.map((p) => {
-    const refName = SLUG_TO_REF_NAME[p.slug];
-    const ref = refName ? (byName.get(refName) ?? null) : null;
-    return { display: p, ref: ref ?? stubRef(p), iconPath: iconPaths[p.slug] ?? null };
-  });
+  return joinProviderReferences(PROVIDERS, PROVIDERS_REF).map(({ display, ref }) => ({
+    display,
+    ref,
+    iconPath: iconPaths[display.slug] ?? null,
+  }));
 }
 
 function formatAuthKind(kind: ProviderRef["authKind"]): string {
@@ -118,10 +74,12 @@ function formatAuthKind(kind: ProviderRef["authKind"]): string {
 }
 
 function buildEnvBlock(selected: Merged[]): string {
+  // Catalog slots mirror `stack env export --example`, not credentials an adapter has materialized.
   return selected
     .map((m) => {
-      const header = `# ${m.display.name} — ${m.ref?.authKind ? formatAuthKind(m.ref.authKind) : "API key"}`;
-      const lines = (m.ref?.secrets ?? []).map((s) => `${s}=`);
+      if (!m.ref) return `# ${m.display.name} — planning only; no verified environment keys`;
+      const header = `# ${m.display.name} — ${formatAuthKind(m.ref.authKind)}`;
+      const lines = m.ref.secrets.map((s) => `${s}=`);
       return [header, ...lines].join("\n");
     })
     .join("\n\n");
@@ -130,10 +88,7 @@ function buildEnvBlock(selected: Merged[]): string {
 const canonicalProviderNames = new Set(PROVIDERS_REF.map((provider) => provider.name));
 
 function addPlan(selected: Merged[]) {
-  return planStackAddCommands(
-    selected.map((m) => m.ref?.name ?? ""),
-    canonicalProviderNames,
-  );
+  return planJoinedProviderCommands(selected, canonicalProviderNames);
 }
 
 interface CardProps {
@@ -184,10 +139,10 @@ function ProviderCard({ m, selected, expanded, onToggle, onExpand }: CardProps) 
               MCP
             </span>
           )}
-          {m.display.keyOnly && (
+          {m.ref && m.display.keyOnly && (
             <span
               className="text-[9px] mono tracking-[0.08em] uppercase px-1.5 py-0.5 border border-[color:var(--color-ink-600)] text-[color:var(--color-ink-500)]"
-              title="Key-only · v0.2 adds provisioning"
+              title="Uses a supplied provider credential"
             >
               key
             </span>
@@ -197,7 +152,7 @@ function ProviderCard({ m, selected, expanded, onToggle, onExpand }: CardProps) 
       <div className="relative mt-3 pointer-events-none">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-white tracking-tight">{m.display.name}</span>
-          {m.display.auth && (
+          {m.ref && m.display.auth && (
             <span className="text-[9px] mono text-[color:var(--color-ink-500)]">
               · {m.display.auth}
             </span>
@@ -238,7 +193,28 @@ interface DetailProps {
 }
 function DetailPanel({ m, onClose, selected, onToggle }: DetailProps) {
   const ref = m.ref;
-  if (!ref) return null;
+  if (!ref) {
+    return (
+      <div className="panel-steel mt-4 p-5 sm:p-6 flex items-start justify-between gap-4">
+        <div>
+          <h4 className="text-xl text-[color:var(--color-ink-50)] tracking-tight font-medium">
+            {m.display.name}
+          </h4>
+          <p className="mt-1 text-sm text-[color:var(--color-ink-300)]">
+            Planning only — no verified Stack catalog reference or environment keys for this entry.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="mono text-[10px] tracking-[0.12em] uppercase text-[color:var(--color-ink-400)] hover:text-[color:var(--color-ink-100)]"
+          aria-label="Close detail"
+        >
+          close ✕
+        </button>
+      </div>
+    );
+  }
   const plan = planStackAddCommands([ref.name], canonicalProviderNames);
   const cmd = plan.commands;
   const envSample = ref.secrets.map((s) => `${s}=`).join("\n");
@@ -407,7 +383,7 @@ function StackDock({ selected, onClear, onOpen }: DockProps) {
               {selected.length.toString().padStart(2, "0")} providers
             </span>
             <span className="mono text-[11px] text-[color:var(--color-ink-400)]">
-              · {envCount} env vars
+              · {envCount} example keys
             </span>
             {mcpCount > 0 && (
               <span className="mono text-[11px] text-[color:var(--color-blade-400)]">

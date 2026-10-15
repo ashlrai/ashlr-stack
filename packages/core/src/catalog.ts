@@ -377,7 +377,8 @@ export const PROVIDERS_REF: ProviderRef[] = [
     category: "Errors",
     authKind: "pat",
     secrets: ["SENTRY_AUTH_TOKEN", "SENTRY_DSN", "SENTRY_ORG", "SENTRY_PROJECT"],
-    blurb: "Error + performance tracking. Creates a project and fetches its DSN.",
+    blurb:
+      "Error + performance tracking. Attaches to an existing project and reads its DSN when available.",
     mcp: {
       name: "sentry",
       detail:

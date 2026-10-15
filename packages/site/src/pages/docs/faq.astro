@@ -31,7 +31,7 @@ const faq = faqPageSchema(
     {
       question: "What happens if I delete .stack.toml?",
       answer:
-        "Your upstream resources stay exactly as they were. Stack loses its map of what was wired. The secrets in Phantom also stay put. Running stack init again starts fresh. To actually tear things down, use `stack remove <service>` (deprovisions upstream + removes secrets + cleans up .mcp.json) or `stack remove --all --keepRemote` (removes local state only).",
+        "Deleting .stack.toml does not delete upstream resources or Phantom secrets. Preserve a copy if you need its service references. stack remove <service> or stack remove --all removes local service/MCP configuration and attempts Phantom secret cleanup; upstream resources are kept in every mode. --keepRemote is a compatibility flag. Headless cleanup or refused confirmation can leave secrets stored; inspect the result and use the Phantom Secrets guidance for manual cleanup.",
     },
     {
       question: "Can I commit .env.local with phm_ tokens?",
@@ -66,7 +66,7 @@ const faq = faqPageSchema(
     {
       question: "How do I uninstall Stack?",
       answer:
-        "Optionally run `stack remove --all` to deprovision everything Stack created. Then `bun remove -g @ashlr/stack` (or `npm uninstall -g @ashlr/stack`) to uninstall the CLI. Drop the global state with `rm -rf ~/.stack/`. Phantom is a separate install — leave it alone unless you also want to nuke every secret.",
+        "Optionally use stack remove --all for local service/MCP cleanup and attempted Phantom secret cleanup; it keeps upstream resources and can leave secrets stored. Uninstall the CLI with bun remove -g @ashlr/stack or npm uninstall -g @ashlr/stack. Inspect and back up project configuration and any local registry before deleting files. Phantom is a separate install; follow its qualified cleanup guidance at https://phm.dev/secrets rather than assuming an all-secrets command or complete teardown.",
     },
     {
       question: "Where do I report bugs or request providers?",
@@ -179,10 +179,12 @@ const faq = faqPageSchema(
     <code>stack init</code> again would start fresh.
   </p>
   <p>
-    To actually tear things down, use <code>stack remove &lt;service&gt;</code>
-    (deprovisions upstream + removes the secrets + cleans up <code>.mcp.json</code>)
-    or <code>stack remove --all --keepRemote</code> (removes local state
-    only).
+    <code>stack remove &lt;service&gt;</code> or <code>stack remove --all</code>
+    removes local service and MCP configuration and attempts Phantom secret cleanup.
+    Upstream resources are kept in every mode; <code>--keepRemote</code> is a
+    compatibility flag. Headless cleanup or refused confirmation can leave secrets
+    stored. Inspect the result and consult the
+    <a href="https://phm.dev/secrets">Phantom Secrets guidance</a> for manual cleanup.
   </p>
 
   <h2>Can I commit <code>.env.local</code> with phm_ tokens?</h2>
@@ -255,18 +257,15 @@ const faq = faqPageSchema(
   <h2>How do I uninstall Stack?</h2>
 
   <Code
-    code={`# optionally: deprovision everything Stack created
+    code={`# Optional local cleanup: upstream resources are kept; secrets may remain
 stack remove --all
 
-# uninstall the CLI
+# Uninstall the CLI
 bun remove -g @ashlr/stack   # or: npm uninstall -g @ashlr/stack
 
-# drop the global state (registry only — does NOT touch Phantom)
-rm -rf ~/.stack/
-
-# Phantom is a separate install; leave it alone unless you also want
-# to nuke every secret, in which case:
-#   phantom remove --all   (interactive confirmation)`}
+# Inspect and back up project configuration and the local registry
+# before deleting files. Phantom is a separate install; follow its
+# qualified cleanup guidance at https://phm.dev/secrets.`}
     lang="bash"
     theme="github-dark-dimmed"
   />

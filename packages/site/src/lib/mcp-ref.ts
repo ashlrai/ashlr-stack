@@ -8,7 +8,7 @@
 
 export interface McpToolInput {
   name: string;
-  type: "string" | "boolean";
+  type: "string" | "boolean" | "number";
   required?: boolean;
   description: string;
 }
@@ -24,7 +24,8 @@ export interface McpTool {
 export const MCP_TOOLS: McpTool[] = [
   {
     name: "stack_init",
-    description: "Scaffold a new .stack.toml in the current directory.",
+    description:
+      "Scaffold .stack.toml in the current directory; a selected template may also run provider setup.",
     inputs: [
       {
         name: "template",
@@ -78,13 +79,15 @@ export const MCP_TOOLS: McpTool[] = [
   },
   {
     name: "stack_remove",
-    description: "Remove a service from the stack (vault entries and MCP config).",
+    description:
+      "Remove local service configuration, declared vault entries and its MCP entry. This command does not delete upstream resources.",
     inputs: [
       { name: "service", type: "string", required: true, description: "Service name." },
       {
         name: "keepRemote",
         type: "boolean",
-        description: "Leave the provider-side resource untouched.",
+        description:
+          "Accepted and forwarded flag; this CLI performs local removal without upstream deletion either way.",
       },
     ],
     cli: "stack remove <service> [--keepRemote]",
@@ -98,7 +101,7 @@ export const MCP_TOOLS: McpTool[] = [
   {
     name: "stack_info",
     description:
-      "Deep-dive on a single service: resource, region, auth, secrets, MCP wiring, health.",
+      "Inspect configured resource, auth kind, secret-name inventory and MCP metadata; attempt a healthcheck when the provider supports one.",
     inputs: [{ name: "service", type: "string", required: true, description: "Service name." }],
     cli: "stack info <service>",
   },
@@ -122,7 +125,8 @@ export const MCP_TOOLS: McpTool[] = [
   },
   {
     name: "stack_doctor",
-    description: "Verify every service is reachable and credentials are valid.",
+    description:
+      "Inspect the configured-service health report. --fix attempts supported remediation; existing vault names can cause repairs to be skipped, and name presence is not credential validity.",
     inputs: [
       { name: "fix", type: "boolean", description: "Attempt auto-remediation." },
       { name: "all", type: "boolean", description: "Run across every registered project." },
@@ -151,7 +155,8 @@ export const MCP_TOOLS: McpTool[] = [
   },
   {
     name: "stack_projects_list",
-    description: "List every Stack-enabled project on this machine.",
+    description:
+      "List projects recorded in the local Stack registry; this is not a filesystem-wide discovery scan.",
     inputs: [],
     cli: "stack projects list",
   },
@@ -186,7 +191,7 @@ export const MCP_TOOLS: McpTool[] = [
       },
       {
         name: "k",
-        type: "string",
+        type: "number",
         description: "Max top-level hits to return (default 6).",
       },
       {
@@ -206,7 +211,7 @@ export const MCP_TOOLS: McpTool[] = [
   {
     name: "stack_apply",
     description:
-      "Replay a saved Recipe: run stack_add per provider, then pre-wire Phantom rotation envelopes + webhook stubs. Opt out of the wire step with no_wire:true.",
+      "Apply a saved Recipe through provider setup, then attempt optional Phantom wiring and write webhook stubs. Inspect failures and skips; working rotation is not established. no_wire:true skips the optional layer.",
     inputs: [
       {
         name: "recipe_id",
@@ -217,7 +222,7 @@ export const MCP_TOOLS: McpTool[] = [
       {
         name: "no_wire",
         type: "boolean",
-        description: "Skip Phantom envelope + webhook pre-wiring.",
+        description: "Skip optional Phantom wiring and webhook stubs.",
       },
     ],
     cli: "stack apply <recipe_id> [--noWire]",
@@ -231,18 +236,19 @@ export interface McpResource {
   mimeType: string;
 }
 
-/** The MCP server also exposes three read-only resources (no tool call needed). */
+/** Up to three read-only resources are advertised when their files exist in server cwd. */
 export const MCP_RESOURCES: McpResource[] = [
   {
     uri: "stack://current/.stack.toml",
     name: ".stack.toml (this project)",
-    description: "Committed shape of the current project's stack.",
+    description: "Current project stack configuration text; Git commit state is not verified.",
     mimeType: "application/toml",
   },
   {
     uri: "stack://current/.stack.local.toml",
     name: ".stack.local.toml (local instance)",
-    description: "Local instance data (resource ids, project_id). Gitignored.",
+    description:
+      "Local instance data (resource ids, project_id); inspect contents and project ignore rules before exposing it.",
     mimeType: "application/toml",
   },
   {
