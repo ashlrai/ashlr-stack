@@ -73,7 +73,7 @@ function Row({ q, idx }: { q: Q; idx: number }) {
             {q.tag}
           </span>
         )}
-        <span className="flex-1 text-[15px] sm:text-[16px] text-[color:var(--color-ink-100)] tracking-tight font-medium">
+        <span className="min-w-0 flex-1 text-[15px] sm:text-[16px] text-[color:var(--color-ink-100)] tracking-tight font-medium">
           {q.q}
         </span>
         <span
@@ -88,7 +88,7 @@ function Row({ q, idx }: { q: Q; idx: number }) {
         className="overflow-hidden transition-[max-height] duration-300"
         style={{ maxHeight: open ? "400px" : "0px" }}
       >
-        <p className="pb-5 pl-[88px] sm:pl-[88px] pr-8 text-[14px] leading-[1.7] text-[color:var(--color-ink-300)] max-w-[780px]">
+        <p className="break-words pb-5 pl-0 sm:pl-[88px] pr-0 sm:pr-8 text-[14px] leading-[1.7] text-[color:var(--color-ink-300)] max-w-[780px]">
           {linkifyPhantom(q.a)}
         </p>
       </div>
