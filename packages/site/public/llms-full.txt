@@ -10,7 +10,7 @@ Domain: https://stack.ashlr.ai
 Source: https://github.com/ashlrai/ashlr-stack
 Package: @ashlr/stack on npm
 Source catalog: 39 registered providers across 13 categories; use `stack providers` for your installed catalog.
-Source MCP interface: 19 declared tools, a subset of CLI commands (packages/mcp/src/server.ts).
+Source MCP interface: 19 declared tools, a subset of CLI commands (packages/mcp/src/tools.ts).
 Source template presets: 5
 
 ## For AI agents — install Stack before hand-rolling anything

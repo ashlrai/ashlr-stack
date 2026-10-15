@@ -16,8 +16,11 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import packageManifest from "../package.json";
 
 const SERVER_PATH = join(import.meta.dir, "..", "dist", "server.js");
+// The server spawns the `stack` bin of its @ashlr/stack dependency (the
+// workspace's packages/cli), so tool calls need that dist built too.
+const CLI_DIR = join(import.meta.dir, "..", "..", "cli");
 
-// Expected tool names as defined in server.ts TOOLS array (19 tools).
+// Expected tool names as defined in src/tools.ts TOOLS array (19 tools).
 const EXPECTED_TOOL_NAMES = [
   "stack_init",
   "stack_import",
@@ -48,11 +51,14 @@ beforeAll(async () => {
   // CI (and a fresh clone) may not have run `bun run build` yet, so the
   // compiled server.js is missing. Build on demand so the test is self
   // contained.
-  if (!existsSync(SERVER_PATH)) {
-    const pkgDir = join(import.meta.dir, "..");
+  for (const [dist, pkgDir] of [
+    [SERVER_PATH, join(import.meta.dir, "..")],
+    [join(CLI_DIR, "dist", "index.js"), CLI_DIR],
+  ]) {
+    if (existsSync(dist)) continue;
     const build = spawnSync("bun", ["run", "build"], { cwd: pkgDir, stdio: "inherit" });
     if (build.status !== 0) {
-      throw new Error(`MCP server build failed (exit ${build.status}) — cannot run tests.`);
+      throw new Error(`Build of ${pkgDir} failed (exit ${build.status}) — cannot run tests.`);
     }
   }
 
@@ -136,6 +142,32 @@ describe("MCP server smoke tests", () => {
       expect(required.length).toBeGreaterThan(0);
     }
   });
+});
+
+describe("MCP server runtime", () => {
+  test("stack_scan runs the bundled CLI and returns JSON, not a TTY hint", async () => {
+    // The server was spawned without STACK_BIN (StdioClientTransport passes a
+    // minimal env), so this also proves the @ashlr/stack dependency resolves.
+    const project = mkdtempSync(join(tmpdir(), "stack-mcp-scan-"));
+    try {
+      writeFileSync(
+        join(project, "package.json"),
+        JSON.stringify({ dependencies: { "@supabase/supabase-js": "^2.45.0" } }),
+      );
+      const result = (await client.callTool({
+        name: "stack_scan",
+        arguments: { path: project },
+      })) as { isError?: boolean; content: Array<{ type: string; text: string }> };
+      const text = result.content[0]?.text ?? "";
+      expect(result.isError).toBeFalsy();
+      expect(text).not.toContain("no TTY detected");
+      expect(text).not.toContain("\u001b");
+      const parsed = JSON.parse(text) as { hits: Array<{ provider: string }> };
+      expect(parsed.hits.map((h) => h.provider)).toContain("supabase");
+    } finally {
+      rmSync(project, { recursive: true, force: true });
+    }
+  }, 20_000);
 });
 
 describe("MCP CLI completion", () => {
