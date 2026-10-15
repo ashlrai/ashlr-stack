@@ -6,8 +6,8 @@
 #
 # What it does, in order:
 #
-#   1. Bumps the `version` field in each published package.json to <version>
-#      (core, mcp, cli). Takes `--version X.Y.Z` or prompts.
+#   1. Validates the reviewed source version (core, mcp, cli and descriptor).
+#      Takes `--version X.Y.Z` or prompts; does not change package versions.
 #   2. Rewrites `workspace:*` deps to `^X.Y.Z` so they resolve on a plain
 #      `npm install` outside the monorepo. Backs up originals to
 #      package.json.bak before touching anything.
@@ -61,7 +61,7 @@ VERSION=""
 AUTO_YES=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --version) VERSION="${2:-}"; shift 2 ;;
+    --version) [[ $# -ge 2 && -n "$2" ]] || die "version is required"; VERSION="$2"; shift 2 ;;
     --yes|-y)  AUTO_YES=1; shift ;;
     -h|--help) usage; exit 0 ;;
     *)         die "unknown argument (try --help)" ;;
@@ -69,11 +69,11 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$VERSION" ]]; then
-  read -r -p "  ? publish: version to publish (e.g. 0.1.0): " VERSION
+  read -r -p "  ? publish: version to publish (e.g. 0.1.0): " VERSION || die "version is required"
 fi
 
 if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
-  die "version '$VERSION' doesn't look like semver (X.Y.Z or X.Y.Z-pre.N)."
+  die "invalid version (expected X.Y.Z or X.Y.Z-pre.N)"
 fi
 
 command -v npm  >/dev/null 2>&1 || die "npm is required (even if you use bun day-to-day)."
@@ -89,6 +89,47 @@ for pkg in "${PKG_ORDER[@]}"; do
   fi
 done
 
+# Read source data only; these guards do not establish publisher or archive authority.
+if ! node --input-type=module - "$VERSION" <<'STACK_RELEASE_SOURCE'
+import { lstatSync, readFileSync } from 'node:fs';
+try {
+  const version = process.argv[2];
+  const read = (path) => {
+    const stat = lstatSync(path);
+    if (!stat.isFile() || stat.isSymbolicLink()) throw new Error();
+    return readFileSync(path, 'utf8');
+  };
+  const manifests = ['core', 'mcp', 'cli'].map((name) =>
+    JSON.parse(read(`packages/${name}/package.json`)));
+  if (manifests.some((pkg) => pkg.version !== version)) throw new Error();
+  if (typeof manifests[1].name !== 'string' || !manifests[1].name) throw new Error();
+  const descriptor = JSON.parse(read('packages/mcp/server.json'));
+  const entries = Array.isArray(descriptor.packages)
+    ? descriptor.packages.filter((pkg) => pkg.registryType === 'npm'
+      && pkg.identifier === manifests[1].name) : [];
+  if (descriptor.version !== version || entries.length !== 1
+      || entries[0].version !== version) throw new Error();
+  const cli = read('packages/cli/src/index.ts');
+  const declarations = [...cli.matchAll(/^const[ \t]+VERSION[ \t]*=[ \t]*([^;\r\n]+);[ \t]*$/gm)];
+  if (declarations.length !== 1) throw new Error();
+  const literal = declarations[0][1].trim().match(/^(["'])([^"'\r\n]+)\1$/);
+  if (!literal || literal[2] !== version) throw new Error();
+} catch {
+  process.exit(1);
+}
+STACK_RELEASE_SOURCE
+then
+  die "source version validation failed"
+fi
+
+# Check an actually selected tag without inventing a branch-dispatch tag owner.
+if [[ "${GITHUB_REF:-}" == refs/tags/* ]]; then
+  [[ "$GITHUB_REF" == "refs/tags/v$VERSION" ]] || die "selected tag validation failed"
+  TAG_COMMIT="$(git rev-parse --verify "refs/tags/v$VERSION^{commit}" 2>/dev/null)" || die "selected tag validation failed"
+  HEAD_COMMIT="$(git rev-parse --verify HEAD 2>/dev/null)" || die "selected tag validation failed"
+  [[ -n "$TAG_COMMIT" && "$TAG_COMMIT" == "$HEAD_COMMIT" ]] || die "selected tag validation failed"
+fi
+
 BACKED_UP=()
 
 restore_all() {
@@ -103,9 +144,9 @@ restore_all() {
 
 trap 'rc=$?; restore_all; exit $rc' EXIT INT TERM
 
-# ---- step 1+2: bump versions + rewrite workspace:* -----------------------
+# ---- step 1+2: validate source version + rewrite workspace:* -----------------------
 
-say "bumping versions and rewriting workspace:* -> ^$VERSION"
+say "validated source version; rewriting workspace:* -> ^$VERSION"
 
 for pkg in "${PKG_ORDER[@]}"; do
   [[ -f "$pkg/package.json" ]] || die "missing $pkg/package.json"
@@ -116,7 +157,6 @@ for pkg in "${PKG_ORDER[@]}"; do
     import { readFileSync, writeFileSync } from 'node:fs';
     const path = '$pkg/package.json';
     const pkg = JSON.parse(readFileSync(path, 'utf8'));
-    pkg.version = '$VERSION';
     for (const field of ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies']) {
       if (!pkg[field]) continue;
       for (const [name, range] of Object.entries(pkg[field])) {

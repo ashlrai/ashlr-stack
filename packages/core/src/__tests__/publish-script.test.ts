@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawn } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
   chmodSync,
   lstatSync,
@@ -7,6 +8,7 @@ import {
   mkdtempSync,
   readFileSync,
   readlinkSync,
+  realpathSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -15,6 +17,35 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
 const sourceScript = resolve(import.meta.dir, "../../../../scripts/publish.sh");
+const sourceWorkflow = resolve(import.meta.dir, "../../../../.github/workflows/release.yml");
+// Resolve the runner's existing Node before installing the private effect-trap PATH.
+const nodePath = Bun.which("node");
+if (!nodePath) throw new Error("Node is required for copied read-only release preflight tests");
+const realNode = realpathSync(nodePath);
+const validatorProgram = readFileSync(sourceScript, "utf8")
+  .split("<<'STACK_RELEASE_SOURCE'\n")[1]
+  ?.split("\nSTACK_RELEASE_SOURCE")[0];
+if (!validatorProgram) throw new Error("copied release validator is missing");
+const validatorHash = createHash("sha256").update(`${validatorProgram}\n`).digest("hex");
+
+function workflowBlock(name: string) {
+  const source = readFileSync(sourceWorkflow, "utf8");
+  const marker = `name: ${name}\n`;
+  const start = source.indexOf(marker);
+  if (start < 0 || source.indexOf(marker, start + 1) >= 0)
+    throw new Error("ambiguous fixture step");
+  const tail = source.slice(start + marker.length);
+  const run = tail.indexOf("        run: |\n");
+  if (run < 0) throw new Error("fixture step has no run block");
+  const lines = tail.slice(run + "        run: |\n".length).split("\n");
+  const block: string[] = [];
+  for (const line of lines) {
+    if (line && !line.startsWith("          ")) break;
+    block.push(line.slice(10));
+  }
+  return block.join("\n");
+}
+
 const mutatingCommands = ["npm", "node", "git", "cp", "mv"];
 
 // Bun 1.2's sync facade mislabels nonzero exits and ignores its timeout/buffer
@@ -114,6 +145,35 @@ describe("publish script early parser (copied script, inert commands)", () => {
       );
       chmodSync(trap, 0o700);
     }
+    // The only real Node program allowed is the exact copied, read-only validator.
+    // This is a test binding, not a sandbox or publisher/account attestation.
+    writeFileSync(
+      join(bin, "node-reader.cjs"),
+      `const {readFileSync, appendFileSync} = require('node:fs');
+const {createHash} = require('node:crypto');
+const {spawnSync} = require('node:child_process');
+const input = readFileSync(0);
+const args = process.argv.slice(2);
+if (args.length !== 3 || args[0] !== '--input-type=module' || args[1] !== '-'
+    || createHash('sha256').update(input).digest('hex') !== '${validatorHash}') {
+  appendFileSync(process.env.SCRIPT_FIXTURE_TRACE, 'node\\n'); process.exit(97);
+}
+appendFileSync(process.env.VALIDATOR_TRACE, 'read\\n');
+const result = spawnSync(${JSON.stringify(realNode)}, args, {
+  cwd: process.cwd(), env: process.env, input, timeout: 1000, maxBuffer: 64 * 1024,
+});
+if (result.error || result.signal || result.status === null) process.exit(98);
+process.stdout.write(result.stdout); process.stderr.write(result.stderr);
+process.exit(result.status);
+`,
+      { mode: 0o700 },
+    );
+    // A Bash wrapper quotes Node paths containing spaces; a shebang cannot.
+    writeFileSync(
+      join(bin, "node"),
+      `#!/bin/bash\nexec ${JSON.stringify(realNode)} ${JSON.stringify(join(bin, "node-reader.cjs"))} "$@"\n`,
+      { mode: 0o700 },
+    );
     symlinkSync("/usr/bin/dirname", join(bin, "dirname"));
     symlinkSync("/bin/cat", join(bin, "cat"));
     // No inherited startup files, loader options, registry credentials or auth environment.
@@ -124,7 +184,9 @@ describe("publish script early parser (copied script, inert commands)", () => {
       LANG: "C",
       LC_ALL: "C",
       SCRIPT_FIXTURE_TRACE: trace,
+      VALIDATOR_TRACE: join(root, "validator.log"),
     };
+    writeFileSync(env.VALIDATOR_TRACE, "", { mode: 0o600 });
     preserved = [];
     for (const name of ["core", "mcp", "cli"]) {
       const directory = join(root, "packages", name);
@@ -143,6 +205,18 @@ describe("publish script early parser (copied script, inert commands)", () => {
         preserved.push({ path, bytes });
       }
     }
+    mkdirSync(join(root, "packages/cli/src"), { recursive: true, mode: 0o700 });
+    writeFileSync(join(root, "packages/cli/src/index.ts"), 'const VERSION = "0.2.1";\n', {
+      mode: 0o600,
+    });
+    writeFileSync(
+      join(root, "packages/mcp/server.json"),
+      JSON.stringify({
+        version: "0.2.1",
+        packages: [{ registryType: "npm", identifier: "synthetic-mcp", version: "0.2.1" }],
+      }),
+      { mode: 0o600 },
+    );
   });
 
   afterEach(() => {
@@ -323,5 +397,263 @@ describe("publish script early parser (copied script, inert commands)", () => {
         lstatSync(join(root, "packages", name, "package.json.bak"), { throwIfNoEntry: false }),
       ).toBeUndefined();
     }
+  });
+  function inputs() {
+    return [
+      ...preserved.map((file) => file.path),
+      join(root, "packages/cli/src/index.ts"),
+      join(root, "packages/mcp/server.json"),
+    ].map((path) => ({ path, snapshot: backupSnapshot(path) }));
+  }
+
+  async function refuse(args: string[], message: string, sentinel?: string) {
+    const before = inputs();
+    const result = await runFixture(
+      "/bin/bash",
+      ["--noprofile", "--norc", script, ...args],
+      root,
+      env,
+    );
+    expect(result.error).toBeUndefined();
+    expect(result.signal).toBeNull();
+    expect(result.timedOut).toBe(false);
+    expect(result.outputLimitExceeded).toBe(false);
+    expect(result.status).toBe(1);
+    const output = `${result.stdout}${result.stderr}`;
+    expect(output).toContain(message);
+    if (sentinel) expect(output).not.toContain(sentinel);
+    if (message === "source version validation failed")
+      expect(readFileSync(env.VALIDATOR_TRACE, "utf8")).toBe("read\n");
+    expect(readFileSync(trace, "utf8")).toBe("");
+    expect(inputs()).toEqual(before);
+    return result;
+  }
+
+  test("missing operand and closed-input prompt refuse without effects", async () => {
+    await refuse(["--version"], "version is required");
+    await refuse([], "version is required");
+  });
+
+  test("invalid version never reflects its payload", async () => {
+    await refuse(
+      ["--version", "synthetic-version-secret\n$(not-run)"],
+      "invalid version",
+      "synthetic-version-secret",
+    );
+  });
+
+  test("valid mismatched version refuses before any copy", async () => {
+    removeFixtureBackups();
+    await refuse(["--version", "0.2.2", "--yes"], "source version validation failed");
+    expect(readFileSync(env.VALIDATOR_TRACE, "utf8")).toBe("read\n");
+  });
+
+  for (const name of ["core", "mcp", "cli"]) {
+    for (const invalid of ['{"version":"0.2.2"}', "not-json", '{"version":21}']) {
+      test(`${name} manifest refuses invalid source data ${invalid}`, async () => {
+        removeFixtureBackups();
+        writeFileSync(join(root, "packages", name, "package.json"), invalid);
+        await refuse(["--version", "0.2.1"], "source version validation failed");
+      });
+    }
+  }
+
+  for (const descriptor of [
+    {
+      version: "0.2.2",
+      packages: [{ registryType: "npm", identifier: "synthetic-mcp", version: "0.2.1" }],
+    },
+    {
+      version: "0.2.1",
+      packages: [{ registryType: "npm", identifier: "synthetic-mcp", version: "0.2.2" }],
+    },
+    {
+      version: "0.2.1",
+      packages: [{ registryType: "npm", identifier: "wrong", version: "0.2.1" }],
+    },
+    {
+      version: "0.2.1",
+      packages: Array.from({ length: 2 }, () => ({
+        registryType: "npm",
+        identifier: "synthetic-mcp",
+        version: "0.2.1",
+      })),
+    },
+  ]) {
+    test(`descriptor mismatch refuses ${JSON.stringify(descriptor)}`, async () => {
+      removeFixtureBackups();
+      writeFileSync(join(root, "packages/mcp/server.json"), JSON.stringify(descriptor));
+      await refuse(["--version", "0.2.1"], "source version validation failed");
+    });
+  }
+
+  for (const cli of [
+    'const VERSION = "0.2.2";',
+    '// const VERSION = "0.2.1";',
+    'const VERSION = "0.2.1";\nconst VERSION = "0.2.1";',
+    "const VERSION = getVersion();",
+  ]) {
+    test(`CLI source must have one matching literal ${cli}`, async () => {
+      removeFixtureBackups();
+      writeFileSync(join(root, "packages/cli/src/index.ts"), cli);
+      await refuse(["--version", "0.2.1"], "source version validation failed");
+    });
+  }
+
+  for (const kind of ["missing", "symlink", "directory"]) {
+    test(`source reader refuses ${kind} inputs`, async () => {
+      removeFixtureBackups();
+      const path = join(root, "packages/mcp/server.json");
+      rmSync(path);
+      if (kind === "directory") mkdirSync(path);
+      if (kind === "symlink") symlinkSync(join(root, "packages/core/package.json"), path);
+      // Directory snapshot uses its existing retained fixture convention.
+      if (kind === "directory") writeFileSync(join(path, "retained.txt"), "retained");
+      const before = backupSnapshot(path);
+      const result = await runFixture(
+        "/bin/bash",
+        ["--noprofile", "--norc", script, "--version", "0.2.1"],
+        root,
+        env,
+      );
+      expect(result.error).toBeUndefined();
+      expect(result.signal).toBeNull();
+      expect(result.timedOut).toBe(false);
+      expect(result.outputLimitExceeded).toBe(false);
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain("source version validation failed");
+      expect(readFileSync(env.VALIDATOR_TRACE, "utf8")).toBe("read\n");
+      expect(readFileSync(trace, "utf8")).toBe("");
+      expect(backupSnapshot(path)).toEqual(before);
+    });
+  }
+
+  function cannedGit(tag: string, head: string, fail = false) {
+    writeFileSync(
+      join(root, "bin/git"),
+      `#!/bin/bash
+if [[ "$*" == 'rev-parse --verify refs/tags/v0.2.1^{commit}' ]]; then
+  ${fail ? "exit 1" : `printf '%s\\n' '${tag}'`}
+elif [[ "$*" == 'rev-parse --verify HEAD' ]]; then
+  printf '%s\\n' '${head}'
+else
+  printf 'git\\n' >> "$SCRIPT_FIXTURE_TRACE"; exit 97
+fi
+`,
+      { mode: 0o700 },
+    );
+  }
+
+  for (const kind of ["version", "commit", "missing"]) {
+    test(`selected tag ${kind} mismatch refuses without mutation`, async () => {
+      removeFixtureBackups();
+      env.GITHUB_REF = kind === "version" ? "refs/tags/v0.2.2" : "refs/tags/v0.2.1";
+      cannedGit("tag", "head", kind === "missing");
+      await refuse(["--version", "0.2.1"], "selected tag validation failed");
+    });
+  }
+
+  test("matching selected tag reaches only the inert original copy boundary", async () => {
+    removeFixtureBackups();
+    env.GITHUB_REF = "refs/tags/v0.2.1";
+    cannedGit("same", "same");
+    writeFileSync(
+      join(root, "bin/cp"),
+      '#!/bin/bash\nprintf "cp\\n" >> "$SCRIPT_FIXTURE_TRACE"\nexit 1\n',
+      { mode: 0o700 },
+    );
+    const result = await runBackupCase();
+    expect(result.status).toBe(1);
+    expect(readFileSync(trace, "utf8")).toBe("cp\n");
+    expect(readFileSync(env.VALIDATOR_TRACE, "utf8")).toBe("read\n");
+  });
+
+  async function preflight(
+    name: string,
+    version: string,
+    otp: string,
+    ref = "refs/heads/synthetic",
+  ) {
+    const block = workflowBlock(name);
+    env.RELEASE_INPUT_VERSION = version;
+    env.RELEASE_INPUT_OTP = otp;
+    env.GITHUB_REF = ref;
+    env.GITHUB_OUTPUT = join(root, "github-output");
+    writeFileSync(env.GITHUB_OUTPUT, "", { mode: 0o600 });
+    const before = inputs();
+    const result = await runFixture("/bin/bash", ["--noprofile", "--norc", "-c", block], root, env);
+    expect(result.error).toBeUndefined();
+    expect(result.signal).toBeNull();
+    expect(result.timedOut).toBe(false);
+    expect(result.outputLimitExceeded).toBe(false);
+    expect(readFileSync(trace, "utf8")).toBe("");
+    expect(inputs()).toEqual(before);
+    return { ...result, output: `${result.stdout}${result.stderr}` };
+  }
+
+  for (const name of [
+    "Validate release source before producers",
+    "Validate release source before installs",
+  ]) {
+    for (const otp of ["synthetic-otp-secret", " ", "$(synthetic-otp-secret)"]) {
+      test(`${name} refuses nonempty unsupported OTP before subprocesses ${JSON.stringify(otp)}`, async () => {
+        const result = await preflight(name, "0.2.1", otp);
+        expect(result.status).toBe(1);
+        expect(result.output).toContain("release input/source validation failed");
+        expect(result.output).not.toContain(otp.trim() || "OTP");
+        expect(readFileSync(env.VALIDATOR_TRACE, "utf8")).toBe("");
+        expect(readFileSync(env.GITHUB_OUTPUT, "utf8")).toBe("");
+      });
+    }
+    test(`${name} actually validates branch source and exports only its version`, async () => {
+      const result = await preflight(name, "0.2.1", "");
+      expect(result.status).toBe(0);
+      expect(readFileSync(env.VALIDATOR_TRACE, "utf8")).toBe("read\n");
+      expect(readFileSync(env.GITHUB_OUTPUT, "utf8")).toBe("version=0.2.1\n");
+    });
+    test(`${name} refuses absent, malformed and mismatched version inputs`, async () => {
+      for (const version of ["", "synthetic-version-secret", "0.2.2"]) {
+        const result = await preflight(name, version, "");
+        expect(result.status).toBe(1);
+        expect(result.output).not.toContain("synthetic-version-secret");
+        expect(readFileSync(env.GITHUB_OUTPUT, "utf8")).toBe("");
+      }
+    });
+    test(`${name} validates actual selected-tag coherence`, async () => {
+      cannedGit("same", "same");
+      const matching = await preflight(name, "0.2.1", "", "refs/tags/v0.2.1");
+      expect(matching.status).toBe(0);
+      const mismatch = await preflight(name, "0.2.2", "", "refs/tags/v0.2.1");
+      expect(mismatch.status).toBe(1);
+      expect(readFileSync(env.GITHUB_OUTPUT, "utf8")).toBe("");
+    });
+  }
+
+  test("actual npm caller quotes one version, supplies no OTP and propagates failure", async () => {
+    const block = workflowBlock("Publish @ashlr/stack-core + ashlr-stack-mcp + @ashlr/stack");
+    const argv = join(root, "caller-argv");
+    writeFileSync(
+      join(root, "bin/bash"),
+      `#!/bin/bash
+printf '%s\\n' "$@" > "${argv}"
+exit 29
+`,
+      { mode: 0o700 },
+    );
+    env.RELEASE_VERSION = "synthetic version ; $(not-run)";
+    const result = await runFixture("/bin/bash", ["--noprofile", "--norc", "-c", block], root, env);
+    expect(result.error).toBeUndefined();
+    expect(result.signal).toBeNull();
+    expect(result.timedOut).toBe(false);
+    expect(result.outputLimitExceeded).toBe(false);
+    expect(result.status).toBe(29);
+    expect(readFileSync(argv, "utf8").split("\n")).toEqual([
+      "scripts/publish.sh",
+      "--version",
+      env.RELEASE_VERSION,
+      "--yes",
+      "",
+    ]);
+    expect(readFileSync(trace, "utf8")).toBe("");
   });
 });

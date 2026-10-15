@@ -9,7 +9,7 @@ on:
         description: 'Version to release (no leading v, e.g. 0.1.0)'
         required: true
       npm_otp:
-        description: 'npm OTP (6-digit, optional — only needed when 2FA is required)'
+        description: 'Unsupported legacy input; any nonempty value refuses before release work'
         required: false
         default: ''
 
@@ -48,6 +48,65 @@ jobs:
             asset: stack-darwin-arm64
     steps:
       - uses: actions/checkout@v4
+
+      - name: Validate release source before producers
+        env:
+          RELEASE_INPUT_VERSION: ${{ github.event.inputs.version }}
+          RELEASE_INPUT_OTP: ${{ github.event.inputs.npm_otp }}
+        run: |
+          set -euo pipefail
+          die() { printf '%s\n' 'release input/source validation failed' >&2; exit 1; }
+          # OTP is unsupported: refuse before any subprocess, install or producer.
+          [[ -z "${RELEASE_INPUT_OTP:-}" ]] || die
+          unset RELEASE_INPUT_OTP
+          if [[ "${GITHUB_REF:-}" == refs/tags/* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/v}"
+            [[ -z "${RELEASE_INPUT_VERSION:-}" || "$RELEASE_INPUT_VERSION" == "$VERSION" ]] || die
+          else
+            VERSION="${RELEASE_INPUT_VERSION:-}"
+          fi
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] || die
+          command -v node >/dev/null 2>&1 || die
+          # Read source data only; these guards do not establish publisher or archive authority.
+          if ! node --input-type=module - "$VERSION" <<'STACK_RELEASE_SOURCE'
+          import { lstatSync, readFileSync } from 'node:fs';
+          try {
+            const version = process.argv[2];
+            const read = (path) => {
+              const stat = lstatSync(path);
+              if (!stat.isFile() || stat.isSymbolicLink()) throw new Error();
+              return readFileSync(path, 'utf8');
+            };
+            const manifests = ['core', 'mcp', 'cli'].map((name) =>
+              JSON.parse(read(`packages/${name}/package.json`)));
+            if (manifests.some((pkg) => pkg.version !== version)) throw new Error();
+            if (typeof manifests[1].name !== 'string' || !manifests[1].name) throw new Error();
+            const descriptor = JSON.parse(read('packages/mcp/server.json'));
+            const entries = Array.isArray(descriptor.packages)
+              ? descriptor.packages.filter((pkg) => pkg.registryType === 'npm'
+                && pkg.identifier === manifests[1].name) : [];
+            if (descriptor.version !== version || entries.length !== 1
+                || entries[0].version !== version) throw new Error();
+            const cli = read('packages/cli/src/index.ts');
+            const declarations = [...cli.matchAll(/^const[ \t]+VERSION[ \t]*=[ \t]*([^;\r\n]+);[ \t]*$/gm)];
+            if (declarations.length !== 1) throw new Error();
+            const literal = declarations[0][1].trim().match(/^(["'])([^"'\r\n]+)\1$/);
+            if (!literal || literal[2] !== version) throw new Error();
+          } catch {
+            process.exit(1);
+          }
+          STACK_RELEASE_SOURCE
+          then
+            die "source version validation failed"
+          fi
+          # Check an actually selected tag without inventing a branch-dispatch tag owner.
+          if [[ "${GITHUB_REF:-}" == refs/tags/* ]]; then
+            [[ "$GITHUB_REF" == "refs/tags/v$VERSION" ]] || die "selected tag validation failed"
+            TAG_COMMIT="$(git rev-parse --verify "refs/tags/v$VERSION^{commit}" 2>/dev/null)" || die "selected tag validation failed"
+            HEAD_COMMIT="$(git rev-parse --verify HEAD 2>/dev/null)" || die "selected tag validation failed"
+            [[ -n "$TAG_COMMIT" && "$TAG_COMMIT" == "$HEAD_COMMIT" ]] || die "selected tag validation failed"
+          fi
+          printf 'version=%s\n' "$VERSION" >> "$GITHUB_OUTPUT"
 
       - uses: oven-sh/setup-bun@v2
         with:
@@ -94,15 +153,13 @@ jobs:
     name: Publish to npm
     needs: build-binaries
     runs-on: ubuntu-latest
-    # Skip cleanly if NPM_TOKEN isn't configured yet — the release still
-    # produces binaries + a GitHub Release so install.sh works. Re-tag a
-    # patch release once the token is set and this job fires.
-    if: ${{ !cancelled() }}
+    # Producer success is necessary; npm success alone does not prove registry bytes.
+    if: ${{ !cancelled() && needs.build-binaries.result == 'success' }}
     steps:
       # npm trusted publishing (OIDC): with id-token: write and npm >= 11.5.1,
       # npm exchanges the workflow identity for a short-lived publish token.
       # No NPM_TOKEN or OTP needed once each package (@ashlr/stack-core,
-      # @ashlr/stack-mcp, @ashlr/stack) lists ashlrai/ashlr-stack release.yml
+      # ashlr-stack-mcp, @ashlr/stack) lists ashlrai/ashlr-stack release.yml
       # as a trusted publisher on npmjs.com. NPM_TOKEN remains a fallback.
       - name: Enable npm publish
         id: gate
@@ -125,23 +182,73 @@ jobs:
           registry-url: 'https://registry.npmjs.org/'
 
       - if: steps.gate.outputs.enabled == 'true'
+        name: Validate release source before installs
+        id: ver
+        env:
+          RELEASE_INPUT_VERSION: ${{ github.event.inputs.version }}
+          RELEASE_INPUT_OTP: ${{ github.event.inputs.npm_otp }}
+        run: |
+          set -euo pipefail
+          die() { printf '%s\n' 'release input/source validation failed' >&2; exit 1; }
+          # OTP is unsupported: refuse before any subprocess, install or producer.
+          [[ -z "${RELEASE_INPUT_OTP:-}" ]] || die
+          unset RELEASE_INPUT_OTP
+          if [[ "${GITHUB_REF:-}" == refs/tags/* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/v}"
+            [[ -z "${RELEASE_INPUT_VERSION:-}" || "$RELEASE_INPUT_VERSION" == "$VERSION" ]] || die
+          else
+            VERSION="${RELEASE_INPUT_VERSION:-}"
+          fi
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] || die
+          command -v node >/dev/null 2>&1 || die
+          # Read source data only; these guards do not establish publisher or archive authority.
+          if ! node --input-type=module - "$VERSION" <<'STACK_RELEASE_SOURCE'
+          import { lstatSync, readFileSync } from 'node:fs';
+          try {
+            const version = process.argv[2];
+            const read = (path) => {
+              const stat = lstatSync(path);
+              if (!stat.isFile() || stat.isSymbolicLink()) throw new Error();
+              return readFileSync(path, 'utf8');
+            };
+            const manifests = ['core', 'mcp', 'cli'].map((name) =>
+              JSON.parse(read(`packages/${name}/package.json`)));
+            if (manifests.some((pkg) => pkg.version !== version)) throw new Error();
+            if (typeof manifests[1].name !== 'string' || !manifests[1].name) throw new Error();
+            const descriptor = JSON.parse(read('packages/mcp/server.json'));
+            const entries = Array.isArray(descriptor.packages)
+              ? descriptor.packages.filter((pkg) => pkg.registryType === 'npm'
+                && pkg.identifier === manifests[1].name) : [];
+            if (descriptor.version !== version || entries.length !== 1
+                || entries[0].version !== version) throw new Error();
+            const cli = read('packages/cli/src/index.ts');
+            const declarations = [...cli.matchAll(/^const[ \t]+VERSION[ \t]*=[ \t]*([^;\r\n]+);[ \t]*$/gm)];
+            if (declarations.length !== 1) throw new Error();
+            const literal = declarations[0][1].trim().match(/^(["'])([^"'\r\n]+)\1$/);
+            if (!literal || literal[2] !== version) throw new Error();
+          } catch {
+            process.exit(1);
+          }
+          STACK_RELEASE_SOURCE
+          then
+            die "source version validation failed"
+          fi
+          # Check an actually selected tag without inventing a branch-dispatch tag owner.
+          if [[ "${GITHUB_REF:-}" == refs/tags/* ]]; then
+            [[ "$GITHUB_REF" == "refs/tags/v$VERSION" ]] || die "selected tag validation failed"
+            TAG_COMMIT="$(git rev-parse --verify "refs/tags/v$VERSION^{commit}" 2>/dev/null)" || die "selected tag validation failed"
+            HEAD_COMMIT="$(git rev-parse --verify HEAD 2>/dev/null)" || die "selected tag validation failed"
+            [[ -n "$TAG_COMMIT" && "$TAG_COMMIT" == "$HEAD_COMMIT" ]] || die "selected tag validation failed"
+          fi
+          printf 'version=%s\n' "$VERSION" >> "$GITHUB_OUTPUT"
+
+      - if: steps.gate.outputs.enabled == 'true'
         name: Use an npm CLI that supports trusted publishing
         run: npm install -g "npm@^11.5.1" && npm --version
 
       - if: steps.gate.outputs.enabled == 'true'
         name: Install deps
         run: bun install --frozen-lockfile
-
-      - if: steps.gate.outputs.enabled == 'true'
-        name: Resolve version from tag
-        id: ver
-        run: |
-          if [ -n "${{ github.event.inputs.version }}" ]; then
-            echo "version=${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
-          else
-            # tag is like refs/tags/v0.1.0
-            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
-          fi
 
       - if: steps.gate.outputs.enabled == 'true'
         name: Inject OAuth client IDs
@@ -151,24 +258,19 @@ jobs:
         run: node scripts/inject-client-ids.mjs
 
       - if: steps.gate.outputs.enabled == 'true'
-        name: Publish @ashlr/stack-core + @ashlr/stack-mcp + @ashlr/stack
+        name: Publish @ashlr/stack-core + ashlr-stack-mcp + @ashlr/stack
         id: npm_publish
-        continue-on-error: true
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: 'true'
-          NPM_OTP: ${{ github.event.inputs.npm_otp }}
+          RELEASE_VERSION: ${{ steps.ver.outputs.version }}
         run: |
-          OTP_FLAG=''
-          if [ -n "$NPM_OTP" ]; then
-            OTP_FLAG="--otp=$NPM_OTP"
-          fi
-          bash scripts/publish.sh --version ${{ steps.ver.outputs.version }} --yes $OTP_FLAG
+          bash scripts/publish.sh --version "$RELEASE_VERSION" --yes
 
-      - if: steps.gate.outputs.enabled == 'true' && steps.npm_publish.outcome == 'failure'
-        name: Warn — npm publish failed (likely EOTP)
+      - if: failure() && steps.gate.outputs.enabled == 'true' && steps.npm_publish.outcome == 'failure'
+        name: Preserve failed npm publish evidence
         run: |
-          echo '::warning title=npm publish failed::npm publish step failed — this is often an OTP/EOTP error. Rotate to an Automation token (no 2FA required) at https://docs.npmjs.com/creating-and-viewing-access-tokens or re-run this workflow with a fresh OTP via the npm_otp input.'
+          echo '::warning title=npm publish failed::Preserve logs and artifacts; reconcile registry state before any further release action.'
 
       - if: always() && steps.gate.outputs.enabled == 'true'
         name: Restore env.ts (never commit injected client IDs)
@@ -176,10 +278,9 @@ jobs:
 
   create-release:
     name: Create GitHub Release
-    # publish-npm skips gracefully when NPM_TOKEN is absent; binaries alone
-    # are enough to cut a GitHub Release and make install.sh work.
+    # Both producer and npm job success are required before this downstream effect.
     needs: [build-binaries, publish-npm]
-    if: ${{ !cancelled() && needs.build-binaries.result == 'success' }}
+    if: ${{ !cancelled() && needs.build-binaries.result == 'success' && needs.publish-npm.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -191,14 +292,18 @@ jobs:
 
       - name: Resolve version
         id: ver
+        env:
+          RELEASE_INPUT_VERSION: ${{ github.event.inputs.version }}
         run: |
-          if [ -n "${{ github.event.inputs.version }}" ]; then
-            echo "version=${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
-            echo "tag=v${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+          if [[ "${GITHUB_REF:-}" == refs/tags/* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/v}"
+            [[ -z "${RELEASE_INPUT_VERSION:-}" || "$RELEASE_INPUT_VERSION" == "$VERSION" ]] || exit 1
           else
-            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
-            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+            VERSION="${RELEASE_INPUT_VERSION:-}"
           fi
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] || { printf '%s\n' 'release version validation failed' >&2; exit 1; }
+          printf 'version=%s\ntag=v%s\n' "$VERSION" "$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Write release body
         id: body
@@ -254,10 +359,12 @@ jobs:
 
   update-homebrew-tap:
     name: Update Homebrew tap
-    needs: create-release
+    needs: [build-binaries, publish-npm, create-release]
     # Only run on v*.*.* tag pushes (not workflow_dispatch version bumps)
     if: |
       !cancelled() &&
+      needs.build-binaries.result == 'success' &&
+      needs.publish-npm.result == 'success' &&
       needs.create-release.result == 'success' &&
       startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
