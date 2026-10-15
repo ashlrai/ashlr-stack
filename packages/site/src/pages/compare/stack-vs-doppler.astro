@@ -144,10 +144,11 @@ const faq = faqPageSchema(
   <h2>Where they overlap</h2>
   <p>
     Both solve "my app needs secrets at runtime without hardcoding them."
-    Both provide a CLI that wraps a process with resolved environment
-    variables at spawn time (<code>doppler run --</code> and{" "}
-    <code>stack exec --</code> / <code>phantom exec --</code> are
-    functionally similar). Both support cloud sync across machines and CI
+    Both provide a CLI that wraps a process so it can use secrets at runtime
+    (<code>doppler run --</code> injects resolved environment variables;{" "}
+    <code>stack exec --</code> / <code>phantom exec --</code> keep{" "}
+    <code>phm_</code> placeholders in the environment and inject real values
+    into outgoing API requests through a local proxy). Both support cloud sync across machines and CI
     runners. Both try to keep plaintext secrets out of your repo.
   </p>
   <p>

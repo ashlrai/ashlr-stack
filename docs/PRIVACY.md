@@ -2,7 +2,7 @@
 
 **Document version:** 1.0.0
 **Effective date:** 2026-04-23
-**Contact:** privacy@ashlr.ai (or open a [GitHub Issue](https://github.com/ashlrai/stack/issues))
+**Contact:** privacy@ashlr.ai (or open a [GitHub Issue](https://github.com/ashlrai/ashlr-stack/issues))
 
 ---
 
@@ -73,7 +73,7 @@ never written to our analytics database or associated with event records.
 There are four ways to disable telemetry permanently:
 
 1. **Decline the first-run prompt** — answer `N` (or press Enter) when asked.
-2. **CLI command:** `stack telemetry disable` (coming in a future release).
+2. **CLI command:** `stack telemetry disable` (`stack telemetry status` shows the current choice).
 3. **Environment variable:** set `STACK_TELEMETRY=0` in your shell or CI
    environment. This overrides any stored opt-in for the lifetime of that
    process.

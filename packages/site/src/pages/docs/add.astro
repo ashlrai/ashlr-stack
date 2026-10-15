@@ -92,9 +92,11 @@ stack add supabase --install=ask`}
   </p>
 
   <div class="callout callout-warn">
-    Pass <code>--no-rollback</code> only when debugging a broken provisioner. The
-    default rollback is almost always what you want — partial state is worse than
-    a clean failure.
+    <code>stack add</code> has no flag to turn this off. The multi-service
+    commands (<code>stack init --template</code>, <code>stack apply</code>,
+    <code>stack swap</code>) accept <code>--noRollback</code>; use it only when
+    debugging a broken provisioner. The default rollback is almost always what
+    you want — partial state is worse than a clean failure.
   </div>
 
   <p>
@@ -128,8 +130,9 @@ CLERK_PUBLISHABLE_KEY=`}
   />
 
   <p>
-    The file is written relative to <code>.stack.toml</code>. Pass
-    <code>--output &lt;path&gt;</code> to write elsewhere. Secret values are
+    The file is written to <code>.env.example</code> in the current directory.
+    Pass <code>--stdout</code> to print it instead, or <code>--force</code> to
+    overwrite an existing file. Secret values are
     never included — <code>stack env export --example</code> reads key names
     from the catalog, not from Phantom.
   </p>

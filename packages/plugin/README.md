@@ -1,6 +1,6 @@
 # ashlr-stack (Claude Code plugin)
 
-Thin Claude Code plugin that registers the `ashlr-stack` MCP server and a handful of slash commands:
+Thin Claude Code plugin (`stack`) that registers the `ashlr-stack` MCP server, a SessionStart hook that notes when a `.stack.toml` is present, and a handful of slash commands:
 
 - `/stack:add <service>` — provision and wire a new service
 - `/stack:list` — show configured services
@@ -9,7 +9,7 @@ Thin Claude Code plugin that registers the `ashlr-stack` MCP server and a handfu
 - `/stack:recommend <query>` — AI picks providers for a goal and saves a reusable recipe
 - `/stack:apply <recipe-id>` — provision every provider in a recipe and wire secrets
 
-The plugin wraps the `ashlr-stack-mcp` server, which in turn shells out to the `stack` CLI. The CLI is the canonical implementation.
+The plugin starts the MCP server through `scripts/mcp-entrypoint.sh`, which runs `ashlr-stack-mcp` from PATH or, in a monorepo checkout, `bun run ../mcp/src/server.ts`. The server shells out to the `stack` CLI (override with `STACK_BIN`). The CLI is the canonical implementation.
 
 ## Install
 
@@ -20,8 +20,10 @@ npm i -g @ashlr/stack
 # Optional global MCP binary (faster than bun-run-from-source)
 npm i -g ashlr-stack-mcp
 
-# Then inside Claude Code:
-/plugin install ashlr-stack
+# Then inside Claude Code (the plugin is named `stack` in the `ashlr`
+# marketplace defined at the repo root, .claude-plugin/marketplace.json):
+/plugin marketplace add ashlrai/ashlr-stack
+/plugin install stack@ashlr
 ```
 
 ## Architecture
