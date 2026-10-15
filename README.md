@@ -139,9 +139,9 @@ stack recommend "serverless postgres" --save
 # → freezes a Recipe to .stack/recipes/<id>.toml
 
 stack apply <recipe-id>
-# → runs `stack add` for each provider + pre-wires Phantom rotating envelopes
-#   + drops webhook stubs for Stripe / Clerk / Supabase / GitHub
-#   (add --noWire to opt out of the Phantom auto-wiring)
+# → runs `stack add` for each provider, reports which declared secrets are
+#   in Phantom (and which are missing), and drops webhook stubs for
+#   Stripe / Clerk / Supabase / GitHub (add --noWire to skip both)
 ```
 
 Inside Claude Code, the same flow is one tool call:

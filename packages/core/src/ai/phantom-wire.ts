@@ -1,36 +1,36 @@
 /**
- * Recipe → Phantom envelope + webhook stub materializer.
+ * Recipe → Phantom vault check + webhook stub materializer.
  *
  * For each provider in a Recipe:
- *   1. Pre-create Phantom envelopes (one per declared secret) so `stack add`
- *      slots its real values into an already-rotating slot.
+ *   1. Report which declared secrets are already in the Phantom vault and
+ *      which are missing. `stack add` stores the real values; this step never
+ *      writes to the vault. Phantom Secrets refuses secret values in argv and
+ *      denies overwriting existing names, so placeholder entries would either
+ *      fail or block the real value from landing later.
  *   2. For webhook-capable providers (Stripe, Clerk, Supabase, GitHub),
  *      scaffold a commented-out handler stub in `.stack/webhooks/<provider>.ts`
  *      so the user has somewhere concrete to land the signature verification.
  *
- * This is the Stack moat: `stack apply` ends with envelopes + stubs waiting
- * for the real credentials, which the provider-specific `addCommand` flow
- * then fills in. An opt-out (`--no-wire`) exists for users who want pure
- * provisioning without Phantom-assisted rotation.
+ * An opt-out (`--no-wire`) skips both steps.
  */
 
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { findProviderRef } from "../catalog.ts";
 import { PhantomNotInstalledError } from "../errors.ts";
-import { type PhantomExecResult, assertPhantomInstalled, exec as phantomExec } from "../phantom.ts";
+import { assertPhantomInstalled, exec as phantomExec } from "../phantom.ts";
 import type { Recipe } from "./recipe.ts";
 
 export interface WireResult {
-  /** `PROVIDER:SECRET_NAME` entries successfully added to Phantom. */
-  envelopes: string[];
+  /** `PROVIDER:SECRET_NAME` entries already stored in the Phantom vault. */
+  present: string[];
+  /** `PROVIDER:SECRET_NAME` entries the recipe declares but the vault lacks. */
+  missing: string[];
   /** Absolute paths of webhook stub files created. */
   webhooks: string[];
-  /** Names of providers skipped (phantom missing, unknown provider, etc). */
+  /** Names of providers skipped (phantom missing, vault unreadable, unknown provider). */
   skipped: string[];
 }
-
-const PLACEHOLDER = "TODO_STACK_APPLY";
 
 /**
  * Providers with webhooks worth pre-wiring. Keep this list tight — each entry
@@ -44,7 +44,7 @@ export async function wirePhantomForRecipe(
   recipe: Recipe,
   opts: { cwd?: string; noWire?: boolean } = {},
 ): Promise<WireResult> {
-  const result: WireResult = { envelopes: [], webhooks: [], skipped: [] };
+  const result: WireResult = { present: [], missing: [], webhooks: [], skipped: [] };
   if (opts.noWire) return result;
 
   const cwd = opts.cwd ?? process.cwd();
@@ -53,7 +53,7 @@ export async function wirePhantomForRecipe(
     await assertPhantomInstalled();
   } catch (err) {
     if (err instanceof PhantomNotInstalledError) {
-      // Phantom missing → skip envelope creation but still drop webhook stubs
+      // Phantom missing → skip the vault check but still drop webhook stubs
       // (they're just files). Surface the provider names so the CLI can tell
       // the user why nothing landed in the vault.
       for (const p of recipe.providers) result.skipped.push(p.name);
@@ -68,16 +68,16 @@ export async function wirePhantomForRecipe(
     throw err;
   }
 
+  const stored = await listVaultNames(cwd);
+
   for (const { name } of recipe.providers) {
     const ref = findProviderRef(name);
-    if (!ref) {
+    if (!ref || !stored) {
       result.skipped.push(name);
-      continue;
-    }
-
-    for (const secret of ref.secrets) {
-      const added = await addEnvelope(secret, cwd);
-      if (added) result.envelopes.push(`${name}:${secret}`);
+    } else {
+      for (const secret of ref.secrets) {
+        (stored.has(secret) ? result.present : result.missing).push(`${name}:${secret}`);
+      }
     }
 
     if (WEBHOOK_PROVIDERS.has(name)) {
@@ -90,34 +90,24 @@ export async function wirePhantomForRecipe(
 }
 
 /**
- * Shell `phantom add <KEY> <placeholder>` with opportunistic `--rotate`.
- * Try with `--rotate` first; if the running Phantom doesn't support the flag,
- * fall back to a flagless add. Returns true when the envelope was written.
+ * Secret names in the project's Phantom vault, via `phantom list --json`
+ * (names and metadata only, never values). Returns undefined when the vault
+ * can't be read (not initialized, older Phantom without `--json`, etc).
  */
-async function addEnvelope(key: string, cwd: string): Promise<boolean> {
-  const rotateAttempt = await tryExec(["add", key, PLACEHOLDER, "--rotate"], cwd);
-  if (rotateAttempt.code === 0) return true;
-
-  // Heuristic for "Phantom rejected --rotate because it's an older build":
-  // stderr mentions the flag name or "unknown option". On any other failure,
-  // we already logged it via stderr — the caller's noWire path can skip.
-  const stderrLower = rotateAttempt.stderr.toLowerCase();
-  const looksLikeUnknownFlag =
-    stderrLower.includes("--rotate") ||
-    stderrLower.includes("unknown option") ||
-    stderrLower.includes("unrecognized");
-
-  if (!looksLikeUnknownFlag) return false;
-
-  const fallback = await tryExec(["add", key, PLACEHOLDER], cwd);
-  return fallback.code === 0;
-}
-
-async function tryExec(args: string[], cwd: string): Promise<PhantomExecResult> {
+async function listVaultNames(cwd: string): Promise<Set<string> | undefined> {
   try {
-    return await phantomExec(args, { cwd, allowFailure: true });
+    const { stdout, code } = await phantomExec(["list", "--json"], { cwd, allowFailure: true });
+    if (code !== 0) return undefined;
+    const entries: unknown = JSON.parse(stdout);
+    if (!Array.isArray(entries)) return undefined;
+    const names = new Set<string>();
+    for (const entry of entries) {
+      const name = (entry as { name?: unknown } | null)?.name;
+      if (typeof name === "string") names.add(name);
+    }
+    return names;
   } catch {
-    return { stdout: "", stderr: "", code: 1 };
+    return undefined;
   }
 }
 
@@ -132,7 +122,7 @@ function webhookStubFor(provider: string): string {
   const base = `// Auto-generated by \`stack apply\` — webhook handler stub for ${provider}.
 // Fill in the secret retrieval + signature verification before deploying.
 //
-// Secret envelope lives in Phantom; read it at call time with:
+// The secret lives in Phantom; read it at call time with:
 //   phantom reveal ${webhookSecretKeyFor(provider)}
 //
 // export async function handle${capitalize(provider)}Webhook(req: Request): Promise<Response> {

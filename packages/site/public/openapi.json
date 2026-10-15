@@ -332,10 +332,10 @@
         "tags": ["management"],
         "operationId": "stack_apply",
         "summary": "Apply a saved recipe: replay `stack add` per provider + pre-wire Phantom rotation.",
-        "description": "Replays a frozen Recipe (authored by `stack recommend --save` or synthesized by an agent) through the add pipeline, then pre-wires Phantom envelopes + webhook stubs so provider-specific flows land real credentials into already-rotating slots. Pass `--noWire` to skip the Phantom-wire layer and stay pure-provisioning. Requires a `.stack.toml` (run `stack init` first).",
+        "description": "Replays a frozen Recipe (authored by `stack recommend --save` or synthesized by an agent) through the add pipeline, then reports which declared secrets are in the Phantom vault (and which are missing) and writes webhook stubs. It never writes placeholder values to Phantom. Pass `--noWire` to skip the Phantom-wire layer and stay pure-provisioning. Requires a `.stack.toml` (run `stack init` first).",
         "parameters": [
           { "name": "recipeId", "in": "query", "schema": { "type": "string" }, "description": "Recipe id (filename stem in .stack/recipes/). Omit for an interactive picker." },
-          { "name": "noWire", "in": "query", "schema": { "type": "boolean", "default": false }, "description": "Skip Phantom envelope + webhook pre-wiring." }
+          { "name": "noWire", "in": "query", "schema": { "type": "boolean", "default": false }, "description": "Skip the Phantom vault check and webhook stubs." }
         ],
         "responses": { "200": { "description": "Apply summary (each provider's add result + phantom-wire counts)." } }
       }

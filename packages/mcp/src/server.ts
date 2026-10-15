@@ -253,7 +253,7 @@ const TOOLS: ToolDef[] = [
   {
     name: "stack_apply",
     description:
-      "Apply a saved Recipe: replay `stack add` for each provider, then pre-wire Phantom rotation envelopes + webhook stubs. Set `no_wire: true` to opt out of the Phantom-wire layer (stays pure-provisioning).",
+      "Apply a saved Recipe: replay `stack add` for each provider, then report which declared secrets are in the Phantom vault (and which are missing) and write webhook stubs. Never writes placeholder values to Phantom. Set `no_wire: true` to skip the vault check and webhook stubs (stays pure-provisioning).",
     inputSchema: {
       type: "object",
       properties: {
@@ -263,7 +263,7 @@ const TOOLS: ToolDef[] = [
         },
         no_wire: {
           type: "boolean",
-          description: "Skip Phantom envelope + webhook pre-wiring.",
+          description: "Skip the Phantom vault check and webhook stubs.",
         },
       },
       required: ["recipe_id"],

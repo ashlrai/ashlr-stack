@@ -206,7 +206,7 @@ export const MCP_TOOLS: McpTool[] = [
   {
     name: "stack_apply",
     description:
-      "Replay a saved Recipe: run stack_add per provider, then pre-wire Phantom rotation envelopes + webhook stubs. Opt out of the wire step with no_wire:true.",
+      "Replay a saved Recipe: run stack_add per provider, then report which declared secrets are in the Phantom vault (and which are missing) and write webhook stubs. Opt out of the wire step with no_wire:true.",
     inputs: [
       {
         name: "recipe_id",
@@ -217,7 +217,7 @@ export const MCP_TOOLS: McpTool[] = [
       {
         name: "no_wire",
         type: "boolean",
-        description: "Skip Phantom envelope + webhook pre-wiring.",
+        description: "Skip the Phantom vault check and webhook stubs.",
       },
     ],
     cli: "stack apply <recipe_id> [--noWire]",

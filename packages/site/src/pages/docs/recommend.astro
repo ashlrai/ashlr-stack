@@ -23,7 +23,7 @@ const howTo = howToSchema({
     },
     {
       name: "Apply the recipe",
-      text: "Run `stack apply <recipe-id>` to replay `stack add` for each provider and pre-wire Phantom rotation envelopes + webhook stubs.",
+      text: "Run `stack apply <recipe-id>` to replay `stack add` for each provider, check its secrets in Phantom, and write webhook stubs.",
       url: `${pageUrl}#stack-apply`,
     },
   ],
@@ -333,8 +333,8 @@ stack apply b2b-saas-with-auth-ai-and-paymen`}
   </h2>
   <p>
     Replay a saved Recipe through the existing <code>stack add</code> pipeline,
-    then pre-wire Phantom rotation so the first provisioned credential lands
-    into an already-rotating envelope.
+    then check that every secret the recipe's providers declare made it into
+    the Phantom vault.
   </p>
 
   <Code
@@ -348,7 +348,7 @@ stack apply b2b-saas-with-auth-ai-and-paymen`}
   › stack add sentry
   › stack add supabase
 
-  envelopes 3 · webhooks 2
+  secrets in vault 3 · missing 0 · webhooks 2
 
   › stack doctor
   ✓ b2b-saas-with-auth applied.`}
@@ -368,8 +368,7 @@ stack apply b2b-saas-with-auth-ai-and-paymen`}
         <td><code>--noWire</code></td>
         <td>
           Skip the Phantom-wire layer — pure <code>stack add</code> replay, no
-          envelopes, no webhook stubs. Use when you want to opt out of the
-          rotation-from-the-first-call moat.
+          vault check, no webhook stubs.
         </td>
       </tr>
       <tr>
@@ -386,10 +385,12 @@ stack apply b2b-saas-with-auth-ai-and-paymen`}
   <p>With the default flow (no <code>--noWire</code>) apply also writes:</p>
   <ul>
     <li>
-      <strong>Phantom rotation envelopes</strong> — one per secret slot the
-      recipe's providers declare. The envelope rotates on a cadence from day
-      one, so the credential you just fetched is never the credential that
-      ships to prod a week later.
+      <strong>Phantom vault check</strong> — for every secret slot the
+      recipe's providers declare, apply reads <code>phantom list --json</code>
+      (names only, never values) and reports which are stored and which are
+      missing. It never writes to the vault: <code>stack add</code> stores the
+      real values, and you can add a missing one with
+      <code>phantom add &lt;NAME&gt;</code> (hidden prompt).
     </li>
     <li>
       <strong>Webhook stubs</strong> — scaffolded verification + handler files
@@ -407,7 +408,7 @@ stack apply b2b-saas-with-auth-ai-and-paymen`}
   <div class="callout">
     <strong>Idempotent.</strong> Re-running <code>stack apply</code> against
     the same recipe is safe — providers already present short-circuit, and the
-    Phantom-wire pass de-duplicates envelopes by slot name.
+    Phantom-wire pass only reads the vault.
   </div>
 
   <h2>MCP tools</h2>
@@ -473,7 +474,7 @@ stack apply b2b-saas-with-auth-ai-and-paymen`}
     </div>
     <p class="text-[13px] text-ink-300 leading-relaxed mb-3">
       Replay a saved Recipe. Runs <code>stack add</code> for each provider,
-      then pre-wires Phantom rotation envelopes + webhook stubs.
+      then checks its secrets in Phantom and writes webhook stubs.
     </p>
     <table>
       <thead>
@@ -497,7 +498,7 @@ stack apply b2b-saas-with-auth-ai-and-paymen`}
         <tr>
           <td><code class="mono text-[12px]">no_wire</code></td>
           <td class="text-ink-400 mono text-[12px]">boolean</td>
-          <td class="text-[13px]">Skip Phantom envelope + webhook wiring.</td>
+          <td class="text-[13px]">Skip the Phantom vault check and webhook stubs.</td>
         </tr>
       </tbody>
     </table>
@@ -520,13 +521,13 @@ Claude > I'll pick the providers first and freeze a recipe so you can
          neon (Database). Saved as recipe "saas-with-auth-payments-error".
 
          Want me to apply it now? This runs \`stack add\` for each and
-         pre-wires Phantom rotation + webhook stubs.
+         checks the secrets in Phantom + writes webhook stubs.
 
 You > Yes.
 
 Claude > (calls stack_apply { recipe_id: "saas-with-auth-payments-error" })
 
-         ✓ 4 providers provisioned · 7 rotation envelopes · 3 webhook stubs
+         ✓ 4 providers provisioned · 7 secrets in vault · 3 webhook stubs
          All services healthy (stack doctor).`}
     lang="text"
     theme="github-dark-dimmed"
@@ -638,7 +639,7 @@ rationale = "auth"`}
         Phantom Secrets
       </h3>
       <p class="text-[13px] text-ink-400 leading-relaxed">
-        Where the rotation envelopes <code class="mono text-ink-200">stack apply</code> wires actually live.
+        Where the secrets <code class="mono text-ink-200">stack apply</code> checks actually live.
       </p>
     </a>
   </div>

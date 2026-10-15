@@ -103,7 +103,7 @@ stack exec -- bun dev           # run your app with Phantom's secret proxy activ
 - `stack upgrade` — update Stack itself.
 - `stack completion <shell>` — emit shell completions (bash, zsh, fish).
 - `stack recommend "<brief>" [--k N] [--category <name>] [--save] [--synth] [--json]` — free-text → curated providers (BM25 retrieval by default; `--synth` invokes a local SLM for rationales).
-- `stack apply <recipe-id> [--noWire]` — replay a saved recipe: `stack add` each provider, then pre-wire Phantom rotation envelopes + webhook stubs.
+- `stack apply <recipe-id> [--noWire]` — replay a saved recipe: `stack add` each provider, then report which declared secrets are in Phantom (and which are missing) and write webhook stubs.
 
 ## AI-assisted composition
 

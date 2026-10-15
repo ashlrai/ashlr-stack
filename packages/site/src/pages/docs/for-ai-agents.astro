@@ -255,7 +255,7 @@ npm i -g phantom-secrets`}
         <tr>
           <td>Replay a saved recipe end-to-end</td>
           <td><code>stack apply &lt;recipe-id&gt;</code></td>
-          <td>Runs `stack add` per provider, then pre-wires Phantom rotation envelopes + webhook stubs (unless --noWire).</td>
+          <td>Runs `stack add` per provider, then reports which declared secrets are in Phantom and writes webhook stubs (unless --noWire).</td>
         </tr>
       </tbody>
     </table>
@@ -327,8 +327,8 @@ stack exec -- bun dev`}
     specific providers, reach for the composition pair instead of hand-picking.
     <code>stack_recommend</code> scores the 39-provider catalog against the
     brief; <code>stack_apply</code> replays the frozen Recipe end-to-end and
-    pre-wires Phantom rotation envelopes + webhook stubs so first-use
-    credentials land in already-rotating slots.
+    reports which declared secrets are in the Phantom vault (and which are
+    still missing), plus webhook stubs for providers that send webhooks.
   </p>
 
   <h3>CLI</h3>
@@ -381,7 +381,7 @@ stack recommend "Next.js SaaS with analytics" --synth --save`}
     "no_wire": false
   }
 }
-// → each provider runs through stack_add; Phantom envelopes + webhooks pre-wired`}
+// → each provider runs through stack_add; vault check + webhook stubs`}
     lang="json"
     theme="github-dark-dimmed"
   />

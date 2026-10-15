@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **`stack apply` no longer tries to write placeholder secrets to Phantom.** The wire step ran `phantom add <KEY> TODO_STACK_APPLY --rotate` for every declared secret. Current Phantom Secrets refuses secret values on the command line, has no `--rotate` on `add`, and won't overwrite an existing name, so every call failed and nothing reached the vault. Apply now reads `phantom list --json` (names only) and reports which declared secrets are in the vault and which are missing (`secrets in vault N · missing M · webhooks K`). It never writes to the vault; `stack add` stores the real values. `--noWire` and the webhook stubs work as before. `WireResult.envelopes` is replaced by `present` and `missing`. (`packages/core/src/ai/phantom-wire.ts`)
+
 ## 0.2.1 (2026-10-12)
 
 - **Release workflow repaired.** A multi-line `git commit -m` in the Homebrew job ended the YAML block early and left a stray top-level key, so GitHub rejected `release.yml` on every push and the v0.2.0 npm publish never ran.

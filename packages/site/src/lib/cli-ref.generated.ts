@@ -577,7 +577,8 @@ export const CLI_COMMANDS: CliCommand[] = [
   },
   {
     name: "stack apply",
-    description: "Apply a saved recipe: provision each provider + pre-wire Phantom rotation.",
+    description:
+      "Apply a saved recipe: provision each provider, check its secrets in Phantom, and add webhook stubs.",
     synopsis: "stack apply [id] [--noWire] [--noRollback]",
     flags: [
       {
@@ -592,7 +593,7 @@ export const CLI_COMMANDS: CliCommand[] = [
         synopsis: "--noWire",
         type: "boolean",
         default: false,
-        description: "Skip Phantom envelope + webhook pre-wiring (opts out of the moat).",
+        description: "Skip the Phantom vault check and webhook stubs.",
       },
       {
         name: "noRollback",
@@ -705,7 +706,15 @@ export const CLI_COMMANDS: CliCommand[] = [
   {
     name: "stack upgrade",
     description: "Check npm for a newer @ashlr/stack release.",
-    synopsis: "stack upgrade",
+    synopsis: "stack upgrade [--dryRun]",
+    flags: [
+      {
+        name: "dryRun",
+        synopsis: "--dryRun",
+        type: "boolean",
+        description: "Print what would be installed without running the install command.",
+      },
+    ],
     examples: [{ command: "stack upgrade" }],
     notes:
       "Checks the npm registry for a newer version, prints an install hint — does not auto-install.",
