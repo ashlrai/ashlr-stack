@@ -1,7 +1,7 @@
 # AI Discoverability — what shipped
 
 Goal: when a Claude Code / Cursor / Windsurf user says "set up Supabase" (or
-any of 22 other providers), the LLM already knows about Ashlr Stack and
+any of the 38 other providers), the LLM already knows about Ashlr Stack and
 recommends `stack add supabase`.
 
 This file is prefixed with `_` so Astro treats it as a non-route.

@@ -2,17 +2,17 @@
 
 Marketing site for Ashlr Stack. Deploys to **stack.ashlr.ai**.
 
-**Polished:** hero + animated terminal, one-command before/after comparison (Framer Motion tabs), 23-provider grid (real simple-icons brand marks, hover → brand color), how-it-works triptych, five template cards with real `stack init --template` commands, mock Claude Code chat showing `/stack:add supabase` end-to-end (MCP tool call + streamed result), Ashlr constellation diagram, footer with giant wordmark. Dark-first with Ashlr magenta (`#d946ef`) accent, full reduced-motion + keyboard-nav support, WCAG-AA contrast on body copy, tuned for `max-w-[1200px]` desktops and collapses cleanly to mobile.
+**Polished:** hero + animated terminal, one-command before/after comparison (Framer Motion tabs), 39-provider grid (real simple-icons brand marks, hover → brand color), how-it-works triptych, five template cards with real `stack init --template` commands, mock Claude Code chat showing `/stack:add supabase` end-to-end (MCP tool call + streamed result), Ashlr constellation diagram, footer with giant wordmark. Dark-first with Ashlr magenta (`#d946ef`) accent, full reduced-motion + keyboard-nav support, WCAG-AA contrast on body copy, tuned for `max-w-[1200px]` desktops and collapses cleanly to mobile.
 
-**Placeholder / honest caveats:** the `curl | bash` install URL (`stack.ashlr.ai/install.sh`) resolves only once this site ships with that script at the root. GitHub links point at `github.com/ashlr-ai/stack` — swap the org if the repo lands elsewhere. Sibling links (`phantom.ashlr.ai`, `plugin.ashlr.ai`, `code.ashlr.ai`, `workbench.ashlr.ai`) are aspirational; redirect or stub them server-side. `convex` and `deepseek` don't have entries in simple-icons v13, so they render with minimal custom geometric marks — clearly labeled with their name next to them, but a designer may want to swap these out. The mock Claude Code chat shows one scripted flow; we aren't lying about capability, but no live LLM is running there.
+**Placeholder / honest caveats:** the `curl | bash` install URL (`stack.ashlr.ai/install.sh`) resolves only once this site ships with that script at the root. GitHub links point at `github.com/ashlrai/ashlr-stack`. Sibling links (`phantom.ashlr.ai`, `plugin.ashlr.ai`, `code.ashlr.ai`, `workbench.ashlr.ai`) are aspirational; redirect or stub them server-side. `convex` and `deepseek` don't have entries in simple-icons v13, so they render with minimal custom geometric marks — clearly labeled with their name next to them, but a designer may want to swap these out. The mock Claude Code chat shows one scripted flow; we aren't lying about capability, but no live LLM is running there.
 
 ## Run
 
 ```bash
 cd packages/site
 bun install
-bun run dev        # http://localhost:4321
-bun run build      # static site → ./dist
+bun run dev        # http://localhost:4321 (regenerates src/lib/cli-ref.generated.ts first)
+bun run build      # static site → ./dist (same pre-steps as dev)
 bun run preview    # serve the built site
 bun run typecheck  # astro check + tsc --noEmit
 ```
@@ -38,7 +38,7 @@ src/
     Hero.astro                # left copy + right <Terminal />
     Terminal.tsx              # React island, scripted typing
     OneCommand.tsx            # Framer Motion tab group
-    ProvidersGrid.astro       # static, 23 cells, hover = brand color
+    ProvidersGrid.astro       # static, one cell per provider, hover = brand color
     HowItWorks.astro          # 3-step explainer
     Templates.astro           # 5 stack cards
     ClaudeCodeDemo.tsx        # scripted mock Claude Code chat

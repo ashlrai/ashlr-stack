@@ -40,7 +40,7 @@ const howTo = howToSchema({
     },
     {
       name: "Run your app with secrets injected",
-      text: "Run your dev server via `stack exec -- bun dev` so Phantom resolves phm_ tokens to real secret values at spawn.",
+      text: "Run your dev server via `stack exec -- bun dev` so Phantom's local proxy injects real secret values into outgoing API requests.",
       url: `${pageUrl}#6-run-your-app-with-secrets-injected`,
     },
   ],
@@ -251,9 +251,11 @@ stack init`}
   />
 
   <p>
-    Your app boots with <code>SUPABASE_URL</code>, <code>SUPABASE_ANON_KEY</code>,
-    and <code>SUPABASE_SERVICE_ROLE_KEY</code> available in <code>process.env</code>
-    — without any plaintext secret ever touching disk.
+    Your app's environment holds <code>phm_</code> placeholders, not real keys.
+    Supported SDKs are pointed at Phantom's local proxy through
+    <code>*_BASE_URL</code> variables, and the proxy adds the real value to
+    each outgoing request — no plaintext secret touches disk or the process
+    environment.
   </p>
 
   <h2>What now?</h2>

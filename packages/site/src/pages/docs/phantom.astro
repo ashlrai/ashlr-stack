@@ -66,7 +66,7 @@ import PhantomBadge from "~/components/PhantomBadge.astro";
           </li>
           <li class="flex items-start gap-2">
             <span class="text-magenta-400 mt-0.5">●</span>
-            Wires <code class="mono text-[12px]">.env</code> + <code class="mono text-[12px]">.mcp.json</code>
+            Wires <code class="mono text-[12px]">.mcp.json</code> + <code class="mono text-[12px]">.env.example</code>
           </li>
           <li class="flex items-start gap-2 text-ink-500">
             <span class="mt-0.5">○</span>
@@ -85,7 +85,7 @@ import PhantomBadge from "~/components/PhantomBadge.astro";
           </li>
           <li class="flex items-start gap-2">
             <span class="text-cyan-300 mt-0.5">●</span>
-            Proxies <code class="mono text-[12px]">phm_*</code> tokens → real values at exec time
+            Injects real values into outgoing API requests via a local proxy under <code class="mono text-[12px]">phantom exec</code>
           </li>
           <li class="flex items-start gap-2">
             <span class="text-cyan-300 mt-0.5">●</span>
@@ -114,12 +114,16 @@ import PhantomBadge from "~/components/PhantomBadge.astro";
 
   <Code
     code={`$ stack add supabase
-┌  stack add supabase
-│
-└  Phantom is not installed. Install it first:
-     brew install ashlrai/phantom/phantom
-   or
-     npm i -g phantom-secrets`}
+
+  ✗ Phantom Secrets isn't installed.
+
+  Stack uses Phantom for secret storage. Install it:
+
+      brew install ashlrai/phantom/phantom
+
+  Or visit phm.dev for other install options.
+
+  Then re-run this command.`}
     lang="text"
     theme="github-dark-dimmed"
   />
@@ -158,18 +162,16 @@ import PhantomBadge from "~/components/PhantomBadge.astro";
       Stack writes <code>secrets = ["SUPABASE_SERVICE_ROLE_KEY"]</code> into
       <code>.stack.toml</code>. <em>The value never touches disk.</em>
     </li>
-    <li>
-      Stack regenerates <code>.env.local</code> with Phantom tokens:
-      <code>SUPABASE_SERVICE_ROLE_KEY=phm_…</code>.
-    </li>
   </ol>
 
   <div class="callout">
     <strong>What's a <code>phm_</code> token?</strong> It's a placeholder
-    Phantom recognises. When your app runs under <code>phantom exec</code>
-    (which is what <code>stack exec</code> wraps), Phantom swaps the token for
-    the real secret at process-spawn time. The token is safe to check in;
-    the real value never leaves the vault.
+    Phantom writes in place of a real value; it is not a provider credential
+    and Phantom never resolves it from client headers or bodies. Under
+    <code>phantom exec</code> (which is what <code>stack exec</code> wraps),
+    Phantom starts a local reverse proxy, points supported SDKs at it through
+    <code>*_BASE_URL</code> variables, and injects the real key into the
+    outgoing request. The real value stays in the vault.
   </div>
 
   <h2>Runtime injection — <code>stack exec</code></h2>
@@ -180,13 +182,13 @@ import PhantomBadge from "~/components/PhantomBadge.astro";
 
   <Code
     code={`# bun dev straight up
-# .env.local has SUPABASE_SERVICE_ROLE_KEY=phm_abc123
-# → your app reads "phm_abc123" and breaks
+# .env has OPENAI_API_KEY=phm_abc123
+# → API calls go straight to the provider with "phm_abc123" and fail
 bun dev
 
 # stack exec wraps with Phantom's proxy
-# → Phantom resolves phm_abc123 to the real value at spawn
-# → your app reads the real key
+# → OPENAI_BASE_URL points at the local proxy
+# → the proxy injects the real key into each outgoing request
 stack exec -- bun dev`}
     lang="bash"
     theme="github-dark-dimmed"
@@ -194,8 +196,11 @@ stack exec -- bun dev`}
 
   <p>
     <code>stack exec</code> forwards everything after <code>--</code> to
-    <code>phantom exec</code>. Use it for dev servers, test runners, migrations —
-    anything that needs real secrets locally.
+    <code>phantom exec</code>. Use it for dev servers and test runners that
+    call proxied provider APIs. <code>phantom exec</code> refuses to start
+    while a connection string (for example <code>DATABASE_URL</code>) is
+    protected, so run database commands such as migrations from a trusted
+    terminal outside it.
   </p>
 
   <h2>Syncing the vault</h2>

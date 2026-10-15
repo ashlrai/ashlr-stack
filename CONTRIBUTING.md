@@ -6,8 +6,9 @@ Thanks for poking around. Stack is early and the surface is intentionally curate
 
 ```bash
 bun install
-bun test                                    # 10 tests, all green
+bun test                                    # full suite (bun's test runner)
 bunx tsc --noEmit -p tsconfig.json          # typecheck
+bun run lint                                # biome check .
 bun run packages/cli/src/index.ts providers # smoke CLI
 ```
 
@@ -22,6 +23,7 @@ Every curated provider implements `Provider` (`packages/core/src/providers/_base
 - `materialize(ctx, resource, auth)` — return `{ secrets, mcp?, urls? }`. Secrets go straight into Phantom.
 - `healthcheck?(ctx, entry)` — optional ping; surfaced by `stack doctor`.
 - `dashboardUrl?(entry)` — optional; wired into `stack open`.
+- `deprovision?(ctx, auth, resourceId)` — optional; lets `stack add` roll back a resource it created when a later step fails (implemented today for Supabase, Neon, Turso, and Vercel).
 
 Then register in `packages/core/src/providers/index.ts` and add a row to `docs/provider-auth-matrix.md`.
 

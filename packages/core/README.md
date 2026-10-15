@@ -18,10 +18,10 @@ Selected exports — see `src/index.ts` for the full surface.
 
 | Export | Purpose |
 | --- | --- |
-| `addService(opts)` | End-to-end pipeline: login → provision → materialize → persist secrets + MCP entry |
+| `addService({ providerName, ... })` | End-to-end pipeline: login → provision → materialize → persist secrets + MCP entry |
 | `readConfig(cwd)` / `writeConfig(cfg, cwd)` | Read/write `.stack.toml` + `.stack.local.toml` |
-| `listProviderNames()` / `getProvider(name)` | Introspect the built-in 23-provider registry |
-| `scanSource(opts)` | Detect providers from `package.json`, configs, `.env.example` |
+| `listProviderNames()` / `getProvider(name)` | Introspect the built-in 39-provider registry (`getProvider` is async) |
+| `scanSource(cwd)` | Detect providers from `package.json`, configs, `.env.example` |
 | `detectProvider(envName)` | Map an env-var name back to a known provider |
 | `parseEnv(text)` | Parse `.env`-style text into `{ key, value }` pairs |
 
@@ -37,14 +37,14 @@ import {
 
 // Pipeline: provisions a new Supabase project, writes secrets through Phantom,
 // merges the MCP entry, and updates .stack.toml + .stack.local.toml.
-await addService({ provider: "supabase", cwd: process.cwd() });
+await addService({ providerName: "supabase", cwd: process.cwd() });
 
 const cfg = await readConfig();
-console.log(cfg.services.map((s) => s.name));
+console.log(Object.keys(cfg.services));
 
 // Scan an existing checkout for providers already wired up.
-const detections = await scanSource({ cwd: process.cwd() });
-console.log(listProviderNames().length); // 23
+const detections = await scanSource(process.cwd());
+console.log(listProviderNames().length); // 39
 ```
 
 ## Links

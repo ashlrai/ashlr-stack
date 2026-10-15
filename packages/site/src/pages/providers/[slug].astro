@@ -230,9 +230,9 @@ const breadcrumbs = breadcrumbSchema([
     {p.secrets.map((s) => <li><code>{s}</code></li>)}
   </ul>
   <p>
-    The values never leave Phantom in plaintext. Your <code>.env</code> file references slot
-    names, and <code>stack exec -- &lt;cmd&gt;</code> swaps them in at process-spawn time via
-    Phantom's local proxy.
+    The values never leave Phantom in plaintext. Under <code>stack exec -- &lt;cmd&gt;</code>,
+    Phantom's local proxy injects real values into outgoing API requests; the process
+    environment only holds <code>phm_</code> placeholders.
   </p>
 
   {p.mcp && (

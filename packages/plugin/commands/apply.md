@@ -11,17 +11,17 @@ stack_apply { recipe_id: "<user's input>", no_wire: false }
 ```
 
 What `stack_apply` does:
-- Runs `stack_add` for each provider in the recipe (creates resources where the provider supports it, otherwise stubs the entry).
-- Requests rotating envelopes from Phantom for every secret slot so keys are encrypted at rest and can be rotated without code changes.
-- Writes webhook stubs for providers that emit events (Stripe, Clerk, GitHub, Linear, Resend, etc.) so the app can wire them later.
-- Updates `.stack.toml` and the MCP entries in one pass.
+- Runs `stack init --noInteractive` first if there is no `.stack.toml`.
+- Runs `stack add` for each provider in the recipe, one at a time. If some providers fail, the ones that succeeded are rolled back (automatically when, as under MCP, there is no TTY) unless the CLI was given `--noRollback`.
+- If at least one provider was added: writes a placeholder Phantom entry for every secret slot the recipe's providers declare (`phantom add <KEY> TODO_STACK_APPLY --rotate`, retried without `--rotate` on Phantom builds that lack the flag), and writes commented-out webhook handler stubs to `.stack/webhooks/<provider>.ts` for Stripe, Clerk, Supabase, and GitHub.
+- Runs `stack doctor` at the end (informational; a failing doctor does not fail apply).
 
-If the user appends `--no-wire` (e.g. `/stack:apply rec_xxx --no-wire`), call with `no_wire: true` instead. That skips the Phantom envelopes + webhook stubs and only records the providers in `.stack.toml` — useful when the user wants to inspect what would happen before wiring real credentials.
+If the user appends `--no-wire` (e.g. `/stack:apply rec_xxx --no-wire`), call with `no_wire: true` instead (the CLI flag is `--noWire`). That still provisions every provider through `stack add`; it only skips the placeholder Phantom entries and webhook stubs. It is not a preview: there is no dry-run mode for apply.
 
 After the call succeeds, summarize:
 - Which providers were added
 - Any providers that were skipped and why (already present, missing API credentials, etc.)
-- The path of the updated `.stack.toml`
+- The envelope and webhook counts apply printed, and any providers phantom-wire skipped
 
 Then suggest the next step verbatim:
 

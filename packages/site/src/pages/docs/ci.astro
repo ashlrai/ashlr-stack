@@ -219,8 +219,8 @@ stack doctor --json > stack-doctor.json`}
   </p>
 
   <Code
-    code={`# Detect services, emit JSON, exit 0 even if drift is found
-stack scan --json --yes`}
+    code={`# Detect services and emit JSON; exits 0, no prompts, nothing added
+stack scan --json`}
     lang="bash"
     theme="github-dark-dimmed"
   />
@@ -235,15 +235,15 @@ stack scan --json --yes`}
     <tbody>
       <tr>
         <td><code>--json</code></td>
-        <td>Emit a machine-readable JSON report instead of interactive output. Suitable for parsing in downstream steps.</td>
+        <td>Emit a machine-readable JSON report and exit 0. No prompts, and nothing is added even with <code>--yes</code>. Suitable for parsing in downstream steps.</td>
       </tr>
       <tr>
         <td><code>--yes</code></td>
-        <td>Accept all detected services without prompting. Required in headless/CI environments.</td>
+        <td>Run <code>stack add</code> for every hit at or above the threshold without prompting (implies <code>--auto</code>). Without <code>--json</code> or <code>--yes</code>, a non-TTY run only prints a hint.</td>
       </tr>
       <tr>
-        <td><code>--confidence &lt;0–1&gt;</code></td>
-        <td>Only report detections above this confidence threshold (default: <code>0.6</code>). Raise to <code>0.8</code> to reduce false positives in large repos.</td>
+        <td><code>--confidence &lt;low|medium|high&gt;</code></td>
+        <td>Only report detections at or above this tier. Defaults to <code>medium</code>, or <code>high</code> with <code>--yes</code>.</td>
       </tr>
     </tbody>
   </table>
@@ -252,9 +252,9 @@ stack scan --json --yes`}
 
   <Code
     code={`{
-  "detections": [
-    { "provider": "supabase", "confidence": 0.95, "evidence": ["@supabase/supabase-js"] },
-    { "provider": "resend",   "confidence": 0.82, "evidence": ["resend"] }
+  "hits": [
+    { "provider": "resend",   "confidence": "high", "sources": ["package.json:resend"] },
+    { "provider": "supabase", "confidence": "high", "sources": ["package.json:@supabase/supabase-js"] }
   ]
 }`}
     lang="json"
@@ -269,7 +269,7 @@ stack scan --json --yes`}
 
   <h2>Rotating secrets from CI</h2>
   <div class="callout callout-warn">
-    <strong>Don't</strong> run <code>stack add &lt;service&gt; --force</code>
+    <strong>Don't</strong> re-run <code>stack add &lt;service&gt;</code>
     from CI — it'd re-run the full OAuth / PAT flow, which isn't meaningful in
     a headless job. Instead, rotate the underlying credential at the provider
     (e.g. generate a new Supabase service key), then run <code>stack login
