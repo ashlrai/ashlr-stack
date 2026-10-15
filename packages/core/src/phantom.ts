@@ -55,6 +55,16 @@ export async function exec(args: string[], opts: ExecOptions = {}): Promise<Phan
         ? setTimeout(() => {
             timedOut = true;
             child.kill("SIGKILL");
+            // Reject now: a grandchild holding the pipes open would otherwise
+            // delay "close" until it exits on its own.
+            child.stdout?.destroy();
+            child.stderr?.destroy();
+            reject(
+              new StackError(
+                "PHANTOM_EXEC_FAILED",
+                `phantom ${formatArgsForError(args)} timed out after ${opts.timeoutMs}ms`,
+              ),
+            );
           }, opts.timeoutMs)
         : undefined;
 
@@ -82,15 +92,7 @@ export async function exec(args: string[], opts: ExecOptions = {}): Promise<Phan
 
     child.on("close", (code) => {
       if (timer) clearTimeout(timer);
-      if (timedOut) {
-        reject(
-          new StackError(
-            "PHANTOM_EXEC_FAILED",
-            `phantom ${formatArgsForError(args)} timed out after ${opts.timeoutMs}ms`,
-          ),
-        );
-        return;
-      }
+      if (timedOut) return;
       const result: PhantomExecResult = { stdout, stderr, code: code ?? 0 };
       if (code !== 0 && !opts.allowFailure) {
         reject(
@@ -116,32 +118,50 @@ export async function removeSecret(key: string, cwd?: string): Promise<void> {
   await exec(["remove", key], { cwd, allowFailure: true });
 }
 
-export async function listSecrets(cwd?: string): Promise<string[]> {
+/**
+ * Names of the secrets in the vault, read from `phantom list --json` (an array
+ * of `{ name, detected_service, ... }`). The human-format `phantom list` has a
+ * header, decorations and notes, so it is never parsed.
+ *
+ * Throws when the vault cannot be read (Phantom missing, non-zero exit such as
+ * no .phantom.toml, timeout, or output that is not a JSON array of entries
+ * with a string `name`), so callers never mistake an unreadable vault for an
+ * empty one.
+ */
+export async function listSecrets(cwd?: string, timeoutMs = 10_000): Promise<string[]> {
   await assertPhantomInstalled();
-  const { stdout } = await exec(["list"], { cwd, allowFailure: true });
-  return stdout
-    .split("\n")
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0 && !line.startsWith("#"));
+  const { stdout } = await exec(["list", "--json"], { cwd, timeoutMs });
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(stdout);
+  } catch {
+    throw new StackError("PHANTOM_EXEC_FAILED", "phantom list --json did not print valid JSON");
+  }
+  if (!Array.isArray(parsed)) {
+    throw new StackError("PHANTOM_EXEC_FAILED", "phantom list --json did not print a JSON array");
+  }
+  return parsed.map((entry) => {
+    const name = (entry as { name?: unknown } | null)?.name;
+    if (typeof name !== "string") {
+      throw new StackError(
+        "PHANTOM_EXEC_FAILED",
+        "phantom list --json printed an entry without a string name",
+      );
+    }
+    return name;
+  });
 }
 
 /**
  * Number of secrets in the vault, read from `phantom list --json` (an array
  * of `{ name, detected_service, ... }`). Returns null when the vault cannot be
  * read: Phantom missing, non-zero exit (e.g. no .phantom.toml), timeout, or
- * output that is not a JSON array.
+ * output that is not a JSON array of named entries.
  */
 export async function countSecrets(cwd?: string, timeoutMs = 10_000): Promise<number | null> {
   try {
     if (!(await isPhantomInstalled())) return null;
-    const { stdout, code } = await exec(["list", "--json"], {
-      cwd,
-      allowFailure: true,
-      timeoutMs,
-    });
-    if (code !== 0) return null;
-    const parsed: unknown = JSON.parse(stdout);
-    return Array.isArray(parsed) ? parsed.length : null;
+    return (await listSecrets(cwd, timeoutMs)).length;
   } catch {
     return null;
   }
