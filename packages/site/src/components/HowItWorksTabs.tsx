@@ -161,7 +161,7 @@ export default function HowItWorksTabs() {
                 </span>
               </div>
               <p className="text-[11px] text-[color:var(--color-ink-400)] leading-[1.5]">
-                {linkifyPhantom(t.blurb)}
+                {t.blurb}
               </p>
             </button>
           );
