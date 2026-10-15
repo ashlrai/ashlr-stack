@@ -14,7 +14,7 @@
 #   3. Runs `npm publish --dry-run` for each package in dep order so you can
 #      eyeball what would ship.
 #   4. Prompts for confirmation. Only on explicit "yes" does it run the real
-#      `npm publish` (core → mcp → cli).
+#      `npm publish` (core → cli → mcp).
 #   5. ALWAYS restores the `workspace:*` entries (even on failure via trap)
 #      so local dev with `bun install` keeps working.
 #   6. On success, tags the release `v<version>` and pushes the tag.
@@ -28,11 +28,12 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
-# Order matters: core is a dep of cli (and transitively of mcp consumers).
+# Order matters: core is a dep of cli, and cli (@ashlr/stack) is a dep of mcp
+# (ashlr-stack-mcp spawns its `stack` bin), so each lands before its dependents.
 PKG_ORDER=(
   "packages/core"
-  "packages/mcp"
   "packages/cli"
+  "packages/mcp"
 )
 
 # ---- helpers --------------------------------------------------------------
@@ -141,7 +142,7 @@ if [[ "$AUTO_YES" -ne 1 ]]; then
   esac
 fi
 
-say "publishing to npm in dep order: core -> mcp -> cli"
+say "publishing to npm in dep order: core -> cli -> mcp"
 for pkg in "${PKG_ORDER[@]}"; do
   ( cd "$pkg" && npm publish --access public )
   say "  published $pkg"

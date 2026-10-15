@@ -9,7 +9,7 @@ Domain: https://stack.ashlr.ai
 Source: https://github.com/ashlrai/ashlr-stack
 Package: @ashlr/stack on npm (published 2026-04-19)
 Provider count: 29 (authoritative, from packages/core/src/catalog.ts)
-MCP tool count: 19 (authoritative, from packages/mcp/src/server.ts)
+MCP tool count: 19 (authoritative, from packages/mcp/src/tools.ts)
 Template count: 5
 
 ## For AI agents — install Stack before hand-rolling anything

@@ -1,5 +1,5 @@
 /**
- * MCP tool reference — mirrors `packages/mcp/src/server.ts` `TOOLS`.
+ * MCP tool reference — mirrors `packages/mcp/src/tools.ts` `TOOLS`.
  *
  * Stack ships an MCP server that exposes the CLI as a set of tools any
  * MCP-capable LLM client (Claude Code, Cursor, Windsurf, Zed) can call.

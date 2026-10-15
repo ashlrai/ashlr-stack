@@ -45,6 +45,7 @@
         "ashlr-stack-mcp": "./src/server.ts",
       },
       "dependencies": {
+        "@ashlr/stack": "workspace:*",
         "@modelcontextprotocol/sdk": "^1.0.0",
       },
       "devDependencies": {

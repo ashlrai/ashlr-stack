@@ -51,6 +51,7 @@
     "typecheck": "bunx tsc --noEmit"
   },
   "dependencies": {
+    "@ashlr/stack": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.0.0"
   },
   "devDependencies": {
