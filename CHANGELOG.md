@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Bug fixes
+
+- **CI workflow generation fails closed.** `stack ci init` now exits nonzero without creating or overwriting a workflow because the reviewed Phantom Secrets 0.7.9 source requires trusted-terminal approval for Cloud pull. Existing configuration and file guards remain; `--force` stays available as a compatibility flag and does not enable generation.
+
+- **Stack works with Phantom Secrets 0.7.9.** Phantom 0.7.3+ rejects `phantom add KEY VALUE` (argv is visible to other processes), never replaces a stored name, and only reveals or removes a secret in an attached terminal. Stack still passed values on argv, so every `stack add` failed against the released CLI, and `phantom list`'s table was parsed as secret names. Stack now pipes values to `phantom add KEY --stdin`, treats a repeat of its own identical write as done, reports any other existing name as `PHANTOM_SECRET_EXISTS`, reads names from `phantom list --json`, and has `stack remove` hand Phantom the terminal (or list the secrets Phantom kept). Reading a stored token back is no longer possible, so cached-token reuse falls back to prompting, and token-based healthchecks still report the token as missing (follow-up). `packages/core/src/__tests__/phantom-contract.test.ts` runs the wrapper against a real binary (`STACK_PHANTOM_CONTRACT_BIN=/path/to/phantom bun test phantom-contract`).
+
 ### Agent-facing fixes
 
 - **`npx -y ashlr-stack-mcp` can run tools.** The MCP server spawned `stack` from PATH (absent under npx, and Haskell's `stack` when present). `ashlr-stack-mcp` now depends on `@ashlr/stack` and runs that package's bin with the current runtime; `STACK_BIN` still overrides, PATH is the last resort. Publish order is now core, cli, mcp. (`packages/mcp/src/stack-bin.ts`)

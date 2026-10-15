@@ -48,7 +48,9 @@ function runStack(args: string[]): Promise<{ stdout: string; stderr: string; cod
           : (err as Error).message;
       resolve({ stdout: "", stderr: hint, code: 127 });
     });
-    child.on("close", (code) => resolve({ stdout, stderr, code: code ?? 0 }));
+    child.on("close", (code, signal) =>
+      resolve({ stdout, stderr, code: signal || code === null ? 1 : code }),
+    );
   });
 }
 
@@ -99,7 +101,8 @@ server.setRequestHandler(ListResourcesRequestSchema, async () => {
     resources.push({
       uri: "stack://current/.stack.toml",
       name: ".stack.toml (this project)",
-      description: "Committed shape of the current project's stack.",
+      description:
+        "Project configuration text when the file exists in server cwd; Git commit state is not verified and reads are not redacted.",
       mimeType: "application/toml",
     });
   }
@@ -107,7 +110,8 @@ server.setRequestHandler(ListResourcesRequestSchema, async () => {
     resources.push({
       uri: "stack://current/.stack.local.toml",
       name: ".stack.local.toml (local instance)",
-      description: "Local instance data (resource ids, project_id). Gitignored.",
+      description:
+        "Local instance data when the file exists in server cwd; inspect contents and project ignore rules before exposing raw text.",
       mimeType: "application/toml",
     });
   }
@@ -115,7 +119,8 @@ server.setRequestHandler(ListResourcesRequestSchema, async () => {
     resources.push({
       uri: "stack://current/.mcp.json",
       name: ".mcp.json (MCP wiring)",
-      description: "Currently-wired MCP servers.",
+      description:
+        "MCP configuration text when the file exists in server cwd; client loading and usable credentials are not verified.",
       mimeType: "application/json",
     });
   }

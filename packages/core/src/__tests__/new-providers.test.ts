@@ -13,7 +13,8 @@ describe("Wave 4 providers", () => {
   let realFetch: typeof fetch;
 
   beforeEach(() => {
-    h = setupFakePhantom();
+    // Provider logic after a token is read; real Phantom 0.7.9 refuses headless reveal.
+    h = setupFakePhantom({}, { legacyHeadlessReveal: true });
     realFetch = globalThis.fetch;
   });
 
@@ -97,7 +98,9 @@ describe("Wave 4 providers", () => {
     await workos.materialize(ctx, { id: "default", displayName: "WorkOS" }, auth);
     // trigger verify via healthcheck
     const { addSecret } = await import("../phantom.ts");
-    await addSecret("WORKOS_API_KEY", "sk_workos_fake");
+    await expect(addSecret("WORKOS_API_KEY", "sk_workos_fake")).rejects.toMatchObject({
+      code: "PHANTOM_SECRET_EXISTS",
+    });
     await workos.healthcheck!(ctx, {
       provider: "workos",
       secrets: ["WORKOS_API_KEY"],
@@ -169,7 +172,9 @@ describe("Wave 4 providers", () => {
     await plausible.provision(ctx, auth, {});
     await plausible.materialize(ctx, { id: "default", displayName: "Plausible" }, auth);
     const { addSecret } = await import("../phantom.ts");
-    await addSecret("PLAUSIBLE_API_KEY", "plausible_fake");
+    await expect(addSecret("PLAUSIBLE_API_KEY", "plausible_fake")).rejects.toMatchObject({
+      code: "PHANTOM_SECRET_EXISTS",
+    });
     await plausible.healthcheck!(ctx, {
       provider: "plausible",
       secrets: ["PLAUSIBLE_API_KEY"],
@@ -210,7 +215,9 @@ describe("Wave 4 providers", () => {
     const resource = await datadog.provision(ctx, auth, {});
     await datadog.materialize(ctx, resource, auth);
     const { addSecret } = await import("../phantom.ts");
-    await addSecret("DD_API_KEY", "dd_api_fake");
+    await expect(addSecret("DD_API_KEY", "dd_api_fake")).rejects.toMatchObject({
+      code: "PHANTOM_SECRET_EXISTS",
+    });
     await datadog.healthcheck!(ctx, {
       provider: "datadog",
       secrets: ["DD_API_KEY"],
@@ -422,9 +429,6 @@ describe("Wave 4 providers", () => {
       );
     }) as unknown as typeof fetch;
 
-    const { addSecret } = await import("../phantom.ts");
-    await addSecret("LAUNCHDARKLY_API_TOKEN", "api-fake-ld-token");
-
     const launchdarkly = (await import("../providers/launchdarkly.ts")).default;
     const ctx: ProviderContext = { cwd: process.cwd(), interactive: false, log: () => {} };
 
@@ -433,6 +437,10 @@ describe("Wave 4 providers", () => {
     const resource = await launchdarkly.provision(ctx, auth, {});
     const materialized = await launchdarkly.materialize(ctx, resource, auth);
     expect(materialized.secrets.LAUNCHDARKLY_API_TOKEN).toBe("api-fake-ld-token");
+    const { addSecret } = await import("../phantom.ts");
+    await expect(addSecret("LAUNCHDARKLY_API_TOKEN", "api-fake-ld-token")).rejects.toMatchObject({
+      code: "PHANTOM_SECRET_EXISTS",
+    });
 
     // Trigger verify via healthcheck to capture the URL
     await launchdarkly.healthcheck!(ctx, {

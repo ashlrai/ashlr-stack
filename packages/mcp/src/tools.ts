@@ -18,7 +18,8 @@ export interface ToolDef {
 export const TOOLS: ToolDef[] = [
   {
     name: "stack_init",
-    description: "Scaffold a new .stack.toml in the current directory.",
+    description:
+      "Scaffold .stack.toml in the current directory; a selected template may also run provider setup.",
     inputSchema: {
       type: "object",
       properties: {
@@ -35,7 +36,8 @@ export const TOOLS: ToolDef[] = [
   },
   {
     name: "stack_import",
-    description: "Import an existing .env file into Phantom + .stack.toml.",
+    description:
+      "Import nonempty new variables from an .env file into Phantom and record detected services; existing vault names are left unchanged.",
     inputSchema: {
       type: "object",
       properties: {
@@ -75,7 +77,8 @@ export const TOOLS: ToolDef[] = [
   },
   {
     name: "stack_add",
-    description: "Provision a service and wire its secrets + MCP entry.",
+    description:
+      "Run provider-specific service setup or attach an existing resource, then record returned secret slots and optional MCP configuration. Credentials and client/provider acceptance must be checked separately.",
     inputSchema: {
       type: "object",
       properties: {
@@ -92,7 +95,8 @@ export const TOOLS: ToolDef[] = [
   },
   {
     name: "stack_remove",
-    description: "Remove a service from the stack (vault entries and MCP config).",
+    description:
+      "Remove local service configuration and its MCP entry, and attempt Phantom secret cleanup. Upstream resources are kept; headless cleanup or refused confirmation can leave secrets stored.",
     inputSchema: {
       type: "object",
       properties: {
@@ -116,7 +120,7 @@ export const TOOLS: ToolDef[] = [
   {
     name: "stack_info",
     description:
-      "Deep-dive on a single service: resource, region, auth, secrets, MCP wiring, health.",
+      "Inspect configured resource, auth kind, secret-name inventory and MCP metadata; attempt a healthcheck when the provider supports one.",
     inputSchema: {
       type: "object",
       properties: { service: { type: "string" } },
@@ -144,7 +148,8 @@ export const TOOLS: ToolDef[] = [
   },
   {
     name: "stack_doctor",
-    description: "Verify every service is reachable and credentials are valid.",
+    description:
+      "Inspect the configured-service health report. --fix attempts supported remediation; stored vault names can cause repairs to be skipped, and name presence is not credential validity.",
     inputSchema: {
       type: "object",
       properties: {
@@ -163,7 +168,8 @@ export const TOOLS: ToolDef[] = [
   },
   {
     name: "stack_sync",
-    description: "Push secrets to a deployment platform (via `phantom sync`).",
+    description:
+      "Forward a deployment-platform sync request to phantom sync; inspect the installed Phantom command support and result separately.",
     inputSchema: {
       type: "object",
       properties: { platform: { type: "string" } },
@@ -173,13 +179,15 @@ export const TOOLS: ToolDef[] = [
   },
   {
     name: "stack_providers",
-    description: "List every curated provider Stack can wire up (grouped by category).",
+    description:
+      "List the curated source provider catalog by category; inclusion does not attest complete provisioning or active credentials.",
     inputSchema: { type: "object", properties: {} },
     cliArgs: () => ["providers"],
   },
   {
     name: "stack_projects_list",
-    description: "List every Stack-enabled project on this machine.",
+    description:
+      "List projects recorded in the local Stack registry; this is not a filesystem-wide discovery scan.",
     inputSchema: { type: "object", properties: {} },
     cliArgs: () => ["projects", "list"],
   },
@@ -204,7 +212,7 @@ export const TOOLS: ToolDef[] = [
   {
     name: "stack_recommend",
     description:
-      "Given a free-text description of what the user is building (e.g. 'B2B SaaS with auth, AI, and payments'), return a structured list of the most relevant curated providers with scores, matched terms, and per-category ranking. Pass save:true to also persist a Recipe to .stack/recipes/<id>.toml so you (Claude) can follow up with stack_apply. Retrieval-only — no LLM inference happens here.",
+      "Retrieve scored curated-provider matches and per-category ranking for a query. save:true writes a Recipe for a later stack_apply request. The CLI JSON payload is forwarded as text; this tool does not request LLM inference.",
     inputSchema: {
       type: "object",
       properties: {
@@ -219,7 +227,7 @@ export const TOOLS: ToolDef[] = [
         category: {
           type: "string",
           description:
-            "Optional filter to a single category: Database, Deploy, Cloud, AI, Analytics, Errors, Payments, Code, Tickets, Email, Auth.",
+            "Optional filter to a source catalog category: Database, Deploy, Cloud, AI, Analytics, Observability, Errors, Payments, Code, Tickets, Email, Auth, FeatureFlags. The server input is a string, not an enforced enum.",
         },
         save: {
           type: "boolean",
@@ -240,7 +248,7 @@ export const TOOLS: ToolDef[] = [
   {
     name: "stack_apply",
     description:
-      "Apply a saved Recipe: replay `stack add` for each provider, then pre-wire Phantom rotation envelopes + webhook stubs. Set `no_wire: true` to opt out of the Phantom-wire layer (stays pure-provisioning).",
+      "Apply a saved Recipe through provider setup, then attempt optional Phantom wiring and write webhook stubs. Inspect failures and skips; working rotation is not established. no_wire:true skips the optional layer, not provider credential writes.",
     inputSchema: {
       type: "object",
       properties: {

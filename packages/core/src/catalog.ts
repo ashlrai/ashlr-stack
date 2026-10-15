@@ -377,7 +377,8 @@ export const PROVIDERS_REF: ProviderRef[] = [
     category: "Errors",
     authKind: "pat",
     secrets: ["SENTRY_AUTH_TOKEN", "SENTRY_DSN", "SENTRY_ORG", "SENTRY_PROJECT"],
-    blurb: "Error + performance tracking. Creates a project and fetches its DSN.",
+    blurb:
+      "Error + performance tracking. Attaches to an existing project and reads its DSN when available.",
     mcp: {
       name: "sentry",
       detail:
@@ -541,13 +542,14 @@ export const PROVIDERS_REF: ProviderRef[] = [
     displayName: "Datadog",
     category: "Observability",
     authKind: "api_key",
-    secrets: ["DD_API_KEY", "DD_APP_KEY"],
-    blurb: "Metrics, traces, logs. API + Application keys verified via /api/v1/validate.",
+    secrets: ["DD_API_KEY"],
+    blurb:
+      "Metrics, traces, logs. Current adapter validates an API key via /api/v1/validate and stores that key only.",
     keyOnly: true,
     dashboard: "https://app.datadoghq.com",
     docs: "https://docs.datadoghq.com/api/latest/",
     howTo:
-      "Create an API key at https://app.datadoghq.com/organization-settings/api-keys and an Application key at https://app.datadoghq.com/organization-settings/application-keys.",
+      "Create an API key at https://app.datadoghq.com/organization-settings/api-keys. This adapter validates and stores that key only.",
     sdkPackages: ["dd-trace"],
   },
   {
@@ -616,13 +618,14 @@ export const PROVIDERS_REF: ProviderRef[] = [
     displayName: "Auth0",
     category: "Auth",
     authKind: "api_key",
-    secrets: ["AUTH0_DOMAIN", "AUTH0_CLIENT_ID", "AUTH0_CLIENT_SECRET"],
-    blurb: "Identity platform. Domain + M2M client credentials stored in Phantom.",
+    secrets: ["AUTH0_DOMAIN"],
+    blurb:
+      "Identity platform. Current adapter checks a domain's discovery endpoint and stores only the domain.",
     keyOnly: true,
     dashboard: "https://manage.auth0.com",
     docs: "https://auth0.com/docs/api/management/v2",
     howTo:
-      "Create a Machine-to-Machine application in Auth0 → Applications and note the domain, client ID, and client secret.",
+      "Enter your Auth0 tenant domain, such as your-tenant.us.auth0.com. This adapter checks its discovery response and stores only that domain.",
     notes: "Browser SDK: @auth0/auth0-spa-js. Server SDK: auth0 (bundled).",
     sdkPackages: ["auth0"],
   },

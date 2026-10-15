@@ -43,7 +43,7 @@ export function websiteSchema(): Record<string, unknown> {
     url: SITE_URL,
     name: SITE_NAME,
     description:
-      "Ashlr Stack is a CLI, MCP server, and Claude Code plugin that provisions, wires, and operates every third-party service in your dev project with one command.",
+      "Ashlr Stack offers a local CLI, stdio MCP bridge and Claude Code plugin for planning and configuring supported project services.",
     publisher: { "@id": "https://ashlr.ai/#organization" },
     inLanguage: "en-US",
   };
@@ -60,7 +60,7 @@ export function softwareApplicationSchema(): Record<string, unknown> {
     applicationSubCategory: "DevOps Tool",
     operatingSystem: "macOS, Linux, Windows",
     url: SITE_URL,
-    description: `The control plane for your entire dev stack. One command to provision, wire, and operate every third-party service in a project. Ships as a CLI, an MCP server, and a Claude Code plugin. Supports ${PROVIDERS_REF.length} providers across databases, deploy targets, cloud, AI, observability, feature flags, payments, code hosting, tickets, email, and auth.`,
+    description: `The reviewed catalog lists ${PROVIDERS_REF.length} provider entries. Stack offers CLI workflows and a stdio MCP bridge for local project setup; authentication, resource and client results depend on each adapter.`,
     softwareVersion: "0.1.1",
     license: "https://opensource.org/licenses/MIT",
     offers: {
@@ -82,16 +82,16 @@ export function softwareApplicationSchema(): Record<string, unknown> {
       "OAuth automation",
     ].join(", "),
     featureList: [
-      `One-command provisioning across ${PROVIDERS_REF.length} third-party services`,
-      "OAuth dance handled automatically per provider",
-      "Secrets written through Phantom (E2E-encrypted, never leak to disk)",
-      "Generates .env and .mcp.json, per-tier",
-      "Claude Code plugin with /stack:add, /stack:doctor, /stack:open",
-      "MCP server exposes every command as a tool (19 tools, 3 resources)",
+      `Curated source metadata for ${PROVIDERS_REF.length} provider entries`,
+      "Provider-specific OAuth, PAT or API-key setup",
+      "Credential persistence through Phantom; setup processes still handle values",
+      "Explicit .env.example empty-key export and optional MCP configuration",
+      "Claude Code plugin with /stack:add, /stack:doctor, /stack:list",
+      "Source stdio MCP bridge: 19 CLI-backed tools and up to 3 conditional raw-file resources",
       "Templated starters: Next.js + Supabase + PostHog, Cloudflare + Turso + Clerk, etc.",
       "stack scan detects existing services in a repo",
-      "stack doctor --fix re-provisions broken services",
-      "Works across Claude Code, Cursor, Windsurf, OpenAI Codex, ashlrcode",
+      "stack doctor --fix attempts supported repairs; failures and skips remain visible",
+      "MCP client setup depends on CLI/server runtime, working directory and credentials",
     ],
   };
 }

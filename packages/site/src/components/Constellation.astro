@@ -18,7 +18,7 @@ const nodes: Node[] = [
     id: "stack",
     title: "Stack",
     tag: "Control plane",
-    body: "The CLI + MCP that provisions, wires, and operates every service.",
+    body: "CLI workflows and an MCP bridge for supported provider setup.",
     glyph: "▲",
     glyphColor: "var(--color-blade-400)",
     cx: 50,
@@ -30,40 +30,40 @@ const nodes: Node[] = [
     id: "phantom",
     title: "Phantom Secrets",
     tag: "Vault",
-    body: "E2E-encrypted secret storage. Stack writes every credential through Phantom.",
+    body: "Credential workflows use Phantom. Review project configuration and provider output.",
     glyph: "◇",
     glyphColor: "var(--color-steel-100)",
     cx: 16,
     cy: 28,
     size: "satellite",
     url: "https://phantom.ashlr.ai",
-    link: "writes secrets through",
+    link: "used by credential workflows in",
   },
   {
     id: "plugin",
     title: "ashlr-plugin",
-    tag: "Context compressor",
-    body: "Drops Claude Code token spend ~80% on large repos with genome-indexed read/grep.",
+    tag: "Context tools",
+    body: "Tools for compact code context. Review setup and benchmarks for your version.",
     glyph: "◈",
     glyphColor: "var(--color-blade-300)",
     cx: 84,
     cy: 28,
     size: "satellite",
     url: "https://github.com/ashlrai/ashlr-plugin",
-    link: "shares .stack.toml with",
+    link: "related tool alongside",
   },
   {
     id: "ashlrcode",
     title: "ashlrcode",
-    tag: "Multi-model CLI",
-    body: "Route the same prompt across Claude, GPT, Grok, DeepSeek. Compare, diff, stream.",
+    tag: "Coding CLI",
+    body: "A terminal coding agent. Review supported backends, credentials and runtime requirements.",
     glyph: "◎",
     glyphColor: "var(--color-signal-ok,#6fe8a7)",
     cx: 50,
     cy: 88,
     size: "satellite",
     url: "https://github.com/ashlrai/ashlrcode",
-    link: "resolves slots via",
+    link: "related tool alongside",
   },
 ];
 ---
@@ -75,12 +75,12 @@ const nodes: Node[] = [
 
   <header class="max-w-[760px] mb-14" data-reveal>
     <h2 class="display text-[color:var(--color-ink-50)]" style="font-size: clamp(32px, 4.4vw, 56px);">
-      Four tools. <span class="display-accent">One coherent platform.</span>
+      Four tools. <span class="display-accent">Explore each tool.</span>
     </h2>
     <p class="mt-5 text-[15px] leading-[1.6] text-[color:var(--color-ink-300)] max-w-[620px]">
-      Stack is the control plane. Phantom is the vault. ashlr-plugin is the context compressor.
-      ashlrcode is the multi-model runtime. They compose — none of them require the others, but
-      together they're load-bearing. Hover a satellite to highlight the relationship.
+      Stack coordinates provider setup; its credential workflows use Phantom. ashlr-plugin and
+      ashlrcode are separate tools shown for discovery. Verify their capabilities and compatibility
+      separately. Hover a satellite to highlight the relationship.
     </p>
   </header>
 
@@ -90,7 +90,7 @@ const nodes: Node[] = [
     <svg
       viewBox="0 0 100 100"
       preserveAspectRatio="none"
-      class="absolute inset-0 w-full h-full pointer-events-none"
+      class="constellation-connections absolute inset-0 w-full h-full pointer-events-none"
       aria-hidden="true"
     >
       <defs>
@@ -115,18 +115,18 @@ const nodes: Node[] = [
     <!-- Phantom halo behind the central node -->
     <div
       aria-hidden="true"
-      class="absolute pointer-events-none"
+      class="constellation-halo absolute pointer-events-none"
       style="left:50%;top:50%;width:320px;height:320px;transform:translate(-50%,-50%);background:radial-gradient(closest-side, rgba(233,107,42,0.22), transparent 70%);"
     ></div>
 
-    <div class="relative aspect-[16/10] min-h-[460px] sm:min-h-[520px] w-full">
+    <div class="constellation-stage relative w-full">
       {nodes.map((n) => {
         const isCenter = n.id === "stack";
-        const base = `absolute -translate-x-1/2 -translate-y-1/2 ${isCenter ? "w-[240px] sm:w-[280px]" : "w-[220px] sm:w-[240px]"}`;
+        const base = "constellation-position";
         const inner = `relative panel rounded-2xl p-4 transition-all ${
           isCenter ? "ring-1 ring-[color:var(--color-blade-500)]/40" : ""
         }`;
-        const style = `left:${n.cx}%; top:${n.cy}%;`;
+        const style = `--node-x:${n.cx}%; --node-y:${n.cy}%;`;
         const content = (
           <article class={inner}>
             <div class="flex items-start justify-between mb-2">
@@ -143,7 +143,7 @@ const nodes: Node[] = [
               </span>
             )}
             {!isCenter && (
-              <div class="mt-3 mono text-[10px] tracking-[0.12em] uppercase text-[color:var(--color-blade-400)] opacity-0 transition-opacity duration-200 constellation-link">
+              <div class="mt-3 mono text-[10px] tracking-[0.12em] uppercase text-[color:var(--color-blade-400)] transition-opacity duration-200 constellation-link">
                 ↔ {n.link} Stack
               </div>
             )}
@@ -171,17 +171,64 @@ const nodes: Node[] = [
   </div>
 
   <div class="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-[12px] text-[color:var(--color-ink-500)]">
-    <span>→ Stack writes through Phantom</span>
-    <span>→ ashlr-plugin shares the same <code class="mono text-[color:var(--color-ink-300)]">.stack.toml</code></span>
-    <span>→ ashlrcode respects the same secret slots</span>
+    <span>→ Stack credential workflows use Phantom</span>
+    <span>→ Verify ashlr-plugin support for <code class="mono text-[color:var(--color-ink-300)]">.stack.toml</code></span>
+    <span>→ Verify ashlrcode credential handling separately</span>
   </div>
 </section>
 
 <style>
+  .constellation-stage {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.5rem;
+  }
+  .constellation-position {
+    position: relative;
+    min-width: 0;
+    width: 100%;
+  }
+  .constellation-connections,
+  .constellation-halo {
+    display: none;
+  }
+  .constellation-link {
+    opacity: 1;
+  }
+  @media (min-width: 640px) {
+    .constellation-stage {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (min-width: 1280px) {
+    .constellation-stage {
+      display: block;
+      aspect-ratio: 16 / 10;
+      min-height: 520px;
+    }
+    .constellation-position {
+      position: absolute;
+      width: 240px;
+      left: var(--node-x);
+      top: var(--node-y);
+      transform: translate(-50%, -50%);
+    }
+    .constellation-position[data-node-id="stack"] {
+      width: 280px;
+    }
+    .constellation-connections,
+    .constellation-halo {
+      display: block;
+    }
+    .constellation-link {
+      opacity: 0;
+    }
+  }
   .constellation-line {
     transition: stroke-opacity 220ms ease, stroke-width 220ms ease;
   }
-  .constellation-node:hover .constellation-link {
+  .constellation-node:hover .constellation-link,
+  .constellation-node:focus-within .constellation-link {
     opacity: 1;
   }
   /* Highlight the matching line when a node is hovered */

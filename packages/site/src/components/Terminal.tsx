@@ -22,47 +22,47 @@ const SCRIPT: Step[] = [
   { kind: "blank" },
   {
     kind: "out",
-    text: "▲ stack  adding supabase · to ~/projects/raven",
+    text: "▲ stack  adding supabase · illustrative flow",
     className: "ansi-white",
   },
   { kind: "blank" },
   {
     kind: "work",
-    label: "opening browser for Supabase OAuth",
+    label: "requesting Supabase authorization",
     duration: 900,
-    detail: "signed in as mason@evero-consulting.com",
+    detail: "approve in your own account if prompted",
   },
   {
     kind: "work",
-    label: "creating project  raven-prod · region us-east-1",
+    label: "creating or attaching a Supabase project",
     duration: 1400,
-    detail: "db.abc123def.supabase.co",
+    detail: "actual project and region depend on your account",
   },
   {
     kind: "work",
-    label: "writing secrets to phantom vault",
+    label: "storing returned credentials through Phantom",
     duration: 700,
     detail: "SUPABASE_URL · ANON_KEY · SERVICE_ROLE_KEY",
   },
   {
     kind: "work",
-    label: "patching .env.local · .mcp.json · .stack.toml",
+    label: "recording .stack.toml · MCP entry if supplied",
     duration: 600,
   },
   {
     kind: "work",
-    label: "installing @supabase/supabase-js",
+    label: "offering optional @supabase/supabase-js install",
     duration: 900,
   },
   { kind: "blank" },
   {
     kind: "out",
-    text: "✓ supabase ready · 4.2s",
+    text: "Review the result and verify your app separately",
     className: "ansi-green",
   },
   {
     kind: "out",
-    text: "  next: stack exec -- bun dev",
+    text: "  next: stack doctor (checks depend on the provider)",
     className: "ansi-dim",
   },
 ];
@@ -193,7 +193,7 @@ export default function Terminal() {
   return (
     <div
       className="relative w-full overflow-hidden rounded-2xl panel shadow-[0_40px_120px_-40px_rgba(217,70,239,0.25)]"
-      aria-label="Live terminal preview of stack add supabase"
+      aria-label="Illustrative terminal flow for stack add supabase"
     >
       {/* Glow */}
       <div
@@ -213,7 +213,7 @@ export default function Terminal() {
           <span className="w-2.5 h-2.5 rounded-full bg-[#28c840]" />
         </div>
         <div className="flex-1 text-center text-xs text-ink-400 mono tracking-wide select-none">
-          ~ / projects / raven — stack
+          example flow — stack
         </div>
         <div className="text-[10px] text-ink-500 mono uppercase tracking-widest hidden sm:block">
           bash

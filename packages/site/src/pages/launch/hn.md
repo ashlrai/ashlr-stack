@@ -1,63 +1,37 @@
 ---
 layout: ~/layouts/LaunchNote.astro
 title: "Show HN: Ashlr Stack — the control plane for your dev stack"
-description: "One command to provision, wire, and operate every third-party service in your project."
+description: "Historical, unposted launch draft with illustrative source-defined setup and provider-switch workflows."
 noindex: true
 ---
 
 # Show HN: Stack v0.2 — one command to provision, wire, and boot a full dev stack
 
-Every time I `create-next-app`, I lose the first hour to tab-hopping: Supabase
-project, copy URL + anon key + service role, `.env.local`, Vercel project, deploy
-hook, Sentry DSN, PostHog key, then manually wire four MCP servers into
-`.mcp.json` so Claude can reach into all of it from chat. Same hour, every time,
-every project.
+Historical, unposted Show HN draft, revised against source 0.2.1. Recorded public npm 0.1.1 and historical native 0.2.0 are separate artifacts. The setup below is illustrative, not a posted release or customer acceptance record.
 
-v0.2 collapses it:
+Source template setup to evaluate with a qualified installed version:
 
 ```bash
-brew install ashlrai/ashlr/stack
-stack init --template nextjs-supabase-posthog
+# Config-only init; provider login and a Phantom project are not required
+stack init --template nextjs-supabase-posthog --noProvision
 ```
 
-The init command opens the Supabase OAuth dance, provisions the project, writes
-three secrets into Phantom (encrypted local vault — raw values never touch
-disk), patches `.env.local` + `.mcp.json` + `.stack.toml`, and installs
-`@supabase/supabase-js` and `posthog-js` inline. End-to-end in one terminal
-session, no browser tab-hopping.
+This config-only example writes the selected template configuration without provisioning. Omit `--noProvision` only when you intend service setup with a qualified Phantom project and authorized provider access: Supabase can create a project; PostHog accepts credentials. SDK installation and MCP descriptors are conditional, and Stack does not fill `.env.local` or establish that the app boots.
 
-New in v0.2: `stack swap supabase --to neon` migrates a live project to a
-different provider — secrets rotated in Phantom, env references updated in
-place. `stack rollback` if it goes sideways.
+`stack swap supabase neon --dryRun` shows the proposed switch. Actual swap sets up the target, then attempts old-service cleanup; it does not migrate data or atomically rotate credentials. There is no registered `stack rollback` command.
 
 **What's NOT working yet (honest list):**
 
-- **npm 2FA blocker.** Publishing `@ashlr/stack` to npm requires interactive OTP
-  entry, which breaks our release automation. Install via `brew install
-  ashlrai/ashlr/stack` for now — that path is clean. The npm package exists but
-  install-via-npm requires accepting the OTP prompt manually.
-- **Supabase OAuth app — dashboard-only limitation.** Supabase's OAuth app
-  registration doesn't expose a full org-creation API, so if the OAuth token
-  covers an org with no existing projects, we can create a project but can't
-  create the org itself. Affects fresh Supabase accounts. Workaround: create
-  one project manually in the dashboard once, then Stack can provision freely.
-- **5 of 39 providers are full OAuth.** The other 34 use a PAT or API-key paste
-  with automated verification. It works; it's just one extra step per provider.
-  OAuth app registrations are in progress — takes a week to a month per
-  provider depending on their review process.
-- **Phantom is required.** Not optional. Stack refuses to write raw secrets to
-  disk and shells out to Phantom for every secret operation. One install per
-  machine.
+- **Version layers.** Source 0.2.1 is separate from recorded public npm 0.1.1 and historical native 0.2.0. Consumer npm installation does not inherit a publisher OTP requirement.
+- **Provider prerequisites.** OAuth app configuration, account permissions and existing resources vary by adapter.
+- **Adapter scope.** Of 39 source entries, 31 use the API-key factory and eight are custom; four have resource-creation paths. Verification strength varies.
+- **Phantom is required for managed credentials.** Setup and create-only persistence can fail; inspect partial state and qualify the installed interface.
 
-**Scope:** 39 providers — Supabase, Neon, Turso, Convex, Firebase, Vercel,
-Railway, Fly, Render, Cloudflare Workers, AWS, OpenAI, Anthropic, Sentry,
-PostHog, Clerk, Stripe, GitHub, Linear, Resend, Upstash, and more.
+**Scope:** 39 source catalog entries, including Supabase, Neon, Turso, Convex, Firebase, Vercel, Railway, Fly, Render, Cloudflare, AWS, OpenAI, Anthropic, Sentry, PostHog, Clerk, Stripe, GitHub, Linear, Resend and Upstash. Catalog inclusion does not mean upstream creation or runtime acceptance.
 
-**Telemetry:** The CLI itself has none. v0.2 ships a Cloudflare Worker endpoint
-for counting install events (just a counter — no project data, no secrets, no
-identifiers). You can audit it; it's in the repo.
+**Telemetry:** Source includes opt-in telemetry and update checks. Inspect the installed controls; no blanket no-network, no-identifiers or customer adoption claim is established here.
 
-Free. MIT. Ships as a CLI, an MCP server, and a Claude Code plugin.
+MIT source, with CLI, MCP server and Claude Code plugin interfaces. Publication and installed capabilities require separate qualification.
 
 - Site: https://stack.ashlr.ai
 - Repo: https://github.com/ashlrai/ashlr-stack
@@ -67,16 +41,8 @@ Free. MIT. Ships as a CLI, an MCP server, and a Claude Code plugin.
 
 **First reply (pre-written for founder to post):**
 
-The hardest part to get right was the secret model. Early versions wrote keys
-to `.env.local` like everything else, and I kept noticing that the moment a
-file touches disk unencrypted, the whole security story is one accidental
-commit away from being over.
+The credential boundary needs explicit qualification. Stack passes managed values through Phantom’s create-only stdin interface, then performs later configuration writes. Some credentials persist earlier, and failures can leave partial state.
 
-Phantom's `phm_…` placeholder model is what makes this composable: Stack
-writes a meaningless token to the file, `stack exec` resolves it at spawn time,
-and `.env.local` is safe to accidentally ship to a screenshot or a gist.
+Stack does not generate meaningless tokens in `.env.local` or make that file safe to share. `stack exec` forwards to `phantom exec`; runtime credential delivery depends on the separately qualified installed interface.
 
-The swap/rollback feature in v0.2 was the other unlock. Being able to say "move
-this project from Supabase to Neon" and have the secrets, env references, and
-`.stack.toml` all update atomically is the thing that makes Stack feel like a
-control plane rather than a one-shot provisioning script.
+Swap is a setup-and-cleanup workflow, not an atomic migration or rollback system. Verify target configuration and application behavior, preserve backups, and inspect old-service cleanup results.

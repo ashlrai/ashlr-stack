@@ -38,7 +38,8 @@ describe("api-key provider login — invalid cached token warning", () => {
 
   beforeEach(() => {
     // Seed the vault so the provider's login() finds a cached token to reject.
-    h = setupFakePhantom({ TEST_PROVIDER_KEY: RAW_TOKEN });
+    // Legacy headless reveal: real Phantom 0.7.9 never lets Stack read it back.
+    h = setupFakePhantom({ TEST_PROVIDER_KEY: RAW_TOKEN }, { legacyHeadlessReveal: true });
     realFetch = globalThis.fetch;
   });
 

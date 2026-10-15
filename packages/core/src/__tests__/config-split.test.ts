@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { parse as parseToml } from "smol-toml";
 import {
   CONFIG_FILENAME,
   LOCAL_FILENAME,
@@ -134,5 +135,207 @@ default = true
     const shape = readFileSync(join(cwd, CONFIG_FILENAME), "utf-8");
     expect(shape).not.toContain("stk_migrate");
     expect(shape).toContain("OPENAI_API_KEY");
+  });
+});
+
+describe("public config reference matches produced data", () => {
+  let cwd: string;
+  let registry: string;
+  let previousRegistryDir: string | undefined;
+
+  beforeEach(() => {
+    cwd = mkdtempSync(join(tmpdir(), "stack-schema-config-"));
+    registry = mkdtempSync(join(tmpdir(), "stack-schema-registry-"));
+    previousRegistryDir = process.env.STACK_REGISTRY_DIR;
+    process.env.STACK_REGISTRY_DIR = registry;
+  });
+
+  afterEach(() => {
+    if (previousRegistryDir === undefined)
+      Reflect.deleteProperty(process.env, "STACK_REGISTRY_DIR");
+    else process.env.STACK_REGISTRY_DIR = previousRegistryDir;
+    rmSync(cwd, { recursive: true, force: true });
+    rmSync(registry, { recursive: true, force: true });
+  });
+
+  function reference() {
+    return JSON.parse(
+      readFileSync(new URL("../../../site/public/openapi.json", import.meta.url), "utf-8"),
+    ).components.schemas;
+  }
+
+  // These are field-coverage checks on actual serialized/merged values, not a
+  // JSON Schema validator or a claim that readConfig validates arbitrary input.
+  function expectDocumentedFields(
+    value: object,
+    schema: { properties: object; required?: string[] },
+  ) {
+    for (const key of Object.keys(value)) expect(schema.properties).toHaveProperty(key);
+    for (const key of schema.required ?? []) expect(value).toHaveProperty(key);
+  }
+
+  function expectTable(value: unknown): asserts value is Record<string, unknown> {
+    if (typeof value !== "object" || value === null || Array.isArray(value)) {
+      throw new Error("Expected a parsed TOML table in the synthetic config fixture.");
+    }
+  }
+
+  test("StackToml describes the parsed committed output of a blank write", async () => {
+    await writeConfig(emptyConfig(), cwd);
+    const shape = parseToml(readFileSync(join(cwd, CONFIG_FILENAME), "utf-8"));
+    const schema = reference().StackToml;
+
+    expectDocumentedFields(shape, schema);
+    expect(Object.keys(shape)).toEqual(["stack", "services", "environments"]);
+    expect(schema.required).toEqual(Object.keys(shape));
+    expect(schema.properties.stack.properties.version.type).toBe("string");
+    expect(schema.properties).not.toHaveProperty("version");
+    expect(schema.properties).not.toHaveProperty("project");
+    expect(shape.stack).toEqual({ version: "1" });
+    expect(shape.services).toEqual({});
+    expect(shape.environments).toEqual([{ name: "dev", default: true }]);
+  });
+
+  test("committed service fields stay separate from the full merged ServiceEntry", async () => {
+    const config = emptyConfig("fixture-template");
+    const metadata = { note: "synthetic metadata", nested: { enabled: true } };
+    config.services.primary = {
+      provider: "supabase",
+      resource_id: "fixture-resource",
+      region: "fixture-region",
+      secrets: ["FIXTURE_URL"],
+      mcp: "fixture-mcp",
+      meta: metadata,
+      created_at: "fixture-time",
+      created_by: "fixture-owner",
+    };
+    await writeConfig(config, cwd);
+    const shape = parseToml(readFileSync(join(cwd, CONFIG_FILENAME), "utf-8"));
+    const local = parseToml(readFileSync(join(cwd, LOCAL_FILENAME), "utf-8"));
+    const merged = await readConfig(cwd);
+    const schemas = reference();
+    const committed = schemas.StackToml.properties.services.additionalProperties;
+    expectTable(shape.services);
+    expectTable(shape.services.primary);
+
+    expect(committed).not.toHaveProperty("$ref");
+    expectDocumentedFields(shape.services.primary, committed);
+    expect(committed.required).toEqual(["provider", "secrets"]);
+    expect(Object.keys(committed.properties)).toEqual(["provider", "secrets", "mcp"]);
+    expect(shape.services).toEqual({
+      primary: { provider: "supabase", secrets: ["FIXTURE_URL"], mcp: "fixture-mcp" },
+    });
+    expect(local.stack).toEqual({ project_id: config.stack.project_id });
+    expect(local.services).toEqual({
+      primary: {
+        resource_id: "fixture-resource",
+        region: "fixture-region",
+        meta: metadata,
+        created_at: "fixture-time",
+        created_by: "fixture-owner",
+      },
+    });
+    expect(merged.services.primary).toEqual(config.services.primary);
+    expectDocumentedFields(merged.services.primary, schemas.ServiceEntry);
+    expect(schemas.ServiceEntry.required).toEqual(["provider", "secrets", "created_at"]);
+    expect(schemas.ServiceEntry.properties.created_at).not.toHaveProperty("format");
+    expect(schemas.ServiceEntry.properties.meta.type).toBe("object");
+    expect(schemas.ServiceEntry.properties.secrets.items.type).toBe("string");
+    expectDocumentedFields(merged.stack, {
+      properties: { version: {}, project_id: {}, template: {} },
+    });
+  });
+
+  test("merged entry documentation covers actual instances independently of the committed subset", async () => {
+    const config = emptyConfig();
+    config.services.custom_slot = {
+      provider: "neon",
+      secrets: [],
+      resource_id: "opaque-fixture-id",
+      meta: { arbitrary: "not a credential fixture" },
+      created_at: "not-a-date-validator",
+    };
+    await writeConfig(config, cwd);
+    const merged = await readConfig(cwd);
+    const schema = reference().ServiceEntry;
+
+    expectDocumentedFields(merged.services.custom_slot, schema);
+    expect(schema.properties.resource_id.type).toBe("string");
+    expect(schema.properties.meta.type).toBe("object");
+    expect(schema.properties.created_at.type).toBe("string");
+    expect(merged.services.custom_slot.secrets).toEqual([]);
+    expect(merged.services.custom_slot.mcp).toBeUndefined();
+  });
+
+  test("the writer preserves other version strings and an empty environments array", async () => {
+    const config = emptyConfig();
+    config.stack.version = "fixture-future-version";
+    config.environments = [];
+    config.services.first = { provider: "neon", secrets: [], created_at: "fixture" };
+    config.services.second = { provider: "neon", secrets: [], created_at: "fixture" };
+    await writeConfig(config, cwd);
+    const shape = parseToml(readFileSync(join(cwd, CONFIG_FILENAME), "utf-8"));
+    const schema = reference().StackToml;
+
+    expect(shape.stack).toEqual({ version: "fixture-future-version" });
+    expect(shape.environments).toEqual([]);
+    expect(shape.services).toEqual({
+      first: { provider: "neon", secrets: [] },
+      second: { provider: "neon", secrets: [] },
+    });
+    expect(schema.properties.stack.properties.version.type).toBe(typeof config.stack.version);
+    expect(schema.properties.stack.properties.version).not.toHaveProperty("const");
+    expect(schema.properties.stack.properties.version).not.toHaveProperty("enum");
+    expect(schema.properties.environments.type).toBe("array");
+    expect(schema.properties.environments).not.toHaveProperty("minItems");
+    expect((await readConfig(cwd)).environments).toEqual([{ name: "dev", default: true }]);
+  });
+
+  test("environment documentation covers actual overrides without enforcing one default", async () => {
+    const config = emptyConfig();
+    config.environments = [
+      { name: "one", default: true, overrides: { FIXTURE_URL: "_ONE" } },
+      { name: "two", default: true },
+    ];
+    await writeConfig(config, cwd);
+    const merged = await readConfig(cwd);
+    const schema = reference().StackToml.properties.environments.items;
+
+    expect(merged.environments).toEqual(config.environments);
+    for (const entry of merged.environments) expectDocumentedFields(entry, schema);
+    expect(schema.required).toEqual(["name"]);
+    expect(schema.properties.name.type).toBe("string");
+    expect(schema.properties.default.type).toBe("boolean");
+    expect(schema.properties.overrides.additionalProperties.type).toBe("string");
+  });
+
+  test("normal defaults and legacy precedence remain distinct from canonical file documentation", async () => {
+    writeFileSync(
+      join(cwd, CONFIG_FILENAME),
+      '[stack]\nversion = "fixture"\n[services.item]\nprovider = "neon"\nsecrets = []\nregion = "ignored-shape-region"\n',
+    );
+    writeFileSync(
+      join(cwd, LOCAL_FILENAME),
+      '[stack]\nproject_id = "fixture-local"\n[services.item]\nregion = "local-region"\n',
+    );
+    const normal = await readConfig(cwd);
+    expect(normal.stack.project_id).toBe("fixture-local");
+    expect(normal.services.item.region).toBe("local-region");
+    expect(normal.services.item.created_at).toBe("1970-01-01T00:00:00Z");
+    expect(normal.environments).toEqual([{ name: "dev", default: true }]);
+
+    writeFileSync(
+      join(cwd, CONFIG_FILENAME),
+      'environments = []\n[stack]\nversion = "fixture"\nproject_id = "fixture-legacy"\n[services.item]\nresource_id = "legacy-resource"\n',
+    );
+    const legacy = await readConfig(cwd);
+    expect(legacy.stack.project_id).toBe("fixture-legacy");
+    expect(legacy.services.item.provider).toBe("item");
+    expect(legacy.services.item.secrets).toEqual([]);
+    expect(legacy.services.item.resource_id).toBe("legacy-resource");
+    expect(legacy.services.item.region).toBeUndefined();
+    expect(legacy.environments).toEqual([]);
+    expect(legacy.services.item.created_at).not.toBe("1970-01-01T00:00:00Z");
+    expect(readFileSync(join(cwd, LOCAL_FILENAME), "utf-8")).toContain("fixture-local");
   });
 });

@@ -6,7 +6,7 @@ import { MCP_TOOLS, MCP_RESOURCES } from "~/lib/mcp-ref";
 
 <Docs
   title="MCP integration"
-  description="Stack ships as an MCP server. Any LLM editor that speaks MCP — Claude Code, Cursor, Windsurf, Zed — can drive Stack directly from a chat."
+  description="Configure Stack's stdio MCP server, inspect its CLI tools, and understand the provider configuration it writes."
   eyebrow="Integrations"
 >
   <h2>Two directions of MCP</h2>
@@ -17,43 +17,51 @@ import { MCP_TOOLS, MCP_RESOURCES } from "~/lib/mcp-ref";
   <ul>
     <li>
       <strong>Producer:</strong> Stack itself is an MCP server
-      (<code>ashlr-stack-mcp</code>). It exposes {MCP_TOOLS.length} tools so
-      an LLM editor can call <code>stack add</code>, <code>stack doctor</code>,
-      etc. without a terminal.
+      (<code>ashlr-stack-mcp</code>). The source declares {MCP_TOOLS.length} tools,
+      a subset of CLI commands, including <code>stack add</code> and
+      <code>stack doctor</code>.
     </li>
     <li>
       <strong>Consumer:</strong> When you <code>stack add</code> a service that
       has its own MCP server (Supabase, PostHog, Sentry, GitHub, Linear), Stack
-      merges that server's config into your project's <code>.mcp.json</code> so
-      the same editor can reach into the service.
+      may merge that server's configuration into your project's <code>.mcp.json</code>.
+      An entry alone does not establish usable credentials or a loaded client.
     </li>
   </ul>
 
   <h2>Installing Stack as an MCP server</h2>
   <p>
-    The simplest path is the <strong>Claude Code plugin</strong>, which also
-    registers slash commands:
+    The repository includes a <strong>Claude Code plugin</strong>. In Claude Code,
+    add the marketplace and install its Stack plugin:
   </p>
 
   <Code
-    code={`claude plugin install ashlrai/ashlr-stack`}
+    code={`/plugin marketplace add ashlrai/ashlr-stack
+/plugin install stack@ashlr`}
     lang="bash"
     theme="github-dark-dimmed"
   />
 
   <p>
-    Or wire it by hand. The server is a stdio MCP binary; add it to your
-    editor's MCP config:
+    Or configure the stdio server in your MCP client. It also needs the
+    <code>stack</code> CLI on PATH, or an absolute CLI path in <code>STACK_BIN</code>.
+    The dual-package example below supplies both commands through <code>npx</code>.
   </p>
 
-  <h3>Claude Code (or any global <code>.mcp.json</code>)</h3>
+  <p>
+    Published CLI and MCP packages are currently <code>0.1.1</code> and require
+    <strong>Bun 1.2 or newer</strong> on PATH, including when installed through
+    npm or launched with npx. This reference describes source <code>0.2.1</code>,
+    which is not a published-version claim. The example pins those public versions; check the tools advertised by your installed server.
+  </p>
+
+  <h3>Example stdio configuration</h3>
   <Code
     code={`{
   "mcpServers": {
     "ashlr-stack": {
       "command": "npx",
-      "args": ["-y", "ashlr-stack-mcp"],
-      "env": {}
+      "args": ["-y", "-p", "@ashlr/stack@0.1.1", "-p", "ashlr-stack-mcp@0.1.1", "ashlr-stack-mcp"]
     }
   }
 }`}
@@ -61,31 +69,36 @@ import { MCP_TOOLS, MCP_RESOURCES } from "~/lib/mcp-ref";
     theme="github-dark-dimmed"
   />
 
-  <h3>Cursor</h3>
+  <h3>Client configuration</h3>
   <p>
-    Cursor reads the same <code>.mcp.json</code> format. Drop the snippet above
-    into <code>~/.cursor/mcp.json</code> or your project-level one.
+    Claude Code, Cursor, Windsurf and Zed have their own configuration locations
+    and formats. Adapt the stdio command and arguments to your client's MCP settings;
+    this JSON example does not define a universal global config file.
   </p>
 
-  <h3>Windsurf / Zed</h3>
+  <h3>Project selection</h3>
   <p>
-    Both editors speak MCP via <code>stdio</code>; use the same{" "}
-    <code>command</code>/<code>args</code> shape in their config.
+    Stack uses the server process's working directory. Confirm that your client
+    launches it in the intended project; the snippet does not set that directory.
   </p>
 
   <div class="callout">
-    <strong>Already have <code>stack</code> on PATH?</strong> You can skip the
-    <code>npx</code> shim and just use <code>"command": "stack-mcp"</code>.
-    Stack resolves the CLI path via <code>$STACK_BIN</code> if you need to
-    point at a non-standard install.
+    <strong>Already have both commands installed?</strong> With
+    <code>ashlr-stack-mcp</code> and <code>stack</code> on PATH, you can use
+    <code>"command": "ashlr-stack-mcp"</code> directly.
+    <code>STACK_BIN</code> overrides the CLI path; it does not install the CLI
+    or select the project directory.
   </div>
 
   <h2>Tools — <code>{MCP_TOOLS.length}</code> total</h2>
   <p>
-    Every tool below maps 1:1 to a CLI command. The server spawns{" "}
+    The table describes the reviewed source contract; installed versions may differ.
+    Check the tools your server actually advertises. Each declared tool dispatches
+    CLI arguments from its input schema. The server spawns{" "}
     <code>stack &lt;args&gt;</code> with <code>NO_COLOR=1</code> and{" "}
-    <code>CI=1</code> so output is clean for LLM consumption, then returns
-    stdout (and stderr on errors) as text content.
+    <code>CI=1</code>. It returns stdout and any nonempty stderr as text, with
+    <code>isError</code> reflecting command completion. The server is a control plane,
+    not a sandbox or redaction layer; results are not universally JSON.
   </p>
 
   {MCP_TOOLS.map((tool) => (
@@ -129,8 +142,10 @@ import { MCP_TOOLS, MCP_RESOURCES } from "~/lib/mcp-ref";
 
   <h2>Resources</h2>
   <p>
-    Stack's MCP server also exposes three read-only resources so the editor
-    can inspect the current project without a tool call:
+    Up to three read-only resources are advertised when their files exist in the
+    server's working directory. Reads return the file text. Confirm the intended
+    project and inspect private configuration before exposing it; read-only does
+    not mean redacted:
   </p>
 
   {MCP_RESOURCES.map((r) => (
@@ -146,9 +161,9 @@ import { MCP_TOOLS, MCP_RESOURCES } from "~/lib/mcp-ref";
 
   <h2>Provider-side MCP servers</h2>
   <p>
-    Several providers register their own MCP server when you <code>stack add</code>
-    them. The entry is merged into your project's <code>.mcp.json</code>, so
-    the same Claude / Cursor session can talk to the service directly:
+    Several provider adapters may emit MCP entries during <code>stack add</code>.
+    The table describes source configuration merged into <code>.mcp.json</code>,
+    not verified installed packages, reachable endpoints or client acceptance:
   </p>
 
   <table>
@@ -156,7 +171,7 @@ import { MCP_TOOLS, MCP_RESOURCES } from "~/lib/mcp-ref";
       <tr>
         <th>Provider</th>
         <th>MCP transport</th>
-        <th>What it wires</th>
+        <th>Source configuration</th>
       </tr>
     </thead>
     <tbody>
@@ -164,8 +179,9 @@ import { MCP_TOOLS, MCP_RESOURCES } from "~/lib/mcp-ref";
         <td><code>supabase</code></td>
         <td><code>stdio</code> (<code>npx</code>)</td>
         <td>
-          <code>@supabase/mcp-server-supabase</code> pinned to your new project ref,
-          with <code>SUPABASE_ACCESS_TOKEN</code> resolved via Phantom.
+          <code>@supabase/mcp-server-supabase@latest</code> with <code>--project-ref</code>
+          and a literal Phantom reveal placeholder in <code>SUPABASE_ACCESS_TOKEN</code>.
+          The project ref selects a project; <code>@latest</code> is not a package pin.
         </td>
       </tr>
       <tr>
@@ -173,15 +189,15 @@ import { MCP_TOOLS, MCP_RESOURCES } from "~/lib/mcp-ref";
         <td><code>sse</code></td>
         <td>
           <code>mcp.posthog.com/sse</code> with the <code>POSTHOG_PERSONAL_API_KEY</code>
-          piped through Phantom's bearer header.
+          represented by a literal Phantom reveal placeholder in the bearer header.
         </td>
       </tr>
       <tr>
         <td><code>sentry</code></td>
         <td><code>stdio</code> (<code>npx</code>)</td>
         <td>
-          <code>@sentry/mcp-server</code> with <code>SENTRY_AUTH_TOKEN</code> via
-          Phantom and <code>SENTRY_HOST=https://sentry.io</code>.
+          <code>@sentry/mcp-server</code> with a literal Phantom reveal placeholder in
+          <code>SENTRY_AUTH_TOKEN</code> and <code>SENTRY_HOST=https://sentry.io</code>.
         </td>
       </tr>
       <tr>
@@ -189,73 +205,67 @@ import { MCP_TOOLS, MCP_RESOURCES } from "~/lib/mcp-ref";
         <td><code>stdio</code> (<code>npx</code>)</td>
         <td>
           <code>@modelcontextprotocol/server-github</code> with{" "}
-          <code>GITHUB_PERSONAL_ACCESS_TOKEN</code> via Phantom.
+          <code>GITHUB_PERSONAL_ACCESS_TOKEN</code> containing a literal Phantom reveal placeholder.
         </td>
       </tr>
       <tr>
         <td><code>linear</code></td>
         <td><code>stdio</code> (<code>npx</code>)</td>
-        <td><code>mcp-linear</code> with <code>LINEAR_API_KEY</code> via Phantom.</td>
+        <td><code>mcp-linear</code> with a literal Phantom reveal placeholder in <code>LINEAR_API_KEY</code>.</td>
       </tr>
     </tbody>
   </table>
 
   <div class="callout callout-info">
-    <strong>Secrets stay phantom-gated.</strong> Every env var for these MCP
-    servers is resolved via <code>$(phantom reveal …)</code> at spawn time. The
-    agent sees the <em>slot name</em> in <code>.mcp.json</code>, never the
-    real value.
+    <strong>Credential placeholders are literal.</strong> Stack writes strings such as
+    <code>$(phantom reveal NAME)</code> unchanged; this writer supplies no general
+    expansion or credential-resolution step. They do not establish usable credentials
+    or secret-safe agent output. Phantom 0.7.9 retains trusted-terminal and value
+    boundaries. Complete credential setup appropriate to your actual client and provider,
+    then inspect their results separately.
   </div>
 
   <h2>Plugin slash commands</h2>
   <p>
     The <a
-      href="https://github.com/ashlrai/ashlr-stack-plugin"
+      href="https://github.com/ashlrai/ashlr-stack/tree/main/packages/plugin"
       rel="noopener noreferrer"
       target="_blank"
-    >Claude Code plugin</a> adds a handful of slash commands that wrap the most
-    common MCP tool calls with better defaults and prompts:
+    >Claude Code plugin</a> supplies instructions for these six commands to invoke
+    MCP tools. Inspect returned results; these instructions do not guarantee
+    interactive setup or provider success:
   </p>
 
   <ul>
     <li>
-      <code>/stack:add</code> — provision a service from chat, with an
-      interactive picker.
+      <code>/stack:add</code> — request service setup through <code>stack_add</code>.
     </li>
     <li>
-      <code>/stack:doctor</code> — run healthchecks inline, with structured
-      diffs.
+      <code>/stack:doctor</code> — inspect the configured-service health report.
     </li>
     <li>
-      <code>/stack:open</code> — open a service's dashboard from the chat.
+      <code>/stack:list</code>, <code>/stack:status</code> — inspect configured services and status.
     </li>
     <li>
-      <code>/stack:init</code>, <code>/stack:status</code>, <code>/stack:deps</code>
-      — thin wrappers around the obvious commands.
+      <code>/stack:recommend</code>, <code>/stack:apply</code> — retrieve providers and
+      apply a saved recipe.
     </li>
   </ul>
 
-  <h2>Example chat</h2>
+  <h2>Illustrative tool request</h2>
   <p>
-    Here's a real interaction once you have both Stack's MCP server and a
-    provider-side MCP server wired:
+    This is an illustrative source tool request, not a recorded successful interaction.
+    <code>stack_add</code> can contact a provider and create resources; it is not a preview.
+    Inspect returned CLI text, local writes and provider results separately. An emitted
+    MCP entry does not prove that a client loaded it or that its credentials work:
   </p>
 
   <Code
-    code={`You > Can you add Supabase to this project?
-
-Claude > I'll use stack_add to provision a new Supabase project.
-         (calls stack_add with service: "supabase")
-         ● supabase (abcdefghijklmnop) · 3 secrets · mcp wired
-         Done. The new supabase MCP server is now available — want me
-         to create your first table?
-
-You > Yes, users with email + created_at
-
-Claude > (calls the supabase MCP server's execute_sql tool)
-         Created public.users with email (text, unique) and
-         created_at (timestamptz default now()).`}
-    lang="text"
+    code={`{
+  "name": "stack_add",
+  "arguments": { "service": "supabase" }
+}`}
+    lang="json"
     theme="github-dark-dimmed"
   />
 </Docs>
