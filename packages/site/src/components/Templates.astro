@@ -94,8 +94,8 @@ const templates: Template[] = TEMPLATES.map((t) => ({
     <TemplateExplorer templates={templates} client:visible />
   </div>
 
-  <div class="mt-8 flex items-center gap-3 text-sm text-[color:var(--color-ink-400)]">
-    <span class="w-1 h-1 rounded-full bg-[color:var(--color-ink-500)]"></span>
+  <div class="mt-8 break-words text-sm text-[color:var(--color-ink-400)]">
+    <span class="inline-block w-1 h-1 mr-3 align-middle rounded-full bg-[color:var(--color-ink-500)]"></span>
     Don't see your stack? In an interactive terminal, <code class="mono text-[color:var(--color-ink-200)]">stack init</code> offers blank or a starter template. Choosing a template attempts setup for its listed services by default; use <code class="mono text-[color:var(--color-ink-200)]">--noProvision</code> with a template to write config only.
   </div>
 </section>
