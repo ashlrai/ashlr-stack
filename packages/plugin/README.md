@@ -1,27 +1,26 @@
 # ashlr-stack (Claude Code plugin)
 
-Thin Claude Code plugin that registers the `ashlr-stack` MCP server and a handful of slash commands:
+Thin Claude Code plugin with six slash-command files and an MCP entrypoint:
 
-- `/stack:add <service>` — provision and wire a new service
+- `/stack:add <service>` — run one provider setup, creating or attaching as its adapter supports
 - `/stack:list` — show configured services
-- `/stack:status` — health + Phantom + services at a glance
-- `/stack:doctor` — verify every service is reachable
-- `/stack:recommend <query>` — AI picks providers for a goal and saves a reusable recipe
-- `/stack:apply <recipe-id>` — provision every provider in a recipe and wire secrets
+- `/stack:status` — inspect local Stack and Phantom metadata
+- `/stack:doctor` — report available provider checks and unchecked services
+- `/stack:recommend <query>` — retrieve catalog matches and save a reusable recipe
+- `/stack:apply <recipe-id>` — replay provider setup and attempt optional wiring; inspect failures
 
 The plugin wraps the `ashlr-stack-mcp` server, which in turn shells out to the `stack` CLI. The CLI is the canonical implementation.
 
 ## Install
 
 ```bash
-# Install the CLI first (provides `stack` on PATH)
-npm i -g @ashlr/stack
-
-# Optional global MCP binary (faster than bun-run-from-source)
-npm i -g ashlr-stack-mcp
+# Illustrative public 0.1.1 package setup; requires Bun 1.2+
+# Installs the CLI and separate stdio server, not provider accounts
+npm i -g @ashlr/stack@0.1.1 ashlr-stack-mcp@0.1.1
 
 # Then inside Claude Code:
-/plugin install ashlr-stack
+/plugin marketplace add ashlrai/ashlr-stack
+/plugin install stack@ashlr
 ```
 
 ## Architecture
@@ -34,4 +33,4 @@ ashlr-stack MCP server  ──spawn──►  stack CLI  ──spawn──►  p
          (stdio)                   (TypeScript)            (Rust)
 ```
 
-All three are shipped under the Ashlr brand and compose cleanly.
+The server inherits its working directory and forwards CLI output as MCP text. Configure the intended project directory and check the actual client tool list. The recorded public packages are 0.1.1; reviewed source 0.2.1 and historical native release 0.2.0 are separate artifacts. Plugin installation is not provider, credential or installed-runtime acceptance.

@@ -105,7 +105,7 @@ The following examples are a subset. This source registers 39 providers across 1
 - `stack sync --platform <vercel|railway|fly>` — push through Phantom to a configured deployment target.
 - `stack projects list` — every project on this machine that uses Stack.
 - `stack deps` — show provider dependency graph.
-- `stack ci init` — write a workflow template; review runtime and credential requirements before enabling it.
+- `stack ci init` — currently exits nonzero without writing or overwriting a workflow; `--force` is a compatibility flag, not permission to generate one.
 - `stack login <provider>` — explicitly refresh credentials for that provider; no registered logout command.
 - `stack upgrade` — check registry metadata and print an update hint; it does not install the update.
 - `stack completion <shell>` — emit shell completions (bash, zsh, fish).

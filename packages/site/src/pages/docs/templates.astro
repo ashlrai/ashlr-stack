@@ -9,7 +9,7 @@ const pageUrl = `${SITE_URL}/docs/templates/`;
 
 const templateList = itemListSchema({
   name: "Ashlr Stack starter templates",
-  description: `${TEMPLATES_REF.length} opinionated starter stacks Stack can scaffold and provision with one command.`,
+  description: `${TEMPLATES_REF.length} source starter configurations; selected template setup may create or attach provider resources.`,
   itemListOrder: "Unordered",
   url: pageUrl,
   items: TEMPLATES_REF.map((t) => ({
@@ -31,7 +31,7 @@ const templateList = itemListSchema({
 
 <Docs
   title="Templates"
-  description={`${TEMPLATES_REF.length} opinionated starter stacks. Pick one and \`stack init --template <name>\` writes the \`.stack.toml\`; \`stack templates apply <name>\` runs \`stack add\` for every service.`}
+  description={`${TEMPLATES_REF.length} source starter configurations. Template init writes split config and attempts provider setup by default; use --noProvision to inspect config first.`}
   eyebrow="Reference"
   extraSchemas={[templateList]}
 >
@@ -50,21 +50,23 @@ const templateList = itemListSchema({
   <ul>
     <li>
       <code>stack init --template &lt;name&gt;</code> — writes the
-      <code>.stack.toml</code> but doesn't provision anything yet. Useful when
-      you want to inspect what you're about to create.
+      <code>.stack.toml</code> and local instance file, then attempts provider
+      setup by default. Add <code>--noProvision</code> to write config without
+      running the provider setup loop.
     </li>
     <li>
       <code>stack templates apply &lt;name&gt;</code> — actually runs through
-      every <code>stack add</code>. Needs Phantom and live creds for each
-      provider.
+      the setup loop for eligible entries. Needs the installed Phantom setup
+      and provider access; inspect reported skips, failures and partial writes.
     </li>
   </ul>
 
   <div class="callout">
     <strong>Continue on error:</strong> By default{" "}
     <code>stack templates apply</code> keeps going when a single service fails
-    (e.g. you skipped Sentry OAuth). Pass{" "}
-    <code>--continueOnError=false</code> to bail on the first failure.
+    (e.g. a provider refuses setup). Review{" "}
+    <code>stack templates apply --help</code> for your installed interface and
+    inspect every reported result.
   </div>
 
   <h2>The five starters</h2>
@@ -83,10 +85,10 @@ const templateList = itemListSchema({
             <span class="text-magenta-400">{t.services.length}</span> services
           </span>
           <span class="inline-flex items-center gap-1 text-[11px] text-ink-400 px-2 py-1 rounded border border-white/[0.06] bg-white/[0.02] mono">
-            <span class="text-magenta-400">{totalSecrets}</span> secrets
+            <span class="text-magenta-400">{totalSecrets}</span> declared slots
           </span>
           <span class="inline-flex items-center gap-1 text-[11px] text-ink-400 px-2 py-1 rounded border border-white/[0.06] bg-white/[0.02] mono">
-            <span class="text-cyan-300">{mcpCount}</span> MCP server{mcpCount === 1 ? "" : "s"}
+            <span class="text-cyan-300">{mcpCount}</span> MCP declaration{mcpCount === 1 ? "" : "s"}
           </span>
           <span class="inline-flex items-center gap-1 text-[11px] text-ink-400 px-2 py-1 rounded border border-white/[0.06] bg-white/[0.02] mono">
             envs: {t.environments.join(", ")}
@@ -143,8 +145,8 @@ const templateList = itemListSchema({
           code={`# inside a fresh project directory
 stack templates apply ${t.name}
 
-# or: write .stack.toml first, then add services one at a time
-stack init --template ${t.name}`}
+# or: write split config without provider setup, then inspect it
+stack init --template ${t.name} --noProvision`}
           lang="bash"
           theme="github-dark-dimmed"
         />

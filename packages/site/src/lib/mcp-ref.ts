@@ -2,7 +2,7 @@
  * MCP tool reference — mirrors `packages/mcp/src/server.ts` `TOOLS`.
  *
  * Stack ships an MCP server that exposes the CLI as a set of tools any
- * MCP-capable LLM client (Claude Code, Cursor, Windsurf, Zed) can call.
+ * configured MCP-capable client may request; CLI/runtime/cwd setup is separate.
  * Each entry below is one tool.
  */
 
@@ -42,7 +42,8 @@ export const MCP_TOOLS: McpTool[] = [
   },
   {
     name: "stack_import",
-    description: "Import an existing .env file into Phantom + .stack.toml.",
+    description:
+      "Import nonempty new variables from an .env file into Phantom and record detected services; existing vault names are left unchanged.",
     inputs: [
       { name: "from", type: "string", description: "Path to the .env file (default: .env)." },
       { name: "dryRun", type: "boolean", description: "Preview without writing." },
@@ -65,7 +66,8 @@ export const MCP_TOOLS: McpTool[] = [
   },
   {
     name: "stack_add",
-    description: "Provision a service and wire its secrets + MCP entry.",
+    description:
+      "Run provider-specific service setup or attach an existing resource, then record returned secret slots and optional MCP configuration. Credentials and client/provider acceptance must be checked separately.",
     inputs: [
       {
         name: "service",
@@ -80,7 +82,7 @@ export const MCP_TOOLS: McpTool[] = [
   {
     name: "stack_remove",
     description:
-      "Remove local service configuration, declared vault entries and its MCP entry. This command does not delete upstream resources.",
+      "Remove local service configuration and its MCP entry, and attempt Phantom secret cleanup. Upstream resources are kept; headless cleanup or refused confirmation can leave secrets stored.",
     inputs: [
       { name: "service", type: "string", required: true, description: "Service name." },
       {
@@ -126,7 +128,7 @@ export const MCP_TOOLS: McpTool[] = [
   {
     name: "stack_doctor",
     description:
-      "Inspect the configured-service health report. --fix attempts supported remediation; existing vault names can cause repairs to be skipped, and name presence is not credential validity.",
+      "Inspect the configured-service health report. --fix attempts supported remediation; stored vault names can cause repairs to be skipped, and name presence is not credential validity.",
     inputs: [
       { name: "fix", type: "boolean", description: "Attempt auto-remediation." },
       { name: "all", type: "boolean", description: "Run across every registered project." },
@@ -136,7 +138,8 @@ export const MCP_TOOLS: McpTool[] = [
   },
   {
     name: "stack_sync",
-    description: "Push secrets to a deployment platform (via phantom sync).",
+    description:
+      "Forward a deployment-platform sync request to phantom sync; inspect the installed Phantom command support and result separately.",
     inputs: [
       {
         name: "platform",
@@ -149,7 +152,8 @@ export const MCP_TOOLS: McpTool[] = [
   },
   {
     name: "stack_providers",
-    description: "List every curated provider Stack can wire up (grouped by category).",
+    description:
+      "List the curated source provider catalog by category; inclusion does not attest complete provisioning or active credentials.",
     inputs: [],
     cli: "stack providers",
   },
@@ -181,7 +185,7 @@ export const MCP_TOOLS: McpTool[] = [
   {
     name: "stack_recommend",
     description:
-      "Free-text → curated providers. Given a natural-language brief (e.g. 'B2B SaaS with auth, AI, and payments'), returns scored hits + a per-category ranking. Pass save:true to freeze as a Recipe and follow up with stack_apply.",
+      "Retrieve scored curated-provider matches and per-category ranking for a query. save:true writes a Recipe for a later stack_apply request. The CLI JSON payload is forwarded as text; this tool does not request LLM inference.",
     inputs: [
       {
         name: "query",
@@ -198,7 +202,7 @@ export const MCP_TOOLS: McpTool[] = [
         name: "category",
         type: "string",
         description:
-          "Optional filter to a single category (Database, Deploy, Cloud, AI, Analytics, Errors, Payments, Code, Tickets, Email, Auth).",
+          "Optional filter to a source catalog category: Database, Deploy, Cloud, AI, Analytics, Observability, Errors, Payments, Code, Tickets, Email, Auth, FeatureFlags. The server input is a string, not an enforced enum.",
       },
       {
         name: "save",
@@ -211,7 +215,7 @@ export const MCP_TOOLS: McpTool[] = [
   {
     name: "stack_apply",
     description:
-      "Apply a saved Recipe through provider setup, then attempt optional Phantom wiring and write webhook stubs. Inspect failures and skips; working rotation is not established. no_wire:true skips the optional layer.",
+      "Apply a saved Recipe through provider setup, then attempt optional Phantom wiring and write webhook stubs. Inspect failures and skips; working rotation is not established. no_wire:true skips the optional layer, not provider credential writes.",
     inputs: [
       {
         name: "recipe_id",
@@ -241,20 +245,22 @@ export const MCP_RESOURCES: McpResource[] = [
   {
     uri: "stack://current/.stack.toml",
     name: ".stack.toml (this project)",
-    description: "Current project stack configuration text; Git commit state is not verified.",
+    description:
+      "Project configuration text when the file exists in server cwd; Git commit state is not verified and reads are not redacted.",
     mimeType: "application/toml",
   },
   {
     uri: "stack://current/.stack.local.toml",
     name: ".stack.local.toml (local instance)",
     description:
-      "Local instance data (resource ids, project_id); inspect contents and project ignore rules before exposing it.",
+      "Local instance data when the file exists in server cwd; inspect contents and project ignore rules before exposing raw text.",
     mimeType: "application/toml",
   },
   {
     uri: "stack://current/.mcp.json",
     name: ".mcp.json (MCP wiring)",
-    description: "Currently-wired MCP servers.",
+    description:
+      "MCP configuration text when the file exists in server cwd; client loading and usable credentials are not verified.",
     mimeType: "application/json",
   },
 ];

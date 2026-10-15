@@ -60,7 +60,7 @@
     },
     {
       "name": "stack_add",
-      "description": "Provision a service and wire its secrets + MCP entry.",
+      "description": "Run provider-specific service setup or attach an existing resource, then record returned secret slots and optional MCP configuration. Credentials and client/provider acceptance must be checked separately.",
       "cli": "stack add <service> [--use <id>]",
       "inputSchema": {
         "type": "object",
@@ -136,7 +136,7 @@
     },
     {
       "name": "stack_sync",
-      "description": "Push secrets to a deployment platform (via phantom sync).",
+      "description": "Forward a deployment-platform sync request to phantom sync; inspect the installed Phantom command support and result separately.",
       "cli": "stack sync --platform <name>",
       "inputSchema": {
         "type": "object",
@@ -148,7 +148,7 @@
     },
     {
       "name": "stack_providers",
-      "description": "List every curated provider Stack can wire up (grouped by category).",
+      "description": "List the curated source provider catalog by category; inclusion does not attest complete provisioning or active credentials.",
       "cli": "stack providers",
       "inputSchema": { "type": "object", "properties": {}, "required": [] }
     },
@@ -178,7 +178,7 @@
     },
     {
       "name": "stack_recommend",
-      "description": "Given a free-text description of what the user is building (e.g. 'B2B SaaS with auth, AI, and payments'), return a structured list of the most relevant curated providers with scores, matched terms, and per-category ranking. Pass save:true to also persist a Recipe to .stack/recipes/<id>.toml so you (Claude) can follow up with stack_apply. Retrieval-only — no LLM inference happens here.",
+      "description": "Retrieve scored curated-provider matches and per-category ranking for a query. save:true writes a Recipe for a later stack_apply request. The CLI JSON payload is forwarded as text; this tool does not request LLM inference.",
       "cli": "stack recommend \"<query>\" --json [--k <n>] [--category <name>] [--save]",
       "inputSchema": {
         "type": "object",
@@ -193,7 +193,7 @@
           },
           "category": {
             "type": "string",
-            "description": "Optional filter to a single category: Database, Deploy, Cloud, AI, Analytics, Errors, Payments, Code, Tickets, Email, Auth."
+            "description": "Optional filter to a source catalog category: Database, Deploy, Cloud, AI, Analytics, Observability, Errors, Payments, Code, Tickets, Email, Auth, FeatureFlags. The server input is a string, not an enforced enum."
           },
           "save": {
             "type": "boolean",

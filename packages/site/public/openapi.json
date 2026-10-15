@@ -297,12 +297,12 @@
       "get": {
         "tags": ["meta"],
         "operationId": "stack_ci",
-        "summary": "Scaffold CI integrations that run `stack doctor` on pushes + nightly.",
+        "summary": "Inspect CI health workflow availability.",
         "parameters": [
           { "name": "sub", "in": "query", "schema": { "type": "string", "enum": ["init"], "default": "init" }, "description": "Subcommand." },
-          { "name": "force", "in": "query", "schema": { "type": "boolean", "default": false }, "description": "Overwrite an existing stack-ci.yml." }
+          { "name": "force", "in": "query", "schema": { "type": "boolean", "default": false }, "description": "Compatibility flag; generation is unavailable and no workflow is overwritten." }
         ],
-        "responses": { "200": { "description": "Workflow file written." } }
+        "responses": { "200": { "description": "Command reference only. CI health workflow generation is unavailable; ci init refuses without writing a workflow." } }
       }
     },
     "/cli/recommend": {
@@ -314,7 +314,21 @@
         "parameters": [
           { "name": "query", "in": "query", "schema": { "type": "string" }, "description": "Free-text description (positional in the CLI; omit for usage hint)." },
           { "name": "k", "in": "query", "schema": { "type": "integer", "default": 6 }, "description": "Max top-level hits to return." },
-          { "name": "category", "in": "query", "schema": { "type": "string", "enum": ["Database", "Deploy", "Cloud", "AI", "Analytics", "Errors", "Payments", "Code", "Tickets", "Email", "Auth"] }, "description": "Restrict to a single category." },
+          { "name": "category", "in": "query", "schema": { "type": "string", "enum": [
+  "Database",
+  "Deploy",
+  "Cloud",
+  "AI",
+  "Analytics",
+  "Observability",
+  "Errors",
+  "Payments",
+  "Code",
+  "Tickets",
+  "Email",
+  "Auth",
+  "FeatureFlags"
+] }, "description": "Restrict to a single category." },
           { "name": "json", "in": "query", "schema": { "type": "boolean", "default": false }, "description": "Machine-readable JSON output." },
           { "name": "save", "in": "query", "schema": { "type": "boolean", "default": false }, "description": "Freeze the result to .stack/recipes/<id>.toml for later `stack apply`." },
           { "name": "synth", "in": "query", "schema": { "type": "boolean", "default": false }, "description": "Call a local SLM to synthesize rationales. Falls back to retrieval-only if no endpoint is reachable." }

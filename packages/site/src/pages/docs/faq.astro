@@ -11,22 +11,22 @@ const faq = faqPageSchema(
     {
       question: "Is this production-ready?",
       answer:
-        "No — Stack is v0.1, pre-alpha. Interfaces are still moving, error messages are still being hardened, and some providers have paste-a-token fallbacks because their OAuth apps aren't registered yet. The data model (two-file .stack.toml split, Phantom-gated secrets, MCP wiring) is stable. The CLI surface will add commands but won't remove them. Breaking changes will land in the 0.x window and stop at 1.0.",
+        "These docs describe reviewed source 0.2.1, not a new release or production acceptance. Recorded public CLI/MCP packages are 0.1.1; historical native 0.2.0 is separate. Interfaces and provider coverage vary. Check the installed version and help; no future CLI stability or migration guarantee follows from this source.",
     },
     {
       question: "Why is Phantom required?",
       answer:
-        "Because Stack otherwise has nowhere to put your secrets except .env on disk. That's the thing we're specifically trying to avoid. Phantom gives us an encrypted vault, a uniform way to reveal secrets at exec time, and a clean story for syncing secrets to CI. If you have an existing secret manager (1Password, Doppler, Infisical), we'd rather integrate Phantom with it than compete — Phantom Cloud is designed to be the last-mile layer, not the source of truth.",
+        "Real credential-writing workflows use the installed Phantom Secrets interface and project preflight. Stack handles values during setup and records dedicated slot names in config. Phantom configuration, permissions and execution must be verified separately; this integration does not promise universal sync or secrecy.",
     },
     {
       question: "Which providers still fall back to paste-a-token?",
       answer:
-        "Neon, Turso, Vercel, Cloudflare, and Sentry use PAT paste with automated verification. Railway, Fly.io, Render, Upstash, Convex, Linear, Resend, PostHog, Clerk, Stripe, OpenAI, Anthropic, xAI, and DeepSeek use API key paste. Firebase uses a service-account JSON paste. AWS uses an IAM access key pair paste. OAuth (PKCE or device flow) is live today for Supabase and GitHub.",
+        "Most source adapters accept a supplied PAT or API-key input. Supabase has an available OAuth branch and GitHub has a device-flow branch, with fallback requirements. Verification can be a limited endpoint or local structure check; catalog authKind alone is not evidence of account access or every credential.",
     },
     {
       question: "Does Stack touch the internet without asking?",
       answer:
-        "Yes — during stack add (logs into the provider, creates upstream resources, fetches credentials), stack doctor (healthchecks each provider), stack upgrade (pings npm for a newer version), stack login (refreshes OAuth/PAT), stack sync (pushes secrets to Vercel/Railway/Fly), and stack clone (git clone the specified URL, then scans locally). Zero telemetry — Stack never calls home.",
+        "Authorized setup, login, health checks, sync, cloning, optional inference and dependency installation can contact external services. The CLI also starts a version check unless suppressed and can send opted-in telemetry. Review each command and its current configuration; this is not an exhaustive no-network guarantee.",
     },
     {
       question: "What happens if I delete .stack.toml?",
@@ -36,32 +36,32 @@ const faq = faqPageSchema(
     {
       question: "Can I commit .env.local with phm_ tokens?",
       answer:
-        "Technically yes — a phm_ token is a meaningless placeholder without the vault. But we don't recommend it; the community is still learning to recognise Phantom tokens, and a leaked token combined with a leaked passphrase is worse than nothing. Add .env.local to .gitignore and keep the vault story clean.",
+        "Keep env and local-instance files private and review them before sharing. Stack does not establish that phm_ strings or user-supplied metadata are harmless or safe to commit. Export an empty-key .env.example with stack env export --example when you need a shareable starting point.",
     },
     {
       question: "How do I use Stack with a monorepo?",
       answer:
-        "Each .stack.toml is per-project, and most monorepos want one stack per app. Run stack init inside each app directory. The cross-project registry (`stack projects list`) will show each one, and `stack doctor --all` will run healthchecks across the whole machine. Shared secrets stay in one Phantom vault — Phantom is machine-wide, not per-project — so de-duping just works.",
+        "Run commands in the intended app directory. The local projects registry records known registrations and can prune missing entries; it is not an inventory of every project on the machine. Doctor --all covers registered projects and available checks. Shared vault names can collide or be reused; verify ownership and each consumer.",
     },
     {
       question: "What does stack doctor --fix actually do?",
       answer:
-        "For each service with a failing healthcheck, Stack asks before re-running stack add. That may kick off a browser OAuth dance or provision a new resource on your behalf, so we force an interactive confirm. Declining is always safe; the service stays marked as broken and you can fix it by hand.",
+        "It can attempt setup for failed entries after its current checks and confirmations. Existing vault names can cause a repair to be skipped; cached credentials or cleanup may refuse in a noninteractive terminal. Inspect the reported effects and unchecked services. Fix does not rotate dashboard credentials or guarantee complete repair.",
     },
     {
       question: "Why not just use .env files like everyone else?",
       answer:
-        "Nothing stops you. Stack's job is to collapse the 45-minute 'tab-hop to create these 8 services, then copy 20 keys into .env' step into one command. If your project has one API key and no MCPs, you don't need Stack. Stack earns its keep when your stack has 5+ services, two or more have MCP servers worth wiring, or you're onboarding someone new.",
+        "Stack can coordinate repeated provider setup and local configuration, while Phantom handles supported credential persistence. Its value depends on the adapters and consumers you use; it does not automatically populate env files or replace application integration.",
     },
     {
       question: "Can I use a template without its MCP servers?",
       answer:
-        "Yes. Apply the template, then edit .stack.toml and remove the mcp = '…' line for services you don't want Claude/Cursor to reach into. On the next stack add or stack remove, .mcp.json gets regenerated accordingly.",
+        "Use stack init --template <name> --noProvision to inspect config without provider setup. The mcp name in config is metadata; editing it does not regenerate every descriptor. Review the project .mcp.json and client configuration before startup; add/remove only affect entries they actually manage.",
     },
     {
       question: "Where does Stack store OAuth access tokens?",
       answer:
-        "In Phantom, under a per-provider slot name (e.g. SUPABASE_STACK_PAT, GITHUB_TOKEN). That means your provider auth is subject to the same E2E encryption as your application secrets. Clear them with `phantom remove <slot>` if you want to force a fresh OAuth.",
+        "Managed credential persistence uses provider-specific Phantom slot names, such as SUPABASE_STACK_PAT or GITHUB_TOKEN. New setup inputs can be staged, while explicit login stores immediately. Existing values are not automatically overwritten or rotated; use the installed Phantom Secrets guidance for ownership and cleanup.",
     },
     {
       question: "How do I uninstall Stack?",
@@ -86,69 +86,62 @@ const faq = faqPageSchema(
 >
   <h2>Is this production-ready?</h2>
   <p>
-    <strong>No — Stack is v0.1, pre-alpha.</strong> Interfaces are still
-    moving, error messages are still being hardened, and some providers have
-    paste-a-token fallbacks because their OAuth apps aren't registered yet
-    (see below). We use it internally every day and it works end-to-end; we
-    wouldn't recommend it for a team of 50 in its current state.
+    <strong>These docs describe source 0.2.1.</strong> Recorded public CLI/MCP
+    packages are 0.1.1; historical native 0.2.0 is separate. Neither the docs
+    nor a source version establishes production or provider acceptance.
   </p>
   <p>
-    The data model (two-file <code>.stack.toml</code> split, Phantom-gated
-    secrets, MCP wiring) is stable. The CLI surface will add commands but
-    won't remove them. Breaking changes will land in the <code>0.x</code>
-    window and stop at <code>1.0</code>.
+    The two-file <code>.stack.toml</code> format and conditional MCP/credential
+    operations are described in source. Check installed help during the
+    <code>0.x</code> period; no future compatibility policy at <code>1.0</code>
+    is established by these implementations.
   </p>
 
   <h2>Why is Phantom required?</h2>
   <p>
-    Because Stack otherwise has nowhere to put your secrets except{" "}
-    <code>.env</code> on disk. That's the thing we're specifically trying to
-    avoid. Phantom gives us an encrypted vault, a uniform way to reveal
-    secrets at exec time, and a clean story for syncing secrets to CI.
+    Real credential-writing workflows use the installed Phantom interface
+    and project preflight. Stack records dedicated names rather than filling
+    <code>.env</code> files automatically; it still handles values in memory.
   </p>
   <p>
-    If you have an existing secret manager (1Password, Doppler, Infisical),
-    we'd rather integrate Phantom with it than compete — Phantom Cloud is
-    designed to be the last-mile layer, not the source of truth. That work
-    isn't in v1 yet. For now: Phantom on every machine that runs <code>stack add</code>.
+    Phantom configuration, permissions, supported execution and any sync
+    integration need their own setup and verification. Confirm those before
+    real <code>stack add</code> credential operations.
   </p>
 
   <h2>Which providers still fall back to paste-a-token?</h2>
   <p>
-    Registering an OAuth app with a provider takes a week to a month,
-    depending on who answers first. The following providers currently use a
-    <strong>personal-access-token paste</strong> instead of full OAuth:
+    Source adapters use different authentication branches. These include
+    <strong>personal-access-token paste</strong> and key inputs; available
+    verification may check a limited endpoint or only local structure:
   </p>
 
   <ul>
-    <li>Neon, Turso, Vercel, Cloudflare, Sentry — PAT paste with automated verification.</li>
+    <li>Neon, Turso, Vercel, Cloudflare, Sentry — provider-specific PAT inputs and checks.</li>
     <li>Railway, Fly.io, Render, Upstash, Convex, Linear, Resend, PostHog, Clerk, Stripe, OpenAI, Anthropic, xAI, DeepSeek — API key paste.</li>
     <li>Firebase — service-account JSON paste.</li>
     <li>AWS — IAM access key pair paste.</li>
   </ul>
 
   <p>
-    OAuth (PKCE or device flow) is live for <strong>Supabase</strong> and{" "}
-    <strong>GitHub</strong>. Expect steady migration as our OAuth apps get
-    registered with each provider — the API contract for providers is
-    <code>authKind: "api_key" | "pat" | "oauth_pkce" | "oauth_device"</code>,
-    so the CLI surface doesn't change when a provider moves from paste to
-    OAuth.
+    OAuth branches exist in source for <strong>Supabase</strong> and{" "}
+    <strong>GitHub</strong>, with configuration and fallback requirements.
+    Catalog labels such as
+    <code>authKind: "api_key" | "pat" | "oauth_pkce" | "oauth_device"</code>
+    do not prove live account access or future behavior.
   </p>
 
   <h2>Does Stack touch the internet without asking?</h2>
   <p>
-    Yes, during these commands (and only these):
+    These workflows can contact services; this list is not exhaustive:
   </p>
 
   <ul>
     <li>
-      <code>stack add</code> — logs into the provider, creates an upstream
-      resource, fetches credentials.
+      <code>stack add</code> — runs adapter-specific auth, creation or attachment and credential steps.
     </li>
     <li>
-      <code>stack doctor</code> — hits each provider's API to verify the
-      stored credential still works.
+      <code>stack doctor</code> — runs available adapter checks, whose coverage varies.
     </li>
     <li>
       <code>stack upgrade</code> — pings the npm registry to check for a
@@ -167,8 +160,9 @@ const faq = faqPageSchema(
   </ul>
 
   <p>
-    <strong>Zero telemetry.</strong> Stack never calls home. No analytics, no
-    usage pings. Run it with Wireshark open if you want to verify.
+    The CLI also starts a version check unless suppressed, and telemetry
+    can send opted-in command metadata. Optional inference and dependency
+    installation have their own contacts. Review current settings and effects.
   </p>
 
   <h2>What happens if I delete <code>.stack.toml</code>?</h2>
@@ -189,12 +183,10 @@ const faq = faqPageSchema(
 
   <h2>Can I commit <code>.env.local</code> with phm_ tokens?</h2>
   <p>
-    Technically yes — a <code>phm_</code> token is a meaningless placeholder
-    without the vault. But we don't recommend it; the community is still
-    learning to recognise Phantom tokens on sight, and a leaked token
-    combined with a leaked passphrase is worse than nothing. Add{" "}
-    <code>.env.local</code> to <code>.gitignore</code> and keep the vault
-    story clean.
+    Keep <code>phm_</code> strings, user-supplied metadata and local-instance
+    data private unless separately reviewed. Do not assume a token is harmless.
+    Keep <code>.env.local</code> out of shared commits with <code>.gitignore</code>;
+    use an empty-key env example when sharing setup documentation.
   </p>
 
   <h2>How do I use Stack with a monorepo?</h2>
@@ -202,32 +194,31 @@ const faq = faqPageSchema(
     Each <code>.stack.toml</code> is per-project, and most monorepos want one
     stack per app (marketing site, dashboard, worker all have different
     services). Run <code>stack init</code> inside each app directory. The
-    cross-project registry (<code>stack projects list</code>) will show each
-    one, and <code>stack doctor --all</code> will run healthchecks across the
-    whole machine.
+    cross-project registry (<code>stack projects list</code>) shows known
+    local registrations and may prune missing entries.
+    <code>stack doctor --all</code> covers those projects and available checks.
   </p>
   <p>
     Shared secrets (e.g. one <code>DATABASE_URL</code> used by every app)
-    stay in one Phantom vault — Phantom is machine-wide, not per-project — so
-    de-duping just works. Declare the same secret slot name in each
-    <code>.stack.toml</code>.
+    can reuse or collide with existing vault names. Check the intended
+    ownership and each app's inputs before sharing a slot across
+    <code>.stack.toml</code> files.
   </p>
 
   <h2>What does <code>stack doctor --fix</code> actually do?</h2>
   <p>
-    For each service with a failing healthcheck, Stack asks before re-running{" "}
-    <code>stack add</code>. That <em>may</em> kick off a browser OAuth dance
-    or provision a new resource on your behalf, so we force an interactive
-    confirm. Declining is always safe; the service stays marked as broken and
-    you can fix it by hand.
+    The fix path can attempt <code>stack add</code> for failed entries after
+    its checks and confirmations. Existing vault names can skip repair; cached
+    credentials and cleanup may refuse in a noninteractive terminal. Inspect
+    <em>reported effects</em> and unchecked services rather than assuming
+    credential rotation or complete repair.
   </p>
 
   <h2>Why not just use <code>.env</code> files like everyone else?</h2>
   <p>
-    Nothing stops you. Stack's job is to collapse the 45-minute "tab-hop to
-    create these 8 services, then copy 20 keys into <code>.env</code>" step
-    into one command. If your project has one API key and no MCPs, you don't
-    need Stack.
+    Stack can coordinate repeated provider setup and local configuration.
+    It does not automatically populate <code>.env</code> files or replace
+    application integration. Its usefulness depends on the adapters you need.
   </p>
   <p>
     Stack earns its keep when (a) your stack has 5+ services, (b) two or more
@@ -237,21 +228,20 @@ const faq = faqPageSchema(
 
   <h2>Can I use a template without its MCP servers?</h2>
   <p>
-    Yes. Apply the template, then edit <code>.stack.toml</code> and remove
-    the <code>mcp = "…"</code> line for services you don't want Claude / Cursor
-    to reach into. On the next <code>stack add</code> or <code>stack
-    remove</code>, <code>.mcp.json</code> gets regenerated accordingly.
-    Alternatively, edit <code>.mcp.json</code> directly — Stack only rewrites
-    entries for services it manages.
+    Use template init with <code>--noProvision</code> to inspect
+    <code>.stack.toml</code> first. A <code>mcp = "…"</code> name is metadata;
+    editing it does not regenerate all descriptors. <code>stack add</code> and
+    <code>stack remove</code> affect entries they actually manage. Review
+    <code>.mcp.json</code> and client configuration before startup.
   </p>
 
   <h2>Where does Stack store OAuth access tokens?</h2>
   <p>
-    In Phantom, under a per-provider slot name (e.g.{" "}
-    <code>SUPABASE_STACK_PAT</code>, <code>GITHUB_TOKEN</code>). That means
-    your provider auth is subject to the same E2E encryption as your
-    application secrets. Clear them with <code>phantom remove
-    &lt;slot&gt;</code> if you want to force a fresh OAuth.
+    Credential persistence uses per-provider Phantom names (e.g.{" "}
+    <code>SUPABASE_STACK_PAT</code>, <code>GITHUB_TOKEN</code>). Setup can stage
+    new inputs; explicit login stores immediately. Existing values are not
+    automatically overwritten or rotated. Use installed Phantom guidance for
+    <code>phantom remove &lt;slot&gt;</code> and reconcile dependent consumers.
   </p>
 
   <h2>How do I uninstall Stack?</h2>

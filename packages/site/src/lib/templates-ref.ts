@@ -35,7 +35,7 @@ export const TEMPLATES_REF: TemplateRef[] = [
     displayName: "Next.js · Supabase · PostHog",
     tagline: "Postgres + auth + product analytics.",
     blurb:
-      "The classic Next.js SaaS starting point. Supabase for data + auth, PostHog for analytics and feature flags. Two MCP servers wired (Supabase scoped to your project, PostHog SSE).",
+      "Starter definitions for Supabase data/auth and PostHog analytics. Available MCP entries depend on provider setup and separately configured client credentials.",
     services: [
       {
         name: "supabase",
@@ -51,14 +51,14 @@ export const TEMPLATES_REF: TemplateRef[] = [
       },
     ],
     environments: ["dev", "prod"],
-    goodFor: "Teams that want a full SaaS stack (DB + auth + analytics) in one command.",
+    goodFor: "Teams planning a data, auth and analytics stack with provider-specific setup.",
   },
   {
     name: "nextjs-neon-vercel-sentry",
     displayName: "Next.js · Neon · Vercel · Sentry",
     tagline: "Serverless Postgres, deploy, error tracking.",
     blurb:
-      "A deploy-focused starter. Neon serverless Postgres, Vercel as the deploy target, Sentry for error monitoring (with its MCP wired so Claude can triage issues).",
+      "Starter definitions for Neon, Vercel and Sentry. Sentry setup selects an existing project; available MCP configuration still needs usable client credentials.",
     services: [
       {
         name: "neon",
@@ -85,7 +85,7 @@ export const TEMPLATES_REF: TemplateRef[] = [
     displayName: "Supabase · PostHog · Sentry · Resend · Stripe",
     tagline: 'The "SaaS in a box" template.',
     blurb:
-      "The maximal SaaS starter — DB/auth, analytics, errors, transactional email, and billing all wired in one command. Three MCP servers (Supabase, PostHog, Sentry) come online alongside.",
+      "Starter definitions for data/auth, analytics, errors, email and payments. Each service needs its supported setup; listed MCP entries do not establish running clients or working credentials.",
     services: [
       {
         name: "supabase",
@@ -117,14 +117,15 @@ export const TEMPLATES_REF: TemplateRef[] = [
       },
     ],
     environments: ["dev", "prod"],
-    goodFor: "Greenfield SaaS projects where day-one billing + error monitoring is non-negotiable.",
+    goodFor:
+      "SaaS projects planning payment and error-monitoring integrations to configure and verify.",
   },
   {
     name: "cloudflare-turso-clerk",
     displayName: "Cloudflare · Turso · Clerk · Sentry",
-    tagline: "Edge-first stack with drop-in auth.",
+    tagline: "Edge deployment, database and auth definitions.",
     blurb:
-      "Edge SQLite (Turso libSQL) + Cloudflare Workers + Clerk for auth. Pairs well with Next.js-on-Cloudflare or Hono. Sentry wires its MCP so Claude can query issues.",
+      "Service definitions for Turso, Cloudflare, Clerk and Sentry. Available MCP configuration depends on adapter results and client setup.",
     services: [
       {
         name: "cloudflare",
@@ -149,14 +150,14 @@ export const TEMPLATES_REF: TemplateRef[] = [
       },
     ],
     environments: ["dev", "prod"],
-    goodFor: "Edge apps on Cloudflare Workers that want proper auth without writing it.",
+    goodFor: "Edge apps planning database, deployment, auth and error-monitoring integrations.",
   },
   {
     name: "claude-agent-openai-anthropic",
     displayName: "Claude agent (OpenAI · Anthropic · xAI · DeepSeek · GitHub)",
     tagline: "Multi-model agent project.",
     blurb:
-      "All four flagship LLM APIs plus GitHub for repo access. Useful for any project that needs to switch between models or test cross-model behaviour. Ships a GitHub MCP for Claude Code.",
+      "Provider slots for OpenAI, Anthropic, xAI, DeepSeek and GitHub. Supply supported account credentials; available GitHub MCP configuration needs separate client setup.",
     services: [
       { name: "openai", provider: "openai", secrets: ["OPENAI_API_KEY"] },
       { name: "anthropic", provider: "anthropic", secrets: ["ANTHROPIC_API_KEY"] },
@@ -165,6 +166,6 @@ export const TEMPLATES_REF: TemplateRef[] = [
       { name: "github", provider: "github", secrets: ["GITHUB_TOKEN"], mcp: "github" },
     ],
     environments: ["dev"],
-    goodFor: "Agent projects and multi-model evals. One command, four API keys, one GitHub token.",
+    goodFor: "Agent projects planning model API access and a GitHub integration.",
   },
 ];

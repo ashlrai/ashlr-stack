@@ -5,98 +5,60 @@ import { Code } from "astro:components";
 
 <Docs
   title="CI integration"
-  description="Run `stack doctor --json` on every push and nightly, backed by Phantom Cloud for secret pull. One command scaffolds the workflow."
+  description="CI health workflow generation is unavailable. Inspect the refusal and optionally collect a separate local source-drift report."
   eyebrow="Integrations"
 >
   <h2>The shape</h2>
   <p>
-    Stack's CI story is deliberately small:
+    In the reviewed source, CI health workflow generation is unavailable:
   </p>
 
   <ol>
     <li>
-      Pull the encrypted vault from <strong><a href="https://phm.dev" target="_blank" rel="noopener" class="text-[color:var(--color-ink-100)] underline decoration-dotted decoration-[#3b82f6]/40 underline-offset-4 hover:decoration-[#3b82f6] hover:text-[#3b82f6] transition-colors">Phantom</a> Cloud</strong> using two
-      repository secrets.
+      Review the <strong><a href="https://phm.dev" target="_blank" rel="noopener" class="text-[color:var(--color-ink-100)] underline decoration-dotted decoration-[#3b82f6]/40 underline-offset-4 hover:decoration-[#3b82f6] hover:text-[#3b82f6] transition-colors">Phantom</a> Cloud</strong> boundary: unattended pull is unsupported by Phantom Secrets 0.7.9.
     </li>
     <li>
-      Run <code>stack doctor --json</code>. Exit code is <code>0</code> if all
-      services are healthy, <code>1</code> if any service fails.
+      Inspect <code>stack ci init</code>. The admitted source refuses workflow generation with exit code <code>1</code>; it does not write a workflow.
     </li>
     <li>
-      Upload the JSON report as a build artifact for debugging.
+      Optionally collect a JSON source-drift report separately. It is not a credentialed health check or working CI bootstrap.
     </li>
   </ol>
 
   <p>
-    That's it. No secrets in GitHub's environment, no plaintext in the logs.
-    The vault stays encrypted end-to-end — Phantom Cloud holds ciphertext, and
-    only the CI job (with the right passphrase) can decrypt locally.
+    Unattended Cloud pull is unsupported with Phantom Secrets 0.7.9. Cloud pull requires stdin, stdout and stderr on a trusted terminal; --force only declares overwrites and does not bypass that requirement. PHANTOM_CLOUD_TOKEN is not a supported Cloud bearer-token input, and the local vault passphrase is not the separate Cloud encryption key. Adding those GitHub secrets does not enable unattended Cloud pull.
   </p>
 
-  <h2>Scaffold the workflow</h2>
+  <h2 id="scaffold-the-workflow">Check workflow availability</h2>
 
   <Code
-    code={`stack ci init`}
+    code={`# Inspect the installed command interface
+stack ci init --help
+
+# Reviewed source refuses generation with exit 1
+stack ci init
+
+# Compatibility flag: still refuses; does not overwrite
+stack ci init --force`}
     lang="bash"
     theme="github-dark-dimmed"
   />
 
   <p>
-    This writes <code>.github/workflows/stack-ci.yml</code> with a correct-by-default
-    workflow. Pass <code>--force</code> to overwrite an existing file.
+    The source first checks whether <code>.stack.toml</code> exists; this is not TOML validation. If <code>.github/workflows/stack-ci.yml</code> already exists and <code>--force</code> is absent, it reports that the file was not changed. Otherwise it reports generation unavailable. All these command-body refusal paths exit 1 before any workflow directory creation or file write. <code>--force</code> only changes which refusal is reached; it is not an overwrite override.
   </p>
 
-  <h2>The generated workflow</h2>
+  <h2 id="the-generated-workflow">Refusal output</h2>
 
   <Code
-    code={`name: Stack doctor
-
-on:
-  push:
-    branches: [main]
-  pull_request:
-  schedule:
-    # Nightly drift check — catches when an upstream key gets revoked
-    # out of band.
-    - cron: "0 7 * * *"
-  workflow_dispatch:
-
-jobs:
-  doctor:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Phantom Secrets
-        run: npm install -g phantom-secrets
-
-      - name: Install Stack CLI
-        run: npm install -g @ashlr/stack
-
-      - name: Pull vault from Phantom Cloud
-        env:
-          PHANTOM_CLOUD_TOKEN: \${{ secrets.PHANTOM_CLOUD_TOKEN }}
-          PHANTOM_VAULT_PASSPHRASE: \${{ secrets.PHANTOM_VAULT_PASSPHRASE }}
-        run: phantom cloud pull --force
-
-      - name: Run stack doctor
-        run: stack doctor --json > stack-doctor.json
-
-      - name: Upload doctor report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: stack-doctor-report
-          path: stack-doctor.json`}
-    lang="yaml"
+    code={`CI health workflow unavailable: Phantom Cloud pull requires trusted-terminal approval. No workflow was written.`}
+    lang="text"
     theme="github-dark-dimmed"
   />
 
-  <h2>Repository secrets</h2>
+  <h2 id="repository-secrets">Cloud prerequisites</h2>
   <p>
-    The workflow needs two secrets. Create them once locally, then copy them
-    into <strong>Settings → Secrets and variables → Actions</strong> on the
-    repo:
+    These names appeared in the former Cloud recipe. Adding them in <strong>Settings → Secrets and variables → Actions</strong> does not enable unattended Cloud pull with Phantom Secrets 0.7.9:
   </p>
 
   <table>
@@ -110,17 +72,13 @@ jobs:
       <tr>
         <td><code>PHANTOM_VAULT_PASSPHRASE</code></td>
         <td>
-          The passphrase for Phantom's encrypted-file vault fallback. Phantom
-          uses this in CI where macOS Keychain / libsecret isn't available.
-          Choose one when you run <code>phantom login</code>.
+          A local-vault passphrase is not Phantom Secrets 0.7.9’s separate Cloud encryption key. It does not enable unattended Cloud pull.
         </td>
       </tr>
       <tr>
         <td><code>PHANTOM_CLOUD_TOKEN</code></td>
         <td>
-          The GitHub OAuth device token Phantom minted when you ran{" "}
-          <code>phantom cloud push</code>. View it with{" "}
-          <code>phantom cloud status --show-token</code>.
+          Phantom Secrets 0.7.9 reads its Cloud bearer token from its credential store, not this environment variable. Check <code>phantom --help</code>; this environment variable is not supported Cloud authentication.
         </td>
       </tr>
     </tbody>
@@ -129,15 +87,9 @@ jobs:
   <h2>Exit-code behaviour</h2>
 
   <Code
-    code={`# success — every service healthy
-$ stack doctor --json
-{ "reports": [ ... ] }
-$ echo $?
-0
-
-# failure — at least one service errored
-$ stack doctor --json
-{ "reports": [ { "services": [ { "status": "error", "detail": "..." } ] } ] }
+    code={`# Illustrative source refusal; no workflow write
+$ stack ci init
+CI health workflow unavailable: Phantom Cloud pull requires trusted-terminal approval. No workflow was written.
 $ echo $?
 1`}
     lang="bash"
@@ -145,64 +97,41 @@ $ echo $?
   />
 
   <p>
-    GitHub Actions will fail the job on a non-zero exit, so the default
-    workflow above is already "red on broken credentials." Pair it with{" "}
-    <code>workflow_dispatch</code> so you can re-run manually once you rotate a
-    key.
+    The existing config and file guards also refuse with exit 1. Running a GitHub job manually does not supply the trusted-terminal ceremony required by Phantom Secrets 0.7.9. The producer does not emit a Cloud workflow, and no unattended health integration is established here.
   </p>
 
-  <h2>JSON report shape</h2>
+  <h2 id="json-report-shape">Optional source-drift report</h2>
 
   <Code
     code={`{
-  "reports": [
-    {
-      "project": "cwd",
-      "path": "/home/runner/work/webapp/webapp",
-      "services": [
-        {
-          "name": "supabase",
-          "status": "ok",
-          "latencyMs": 218
-        },
-        {
-          "name": "posthog",
-          "status": "error",
-          "detail": "key invalid"
-        }
-      ]
-    }
-  ]
+  "configured": ["supabase"],
+  "detected": [],
+  "orphans": ["supabase"],
+  "untracked": []
 }`}
     lang="json"
     theme="github-dark-dimmed"
   />
 
   <p>
-    Each service reports a status of <code>ok</code>, <code>warn</code>,{" "}
-    <code>error</code>, or <code>unchecked</code> (the provider didn't
-    implement a healthcheck yet). Parse this in downstream steps if you want
-    to post a summary to Slack or fail only on specific services.
+    The JSON above illustrates <code>stack doctor --reconcile --json</code>: <code>configured</code> and{" "}
+    <code>detected</code> record config services and source detections; orphans and untracked record their differences. This branch returns before Phantom and health checks and returns 0 on detected drift. Tooling must inspect the fields; scanner or I/O errors can still fail. It is not credential or provider-health acceptance.
   </p>
 
   <h2>Other CI systems</h2>
   <p>
-    <code>stack ci init</code> only scaffolds GitHub Actions today. For other
-    providers, the two essential steps to replicate are:
+    <code>stack ci init</code> does not generate a health workflow for GitHub Actions or another CI system. An optional source-drift report can be collected separately:
   </p>
 
   <Code
-    code={`# 1. Pull the vault (needs PHANTOM_CLOUD_TOKEN + PHANTOM_VAULT_PASSPHRASE)
-phantom cloud pull --force
-
-# 2. Run the check
-stack doctor --json > stack-doctor.json`}
+    code={`# Optional local source-drift report; drift itself returns 0
+stack doctor --reconcile --json > stack-source-drift.json`}
     lang="bash"
     theme="github-dark-dimmed"
   />
 
   <p>
-    Adapters for GitLab CI, CircleCI, and Buildkite are on the roadmap. Open
+    A supported unattended credentialed health integration remains separate work. Open
     an issue on{" "}
     <a
       href="https://github.com/ashlrai/ashlr-stack/issues"
@@ -219,8 +148,8 @@ stack doctor --json > stack-doctor.json`}
   </p>
 
   <Code
-    code={`# Detect services, emit JSON, exit 0 even if drift is found
-stack scan --json --yes`}
+    code={`# Report detected services without adding them
+stack scan --json --confidence medium`}
     lang="bash"
     theme="github-dark-dimmed"
   />
@@ -239,22 +168,22 @@ stack scan --json --yes`}
       </tr>
       <tr>
         <td><code>--yes</code></td>
-        <td>Accept all detected services without prompting. Required in headless/CI environments.</td>
+        <td>Without --json, enables automatic add attempts without confirmation. With --json, scan reports hits and returns before adding services.</td>
       </tr>
       <tr>
-        <td><code>--confidence &lt;0–1&gt;</code></td>
-        <td>Only report detections above this confidence threshold (default: <code>0.6</code>). Raise to <code>0.8</code> to reduce false positives in large repos.</td>
+        <td><code>--confidence &lt;low|medium|high&gt;</code></td>
+        <td>Filter by the named confidence tier. The default is medium, or high with --yes; the example explicitly selects medium.</td>
       </tr>
     </tbody>
   </table>
 
-  <p>Example JSON output shape:</p>
+  <p>Illustrative JSON output shape:</p>
 
   <Code
     code={`{
-  "detections": [
-    { "provider": "supabase", "confidence": 0.95, "evidence": ["@supabase/supabase-js"] },
-    { "provider": "resend",   "confidence": 0.82, "evidence": ["resend"] }
+  "hits": [
+    { "provider": "supabase", "confidence": "high", "sources": ["package.json: @supabase/supabase-js"] },
+    { "provider": "resend", "confidence": "medium", "sources": ["source import: resend"] }
   ]
 }`}
     lang="json"
@@ -269,12 +198,6 @@ stack scan --json --yes`}
 
   <h2>Rotating secrets from CI</h2>
   <div class="callout callout-warn">
-    <strong>Don't</strong> run <code>stack add &lt;service&gt; --force</code>
-    from CI — it'd re-run the full OAuth / PAT flow, which isn't meaningful in
-    a headless job. Instead, rotate the underlying credential at the provider
-    (e.g. generate a new Supabase service key), then run <code>stack login
-    &lt;provider&gt;</code> locally to refresh your vault. Then{" "}
-    <code>phantom cloud push</code> so CI picks up the new value on the next
-    run.
+    <strong>Rotate at the provider using its supported process.</strong> Stack doctor reports available checks; it does not rotate credentials. <code>stack login &lt;provider&gt;</code> runs the provider login path, but cached credentials and create-only storage can prevent replacement. Verify the resulting slot and your separately qualified CI credential delivery before relying on it.
   </div>
 </Docs>

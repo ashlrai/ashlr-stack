@@ -212,7 +212,7 @@ Shows the provider dependency graph — e.g., if Stripe Connect depends on a pri
 
 ### `stack ci init`
 
-Write a GitHub Actions template to `.github/workflows/stack-ci.yml` (`--force` permits overwrite). Review the generated runtime, credential and Phantom Cloud requirements before enabling it; generating a template does not establish working CI or commissioned cloud access.
+CI health workflow generation is unavailable. `stack ci init` exits nonzero without creating or overwriting a workflow; `--force` is a compatibility flag and does not enable generation. The reviewed Phantom Secrets 0.7.9 source requires trusted-terminal approval for Cloud pull. Existing configuration and file guards still apply.
 
 ### `stack login <provider>`
 
@@ -480,8 +480,8 @@ stack doctor --fix              # inspect the report and supported repair attemp
 ### CI
 
 ```bash
-stack ci init                   # writes a workflow template
-# Review Bun/Phantom/credential/cloud requirements before enabling it.
+stack ci init                   # exits nonzero: workflow generation unavailable
+# No workflow is written; --force does not permit overwriting one.
 ```
 
 ### AI-assisted composition (recommend → apply)

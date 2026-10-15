@@ -92,7 +92,7 @@ A cheat sheet for the current source interface:
 | `stack env export --example` | Write a separate `.env.example` with empty values; `--stdout` previews it |
 | `stack exec -- <cmd>` | Forward to the installed `phantom exec` runtime |
 | `stack projects list|register|remove|where` | Cross-project registry |
-| `stack ci init` | Scaffold a `.github/workflows/stack-ci.yml` |
+| `stack ci init` | Inspect unavailable CI health workflow generation; exits nonzero without writing a workflow |
 | `stack completion <bash\|zsh\|fish>` | Emit a shell-completion script |
 | `stack upgrade` | Check npm for a newer `@ashlr/stack` release |
 | `stack login <provider>` | Refresh credentials for that provider; existing stored credentials are separate from setup staging |

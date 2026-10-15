@@ -22,20 +22,19 @@ const ENTRIES: Entry[] = [
   {
     title: "Introducing Ashlr Stack",
     slug: "launch/blog",
-    description:
-      "The control plane for your entire dev stack — one command to provision, wire, and operate every third-party service in a project.",
+    description: "A source launch overview of Stack workflows for supported project services.",
     pubDate: "Fri, 18 Apr 2026 00:00:00 +0000",
   },
   {
-    title: "Ashlr Stack on HN",
+    title: "Draft: Ashlr Stack on HN",
     slug: "launch/hn",
-    description: "Show HN version of the launch post, tighter framing.",
+    description: "Draft discussion post; submission or publication is not established.",
     pubDate: "Fri, 18 Apr 2026 00:00:00 +0000",
   },
   {
-    title: "Ashlr Stack launch thread",
+    title: "Draft: Ashlr Stack launch thread",
     slug: "launch/twitter",
-    description: "Twitter/X thread version of the launch.",
+    description: "Draft thread text; posting or customer acceptance is not established.",
     pubDate: "Fri, 18 Apr 2026 00:00:00 +0000",
   },
 ];
