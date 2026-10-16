@@ -10,7 +10,7 @@ import {
   writeRecipe,
 } from "@ashlr/stack-core";
 import { defineCommand } from "citty";
-import { colors, intro, outro } from "../ui.ts";
+import { colors, intro, outro, outroError } from "../ui.ts";
 
 /**
  * `stack recommend` — free-text → curated providers.
@@ -154,7 +154,7 @@ export const recommendCommand = defineCommand({
     },
     category: {
       type: "string",
-      description: "Restrict to a single category (e.g. Database, Auth).",
+      description: `Restrict to a single category, any case (${PROVIDER_CATEGORIES.join(", ")}).`,
       required: false,
     },
     json: {
@@ -200,10 +200,24 @@ export const recommendCommand = defineCommand({
     }
 
     const k = Number.parseInt(String(args.k ?? "6"), 10);
-    const categories = args.category ? [String(args.category)] : undefined;
+    let categories: RetrievalHit["provider"]["category"][] | undefined;
+    if (args.category) {
+      const wanted = String(args.category).trim().toLowerCase();
+      const match = PROVIDER_CATEGORIES.find((c) => c.toLowerCase() === wanted);
+      if (!match) {
+        const message = `Unknown category "${args.category}". Use one of: ${PROVIDER_CATEGORIES.join(", ")}`;
+        if (args.json) {
+          console.error(message);
+          process.exit(1);
+        }
+        outroError(message);
+        return;
+      }
+      categories = [match];
+    }
     const hits = retrieve(query, {
       k: Number.isFinite(k) && k > 0 ? k : 6,
-      categories: categories as RetrievalHit["provider"]["category"][] | undefined,
+      categories,
     });
 
     let synthOutcome: Awaited<ReturnType<typeof trySynth>> = null;
