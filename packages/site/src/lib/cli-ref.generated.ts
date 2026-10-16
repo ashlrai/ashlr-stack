@@ -500,6 +500,56 @@ export const CLI_COMMANDS: CliCommand[] = [
     examples: [{ command: "stack sync --platform vercel" }],
   },
   {
+    name: "stack onboard",
+    description:
+      "Detect Codex, Claude Code, Cursor and Gemini CLI and register the Phantom gateway in each (plan by default).",
+    synopsis:
+      "stack onboard [--apply] [--undo] [--client <client>] [--all] [--home <home>] [--json]",
+    flags: [
+      {
+        name: "apply",
+        synopsis: "--apply",
+        type: "boolean",
+        description: "Write the changes. Without this flag nothing is written.",
+      },
+      {
+        name: "undo",
+        synopsis: "--undo",
+        type: "boolean",
+        description: "Restore the files saved by the last --apply.",
+      },
+      {
+        name: "client",
+        synopsis: "--client <client>",
+        type: "string",
+        description: "Comma list: claude,codex,cursor,gemini. Default: all.",
+      },
+      {
+        name: "all",
+        synopsis: "--all",
+        type: "boolean",
+        description: "Also wire clients that are not detected.",
+      },
+      {
+        name: "home",
+        synopsis: "--home <home>",
+        type: "string",
+        description: "Home directory to use (default: your home).",
+      },
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        description: "Emit JSON.",
+      },
+    ],
+    examples: [
+      { command: "stack onboard", comment: "plan only, nothing is written" },
+      { command: "stack onboard --apply" },
+      { command: "stack onboard --undo" },
+    ],
+  },
+  {
     name: "stack open",
     description: "Open a service's dashboard in your browser.",
     synopsis: "stack open <service>",

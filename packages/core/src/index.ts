@@ -73,3 +73,4 @@ export {
   type RateCard,
   type UsageRecord,
 } from "./ai/cost-tracker.ts";
+export * from "./agent-onboard.ts";
