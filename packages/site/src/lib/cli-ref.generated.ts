@@ -314,7 +314,15 @@ export const CLI_COMMANDS: CliCommand[] = [
   {
     name: "stack status",
     description: "Show stack health at a glance.",
-    synopsis: "stack status",
+    synopsis: "stack status [--json]",
+    flags: [
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        description: "Emit machine-readable JSON (services, config, phantom).",
+      },
+    ],
     examples: [{ command: "stack status" }],
   },
   {

@@ -90,6 +90,12 @@ jobs:
         working-directory: packages/site
         run: bun run build
 
+      # The build regenerates the CLI reference from the command modules, so
+      # the deployed site is always current; this keeps the committed copy
+      # (what reviewers and source readers see) from drifting behind it.
+      - name: CLI reference is committed up to date
+        run: git diff --exit-code -- packages/site/src/lib/cli-ref.generated.ts || { echo "::error::Run 'bun packages/site/scripts/gen-cli-ref.ts' and commit packages/site/src/lib/cli-ref.generated.ts"; exit 1; }
+
       - name: Smoke — key public routes exist in dist/
         working-directory: packages/site
         run: |
