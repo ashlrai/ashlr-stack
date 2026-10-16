@@ -36,9 +36,9 @@ const marqueeIconPaths: Record<string, string | null> = Object.fromEntries(
 );
 
 const STATS = [
-  { n: String(PROVIDERS_REF.length), l: "providers" },
-  { n: "19", l: "mcp tools" },
-  { n: "11", l: "categories" },
+  { n: String(PROVIDERS_REF.length), l: "catalog entries" },
+  { n: "19", l: "source MCP tools" },
+  { n: "13", l: "categories" },
   { n: "05", l: "templates" },
   { n: "MIT", l: "license" },
 ];
@@ -74,11 +74,11 @@ const STATS = [
 
     <header class="max-w-[720px] mb-10" data-reveal>
       <h2 class="display text-[color:var(--color-ink-50)]" style="font-size: clamp(34px, 4.4vw, 56px);">
-        Forty-five minutes. Or <span class="display-accent">four seconds</span>.
+        Manual setup. Or <span class="display-accent">a guided workflow</span>.
       </h2>
       <p class="mt-5 text-[15px] leading-[1.6] text-[color:var(--color-ink-300)] max-w-[560px]">
-        Wiring a single service the old way vs. <span class="text-[color:var(--color-ink-100)] mono">stack add supabase</span>.
-        Scroll through the delta.
+        Illustrative setup steps vs. <span class="text-[color:var(--color-ink-100)] mono">stack add supabase</span>.
+        Explore the workflow.
       </p>
     </header>
 
@@ -91,15 +91,15 @@ const STATS = [
 
     <header class="max-w-[720px] mb-10" data-reveal>
       <h2 class="display text-[color:var(--color-ink-50)]" style="font-size: clamp(34px, 4.4vw, 56px);">
-        Try it <span class="display-accent">live</span>.
+        Explore the <span class="display-accent">simulation</span>.
       </h2>
       <p class="mt-5 text-[15px] leading-[1.6] text-[color:var(--color-ink-300)] max-w-[620px]">
-        Not a recording. Scripted boot-up, then the prompt unlocks — type any
-        <span class="mono text-[color:var(--color-ink-100)]">stack</span> command (try
+        Scripted browser simulation: after boot-up, try the supported example
+        <span class="mono text-[color:var(--color-ink-100)]">stack</span> commands (including
         <span class="mono text-[color:var(--color-ink-100)]">stack recommend "b2b saas with auth"</span>
-        or <span class="mono text-[color:var(--color-ink-100)]">stack add supabase posthog</span>)
-        and see the real output the CLI would print, driven by the same provider catalog
-        the binary ships with.
+        or <span class="mono text-[color:var(--color-ink-100)]">stack add supabase</span>)
+        to explore illustrative output. This browser demo does not execute the CLI
+        or set up provider accounts.
       </p>
     </header>
 
@@ -130,17 +130,16 @@ const STATS = [
         </h2>
 
         <p class="mt-5 text-[15px] leading-[1.6] text-[color:var(--color-ink-300)]">
-          Stack ships as an MCP server + a first-party Claude Code plugin. From chat,
-          call <code class="mono text-[color:var(--color-ink-100)]">/stack:add</code> and Claude
-          provisions the upstream resource, stores every secret in Phantom, and re-wires
-          <code class="mono text-[color:var(--color-ink-100)]">.mcp.json</code> — zero copy-paste.
+          Stack provides a stdio MCP bridge and a Claude Code plugin. Use <code class="mono text-[color:var(--color-ink-100)]">/stack:add</code> to request
+          provider-specific setup, credential persistence and optional configuration in
+          <code class="mono text-[color:var(--color-ink-100)]">.mcp.json</code>. Review each result and complete client setup.
         </p>
 
         <ul class="mt-8 space-y-4 text-sm">
           {[
-            { t: "MCP-native", d: "Every CLI command is exposed as an MCP tool." },
-            { t: "Plugin commands", d: "/stack:add · /stack:doctor · /stack:open live in chat." },
-            { t: "Phantom-gated", d: "The agent sees a slot name, never a key." },
+            { t: "MCP-native", d: "Reviewed source declares 19 CLI-backed MCP tools, a subset of commands." },
+            { t: "Plugin commands", d: "/stack:add · /stack:doctor · /stack:list are plugin commands." },
+            { t: "Phantom-gated", d: "Credential setup uses Phantom; inspect returned text and config files." },
           ].map((row) => (
             <li class="flex items-start gap-3">
               <span class="mt-1 w-2 h-2 bg-[color:var(--color-blade-500)] shrink-0"></span>
@@ -153,7 +152,7 @@ const STATS = [
         </ul>
 
         <div class="mt-8 panel-steel p-4 mono text-[12px]" style="border-left: 2px solid var(--color-blade-500);">
-          <div class="ansi-dim mb-1"># one-time setup — in any Claude Code session</div>
+          <div class="ansi-dim mb-1"># plugin registration — CLI/server runtime is required</div>
           <div><span class="ansi-blade select-none">›</span> <span class="ansi-white">/plugin marketplace add ashlrai/ashlr-stack</span></div>
           <div><span class="ansi-blade select-none">›</span> <span class="ansi-white">/plugin install stack@ashlr</span></div>
         </div>

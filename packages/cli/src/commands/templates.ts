@@ -8,26 +8,29 @@ import {
   readConfig,
   writeConfig,
 } from "@ashlr/stack-core";
-import { defineCommand } from "citty";
+import { defineCommand, runCommand } from "citty";
 import { colors, intro, outro, outroError, prompts, spinnerBridge } from "../ui.ts";
 
+const templatesListCommand = defineCommand({
+  meta: { name: "list", description: "List available templates." },
+  run() {
+    intro("stack templates");
+    const names = listTemplates();
+    if (names.length === 0) {
+      outro(colors.dim("No templates yet."));
+      return;
+    }
+    console.log();
+    for (const name of names) console.log(`  ${colors.cyan("·")} ${colors.bold(name)}`);
+    console.log();
+  },
+});
+
+/** `stack templates` — list or apply starter templates. Bare `stack templates` runs `list`. */
 export const templatesCommand = defineCommand({
   meta: { name: "templates", description: "List or apply starter stack templates." },
   subCommands: {
-    list: defineCommand({
-      meta: { name: "list", description: "List available templates." },
-      run() {
-        intro("stack templates");
-        const names = listTemplates();
-        if (names.length === 0) {
-          outro(colors.dim("No templates yet."));
-          return;
-        }
-        console.log();
-        for (const name of names) console.log(`  ${colors.cyan("·")} ${colors.bold(name)}`);
-        console.log();
-      },
-    }),
+    list: templatesListCommand,
     apply: defineCommand({
       meta: {
         name: "apply",
@@ -122,5 +125,11 @@ export const templatesCommand = defineCommand({
         }
       },
     }),
+  },
+  // citty 0.1.6 also calls this parent `run` after a matched subcommand, so
+  // only fall through to `list` when no subcommand was given.
+  async run({ rawArgs }) {
+    if (rawArgs.some((a) => !a.startsWith("-"))) return;
+    await runCommand(templatesListCommand, { rawArgs });
   },
 });

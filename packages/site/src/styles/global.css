@@ -1,44 +1,6 @@
 @import "tailwindcss";
 
-/* ──────────────────────────────────────────────────────────────────────
- * Fonts — PP Monument Grotesk (display + UI) + Berkeley Mono (body + code).
- *
- * Files live in public/fonts/{monument,berkeley}/. If a file is missing at
- * build time the @font-face silently falls back to the system mono / sans.
- * ────────────────────────────────────────────────────────────────────── */
-
-@font-face {
-  font-family: "PP Monument Grotesk";
-  src: url("/fonts/monument/PPMonumentGrotesk-Variable.woff2") format("woff2-variations"),
-       url("/fonts/monument/PPMonumentGrotesk-Variable.woff2") format("woff2");
-  font-weight: 100 900;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Berkeley Mono";
-  src: url("/fonts/berkeley/BerkeleyMono-Regular.woff2") format("woff2");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Berkeley Mono";
-  src: url("/fonts/berkeley/BerkeleyMono-Medium.woff2") format("woff2");
-  font-weight: 500;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Berkeley Mono";
-  src: url("/fonts/berkeley/BerkeleyMono-Bold.woff2") format("woff2");
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
+/* Fonts use the existing system sans and mono fallback stacks. */
 
 @theme {
   /* ink — deep charcoal base, no blue cast */
@@ -90,11 +52,9 @@
   --color-magenta-600: #c2521c;
   --color-magenta-700: #c2521c;
 
-  --font-display:
-    "PP Monument Grotesk", ui-sans-serif, "Helvetica Neue", Arial, sans-serif;
+  --font-display: ui-sans-serif, "Helvetica Neue", Arial, sans-serif;
   --font-mono:
-    "Berkeley Mono", ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono",
-    monospace;
+    ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
   /* legacy alias so any Tailwind font-sans usage still resolves */
   --font-sans: var(--font-mono);
 
@@ -171,7 +131,7 @@
   .display {
     font-family: var(--font-display);
     font-weight: 600;
-    font-stretch: 112%;                 /* lean on Monument's Extended width */
+    font-stretch: 112%;                 /* applies when the selected font supports width */
     letter-spacing: -0.028em;
     line-height: 0.96;
   }

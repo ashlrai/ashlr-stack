@@ -1,5 +1,5 @@
 ---
-description: Apply a saved recipe — provision every provider in it and wire secrets + MCP entries. Usage — /stack:apply <recipe-id>
+description: Replay a saved recipe through provider setup and optional wiring; inspect partial results. Usage — /stack:apply <recipe-id>
 ---
 
 Call `stack_apply` via the ashlr-stack MCP server with the recipe id the user provided.
@@ -11,20 +11,21 @@ stack_apply { recipe_id: "<user's input>", no_wire: false }
 ```
 
 What `stack_apply` does:
-- Runs `stack_add` for each provider in the recipe (creates resources where the provider supports it, otherwise stubs the entry).
-- Requests rotating envelopes from Phantom for every secret slot so keys are encrypted at rest and can be rotated without code changes.
-- Writes webhook stubs for providers that emit events (Stripe, Clerk, GitHub, Linear, Resend, etc.) so the app can wire them later.
-- Updates `.stack.toml` and the MCP entries in one pass.
+- If `.stack.toml` is absent, attempts config-only init with `--noInteractive --noProvision`.
+- Runs the CLI provider setup loop for recipe entries one at a time; adapters create or attach resources according to their implementation. On partial failure, the CLI can attempt cleanup of added local config, MCP entries and named vault slots. Headless cleanup can keep secrets; this is not guaranteed upstream-resource deletion. The CLI `--noRollback` flag disables this multi-service cleanup attempt.
+- After at least one successful setup, attempts optional Phantom wiring. The current helper uses `TODO_STACK_APPLY` envelope placeholders and may retry without an unsupported rotate flag; this is not accepted production rotation.
+- Writes optional commented webhook stub files for supported recipe providers; the app must implement and verify their handlers.
+- Attempts credential, MCP and split-config writes during setup. These effects are not atomic and failures can leave partial state. The final doctor call is informational and does not establish application acceptance.
 
-If the user appends `--no-wire` (e.g. `/stack:apply rec_xxx --no-wire`), call with `no_wire: true` instead. That skips the Phantom envelopes + webhook stubs and only records the providers in `.stack.toml` — useful when the user wants to inspect what would happen before wiring real credentials.
+If the user requests skipping optional wiring (e.g. `/stack:apply rec_xxx --noWire`), call with `no_wire: true`. The wrapper forwards the CLI flag `--noWire`; provider setup, credential storage and config writes still occur. This is not a dry run. Confirm the requested recipe and provider effects before calling.
 
-After the call succeeds, summarize:
+Read the returned text, including failures and skips, and summarize:
 - Which providers were added
 - Any providers that were skipped and why (already present, missing API credentials, etc.)
-- The path of the updated `.stack.toml`
+- The envelope and webhook counts apply printed, and any providers phantom-wire skipped
 
 Then suggest the next step verbatim:
 
-> Run `/stack:doctor` to verify every service is reachable and credentials are valid.
+> Run `/stack:doctor` to inspect the implemented checks; verify unchecked services and application credentials separately.
 
-If `stack_apply` fails because Phantom is not installed, surface the install hint: `brew install ashlrai/phantom/phantom`. If the recipe id is not found, suggest `/stack:recommend <query>` to create a new one.
+If Phantom setup is missing or refused, report the boundary and point to https://phm.dev/secrets for the installed-version setup instructions. Do not initialize a vault or grant permissions automatically. If the recipe id is missing, suggest `/stack:recommend <query>` to save a new recipe. The MCP server must run in the intended project directory with its Stack CLI and runtime available.

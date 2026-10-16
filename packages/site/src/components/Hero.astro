@@ -11,7 +11,7 @@ const iconPaths: Record<string, string | null> = Object.fromEntries(
   PROVIDERS.map((p) => [p.slug, getIconPath(p.slug)]),
 );
 
-// Build the orbit payload from the canonical catalog (29 entries). Join against
+// Build the orbit payload from the canonical catalog. Join against
 // the display catalog for brand color + icon slug — catalog.ts doesn't carry
 // either and we want every logo in its real brand color.
 const orbitProviders = PROVIDERS_REF.map((p) => {
@@ -79,10 +79,10 @@ const orbitIconPaths: Record<string, string | null> = Object.fromEntries(
           class="mt-6 text-[17px] leading-[1.5] text-[color:var(--color-ink-200)] load-in max-w-[560px]"
           style="--load-delay: 320ms"
         >
-          One prompt. <strong class="text-[color:var(--color-ink-50)] font-semibold">{PROVIDERS_REF.length} providers</strong>, real accounts, every key vaulted, <span class="mono text-[color:var(--color-ink-100)]">.env</span> + <span class="mono text-[color:var(--color-ink-100)]">.mcp.json</span> wired. In under a minute.
+          One prompt to explore <strong class="text-[color:var(--color-ink-50)] font-semibold">{PROVIDERS_REF.length} providers</strong>. Approve setup in your accounts; Stack records successful services, stores returned credentials through Phantom, and adds supported MCP entries.
         </p>
 
-        <!-- THE DEMO — primary CTA. Click to watch a real recipe materialize. -->
+        <!-- THE DEMO — primary CTA. A scripted illustration of planning and applying a recipe. -->
         <div class="mt-8 max-w-[620px] load-in" style="--load-delay: 420ms">
           <GenerateStackDemo iconPaths={iconPaths} client:visible />
         </div>

@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { findProviderRef, listSecrets, readConfig } from "@ashlr/stack-core";
-import { defineCommand } from "citty";
+import { defineCommand, runCommand } from "citty";
 import { requirePhantom } from "../lib/phantom-preflight.ts";
 import { colors, intro, outro, outroError } from "../ui.ts";
 
@@ -12,47 +12,50 @@ import { colors, intro, outro, outroError } from "../ui.ts";
  * present in the Phantom vault (masked) or missing. Designed for debugging
  * "why does my app boot without Supabase?" kinds of questions.
  */
+const envShowCommand = defineCommand({
+  meta: { name: "show", description: "Show which secrets are present in Phantom." },
+  args: {
+    env: { type: "string", default: "dev", description: "Environment overlay to preview." },
+  },
+  async run({ args }) {
+    intro(`stack env show (${args.env})`);
+    await requirePhantom();
+    const config = await readConfig();
+    const vaultKeys = new Set(await listSecrets());
+    console.log();
+    for (const [name, entry] of Object.entries(config.services)) {
+      console.log(`  ${colors.bold(name)}`);
+      for (const slot of entry.secrets) {
+        const present = vaultKeys.has(slot);
+        const dot = present ? colors.green("●") : colors.red("○");
+        const value = present ? colors.dim("(phm_…)") : colors.red("missing");
+        console.log(`    ${dot} ${slot.padEnd(30)} ${value}`);
+      }
+    }
+    const declared = new Set(Object.values(config.services).flatMap((e) => e.secrets));
+    const orphans = [...vaultKeys].filter((k) => !declared.has(k)).sort();
+    if (orphans.length > 0) {
+      console.log();
+      console.log(colors.dim("  orphans in vault (not referenced by any service):"));
+      for (const k of orphans) console.log(`    ${colors.yellow("●")} ${k}`);
+    }
+    console.log();
+    outro(
+      colors.dim(
+        `${declared.size} declared · ${vaultKeys.size} in vault · ${orphans.length} orphan(s)`,
+      ),
+    );
+  },
+});
+
+/** `stack env` — inspect the env-var map. Bare `stack env` runs `show`. */
 export const envCommand = defineCommand({
   meta: {
     name: "env",
     description: "Inspect the effective env-var map for this stack.",
   },
   subCommands: {
-    show: defineCommand({
-      meta: { name: "show", description: "Show which secrets are present in Phantom." },
-      args: {
-        env: { type: "string", default: "dev", description: "Environment overlay to preview." },
-      },
-      async run({ args }) {
-        intro(`stack env show (${args.env})`);
-        await requirePhantom();
-        const config = await readConfig();
-        const vaultKeys = new Set(await listSecrets());
-        console.log();
-        for (const [name, entry] of Object.entries(config.services)) {
-          console.log(`  ${colors.bold(name)}`);
-          for (const slot of entry.secrets) {
-            const present = vaultKeys.has(slot);
-            const dot = present ? colors.green("●") : colors.red("○");
-            const value = present ? colors.dim("(phm_…)") : colors.red("missing");
-            console.log(`    ${dot} ${slot.padEnd(30)} ${value}`);
-          }
-        }
-        const declared = new Set(Object.values(config.services).flatMap((e) => e.secrets));
-        const orphans = [...vaultKeys].filter((k) => !declared.has(k)).sort();
-        if (orphans.length > 0) {
-          console.log();
-          console.log(colors.dim("  orphans in vault (not referenced by any service):"));
-          for (const k of orphans) console.log(`    ${colors.yellow("●")} ${k}`);
-        }
-        console.log();
-        outro(
-          colors.dim(
-            `${declared.size} declared · ${vaultKeys.size} in vault · ${orphans.length} orphan(s)`,
-          ),
-        );
-      },
-    }),
+    show: envShowCommand,
     export: defineCommand({
       meta: {
         name: "export",
@@ -134,5 +137,11 @@ export const envCommand = defineCommand({
         outroError(`${missing.length} secret(s) missing from the vault.`);
       },
     }),
+  },
+  // Bare `stack env` means `stack env show`. citty 0.1.6 also calls this
+  // parent `run` after a matched subcommand, so only act when none was given.
+  async run({ rawArgs }) {
+    if (rawArgs.some((a) => !a.startsWith("-"))) return;
+    await runCommand(envShowCommand, { rawArgs });
   },
 });

@@ -1,7 +1,7 @@
 {
   "name": "Ashlr Stack",
   "short_name": "Stack",
-  "description": "The control plane for your entire dev stack. One command to provision, wire, and operate every third-party service.",
+  "description": "Plan and configure supported services for a local development project, using Stack CLI workflows and its MCP bridge.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

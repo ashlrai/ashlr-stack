@@ -2,10 +2,9 @@ import { useState } from "react";
 import CopyBtn from "~/components/primitives/CopyBtn";
 
 /**
- * UseCases — real Claude Code conversations alongside the exact `stack`
- * invocations they drive. Tabs across four canonical scenarios. Each
- * tab shows the chat turn, the CLI output it produces, and a copy-
- * able one-liner you can paste into your own terminal.
+ * UseCases — illustrative flows using supported Stack commands and MCP tools.
+ * These are examples, not recorded customer sessions or evidence that a
+ * provider accepted a request. Results depend on authentication and setup.
  */
 
 interface TurnLine {
@@ -27,179 +26,178 @@ interface UseCase {
 const CASES: UseCase[] = [
   {
     id: "new-saas",
-    title: "Spin up a new SaaS — zero to deployable",
+    title: "Compose a new SaaS project",
     persona: "solo founder, new repo",
-    command: "stack init --template saas && stack add supabase posthog sentry resend",
-    ask: "Start a new SaaS: auth, Postgres, product analytics, error tracking, transactional email. Wire everything so I can `bun dev` in one minute.",
+    command:
+      "stack init --noInteractive && stack add supabase && stack add posthog && stack add sentry && stack add resend",
+    ask: "Start a project with Supabase, PostHog, Sentry, and Resend. What needs my authorization?",
     outcome:
-      "5 providers provisioned, 11 env vars in Phantom, 3 MCP servers wired. `.env.local` + `.mcp.json` are ready. Claude Code can now query the DB + tail Sentry without copy-paste.",
+      "If each provider accepts the setup, Stack records service slots in `.stack.toml`, stores credentials in Phantom, and adds available MCP entries to `.mcp.json`. Run `stack env export --example` for empty-key documentation; configure and verify the app separately.",
     turns: [
       {
         kind: "user",
-        text: "Start a new SaaS project. I want Supabase for auth + DB, PostHog for analytics, Sentry for errors, Resend for email.",
+        text: "Start a project with Supabase for auth and data, PostHog for analytics, Sentry for errors, and Resend for email.",
       },
       {
         kind: "assistant",
-        text: "I'll scaffold it with Stack's saas template and batch-add those four providers. One moment.",
+        text: "I'll initialize a blank Stack config, then add one service at a time. Each service may need your existing account, OAuth approval, or API key.",
       },
-      { kind: "tool", text: "stack_init", detail: "template=saas" },
-      { kind: "work", text: "scaffolded package.json + .stack.toml + .stack.local.toml" },
-      { kind: "tool", text: "stack_add", detail: "supabase + posthog + sentry + resend" },
+      { kind: "tool", text: "stack_init", detail: "blank config; no template" },
+      { kind: "work", text: "initialize .stack.toml and .stack.local.toml" },
+      { kind: "tool", text: "stack_add", detail: "service=supabase" },
       {
         kind: "work",
-        text: "Supabase · OAuth PKCE",
-        detail: "project raven-prod · us-east-1 · 3 secrets → phantom",
+        text: "Supabase",
+        detail: "authorize OAuth or provide a PAT; create a project if approved",
       },
+      { kind: "tool", text: "stack_add", detail: "service=posthog" },
       {
         kind: "work",
-        text: "PostHog · API key paste",
-        detail: "POSTHOG_PERSONAL_API_KEY → phantom · MCP server registered",
+        text: "PostHog",
+        detail: "provide an API key; verify access to projects",
       },
+      { kind: "tool", text: "stack_add", detail: "service=sentry" },
       {
         kind: "work",
-        text: "Sentry · PAT",
-        detail: "project raven · DSN fetched · MCP server registered",
+        text: "Sentry",
+        detail: "provide a PAT and select an existing project",
       },
+      { kind: "tool", text: "stack_add", detail: "service=resend" },
       {
         kind: "work",
-        text: "Resend · API key paste",
-        detail: "RESEND_API_KEY → phantom · domain verified",
+        text: "Resend",
+        detail: "provide an API key; verify key access, then check domain setup separately",
       },
-      { kind: "ok", text: "✓ 4 providers ready · 11 env vars · 3 MCP servers wired" },
+      { kind: "ok", text: "Expected: review each provider result before using the app" },
       {
         kind: "assistant",
-        text: "Done. `.env.local` resolves through Phantom; your Claude Code session will see the new MCP servers after a restart. Ready for `bun dev`.",
+        text: "After successful setup, inspect the saved config and MCP entries. Use `stack env export --example` for empty keys; `stack exec -- bun dev` forwards app startup to `phantom exec`.",
       },
     ],
   },
   {
     id: "add-analytics",
-    title: "Add analytics to a repo already in production",
-    persona: "1-person team, existing Next.js app",
+    title: "Add analytics to an existing repo",
+    persona: "small team, existing app",
     command: "stack add posthog",
-    ask: "Wire PostHog into this existing app. Don't touch any of the Supabase secrets already in .env.",
+    ask: "Add PostHog without changing my existing Supabase environment file.",
     outcome:
-      "PostHog key added to the Phantom-managed block of `.env.local` (never touching your unmanaged lines). `stack exec -- bun dev` resolves it at runtime. No other files modified.",
+      "After a successful key check, Stack can store the PostHog key in Phantom, record its slot in `.stack.toml`, and merge its MCP config entry. It does not patch `.env.local`; `stack exec -- bun dev` forwards to `phantom exec`. Integrate the SDK and verify the app receives what it needs.",
     turns: [
       {
         kind: "user",
-        text: "Wire PostHog into this app. Don't touch the existing Supabase secrets.",
+        text: "Add PostHog, but leave my existing Supabase .env.local alone.",
       },
       {
         kind: "assistant",
-        text: "I'll add PostHog. Stack only patches its own managed block in .env.local — your Supabase lines are untouched.",
+        text: "I'll add the PostHog service. Stack does not rewrite your .env.local; review the resulting config and wire the app SDK separately.",
       },
-      { kind: "tool", text: "stack_add", detail: "posthog" },
-      { kind: "work", text: "auth · API key paste", detail: "pasted from Claude Code prompt" },
+      { kind: "tool", text: "stack_add", detail: "service=posthog" },
+      { kind: "work", text: "request an existing PostHog API key" },
       {
         kind: "work",
-        text: "verifying against /api/projects/@me",
-        detail: "200 OK · user mason@evero-consulting.com",
+        text: "check key against the PostHog projects API",
+        detail: "setup continues only if authorization succeeds",
       },
-      { kind: "work", text: "writing POSTHOG_PERSONAL_API_KEY → phantom vault" },
+      { kind: "work", text: "store POSTHOG_PERSONAL_API_KEY in Phantom" },
       {
         kind: "work",
-        text: "patching .env.local managed block",
-        detail: "appended 1 line, left 14 unmanaged lines untouched",
+        text: "record the service in .stack.toml",
+        detail: "existing .env.local stays outside this step",
       },
       {
         kind: "work",
-        text: 'registering MCP server "posthog"',
-        detail: "SSE at mcp.posthog.com/sse",
+        text: "merge PostHog MCP config entry when available",
+        detail: "connection requires separate client verification",
       },
-      { kind: "ok", text: "✓ posthog ready · 1 env var · 1 MCP server" },
+      { kind: "ok", text: "Expected: inspect the saved slot and config" },
       {
         kind: "assistant",
-        text: "PostHog is live. Import and `posthog.capture()` — and the MCP server means I can pull events back without you running commands.",
+        text: "Next, integrate the PostHog SDK in your app and test an event. `stack exec -- bun dev` forwards the command to `phantom exec`; verify the app's required credentials separately.",
       },
     ],
   },
   {
     id: "rotate-key",
-    title: "Rotate a compromised Sentry token",
-    persona: "oncall, prod alert just fired",
-    command: "phantom rotate SENTRY_AUTH_TOKEN && stack doctor",
-    ask: "Sentry auth token leaked via a misconfigured CI log. Rotate + re-verify everything.",
+    title: "Respond to a suspected Sentry token leak",
+    persona: "on-call, credential review",
+    command: "stack doctor",
+    ask: "A Sentry auth token appeared in a CI log. Check Stack, then contain and replace the credential.",
     outcome:
-      "Old token revoked at Sentry, new one generated + stored in Phantom. `.env.local` doesn't need to change (it references the slot, not the value). Every Claude Code session + dev server + CI job picks up the new value on next read.",
+      "`stack doctor` checks the declared stack. Revoke the exposed token in Sentry, create a replacement with the required scopes, update the owned Phantom slot, and verify each consumer separately. A health check does not rotate a provider token or prove consumers refreshed.",
     turns: [
       {
         kind: "user",
-        text: "Sentry auth token leaked in a CI log. Rotate it and confirm every consumer picks up the new value.",
+        text: "A Sentry auth token appeared in a CI log. Can Stack confirm the current state?",
       },
       {
         kind: "assistant",
-        text: "Rotating via Phantom. `.env.local` and `.mcp.json` reference the slot name, not the value — so the rotation is transparent to consumers.",
-      },
-      { kind: "tool", text: "phantom_rotate", detail: "SENTRY_AUTH_TOKEN" },
-      {
-        kind: "work",
-        text: "revoking old token at sentry.io",
-        detail: "api token id: 4829-a1b2 · revoked",
-      },
-      { kind: "work", text: "minting new token", detail: "scopes: project:read project:write" },
-      {
-        kind: "work",
-        text: "writing new value to phantom vault",
-        detail: "rotation counter: 1 → 2",
+        text: "I'll run the Stack health check. Token revocation and replacement need separate action in Sentry and Phantom, followed by consumer checks.",
       },
       { kind: "tool", text: "stack_doctor" },
       {
         kind: "work",
-        text: "bun dev · reading .env",
-        detail: "resolved SENTRY_AUTH_TOKEN via phantom — new value",
+        text: "check declared services and local configuration",
+        detail: "health output depends on this project and provider access",
+      },
+      { kind: "work", text: "review the exposed token's scope and logs" },
+      { kind: "work", text: "revoke the exposed token in Sentry" },
+      {
+        kind: "work",
+        text: "create a scoped replacement and update the owned Phantom slot",
+        detail: "separate provider and vault actions",
       },
       {
         kind: "work",
-        text: 'MCP server "sentry" reconnected',
-        detail: "auth ok · no user-facing restart needed",
+        text: "restart or refresh affected consumers as needed",
+        detail: "CI, app, and MCP clients require independent checks",
       },
-      { kind: "ok", text: "✓ rotated · 0 files modified · all consumers live" },
+      { kind: "ok", text: "Next: verify provider revocation and each consumer" },
       {
         kind: "assistant",
-        text: "Rotated. Nothing was committed — the leaked token is dead, the new one is in Phantom, and every tool downstream has the new value now.",
+        text: "The check alone cannot certify rotation. Confirm the old token fails at Sentry and each consumer uses the replacement before closing the incident.",
       },
     ],
   },
   {
     id: "compare-providers",
-    title: '"Which database should I use?" — agent knows the catalog',
+    title: '"Which database should I use?" — explore the catalog',
     persona: "new project, researching",
-    command: "stack providers database",
-    ask: "I need a serverless Postgres. Walk me through the tradeoffs between the Stack-supported options.",
+    command: "stack providers",
+    ask: "I need a serverless Postgres. Show the Stack catalog and help me compare supported choices.",
     outcome:
-      "Claude reads the PROVIDERS_REF catalog via MCP, filters to Database providers, and lays out the 6 options with their auth method + provisioning behaviour. No tabs, no docs-hunting.",
+      "`stack providers` lists the catalog; the `stack_providers` MCP tool exposes the same list without a category parameter. Filter the returned database entries for a comparison, then confirm current provider details before adding one.",
     turns: [
       {
         kind: "user",
-        text: "I need a serverless Postgres for a side project. What does Stack support and what are the tradeoffs?",
+        text: "I need serverless Postgres for a side project. Which Stack database options should I compare?",
       },
       {
         kind: "assistant",
-        text: "Pulling the catalog via the MCP resource — these are the 6 Database providers Stack ships today, with how Stack authenticates + provisions each.",
+        text: "I'll read the Stack provider catalog and compare the database entries. The catalog is guidance, not proof of an active provider account.",
       },
-      { kind: "tool", text: "stack_providers", detail: "category=database" },
+      { kind: "tool", text: "stack_providers" },
       {
         kind: "work",
         text: "supabase",
-        detail: "OAuth PKCE · Stack creates a project + fetches url/anon/service keys",
+        detail: "OAuth or PAT; project creation through its Management API",
       },
       {
         kind: "work",
         text: "neon",
-        detail: "PAT paste · Stack creates a project + returns DATABASE_URL",
+        detail: "PAT; project creation can return a connection URI",
       },
-      { kind: "work", text: "turso", detail: "platform token paste · Stack creates a libSQL db" },
+      { kind: "work", text: "turso", detail: "platform token; libSQL database option" },
       {
         kind: "work",
         text: "convex",
-        detail: "deploy-key paste · stored only, no upstream provisioning",
+        detail: "catalog entry; inspect its adapter before setup",
       },
-      { kind: "work", text: "upstash", detail: "management-token paste · stored only" },
-      { kind: "work", text: "firebase", detail: "service-account JSON paste · stored only" },
+      { kind: "work", text: "upstash", detail: "catalog entry; inspect its adapter before setup" },
+      { kind: "work", text: "firebase", detail: "catalog entry; inspect its adapter before setup" },
       {
         kind: "assistant",
-        text: "For a solo side project I'd pick Neon (simplest PAT, branchy dev) or Supabase (fullest provisioning, auth + storage included). Want me to run `stack add neon`?",
+        text: "If you specifically need Postgres, start with Neon or Supabase. Review account access and current adapter behavior before running `stack add neon` or `stack add supabase`.",
       },
     ],
   },
@@ -237,7 +235,7 @@ function Turn({ line }: { line: TurnLine }) {
           ? "text-[color:var(--color-signal-ok,#6fe8a7)]"
           : "text-[color:var(--color-ink-400)]";
   const prefix =
-    line.kind === "tool" ? "→ " : line.kind === "work" ? "✓ " : line.kind === "ok" ? "" : "  ";
+    line.kind === "tool" ? "→ " : line.kind === "work" ? "· " : line.kind === "ok" ? "" : "  ";
   return (
     <div className="mono text-[12px] leading-[1.8] pl-3">
       <span className={colorClass}>
@@ -259,7 +257,7 @@ export default function UseCases() {
         {CASES.map((x, i) => {
           const isActive = i === active;
           return (
-            <li key={x.id} className="shrink-0 lg:shrink">
+            <li key={x.id} className="w-[220px] shrink-0 lg:w-auto lg:shrink">
               <button
                 type="button"
                 onClick={() => setActive(i)}
@@ -305,11 +303,11 @@ export default function UseCases() {
           <p className="mt-1 text-sm text-[color:var(--color-ink-300)] max-w-[600px]">{c.ask}</p>
         </div>
 
-        {/* One-liner at the top */}
+        {/* Copyable example command at the top */}
         <div className="panel p-3 mb-4" style={{ borderLeft: "2px solid var(--color-blade-500)" }}>
           <div className="flex items-center justify-between mb-1.5">
             <span className="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--color-ink-500)]">
-              the one command
+              example command
             </span>
             <CopyBtn text={c.command} compact />
           </div>
@@ -318,23 +316,23 @@ export default function UseCases() {
           </div>
         </div>
 
-        {/* Chat transcript */}
+        {/* Illustrative interaction */}
         <div className="panel p-4">
           <div className="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--color-ink-500)] mb-3">
-            chat transcript
+            illustrative interaction
           </div>
           <div className="space-y-0">
             {c.turns.map((t, i) => (
-              // biome-ignore lint/suspicious/noArrayIndexKey: TurnLine has no id; turns are static case-study transcripts.
+              // biome-ignore lint/suspicious/noArrayIndexKey: TurnLine has no id; turns are static illustrative examples.
               <Turn key={i} line={t} />
             ))}
           </div>
         </div>
 
-        {/* Outcome */}
+        {/* Expected next step */}
         <div className="mt-4 flex items-start gap-2">
           <span className="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--color-blade-400)] shrink-0 pt-0.5">
-            outcome
+            expected next step
           </span>
           <p className="text-[13px] text-[color:var(--color-ink-200)] leading-[1.55]">
             {c.outcome}

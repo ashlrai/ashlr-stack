@@ -1,15 +1,16 @@
 import { useMemo, useState } from "react";
 import CopyBtn from "~/components/primitives/CopyBtn";
 import { PROVIDERS_REF, type ProviderRef } from "~/lib/providers-ref";
+import {
+  STACK_MCP_PREREQUISITES,
+  formatOptionalStackMcp,
+  planStackAddCommands,
+} from "~/lib/stack-builder-output";
 
 /**
- * TemplateExplorer — click a template card to see the real recipe it
- * produces: the sequence of `stack add` commands, the env block each
- * provider writes, and the consolidated .mcp.json entry the agent gets.
- *
- * Every command + config snippet below is derived from the same source
- * (PROVIDERS_REF) that the CLI itself uses, so if a provider's secrets
- * change upstream the template preview updates automatically.
+ * TemplateExplorer shows a catalog-derived plan, not observed setup output.
+ * Reuse the qualified single-provider commands and optional Stack MCP bridge;
+ * provider-specific MCP credentials/configuration remain a separate setup step.
  */
 
 export interface Template {
@@ -52,27 +53,20 @@ function buildRecipe(refs: ProviderRef[]): {
   totalSecrets: number;
   mcpCount: number;
 } {
-  const cmd = `stack add ${refs.map((r) => r.name).join(" ")}`;
+  const cmd = planStackAddCommands(
+    refs.map((r) => r.name),
+    new Set(PROVIDERS_REF.map((r) => r.name)),
+  ).commands;
   const env = refs
     .map((r) =>
-      [
-        `# ${r.displayName} — ${formatAuthKind(r.authKind)}`,
-        ...r.secrets.map((s) => `${s}=<phantom://${r.name}/${s}>`),
-      ].join("\n"),
+      [`# ${r.displayName} — ${formatAuthKind(r.authKind)}`, ...r.secrets.map((s) => `${s}=`)].join(
+        "\n",
+      ),
     )
     .join("\n\n");
 
   const mcpRefs = refs.filter((r) => r.mcp);
-  const servers: Record<string, unknown> = {};
-  for (const r of mcpRefs) {
-    if (!r.mcp) continue;
-    servers[r.mcp.name] = {
-      command: "stack",
-      args: ["mcp", "run", r.mcp.name],
-      env: Object.fromEntries(r.secrets.map((s) => [s, `<phantom://${r.name}/${s}>`])),
-    };
-  }
-  const mcp = mcpRefs.length ? JSON.stringify({ mcpServers: servers }, null, 2) : "";
+  const mcp = formatOptionalStackMcp(mcpRefs.length > 0);
 
   return {
     cmd,
@@ -178,7 +172,8 @@ export default function TemplateExplorer({ templates }: Props) {
                   {active.title}
                 </h4>
                 <p className="mt-1 text-sm text-[color:var(--color-ink-300)] max-w-[560px]">
-                  {active.blurb}
+                  {active.blurb} This is a planning preview; no provider or vault operation runs
+                  here.
                 </p>
               </div>
               <div className="flex flex-col items-end gap-1 mono text-[10px] uppercase tracking-[0.14em] text-[color:var(--color-ink-500)]">
@@ -192,11 +187,11 @@ export default function TemplateExplorer({ templates }: Props) {
                   <span className="text-[color:var(--color-ink-100)] tabular-nums">
                     {recipe.totalSecrets}
                   </span>{" "}
-                  env vars
+                  catalog keys
                 </span>
                 {recipe.mcpCount > 0 && (
                   <span className="text-[color:var(--color-blade-400)]">
-                    <span className="tabular-nums">{recipe.mcpCount}</span> MCP servers
+                    <span className="tabular-nums">{recipe.mcpCount}</span> catalog MCP hints
                   </span>
                 )}
               </div>
@@ -221,7 +216,7 @@ export default function TemplateExplorer({ templates }: Props) {
               <div className="panel p-3">
                 <div className="flex items-center justify-between mb-2">
                   <span className="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--color-ink-500)]">
-                    which runs
+                    alternative · one add per service
                   </span>
                   <CopyBtn text={recipe.cmd} compact />
                 </div>
@@ -234,7 +229,7 @@ export default function TemplateExplorer({ templates }: Props) {
               <div className="panel p-3">
                 <div className="flex items-center justify-between mb-2">
                   <span className="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--color-ink-500)]">
-                    .env written
+                    .env.example skeleton · not populated
                   </span>
                   <CopyBtn text={recipe.env} compact />
                 </div>
@@ -248,13 +243,17 @@ export default function TemplateExplorer({ templates }: Props) {
                 <div className="panel p-3">
                   <div className="flex items-center justify-between mb-2">
                     <span className="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--color-ink-500)]">
-                      .mcp.json written
+                      optional Stack bridge · not provider config
                     </span>
                     <CopyBtn text={recipe.mcp} compact />
                   </div>
                   <pre className="mono text-[12px] text-[color:var(--color-ink-200)] leading-[1.5] overflow-x-auto max-h-[280px] overflow-y-auto">
                     {recipe.mcp}
                   </pre>
+                  <p className="mt-2 text-[11px] text-[color:var(--color-ink-400)]">
+                    {STACK_MCP_PREREQUISITES} Adapt to your client and set its project cwd. Provider
+                    MCP entries require separate supported credential setup.
+                  </p>
                 </div>
               )}
             </div>

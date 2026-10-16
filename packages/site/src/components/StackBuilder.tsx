@@ -4,6 +4,13 @@ import CopyBtn from "~/components/primitives/CopyBtn";
 import { CATEGORIES, PROVIDERS, type Provider } from "~/lib/providers";
 import { PROVIDERS_REF, type ProviderRef } from "~/lib/providers-ref";
 import {
+  STACK_MCP_PREREQUISITES,
+  formatOptionalStackMcp,
+  joinProviderReferences,
+  planJoinedProviderCommands,
+  planStackAddCommands,
+} from "~/lib/stack-builder-output";
+import {
   type RetrievalHit,
   retrieve,
   retrieveByCategory,
@@ -16,10 +23,10 @@ import { PROVIDER_CATEGORIES } from "../../../core/src/catalog";
  * Joins the display catalog (providers.ts) with the technical reference
  * (providers-ref.ts) and lets a visitor:
  *   1. Filter providers by category + live search
- *   2. Click a card → inline detail: real `stack add` invocation, env vars,
- *      MCP config entry, dashboard link
- *   3. Multi-select providers → sticky dock at the bottom assembles the full
- *      recipe (.env block, .mcp.json block, one-liner `stack add` batch)
+ *   2. Click a card → inline detail: canonical `stack add` invocation when
+ *      supported, empty-key env example, optional Stack MCP bootstrap, links
+ *   3. Multi-select providers → sticky dock at the bottom assembles a plan
+ *      (empty-key .env.example block and sequential supported add commands)
  *   4. Copy every piece independently or copy the full recipe
  */
 
@@ -45,58 +52,12 @@ interface RecommendResponse {
   guidance: string;
 }
 
-const SLUG_TO_REF_NAME: Record<string, string> = {
-  supabase: "supabase",
-  neon: "neon",
-  turso: "turso",
-  convex: "convex",
-  upstash: "upstash",
-  firebase: "firebase",
-  vercel: "vercel",
-  railway: "railway",
-  flydotio: "fly",
-  cloudflare: "cloudflare",
-  render: "render",
-  modal: "modal",
-  amazonwebservices: "aws",
-  openai: "openai",
-  anthropic: "anthropic",
-  x: "xai",
-  deepseek: "deepseek",
-  replicate: "replicate",
-  braintrust: "braintrust",
-  posthog: "posthog",
-  sentry: "sentry",
-  stripe: "stripe",
-  github: "github",
-  linear: "linear",
-  resend: "resend",
-  clerk: "clerk",
-};
-
-function stubRef(p: Provider): ProviderRef {
-  const key = p.name.toLowerCase().replace(/[^a-z0-9]/g, "_");
-  const secretName = `${key.toUpperCase()}_API_KEY`;
-  return {
-    name: key,
-    displayName: p.name,
-    category: p.category,
-    authKind: "api_key",
-    secrets: [secretName],
-    blurb: p.blurb,
-    dashboard: "",
-    docs: "",
-    howTo: "",
-  };
-}
-
 function mergeCatalog(iconPaths: Record<string, string | null>): Merged[] {
-  const byName = new Map(PROVIDERS_REF.map((r) => [r.name, r]));
-  return PROVIDERS.map((p) => {
-    const refName = SLUG_TO_REF_NAME[p.slug];
-    const ref = refName ? (byName.get(refName) ?? null) : null;
-    return { display: p, ref: ref ?? stubRef(p), iconPath: iconPaths[p.slug] ?? null };
-  });
+  return joinProviderReferences(PROVIDERS, PROVIDERS_REF).map(({ display, ref }) => ({
+    display,
+    ref,
+    iconPath: iconPaths[display.slug] ?? null,
+  }));
 }
 
 function formatAuthKind(kind: ProviderRef["authKind"]): string {
@@ -113,35 +74,21 @@ function formatAuthKind(kind: ProviderRef["authKind"]): string {
 }
 
 function buildEnvBlock(selected: Merged[]): string {
+  // Catalog slots mirror `stack env export --example`, not credentials an adapter has materialized.
   return selected
     .map((m) => {
-      const header = `# ${m.display.name} — ${m.ref?.authKind ? formatAuthKind(m.ref.authKind) : "API key"}`;
-      const lines = (m.ref?.secrets ?? []).map((s) => `${s}=<phantom://${m.ref?.name ?? ""}/${s}>`);
+      if (!m.ref) return `# ${m.display.name} — planning only; no verified environment keys`;
+      const header = `# ${m.display.name} — ${formatAuthKind(m.ref.authKind)}`;
+      const lines = m.ref.secrets.map((s) => `${s}=`);
       return [header, ...lines].join("\n");
     })
     .join("\n\n");
 }
 
-function buildMcpBlock(selected: Merged[]): string {
-  const mcpEntries = selected.filter((m) => m.ref?.mcp);
-  if (mcpEntries.length === 0) return "";
-  const servers: Record<string, unknown> = {};
-  for (const m of mcpEntries) {
-    if (!m.ref?.mcp) continue;
-    servers[m.ref.mcp.name] = {
-      command: "stack",
-      args: ["mcp", "run", m.ref.mcp.name],
-      env: Object.fromEntries(
-        (m.ref.secrets ?? []).map((s) => [s, `<phantom://${m.ref?.name}/${s}>`]),
-      ),
-    };
-  }
-  return JSON.stringify({ mcpServers: servers }, null, 2);
-}
+const canonicalProviderNames = new Set(PROVIDERS_REF.map((provider) => provider.name));
 
-function buildBatchCommand(selected: Merged[]): string {
-  if (selected.length === 0) return "";
-  return `stack add ${selected.map((m) => m.ref?.name ?? m.display.name.toLowerCase()).join(" ")}`;
+function addPlan(selected: Merged[]) {
+  return planJoinedProviderCommands(selected, canonicalProviderNames);
 }
 
 interface CardProps {
@@ -192,10 +139,10 @@ function ProviderCard({ m, selected, expanded, onToggle, onExpand }: CardProps) 
               MCP
             </span>
           )}
-          {m.display.keyOnly && (
+          {m.ref && m.display.keyOnly && (
             <span
               className="text-[9px] mono tracking-[0.08em] uppercase px-1.5 py-0.5 border border-[color:var(--color-ink-600)] text-[color:var(--color-ink-500)]"
-              title="Key-only · v0.2 adds provisioning"
+              title="Uses a supplied provider credential"
             >
               key
             </span>
@@ -205,7 +152,7 @@ function ProviderCard({ m, selected, expanded, onToggle, onExpand }: CardProps) 
       <div className="relative mt-3 pointer-events-none">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-white tracking-tight">{m.display.name}</span>
-          {m.display.auth && (
+          {m.ref && m.display.auth && (
             <span className="text-[9px] mono text-[color:var(--color-ink-500)]">
               · {m.display.auth}
             </span>
@@ -246,24 +193,32 @@ interface DetailProps {
 }
 function DetailPanel({ m, onClose, selected, onToggle }: DetailProps) {
   const ref = m.ref;
-  if (!ref) return null;
-  const cmd = `stack add ${ref.name}`;
-  const envSample = ref.secrets.map((s) => `${s}=<phantom://${ref.name}/${s}>`).join("\n");
-  const mcpSample = ref.mcp
-    ? JSON.stringify(
-        {
-          mcpServers: {
-            [ref.mcp.name]: {
-              command: "stack",
-              args: ["mcp", "run", ref.mcp.name],
-              env: Object.fromEntries(ref.secrets.map((s) => [s, `<phantom://${ref.name}/${s}>`])),
-            },
-          },
-        },
-        null,
-        2,
-      )
-    : "";
+  if (!ref) {
+    return (
+      <div className="panel-steel mt-4 p-5 sm:p-6 flex items-start justify-between gap-4">
+        <div>
+          <h4 className="text-xl text-[color:var(--color-ink-50)] tracking-tight font-medium">
+            {m.display.name}
+          </h4>
+          <p className="mt-1 text-sm text-[color:var(--color-ink-300)]">
+            Planning only — no verified Stack catalog reference or environment keys for this entry.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="mono text-[10px] tracking-[0.12em] uppercase text-[color:var(--color-ink-400)] hover:text-[color:var(--color-ink-100)]"
+          aria-label="Close detail"
+        >
+          close ✕
+        </button>
+      </div>
+    );
+  }
+  const plan = planStackAddCommands([ref.name], canonicalProviderNames);
+  const cmd = plan.commands;
+  const envSample = ref.secrets.map((s) => `${s}=`).join("\n");
+  const mcpSample = formatOptionalStackMcp(Boolean(ref.mcp));
 
   return (
     <div className="panel-steel mt-4 p-5 sm:p-6 relative">
@@ -272,7 +227,9 @@ function DetailPanel({ m, onClose, selected, onToggle }: DetailProps) {
           <div className="mono text-[10px] tracking-[0.18em] uppercase text-[color:var(--color-ink-500)] mb-1">
             {ref.category} · {formatAuthKind(ref.authKind)}
             {ref.mcp && (
-              <span className="text-[color:var(--color-blade-400)]"> · MCP auto-wired</span>
+              <span className="text-[color:var(--color-blade-400)]">
+                {ref.mcp.preview ? " · MCP catalog preview" : " · MCP catalog note"}
+              </span>
             )}
           </div>
           <h4 className="text-xl text-[color:var(--color-ink-50)] tracking-tight font-medium">
@@ -299,10 +256,11 @@ function DetailPanel({ m, onClose, selected, onToggle }: DetailProps) {
             <span className="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--color-ink-500)]">
               invocation
             </span>
-            <CopyBtn text={cmd} compact />
+            {cmd && <CopyBtn text={cmd} compact />}
           </div>
           <div className="mono text-[13px] text-[color:var(--color-ink-100)]">
-            <span className="text-[color:var(--color-blade-400)]">›</span> {cmd}
+            <span className="text-[color:var(--color-blade-400)]">›</span>{" "}
+            {cmd || "Planning only — no verified Stack add command for this catalog entry"}
           </div>
           {ref.howTo && (
             <p className="mt-3 text-[11px] text-[color:var(--color-ink-400)] leading-[1.5]">
@@ -315,7 +273,7 @@ function DetailPanel({ m, onClose, selected, onToggle }: DetailProps) {
         <div className="panel p-3">
           <div className="flex items-center justify-between mb-2">
             <span className="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--color-ink-500)]">
-              writes to .env
+              optional .env.example keys
             </span>
             <CopyBtn text={envSample} compact />
           </div>
@@ -332,7 +290,7 @@ function DetailPanel({ m, onClose, selected, onToggle }: DetailProps) {
           >
             <div className="flex items-center justify-between mb-2">
               <span className="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--color-ink-500)]">
-                .mcp.json entry
+                optional Stack MCP server
               </span>
               <CopyBtn text={mcpSample} compact />
             </div>
@@ -340,6 +298,8 @@ function DetailPanel({ m, onClose, selected, onToggle }: DetailProps) {
               {mcpSample}
             </pre>
             <p className="mt-2 text-[11px] text-[color:var(--color-ink-400)] leading-[1.5]">
+              {STACK_MCP_PREREQUISITES} This controls Stack; provider MCP entries come only from
+              successful local setup. Inspect the generated .mcp.json after `stack add`.{" "}
               {ref.mcp.detail}
             </p>
           </div>
@@ -423,11 +383,11 @@ function StackDock({ selected, onClear, onOpen }: DockProps) {
               {selected.length.toString().padStart(2, "0")} providers
             </span>
             <span className="mono text-[11px] text-[color:var(--color-ink-400)]">
-              · {envCount} env vars
+              · {envCount} example keys
             </span>
             {mcpCount > 0 && (
               <span className="mono text-[11px] text-[color:var(--color-blade-400)]">
-                · {mcpCount} MCP
+                · {mcpCount} MCP catalog {mcpCount === 1 ? "note" : "notes"}
               </span>
             )}
           </div>
@@ -489,9 +449,10 @@ interface RecipeProps {
   onClose: () => void;
 }
 function RecipeModal({ selected, onClose }: RecipeProps) {
-  const batch = buildBatchCommand(selected);
+  const plan = addPlan(selected);
+  const batch = plan.commands;
   const env = buildEnvBlock(selected);
-  const mcp = buildMcpBlock(selected);
+  const mcp = formatOptionalStackMcp(selected.some((m) => Boolean(m.ref?.mcp)));
   const closeBtnRef = useRef<HTMLButtonElement>(null);
   const full = [
     "# Ashlr Stack — recipe export",
@@ -501,14 +462,19 @@ function RecipeModal({ selected, onClose }: RecipeProps) {
     "curl -fsSL stack.ashlr.ai/install.sh | bash",
     "",
     "# 2. Initialise the project",
-    "stack init",
+    "stack init --noInteractive",
     "",
-    "# 3. Provision every provider in one batch",
+    "# 3. Add each provider in sequence (authentication required)",
     batch,
+    plan.unsupported.length
+      ? `# Planning only; no verified Stack add command for: ${plan.unsupported.join(", ")}`
+      : "",
     "",
-    "# Result: .env contents (secret values come from Phantom at read-time)",
+    "# Optional empty-key .env.example template (generate after setup with stack env export --example)",
     env,
-    mcp ? `\n# Result: .mcp.json\n${mcp}` : "",
+    mcp
+      ? `\n# Optional Stack MCP server (controls Stack, not selected providers)\n# ${STACK_MCP_PREREQUISITES}\n# Provider MCP entries come from successful local stack add; inspect generated .mcp.json.\n${mcp}`
+      : "",
   ]
     .filter(Boolean)
     .join("\n");
@@ -551,9 +517,10 @@ function RecipeModal({ selected, onClose }: RecipeProps) {
               {selected.length} providers. One recipe.
             </h3>
             <p className="mt-1 text-sm text-[color:var(--color-ink-300)] max-w-[560px]">
-              Every block below is real output from the exact{" "}
-              <code className="mono text-[color:var(--color-ink-100)]">stack add</code> invocations
-              Stack would run.
+              This is an illustrative plan using{" "}
+              <code className="mono text-[color:var(--color-ink-100)]">stack add</code>. Review each
+              provider result and generated config after authentication. Catalog MCP notes do not
+              prove an active provider connection.
             </p>
           </div>
           <button
@@ -571,19 +538,25 @@ function RecipeModal({ selected, onClose }: RecipeProps) {
           <div className="panel p-3" style={{ borderLeft: "2px solid var(--color-blade-500)" }}>
             <div className="flex items-center justify-between mb-2">
               <span className="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--color-ink-500)]">
-                batch invocation
+                sequential add commands
               </span>
-              <CopyBtn text={batch} compact />
+              {batch && <CopyBtn text={batch} compact />}
             </div>
             <div className="mono text-[13px] text-[color:var(--color-ink-100)] break-all">
-              <span className="text-[color:var(--color-blade-400)]">›</span> {batch}
+              <span className="text-[color:var(--color-blade-400)]">›</span>{" "}
+              {batch || "No verified Stack add commands for this selection"}
             </div>
+            {plan.unsupported.length > 0 && (
+              <p className="mt-2 text-[11px] text-[color:var(--color-ink-400)]">
+                Planning only: no verified add command for {plan.unsupported.join(", ")}.
+              </p>
+            )}
           </div>
 
           <div className="panel p-3">
             <div className="flex items-center justify-between mb-2">
               <span className="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--color-ink-500)]">
-                .env block
+                optional .env.example keys
               </span>
               <CopyBtn text={env} compact />
             </div>
@@ -596,13 +569,17 @@ function RecipeModal({ selected, onClose }: RecipeProps) {
             <div className="panel p-3">
               <div className="flex items-center justify-between mb-2">
                 <span className="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--color-ink-500)]">
-                  .mcp.json block
+                  optional Stack MCP server
                 </span>
                 <CopyBtn text={mcp} compact />
               </div>
               <pre className="mono text-[12px] text-[color:var(--color-ink-200)] leading-[1.5] overflow-x-auto">
                 {mcp}
               </pre>
+              <p className="mt-2 text-[11px] text-[color:var(--color-ink-400)] leading-[1.5]">
+                {STACK_MCP_PREREQUISITES} This controls Stack, not selected providers. Inspect
+                provider MCP entries generated by successful local `stack add`.
+              </p>
             </div>
           )}
 
