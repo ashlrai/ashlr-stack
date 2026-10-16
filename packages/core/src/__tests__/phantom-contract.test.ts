@@ -13,7 +13,7 @@ import {
   removeSecret,
   revealSecret,
 } from "../phantom.ts";
-import { tryRevealSecret } from "../providers/_helpers.ts";
+import { takeRevealRefusals, tryRevealSecret } from "../providers/_helpers.ts";
 
 /**
  * Producer/consumer contract: Stack's Phantom wrapper against a REAL
@@ -147,7 +147,10 @@ describe.skipIf(!enabled)("phantom CLI contract (real binary)", () => {
     }
     expect((caught as StackError).code).toBe("PHANTOM_TRUSTED_TERMINAL_REQUIRED");
     expect(String((caught as Error).message)).not.toContain(SYNTHETIC_VALUE);
+    takeRevealRefusals();
     expect(await tryRevealSecret("STACK_CONTRACT_A")).toBeUndefined();
+    // Doctor relies on this to report "stored, unverified" instead of "missing".
+    expect(takeRevealRefusals()).toEqual(["STACK_CONTRACT_A"]);
   });
 
   test("removeSecret without a terminal reports that nothing was removed", async () => {

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { bearerJsonHeaders, tryRevealSecret } from "../providers/_helpers.ts";
+import { bearerJsonHeaders, takeRevealRefusals, tryRevealSecret } from "../providers/_helpers.ts";
 import { type Harness, setupFakePhantom } from "./_harness.ts";
 
 /**
@@ -35,7 +35,18 @@ describe("provider helpers", () => {
   test("tryRevealSecret returns undefined when Phantom refuses headless reveal", async () => {
     h.cleanup();
     h = setupFakePhantom({ PRESENT_KEY: "hello-world" });
+    takeRevealRefusals();
     expect(await tryRevealSecret("PRESENT_KEY")).toBeUndefined();
+    // The refusal is recorded by name so doctor can say "stored, unverified".
+    expect(takeRevealRefusals()).toEqual(["PRESENT_KEY"]);
+    expect(takeRevealRefusals()).toEqual([]);
+  });
+
+  test("a readable or absent value records no refusal", async () => {
+    takeRevealRefusals();
+    await tryRevealSecret("PRESENT_KEY");
+    await tryRevealSecret("NEVER_STORED_KEY");
+    expect(takeRevealRefusals()).toEqual([]);
   });
 
   test("bearerJsonHeaders returns the canonical shape", () => {
