@@ -8,7 +8,7 @@
 
 ## Install
 
-One-liner (installs both `stack` and `ashlr-stack-mcp`):
+One-liner. It installs `stack`, plus `ashlr-stack-mcp` when it installs from npm or from source; when it installs the prebuilt `stack` binary from GitHub Releases, it prints how to add the MCP server (`npm i -g ashlr-stack-mcp`, or `npx -y ashlr-stack-mcp`):
 
 ```bash
 # macOS / Linux

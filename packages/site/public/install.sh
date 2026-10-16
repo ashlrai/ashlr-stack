@@ -218,6 +218,8 @@ EOF
 say "installing the stack CLI…"
 if install_via_binary; then
   say "installed prebuilt binary from GitHub Releases."
+  # The release binary is only the `stack` CLI; the MCP server ships on npm.
+  say "for the MCP server (ashlr-stack-mcp): npm i -g ashlr-stack-mcp, or run it with npx -y ashlr-stack-mcp"
 elif install_via_registry; then
   say "installed from npm registry."
 else
@@ -235,5 +237,5 @@ if ! command -v stack >/dev/null 2>&1; then
 fi
 
 say "done. Version: $(stack --version 2>/dev/null || echo unknown)"
-say "try: stack providers    # see the 23 curated providers"
+say "try: stack providers    # see the 39 curated providers"
 say "     stack init         # scaffold a new project"
