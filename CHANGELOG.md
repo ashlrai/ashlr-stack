@@ -1,6 +1,18 @@
 # Changelog
 
-## Unreleased
+## 0.2.1 (unreleased; dated when tagged)
+
+0.2.1 was never published, so everything below ships in it, along with the 2026-10-12 notes further down. Source versions (core, cli, mcp, `server.json`, `VERSION` in `packages/cli/src/index.ts`) are already 0.2.1, which `scripts/publish.sh` checks before it publishes core, then cli, then mcp.
+
+### Setup and release safety
+
+- **Credentials are staged during setup.** New login credentials are written only after materialization succeeds, ordinary inputs are validated before commit, and create-only Phantom refusals no longer strand Stack state. (#26, #28)
+- **Release inputs and downstream jobs are guarded.** The release workflow refuses the legacy `npm_otp` input and checks that a tag run publishes the tagged commit. (#38)
+- **CLI fixtures run on the Bun 1.2 floor.** (#27)
+
+### Site
+
+- Homepage wrapping, FAQ clipping, ecosystem examples and the Mechanics tab were corrected, and agent-facing claims now match real CLI behavior. (#32, #34, #35, #36, #37)
 
 ### Docs
 
@@ -31,7 +43,7 @@
 - **Release + docs name the MCP package correctly** (`ashlr-stack-mcp`, not `@ashlr/stack-mcp`), including the site's MCP setup snippet.
 - **CI smoke-tests the npm bundles under Node 20** (`stack --help`, MCP initialize, tools/list, `stack_scan`) via `scripts/node-smoke.mjs`.
 
-## 0.2.1 (2026-10-12)
+### Earlier 0.2.1 notes (2026-10-12)
 
 - **Release workflow repaired.** A multi-line `git commit -m` in the Homebrew job ended the YAML block early and left a stray top-level key, so GitHub rejected `release.yml` on every push and the v0.2.0 npm publish never ran.
 - **Docs: Phantom Secrets + Locus.** New `docs/phantom-locus.md` explains how Stack stores keys through Phantom and runs provider CLIs inside a Locus-pinned account (personal / company / client).
