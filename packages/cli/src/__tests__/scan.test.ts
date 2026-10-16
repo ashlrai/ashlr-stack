@@ -238,3 +238,53 @@ describe("stack scan --yes", () => {
     }
   });
 });
+
+// ── argument validation ────────────────────────────────────────────────────
+
+describe("stack scan rejects bad arguments", () => {
+  test("nonexistent --path exits 1 naming the path (--json)", () => {
+    const missing = join(tmpdir(), "stack-scan-does-not-exist-xyz");
+    const { stdout, stderr, code } = runCli(["scan", "--json", "--path", missing], undefined, {
+      CI: "1",
+    });
+    expect(code).toBe(1);
+    expect(stderr).toContain(missing);
+    expect(stdout).not.toContain('"hits"');
+  });
+
+  test("nonexistent --path exits 1 naming the path (human)", () => {
+    const missing = join(tmpdir(), "stack-scan-does-not-exist-xyz");
+    const { stdout, stderr, code } = runCli(["scan", "--path", missing], undefined, { CI: "1" });
+    expect(code).toBe(1);
+    expect(stdout + stderr).toContain(missing);
+  });
+
+  test("a file as --path exits 1", () => {
+    const cwd = tmp({ "package.json": "{}" });
+    const file = join(cwd, "package.json");
+    const { stderr, code } = runCli(["scan", "--json", "--path", file], undefined, { CI: "1" });
+    expect(code).toBe(1);
+    expect(stderr).toContain(file);
+  });
+
+  test("invalid --confidence exits 1 naming the value and the valid tiers", () => {
+    const cwd = tmp({ "package.json": "{}" });
+    const { stdout, stderr, code } = runCli(
+      ["scan", "--json", "--path", cwd, "--confidence", "hgih"],
+      undefined,
+      { CI: "1" },
+    );
+    expect(code).toBe(1);
+    expect(stderr).toContain('Unknown confidence "hgih"');
+    expect(stderr).toContain("low, medium, high");
+    expect(stdout).not.toContain('"hits"');
+  });
+
+  test("--confidence is accepted in any case", () => {
+    const cwd = tmp({ "package.json": "{}" });
+    const { code } = runCli(["scan", "--json", "--path", cwd, "--confidence", "HIGH"], undefined, {
+      CI: "1",
+    });
+    expect(code).toBe(0);
+  });
+});

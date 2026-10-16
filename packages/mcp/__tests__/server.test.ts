@@ -168,6 +168,28 @@ describe("MCP server runtime", () => {
       rmSync(project, { recursive: true, force: true });
     }
   }, 20_000);
+
+  test.each([
+    {
+      label: "nonexistent path",
+      args: { path: join(tmpdir(), "stack-mcp-scan-missing-xyz") },
+      needle: "stack-mcp-scan-missing-xyz",
+    },
+    {
+      label: "invalid confidence",
+      args: { confidence: "hgih" },
+      needle: 'Unknown confidence "hgih"',
+    },
+  ])("stack_scan reports $label as an error, not empty hits", async ({ args, needle }) => {
+    const result = (await client.callTool({ name: "stack_scan", arguments: args })) as {
+      isError?: boolean;
+      content: Array<{ type: string; text: string }>;
+    };
+    const text = result.content[0]?.text ?? "";
+    expect(result.isError).toBe(true);
+    expect(text).toContain(needle);
+    expect(text).not.toContain('"hits"');
+  }, 20_000);
 });
 
 describe("MCP CLI completion", () => {

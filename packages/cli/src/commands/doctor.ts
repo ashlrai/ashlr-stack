@@ -1,12 +1,15 @@
 import {
+  ConfigNotFoundError,
   type ProviderContext,
   type ServiceEntry,
   addService,
   getProvider,
+  hasConfig,
   isPhantomInstalled,
   listProjects,
   listSecrets,
   readConfig,
+  resolveConfigPath,
   scanSource,
   takeRevealRefusals,
 } from "@ashlr/stack-core";
@@ -85,6 +88,19 @@ export const doctorCommand = defineCommand({
     }
 
     if (!json) intro("stack doctor");
+
+    // Without --all, doctor checks this directory's stack; with no stack here
+    // there is nothing to verify, which must not read as "healthy".
+    if (!args.all && !hasConfig(process.cwd())) {
+      const message = new ConfigNotFoundError(resolveConfigPath(process.cwd())).message;
+      if (json) {
+        process.stdout.write(`${JSON.stringify({ error: message })}\n`);
+        process.exitCode = 1;
+        return;
+      }
+      outroError(message);
+      return;
+    }
 
     if (!(await isPhantomInstalled())) {
       if (json) {

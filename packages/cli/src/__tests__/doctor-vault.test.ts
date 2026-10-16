@@ -95,3 +95,34 @@ describe("stack doctor with Phantom Secrets 0.7.9", () => {
     expect(code).toBe(1);
   });
 });
+
+describe("stack doctor without a .stack.toml", () => {
+  function doctor(args: string[]): { code: number; stdout: string; stderr: string } {
+    const result = spawnSync("bun", [CLI_ENTRY, "doctor", ...args], {
+      encoding: "utf8",
+      cwd: dir,
+      env: { ...process.env, NO_COLOR: "1", CI: "1" },
+    });
+    return { code: result.status ?? 0, stdout: result.stdout, stderr: result.stderr };
+  }
+
+  it("fails with the `stack init` hint instead of reporting healthy", () => {
+    h = setupFakePhantom();
+    const { code, stdout, stderr } = doctor([]);
+    const out = stdout + stderr;
+    expect(out).toContain("No .stack.toml");
+    expect(out).toContain("Run `stack init` first.");
+    expect(out).not.toContain("All services healthy");
+    expect(code).toBe(1);
+  });
+
+  it("--json emits an error object and exits 1", () => {
+    h = setupFakePhantom();
+    const { code, stdout } = doctor(["--json"]);
+    const parsed = JSON.parse(stdout) as { error?: string; reports?: unknown };
+    expect(parsed.error).toContain("No .stack.toml");
+    expect(parsed.error).toContain("Run `stack init` first.");
+    expect(parsed.reports).toBeUndefined();
+    expect(code).toBe(1);
+  });
+});
