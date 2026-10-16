@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Vendor-neutral MCP wiring
+
+- **Stack mirrors MCP entries into Cursor and Gemini CLI project configs.** When `.cursor/` or `.gemini/` already exists in the project, `stack add` also writes the server into `.cursor/mcp.json` and `.gemini/settings.json` (Gemini's `httpUrl`/`url` naming, no `type`), and `stack remove` takes it out again. Absent client dirs are never created, other keys and servers are preserved, and an unparseable client file is left untouched without failing the add.
+
 ### Install fixes
 
 - **Packed npm tarballs include their bins.** `@ashlr/stack` and `ashlr-stack-mcp` built `dist/` only in `prepublishOnly`, which `npm pack` skips, so a packed tarball had no `dist/` and installing it gave no `stack` or `ashlr-stack-mcp` command. The build now runs in `prepack`, which both `npm pack` and `npm publish` run.
