@@ -78,6 +78,36 @@ describe("stack recommend --json", () => {
     }
   });
 
+  it("matches --category case-insensitively", () => {
+    const { stdout, code } = runCli([
+      "recommend",
+      "serverless postgres",
+      "--category",
+      "database",
+      "--json",
+    ]);
+    expect(code).toBe(0);
+    const payload = JSON.parse(stdout);
+    expect(payload.hits.length).toBeGreaterThan(0);
+    for (const hit of payload.hits) {
+      expect(hit.category).toBe("Database");
+    }
+  });
+
+  it("rejects an unknown --category instead of returning nothing", () => {
+    const { stdout, stderr, code } = runCli([
+      "recommend",
+      "serverless postgres",
+      "--category",
+      "bogus",
+      "--json",
+    ]);
+    expect(code).toBe(1);
+    expect(stdout).toBe("");
+    expect(stderr).toContain('Unknown category "bogus"');
+    expect(stderr).toContain("Database");
+  });
+
   it("with --save persists a recipe under .stack/recipes/", () => {
     const dir = mkTmp();
     const { stdout, code } = runCli(["recommend", "postgres database", "--save", "--json"], dir);

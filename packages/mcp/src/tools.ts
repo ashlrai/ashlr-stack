@@ -172,7 +172,9 @@ export const TOOLS: ToolDef[] = [
       "Forward a deployment-platform sync request to phantom sync; inspect the installed Phantom command support and result separately.",
     inputSchema: {
       type: "object",
-      properties: { platform: { type: "string" } },
+      properties: {
+        platform: { type: "string", description: "One of: vercel, railway, fly." },
+      },
       required: ["platform"],
     },
     cliArgs: (input) => ["sync", "--platform", String(input.platform)],
@@ -227,7 +229,7 @@ export const TOOLS: ToolDef[] = [
         category: {
           type: "string",
           description:
-            "Optional filter to a source catalog category: Database, Deploy, Cloud, AI, Analytics, Observability, Errors, Payments, Code, Tickets, Email, Auth, FeatureFlags. The server input is a string, not an enforced enum.",
+            "Optional filter to a source catalog category: Database, Deploy, Cloud, AI, Analytics, Observability, Errors, Payments, Code, Tickets, Email, Auth, FeatureFlags. Matched case-insensitively; an unknown category is an error.",
         },
         save: {
           type: "boolean",

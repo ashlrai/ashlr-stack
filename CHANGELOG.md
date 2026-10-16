@@ -22,6 +22,8 @@
 
 - **`npx -y ashlr-stack-mcp` can run tools.** The MCP server spawned `stack` from PATH (absent under npx, and Haskell's `stack` when present). `ashlr-stack-mcp` now depends on `@ashlr/stack` and runs that package's bin with the current runtime; `STACK_BIN` still overrides, PATH is the last resort. Publish order is now core, cli, mcp. (`packages/mcp/src/stack-bin.ts`)
 - **`stack_scan` over MCP returns results.** It now always passes `--json`; before, every call answered "no TTY detected".
+- **`stack recommend --category` matches any case.** `--category database` used to return no hits, because the filter compared against `Database` exactly. An unknown category now exits 1 and lists the valid ones, instead of returning an empty result.
+- **`stack sync` rejects an unknown platform first.** `stack sync --platform heroku` said "Unsupported platform" only after checking for Phantom. The `stack_sync` MCP schema now names the supported platforms, and the docs quote the error the MCP server actually sends when it can't run the CLI.
 - **No spinner escape codes in piped output.** `prompts.spinner()` prints plain lines when stdout is not a TTY or `CI` is set, so MCP results and CI logs stay clean. (`packages/cli/src/ui.ts`)
 - **`stack exec` stdout belongs to the command.** The intro banner is gone and errors go to stderr, so `stack exec -- cmd > out.json` captures only `cmd`.
 - **MCP `serverInfo.version` reads package.json** instead of a hard-coded `0.2.0`.

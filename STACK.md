@@ -38,7 +38,7 @@ Things that trip agents up:
 
 - **No TTY.** Agent shells have no TTY. `stack scan` without flags only prints a hint and exits 0; use `stack scan --json`. `stack init` skips the template picker; pass `--template <name>` (see `stack templates list`).
 - **`stack init --dryRun` still writes.** It provisions nothing, but it writes `.stack.toml`, `.stack.local.toml` and `.gitignore` and registers the project in `~/.stack/projects.json`. Run it in a scratch directory, and set `STACK_REGISTRY_DIR` to a temp dir to keep `~/.stack` clean.
-- **MCP from source needs the CLI too.** Point the server at the source CLI with `STACK_BIN` (see `packages/mcp/README.md`), or every tool call fails with "The 'stack' CLI is not on PATH".
+- **MCP from source needs the CLI too.** Point the server at the source CLI with `STACK_BIN` (see `packages/mcp/README.md`), or every tool call fails with "Could not run the 'stack' CLI".
 - **`bun run build` rewrites tracked site files** (`packages/site/public/install.ps1`, `packages/site/src/data/CHANGELOG.md`, the generated CLI reference). Don't commit that churn with an unrelated change; `git checkout -- packages/site` after a local build.
 - Site is Astro 5 + Tailwind v4 + Framer Motion
 

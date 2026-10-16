@@ -37,7 +37,7 @@ Cursor (`~/.cursor/mcp.json`):
 { "mcpServers": { "ashlr-stack": { "command": "npx", "args": ["-y", "-p", "@ashlr/stack", "-p", "ashlr-stack-mcp", "ashlr-stack-mcp"] } } }
 ```
 
-With only `ashlr-stack-mcp`, the server starts and lists its tools, but every call returns "The 'stack' CLI is not on PATH".
+With only `ashlr-stack-mcp`, the server starts and lists its tools, but every call returns "Could not run the 'stack' CLI".
 
 ## Why Stack
 
