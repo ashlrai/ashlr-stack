@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.2.1 (unreleased; dated when tagged)
+## 0.2.1 (2026-10-16)
 
 0.2.1 was never published, so everything below ships in it, along with the 2026-10-12 notes further down. Source versions (core, cli, mcp, `server.json`, `VERSION` in `packages/cli/src/index.ts`) are already 0.2.1, which `scripts/publish.sh` checks before it publishes core, then cli, then mcp.
 
