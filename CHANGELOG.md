@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Install fixes
+
+- **Packed npm tarballs include their bins.** `@ashlr/stack` and `ashlr-stack-mcp` built `dist/` only in `prepublishOnly`, which `npm pack` skips, so a packed tarball had no `dist/` and installing it gave no `stack` or `ashlr-stack-mcp` command. The build now runs in `prepack`, which both `npm pack` and `npm publish` run.
+- **Installers state the real provider count (39, not 23)**, and `release-artifacts.test.ts` checks it against the registry and that the site serves the same `install.sh`/`install.ps1` as `scripts/`.
+- **`install.sh` says how to get the MCP server after a binary install.** The prebuilt release binary is only `stack`; the installer now prints `npm i -g ashlr-stack-mcp` / `npx -y ashlr-stack-mcp`, and the MCP README no longer says the one-liner always installs both.
+
 ## 0.2.1 (2026-10-16)
 
 0.2.1 was never published, so everything below ships in it, along with the 2026-10-12 notes further down. Source versions (core, cli, mcp, `server.json`, `VERSION` in `packages/cli/src/index.ts`) are already 0.2.1, which `scripts/publish.sh` checks before it publishes core, then cli, then mcp.
