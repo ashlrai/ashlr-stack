@@ -24,8 +24,42 @@ export const openCommand = defineCommand({
       return;
     }
 
-    const opener = platform() === "darwin" ? "open" : platform() === "win32" ? "start" : "xdg-open";
-    spawn(opener, [url], { stdio: "ignore", detached: true }).unref();
-    outro(colors.green(`Opening ${url}`));
+    const [cmd, cmdArgs] = openerFor(platform(), url);
+    if (await launch(cmd, cmdArgs)) {
+      outro(colors.green(`Opening ${url}`));
+      return;
+    }
+    // No opener on this machine (headless box, container, minimal PATH):
+    // the URL is still the useful answer, so print it and succeed.
+    outro(`Couldn't launch a browser (${cmd} not available); open it by hand:`);
+    console.log(url);
   },
 });
+
+/**
+ * The program that opens `url` in the default browser. On Windows `start` is
+ * a cmd.exe builtin, not an executable, so it cannot be spawned directly;
+ * `rundll32 url.dll,FileProtocolHandler` takes the URL as one argument with
+ * no shell parsing of `&` and friends.
+ */
+export function openerFor(os: NodeJS.Platform, url: string): [string, string[]] {
+  if (os === "darwin") return ["open", [url]];
+  if (os === "win32") return ["rundll32", ["url.dll,FileProtocolHandler", url]];
+  return ["xdg-open", [url]];
+}
+
+/** Spawn a detached opener; resolves false instead of throwing when it can't start. */
+function launch(cmd: string, args: string[]): Promise<boolean> {
+  return new Promise((resolve) => {
+    try {
+      const child = spawn(cmd, args, { stdio: "ignore", detached: true });
+      child.once("error", () => resolve(false));
+      child.once("spawn", () => {
+        child.unref();
+        resolve(true);
+      });
+    } catch {
+      resolve(false);
+    }
+  });
+}

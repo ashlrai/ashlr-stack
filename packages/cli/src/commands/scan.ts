@@ -1,3 +1,4 @@
+import { statSync } from "node:fs";
 import {
   addService,
   emptyConfig,
@@ -64,15 +65,33 @@ export const scanCommand = defineCommand({
 
     // Resolve confidence threshold:
     //   explicit flag > default-for-mode (high when --yes, medium otherwise)
-    const rawConfidence = String(args.confidence).toLowerCase();
+    const rawConfidence = String(args.confidence).trim().toLowerCase();
     const validTiers = ["low", "medium", "high"];
-    const minimum: "low" | "medium" | "high" = validTiers.includes(rawConfidence)
+    const cwd = String(args.path);
+
+    // Reject bad input up front rather than scanning nothing and reporting
+    // "no providers" (an agent can't tell that from a clean repo).
+    let problem: string | undefined;
+    if (rawConfidence && !validTiers.includes(rawConfidence)) {
+      problem = `Unknown confidence "${args.confidence}". Use one of: ${validTiers.join(", ")}`;
+    } else if (!isDirectory(cwd)) {
+      problem = `Path "${cwd}" does not exist or is not a directory.`;
+    }
+    if (problem) {
+      if (isJson) {
+        console.error(problem);
+        process.exit(1);
+      }
+      outroError(problem);
+      return;
+    }
+
+    const minimum: "low" | "medium" | "high" = rawConfidence
       ? (rawConfidence as "low" | "medium" | "high")
       : isYes
         ? "high"
         : "medium";
 
-    const cwd = String(args.path);
     const hits = await scanSource(cwd);
     const order: Record<string, number> = { low: 0, medium: 1, high: 2 };
     const filtered = hits.filter((h) => order[h.confidence] >= order[minimum]);
@@ -198,3 +217,11 @@ export const scanCommand = defineCommand({
     outro(colors.green("scan complete."));
   },
 });
+
+function isDirectory(path: string): boolean {
+  try {
+    return statSync(path).isDirectory();
+  } catch {
+    return false;
+  }
+}

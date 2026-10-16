@@ -435,6 +435,48 @@ export const CLI_COMMANDS: CliCommand[] = [
       "Thin wrapper over `phantom exec` so env vars with phm_ tokens get swapped for real secrets at the network layer.",
   },
   {
+    name: "stack swap",
+    description: "Migrate a project from one provider to an equivalent in the same category.",
+    synopsis: "stack swap <path> <to> [--dryRun] [--noRollback] [--keepFrom]",
+    flags: [
+      {
+        name: "from",
+        synopsis: "<path>",
+        type: "positional",
+        required: true,
+        description: "Provider to remove (e.g. clerk).",
+      },
+      {
+        name: "to",
+        synopsis: "<to>",
+        type: "positional",
+        required: true,
+        description: "Provider to provision (e.g. auth0).",
+      },
+      {
+        name: "dryRun",
+        synopsis: "--dryRun",
+        type: "boolean",
+        default: false,
+        description: "Print the plan without executing any steps.",
+      },
+      {
+        name: "noRollback",
+        synopsis: "--noRollback",
+        type: "boolean",
+        default: false,
+        description: "On failure, leave partial state in place instead of rolling back.",
+      },
+      {
+        name: "keepFrom",
+        synopsis: "--keepFrom",
+        type: "boolean",
+        default: false,
+        description: "Provision `to` without removing `from` (side-by-side migration).",
+      },
+    ],
+  },
+  {
     name: "stack sync",
     description: "Push secrets to a deployment platform (via phantom sync).",
     synopsis: "stack sync --platform <name>",
@@ -478,6 +520,28 @@ export const CLI_COMMANDS: CliCommand[] = [
       },
     ],
     examples: [{ command: "stack login github" }, { command: "stack login supabase" }],
+  },
+  {
+    name: "stack telemetry",
+    description: "Opt into / out of anonymous usage telemetry. See docs/PRIVACY.md.",
+    synopsis: "stack telemetry <status|enable|disable>",
+    subcommands: [
+      {
+        name: "stack telemetry status",
+        description: "Show telemetry opt-in status.",
+        synopsis: "stack telemetry status",
+      },
+      {
+        name: "stack telemetry enable",
+        description: "Opt in to anonymous usage telemetry.",
+        synopsis: "stack telemetry enable",
+      },
+      {
+        name: "stack telemetry disable",
+        description: "Opt out of telemetry.",
+        synopsis: "stack telemetry disable",
+      },
+    ],
   },
   {
     name: "stack templates",
@@ -545,7 +609,8 @@ export const CLI_COMMANDS: CliCommand[] = [
         synopsis: "--category <category>",
         type: "string",
         required: false,
-        description: "Restrict to a single category (e.g. Database, Auth).",
+        description:
+          "Restrict to a single category, any case (Database, Deploy, Cloud, AI, Analytics, Observability, Errors, Payments, Code, Tickets, Email, Auth, FeatureFlags).",
       },
       {
         name: "json",
