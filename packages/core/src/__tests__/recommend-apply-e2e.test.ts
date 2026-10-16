@@ -7,7 +7,7 @@
  *     → recipeFromRetrieval(...)
  *     → writeRecipe(..., cwd)                  // creates .stack/recipes/<id>.toml
  *     → readRecipe(id, cwd)                    // round-trips through TOML
- *     → wirePhantomForRecipe(recipe, { cwd })  // fills the fake Phantom vault
+ *     → wirePhantomForRecipe(recipe, { cwd })  // reads the fake Phantom vault
  *
  * Calling the real provider CLIs (`stack add <provider>`) is out of scope:
  * those make live HTTPS/OAuth calls. This test stops at the phantom-wire
@@ -19,7 +19,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { retrieve } from "../ai/catalog-index.ts";
@@ -82,30 +82,28 @@ describe("recommend → apply e2e", () => {
     expect(loaded.id).toBe(recipe.id);
     expect(loaded.providers.map((p) => p.name)).toEqual(["neon", "openai", "anthropic"]);
 
-    // 4) Wire envelopes via the fake Phantom CLI.
+    // 4) Check the vault via the fake Phantom CLI. `stack add` (skipped here,
+    // it needs OAuth) already stored NEON_API_KEY; the AI keys are missing.
+    writeFileSync(harness.vaultPath, JSON.stringify({ NEON_API_KEY: "neon_real" }));
     const result = await wirePhantomForRecipe(loaded, { cwd: projectDir });
 
-    // Phantom Secrets >= 0.7.3 rejects placeholder envelopes (`--rotate` and
-    // positional values), so nothing lands in the vault and nothing blocks the
-    // later create-only `stack add` (see phantom-contract.test.ts).
-    expect(result.envelopes).toEqual([]);
+    expect(result.present).toEqual(["neon:NEON_API_KEY"]);
+    expect(result.missing).toEqual(
+      expect.arrayContaining(["openai:OPENAI_API_KEY", "anthropic:ANTHROPIC_API_KEY"]),
+    );
     expect(result.skipped).toEqual([]);
 
     // No webhook stubs for these providers — none are in the webhook-capable set.
     expect(result.webhooks).toEqual([]);
 
-    // 5) Every catalog secret was still attempted against Phantom.
-    const adds = harness.callsTo("add");
-    const addedKeys = adds.flatMap((c) => c.args);
-    expect(addedKeys).toContain("NEON_API_KEY");
-    expect(addedKeys).toContain("OPENAI_API_KEY");
-    expect(addedKeys).toContain("ANTHROPIC_API_KEY");
-
+    // 5) Apply only reads names from Phantom; it never writes placeholders
+    // (Phantom refuses secret values in argv) and leaves the vault untouched.
+    expect(harness.callsTo("add")).toEqual([]);
     const vault = JSON.parse(readFileSync(harness.vaultPath, "utf-8")) as Record<string, string>;
-    expect(vault).toEqual({});
+    expect(vault).toEqual({ NEON_API_KEY: "neon_real" });
   });
 
-  it("noWire: true performs zero phantom envelope calls and writes no webhook stubs", async () => {
+  it("noWire: true performs zero phantom vault calls and writes no webhook stubs", async () => {
     // Use stripe so we can also prove the webhook stub is skipped — stripe is
     // in WEBHOOK_PROVIDERS, so it would otherwise drop a stub file.
     const recipe: Recipe = {
@@ -121,7 +119,7 @@ describe("recommend → apply e2e", () => {
       cwd: projectDir,
       noWire: true,
     });
-    expect(result).toEqual({ envelopes: [], webhooks: [], skipped: [] });
+    expect(result).toEqual({ present: [], missing: [], webhooks: [], skipped: [] });
 
     // Zero phantom calls for recipe secrets.
     expect(harness.callsTo("add")).toEqual([]);

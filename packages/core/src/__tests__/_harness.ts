@@ -116,6 +116,7 @@ with open(sys.argv[1], "w") as f: json.dump(v, f)
 ' "$VAULT" "$2"
     ;;
   list)
+    # Real Phantom: \`list --json\` prints [{"name": ...}, ...] (names only).
     python3 -c 'import json,sys
 with open(sys.argv[1]) as f: v = json.load(f)
 if "--json" in sys.argv[2:]:

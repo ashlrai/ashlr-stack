@@ -247,7 +247,7 @@ stack recommend "postgres database" --category Database --json
 
 ### `stack apply [recipe-id] [--noWire] [--noRollback]`
 
-Select a saved recipe; when Stack configuration is absent, the command first initializes a blank config in the current directory. Provider setup follows the recipe. Provision recipe providers, then attempt optional Phantom wiring and write webhook stub files. Inspect failures and skipped entries; this source does not establish working rotating envelopes with Phantom Secrets 0.7.9. Use `--noWire` to skip the optional layer.
+Select a saved recipe; when Stack configuration is absent, the command first initializes a blank config in the current directory. Provider setup follows the recipe. Provision recipe providers, then report which declared secrets are already in the Phantom vault and which are missing (names only; apply never writes to the vault), and write webhook stub files. Inspect failures and skipped entries. Use `--noWire` to skip the vault check and stubs.
 
 ```bash
 stack recommend "B2B SaaS with auth, AI, and payments" --save

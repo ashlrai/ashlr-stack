@@ -13,7 +13,7 @@ stack_apply { recipe_id: "<user's input>", no_wire: false }
 What `stack_apply` does:
 - If `.stack.toml` is absent, attempts config-only init with `--noInteractive --noProvision`.
 - Runs the CLI provider setup loop for recipe entries one at a time; adapters create or attach resources according to their implementation. On partial failure, the CLI can attempt cleanup of added local config, MCP entries and named vault slots. Headless cleanup can keep secrets; this is not guaranteed upstream-resource deletion. The CLI `--noRollback` flag disables this multi-service cleanup attempt.
-- After at least one successful setup, attempts optional Phantom wiring. The current helper uses `TODO_STACK_APPLY` envelope placeholders and may retry without an unsupported rotate flag; this is not accepted production rotation.
+- After at least one successful setup, reads secret names from `phantom list --json` (never values) and reports which declared secrets are in the vault and which are missing. It never writes to the vault; `stack add` or `phantom add <NAME>` stores real values. If the vault can't be listed, those providers are reported as skipped.
 - Writes optional commented webhook stub files for supported recipe providers; the app must implement and verify their handlers.
 - Attempts credential, MCP and split-config writes during setup. These effects are not atomic and failures can leave partial state. The final doctor call is informational and does not establish application acceptance.
 
@@ -22,7 +22,7 @@ If the user requests skipping optional wiring (e.g. `/stack:apply rec_xxx --noWi
 Read the returned text, including failures and skips, and summarize:
 - Which providers were added
 - Any providers that were skipped and why (already present, missing API credentials, etc.)
-- The envelope and webhook counts apply printed, and any providers phantom-wire skipped
+- The `secrets in vault`, `missing` and `webhooks` counts apply printed, the `not in Phantom:` names, and any providers phantom-wire skipped
 
 Then suggest the next step verbatim:
 

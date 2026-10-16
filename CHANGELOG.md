@@ -8,6 +8,8 @@
 
 ### Bug fixes
 
+- **`stack apply` stops writing placeholder secrets.** Its wiring step ran `phantom add <KEY> TODO_STACK_APPLY --rotate` (then without `--rotate`) for every declared secret. Phantom Secrets refuses values in argv and has no `--rotate`, so every call failed and the printed `envelopes` count was always 0; on an older Phantom it could store `TODO_STACK_APPLY` and block the real value later. Apply now reads names from `phantom list --json` and prints `secrets in vault N · missing M · webhooks K`, plus a `not in Phantom:` line pointing at `phantom add <NAME>`. It never writes to the vault. `WireResult.envelopes` is replaced by `present` and `missing`. (Successor to #33.)
+
 - **Command errors are one line.** A command that fails outside a Stack project (`stack list`, `deps`, `info`, `remove`, ...) now prints `✗ No .stack.toml at <path>. Run \`stack init\` first.` on stderr and exits 1, instead of a stack trace followed by the same message again. `STACK_DEBUG=1` adds the stack. Usage errors still print usage. (`packages/cli/src/lib/run-cli.ts`, #19)
 
 - **CI workflow generation fails closed.** `stack ci init` now exits nonzero without creating or overwriting a workflow because the reviewed Phantom Secrets 0.7.9 source requires trusted-terminal approval for Cloud pull. Existing configuration and file guards remain; `--force` stays available as a compatibility flag and does not enable generation.
