@@ -15,6 +15,7 @@ import { infoCommand } from "./commands/info.ts";
 import { initCommand } from "./commands/init.ts";
 import { listCommand } from "./commands/list.ts";
 import { loginCommand } from "./commands/login.ts";
+import { onboardCommand } from "./commands/onboard.ts";
 import { openCommand } from "./commands/open.ts";
 import { projectsCommand } from "./commands/projects.ts";
 import { providersCommand } from "./commands/providers.ts";
@@ -103,6 +104,7 @@ const main = defineCommand({
     exec: execCommand,
     swap: swapCommand,
     sync: syncCommand,
+    onboard: onboardCommand,
     open: openCommand,
     login: loginCommand,
     telemetry: telemetryCommand,

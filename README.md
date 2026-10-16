@@ -39,6 +39,16 @@ Cursor (`~/.cursor/mcp.json`):
 
 With only `ashlr-stack-mcp`, the server starts and lists its tools, but every call returns "Could not run the 'stack' CLI".
 
+### One command for every agent
+
+```bash
+stack onboard            # plan: shows which of Codex, Claude Code, Cursor, Gemini CLI would be wired
+stack onboard --apply    # write the Phantom gateway entry (backups saved first)
+stack onboard --undo     # restore the files exactly as they were
+```
+
+Only the `ashlr-hub` entry is added; an existing entry that differs is reported and left alone. Use `--client gemini,cursor` to limit it and `--json` for scripts.
+
 ## Why Stack
 
 - **One workflow for supported services.** Stack authenticates, provisions where supported, and updates vault entries, Stack configuration and MCP wiring.

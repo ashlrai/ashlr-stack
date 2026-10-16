@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Agent onboarding
+
+- **`stack onboard` detects Codex, Claude Code, Cursor and Gemini CLI and registers the Phantom gateway (`ashlr-hub`, `ashlr mcp`) in each.** It prints a plan by default and writes nothing. `--apply` saves a timestamped backup of each existing config, adds only the `ashlr-hub` entry, keeps every other key, and re-checks each client afterwards. An existing `ashlr-hub` entry that differs is never overwritten. `--undo` restores the saved files byte for byte and refuses any file that changed since it was written. `--client`, `--all` (include clients that are not detected), `--home` and `--json` are supported. It never touches the network or a vendor CLI and writes no secret values.
+
 ### Install fixes
 
 - **Packed npm tarballs include their bins.** `@ashlr/stack` and `ashlr-stack-mcp` built `dist/` only in `prepublishOnly`, which `npm pack` skips, so a packed tarball had no `dist/` and installing it gave no `stack` or `ashlr-stack-mcp` command. The build now runs in `prepack`, which both `npm pack` and `npm publish` run.
