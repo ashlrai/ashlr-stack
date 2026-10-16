@@ -97,7 +97,8 @@ esac
         CI: "1",
       },
     });
-    expect(result.error).toBeUndefined();
+    // Bun 1.2.0 sets `error` on any non-zero exit; only a missing status means a real spawn failure.
+    if (result.status === null) expect(result.error).toBeUndefined();
     expect(result.signal).toBeNull();
     return { code: result.status, output: result.stdout + result.stderr };
   }
