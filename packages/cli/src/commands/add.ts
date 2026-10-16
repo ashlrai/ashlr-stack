@@ -74,10 +74,6 @@ export const addCommand = defineCommand({
 
     intro(`stack add ${service}${args.dryRun ? colors.dim(" (dry-run)") : ""}`);
 
-    if (!args.dryRun) {
-      await requirePhantom();
-    }
-
     if (!available.includes(service)) {
       // Group the catalog by category so the suggestion doesn't wrap into an
       // unreadable one-line comma list on narrow terminals.
@@ -102,6 +98,10 @@ export const addCommand = defineCommand({
       console.log();
       outroError("Pick one from the catalog above.");
       return;
+    }
+
+    if (!args.dryRun) {
+      await requirePhantom();
     }
 
     // Dry-run: describe what the flow would do without executing any step.

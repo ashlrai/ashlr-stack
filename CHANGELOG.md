@@ -27,7 +27,8 @@
 - **No spinner escape codes in piped output.** `prompts.spinner()` prints plain lines when stdout is not a TTY or `CI` is set, so MCP results and CI logs stay clean. (`packages/cli/src/ui.ts`)
 - **`stack exec` stdout belongs to the command.** The intro banner is gone and errors go to stderr, so `stack exec -- cmd > out.json` captures only `cmd`.
 - **MCP `serverInfo.version` reads package.json** instead of a hard-coded `0.2.0`.
-- **Bare `stack env` / `stack templates`** run `show` / `list` instead of exiting 1.
+- **Bare `stack env` / `stack templates` / `stack projects` / `stack telemetry`** run `show` / `list` / `list` / `status` instead of exiting 1 with "No command specified".
+- **`stack add <typo>` names the unknown provider first.** It used to demand Phantom before checking the name, so a misspelled provider on a machine without Phantom only said "Phantom Secrets isn't installed".
 - **Release + docs name the MCP package correctly** (`ashlr-stack-mcp`, not `@ashlr/stack-mcp`), including the site's MCP setup snippet.
 - **CI smoke-tests the npm bundles under Node 20** (`stack --help`, MCP initialize, tools/list, `stack_scan`) via `scripts/node-smoke.mjs`.
 
