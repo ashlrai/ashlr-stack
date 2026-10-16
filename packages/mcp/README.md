@@ -82,7 +82,7 @@ Full tool + resource reference: **[stack.ashlr.ai/docs/mcp](https://stack.ashlr.
 
 ## How secrets are handled
 
-Stack never stores secret values. Every tool call routes through [Phantom Secrets](https://phantom.ashlr.ai) on your machine. The agent only sees slot *names* (like `SUPABASE_URL`, `SUPABASE_ANON_KEY`) — never the values.
+Stack never stores secret values. Every tool call routes through [Phantom Secrets](https://phm.dev/secrets) on your machine. The agent only sees slot *names* (like `SUPABASE_URL`, `SUPABASE_ANON_KEY`) — never the values.
 
 ## Links
 
