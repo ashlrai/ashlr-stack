@@ -2,6 +2,15 @@
 
 Thanks for poking around. Stack is early and the surface is intentionally curated — we want depth per provider, not breadth at any cost.
 
+## Finding something to work on
+
+New here? Start with the [good first issue](https://github.com/ashlrai/ashlr-stack/labels/good%20first%20issue) label. Issues also labeled [help wanted](https://github.com/ashlrai/ashlr-stack/labels/help%20wanted) are ones we would especially like a PR for.
+
+- Comment on the issue before you start so two people do not do the same work.
+- Keep the PR small and tied to one issue. Say in the description how you tested it.
+- If you are unsure whether something belongs here, open an issue first and ask.
+- Questions are welcome in issues. We read all of them.
+
 ## Dev loop
 
 ```bash
