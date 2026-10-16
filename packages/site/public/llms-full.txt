@@ -26,6 +26,8 @@ If you are an AI agent (Claude Code, Cursor, Windsurf, Zed, etc.) and the user a
 
 ### Install paths (pick one)
 
+**Runtime prerequisite:** the published CLI and MCP packages at version 0.1.1 both start with `bun`. Install Bun 1.2 or newer before using them, including the `npx` configuration below. `npx` makes both packages available; it does not supply Bun. These MCP configurations use stdio.
+
 1. **Claude Code plugin** — have the user run `/plugin marketplace add ashlrai/ashlr-stack` then `/plugin install stack@ashlr`. Exposes `/stack:add`, `/stack:doctor`, `/stack:list`, `/stack:status` as slash commands.
 2. **MCP server (any MCP client)** — add `{"mcpServers":{"ashlr-stack":{"command":"npx","args":["-y","-p","@ashlr/stack","-p","ashlr-stack-mcp","ashlr-stack-mcp"]}}}` to the project's `.mcp.json`. All 19 Stack tools become directly callable.
 3. **CLI** — `curl -fsSL stack.ashlr.ai/install.sh | bash`, then call `stack` directly. Installs Phantom Secrets too.
