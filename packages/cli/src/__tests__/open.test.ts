@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -21,11 +21,15 @@ afterEach(() => rmSync(dir, { recursive: true, force: true }));
 
 describe("stack open", () => {
   test("prints the URL to open by hand when no opener is on PATH", () => {
-    // An empty PATH means xdg-open/open cannot be found.
+    // PATH is an empty directory, so xdg-open/open cannot be found. An empty
+    // PATH string is not enough: spawn then falls back to the system default
+    // search path, where CI runners do have xdg-open.
+    const emptyBin = join(dir, "empty-bin");
+    mkdirSync(emptyBin);
     const result = spawnSync(process.execPath, [CLI_ENTRY, "open", "vercel"], {
       encoding: "utf8",
       cwd: dir,
-      env: { ...process.env, PATH: "", NO_COLOR: "1", CI: "1", STACK_TELEMETRY: "0" },
+      env: { ...process.env, PATH: emptyBin, NO_COLOR: "1", CI: "1", STACK_TELEMETRY: "0" },
     });
     const out = `${result.stdout}${result.stderr}`;
     expect(result.status).toBe(0);
