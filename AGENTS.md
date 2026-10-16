@@ -14,6 +14,9 @@ This repository is part of the AshlrAI ecosystem. It is maintained by Phantom (`
 - Spending money, or anything that is billed.
 - Outside messages: emails, posts, issues, or comments directed at people outside AshlrAI.
 
+## Getting started
+Build, test and run instructions for agents are in [STACK.md](./STACK.md#agent-quickstart-from-a-clone).
+
 ## Ground rules
 - Keep diffs small and reviewable, with one concern per PR.
 - Never commit secrets. Use Phantom Secrets placeholders.

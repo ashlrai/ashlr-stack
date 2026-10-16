@@ -1,158 +1,104 @@
 ---
 layout: ~/layouts/LaunchPost.astro
 title: "Stack v0.2: one command for your whole stack"
-description: "The control plane for your dev stack — one command to provision, wire, swap, and operate every third-party service in a project. 39 providers. SDK auto-install. Pre-alpha, MIT, free."
+description: "Historical launch draft revised against source-defined provider setup, credential storage and conditional wiring. Publication and installed acceptance are separate."
 eyebrow: "Launch"
 ---
 
-v0.1 shipped three weeks ago with a broken promise. The CLI installed fine.
-The template scaffolded. But `stack init --template nextjs-supabase-posthog`
-didn't provision Supabase — it printed a placeholder. The SDKs didn't install
-— you still had to run `npm install` separately. And if you tried to install
-via npm, you hit our 2FA wall immediately, because our release automation
-wasn't handling OTP entry. The "one command for your whole stack" headline
-was technically true in the code; it just didn't work in practice.
+Historical, unposted launch draft, revised against source 0.2.1. Recorded public npm 0.1.1 and historical native release 0.2.0 are separate artifacts; these examples do not establish that the source candidate is published or installed.
 
-v0.2 fixes all three.
+The source supports template setup, conditional SDK installation and provider switching. Each has prerequisites and partial-failure boundaries.
 
 ## What was broken and what we did about it
 
-**Problem 1: Template didn't provision.** `stack init --template X` created
-the file structure but treated provisioning as a separate step. That's not
-"one command" — that's just a scaffolder with extra opinions.
+**Template setup.** `stack init --template X` writes the project configuration, then runs the selected template’s service setup unless `--noProvision` is supplied.
 
-Fix: `stack init --template nextjs-supabase-posthog` now runs the full
-provisioning pipeline inline. Browser opens, Supabase OAuth dance completes,
-project is created, three secrets land in Phantom, `.env.local` gets patched.
-All inside the init flow.
+Example: `stack init --template nextjs-supabase-posthog` attempts the selected adapters with authorized provider accounts and a configured Phantom project. Supabase can create a project; PostHog accepts existing credentials. MCP descriptors are conditional. Stack does not fill `.env.local`, and failure can leave configuration or provider state to inspect.
 
-**Problem 2: No SDK install.** v0.1 wired the secrets and the MCP config, but
-left you to `npm install @supabase/supabase-js` yourself. Which sounds minor
-until you realize you now have to know the right package name for each
-provider.
+**SDK installation.** `stack add` can offer the adapter’s SDK packages after setup. This is separate from provider and application readiness.
 
-Fix: v0.2 prompts inline — "install @supabase/supabase-js? (Y/n)" — and runs
-the install via your detected package manager (bun, pnpm, npm). The prompt is
-skippable if you want to manage deps yourself.
+The default install mode asks in an interactive terminal and skips installation in a noninteractive one. Use the declared `--install always` or `--install never` mode when invoking `stack add` if you need an explicit choice.
 
-**Problem 3: npm 2FA blocker.** We publish to npm, and npm requires
-interactive OTP entry for scoped packages. Our CI can't do that unattended,
-which meant the npm package lagged or silently failed.
+**Package and runtime layers.** Publisher authentication is separate from consumer package installation. No npm OTP requirement for users is established by this source.
 
-Fix: we ship a Homebrew tap now. `brew install ashlrai/ashlr/stack` is the
-recommended install path. The npm package still exists for environments where
-brew isn't available, but if you can use brew, use brew.
+The recorded public npm 0.1.1 packages require Bun 1.2 or later. Reviewed source 0.2.1 and historical native 0.2.0 are distinct; check the actual installed version and help before applying source examples.
 
 ## What's new beyond the fixes
 
-**swap + rollback.** The feature that makes Stack feel like a control plane
-rather than a provisioner:
+**Provider switching.** Inspect the planned target before changing local service configuration:
 
 ```bash
-stack swap supabase --to neon
+stack swap supabase neon --dryRun
 ```
 
-Migrates a live project from Supabase to Neon. Provisions the Neon database,
-rotates the secrets in Phantom, updates every env reference in `.env.local`
-and `.stack.toml`. `stack rollback supabase` if it goes wrong.
+The implemented swap sets up the target and then attempts old-service cleanup. It does not migrate application data, update every environment reference or rotate all credentials. Upstream resources remain; there is no registered `stack rollback` command. Inspect partial state and use supported recovery steps.
 
-This is the thing v0.1 was missing to be useful beyond day-one setup.
+A dry run describes the proposed switch, not a completed migration or rollback guarantee.
 
-**Cloudflare Worker telemetry endpoint.** Stack itself has no telemetry. v0.2
-ships a slim Cloudflare Worker that counts install events — just a counter,
-no project data, no secrets, no identifiers. It's in the repo, auditable.
-We added it so we know whether anyone is actually running the thing.
+**Telemetry controls.** Source includes opt-in telemetry and update checks. Review `stack telemetry` settings for the installed version; neither an install counter nor these source controls establish a blanket no-network or no-identifiers guarantee.
 
 ## How the provisioning pipeline works
 
-`stack add supabase` (and the inline version in `stack init`) does four things
-in sequence:
+`stack add supabase` coordinates these source phases. Their behavior depends on the selected adapter and installed prerequisites:
 
-1. **Login.** Where we have an OAuth app registered (Supabase, GitHub), we
-   open the browser, run PKCE, capture the access token. For the other 34
-   providers, we prompt for a PAT or API key and verify it against a
-   read-only endpoint before going further. You never commit a bad key
-   halfway through.
-2. **Provision.** We hit the provider's API to create the upstream resource.
-   Supabase: project in `us-east-1`. Neon: branch + compute. Turso: database
-   + auth token. Where a provider doesn't expose a creation API (Stripe,
-   Linear), we bind to an existing account.
-3. **Materialize.** Every secret the provider emits goes into **Phantom** —
-   an encrypted local vault you install once per machine. `.env.local` and
-   `.stack.local.toml` get a `phm_…` placeholder token, not the real value.
-   The raw secret never touches disk.
-4. **Persist.** We patch `.stack.toml` (committed — declares which services
-   this project uses), `.stack.local.toml` (gitignored — instance IDs,
-   regions), and `.mcp.json` (so Claude / Cursor can reach the service's MCP
-   server).
+1. **Login.** Configured OAuth flows, PATs or API keys vary by adapter. Verification can be a remote probe or local structure check; it is not universal credential validity proof.
+2. **Provision.** Supabase, Neon, Turso and Vercel have create-resource paths. Other adapters select existing resources or accept credentials; none of this creates every provider account.
+3. **Materialize.** Managed credential values are passed to Phantom’s create-only stdin interface. Persistence can fail, and some critical credentials are committed before later setup steps. Conditional MCP descriptors are written as configuration, not launched.
+4. **Persist.** Stack writes declarations and local instance metadata sequentially. Project-supplied metadata is not automatically secret-free or safe to commit; later failure can leave partial state.
 
-At runtime, `stack exec -- bun dev` resolves the `phm_…` placeholders to
-real secrets in the child process environment. If `.env.local` leaks in a
-screenshot or an accidental commit, the attacker gets meaningless tokens.
+`stack exec -- bun dev` forwards to the installed `phantom exec` interface. Stack does not itself resolve placeholders or produce a filled environment file. Qualify runtime credential delivery separately.
 
 ## 39 providers, same model
 
-Every provider goes through the same four steps. The catalog covers:
+The source catalog has 39 entries. Examples include:
 
-- **DB:** Supabase, Neon, Turso, Convex, Firebase, PlanetScale, Xata
-- **Deploy:** Vercel, Railway, Fly.io, Render, Cloudflare Workers
-- **Cloud:** AWS
-- **AI:** OpenAI, Anthropic, xAI, Groq, DeepSeek, Together, Fireworks
-- **Obs:** Sentry, PostHog, Datadog, LogFlare
+- **DB:** Supabase, Neon, Turso, Convex, Firebase
+- **Deploy:** Vercel, Railway, Fly, Render, Cloudflare
+- **Cloud:** AWS, GCP
+- **AI:** OpenAI, Anthropic, xAI, DeepSeek
+- **Obs:** Sentry, PostHog, Datadog, Grafana
 - **Auth:** Clerk, Auth0
-- **Payments:** Stripe, Lemon Squeezy
-- **Infra:** Upstash, Cloudflare KV, Resend, Loops
-- **Dev:** GitHub, Linear, Slack
+- **Payments:** Stripe
+- **Infra:** Upstash, Resend
+- **Dev:** GitHub, Linear
 
-5 of 39 are full OAuth (browser-open, no manual key paste). The rest use
-PAT or API-key paste with automated verification. OAuth app registrations
-are in progress — a week to a month per provider depending on their review
-process.
+The registry contains 31 API-key factory adapters and eight custom adapters. Four custom adapters have resource-creation paths. OAuth prerequisites, returned slots and verification strength vary; a catalog entry is not live provider acceptance.
 
 ## Honest v0.2 caveats
 
-This is a launch post, not a press release.
+This is an illustrative draft, not a posted announcement or customer acceptance record.
 
-- **Pre-alpha.** We use Stack daily on real projects. We wouldn't bet a team
-  of 50 on it yet. The data model is stable; the CLI surface will add
-  commands but won't remove them until 1.0.
-- **npm 2FA blocker is not fully resolved.** The release path is improved,
-  but interactive OTP is still required for manual npm publishes. Use brew.
-- **Supabase OAuth app — dashboard-only limitation.** Supabase can't
-  programmatically create orgs; only projects within existing orgs. Fresh
-  Supabase accounts need one manual dashboard action first. We're in
-  conversation with Supabase about a workaround.
-- **Phantom is required.** Not optional. One install per machine.
-- **Telemetry:** the CLI itself has none. The install-count Worker is opt-out
-  (it fires on `stack init`; `--no-telemetry` suppresses it).
+- **Source candidate.** Source behavior is not proof of a published package, installed runtime or working application.
+- **Partial state.** Setup, credential persistence and configuration writes are sequential; cleanup is best effort.
+- **Provider prerequisites.** Account permissions, existing organization or project requirements and configured OAuth apps vary by adapter.
+- **Phantom is required for managed credentials.** Qualify its installed project and create-only credential interface separately.
+- **Telemetry.** Source includes opt-in controls and update checks; do not infer zero telemetry or zero network contact.
 
 ## Roadmap
 
-1. Finish OAuth app registrations — biggest remaining papercut.
-2. End-to-end recorded tests per provider — the bar for "battle-tested".
-3. Better error messages — each non-trivial error rewritten as _what happened
-   · why · what to do_.
-4. Phantom Cloud team sync — shared vaults, RBAC, audit log.
-5. More providers — Modal, Replicate, Segment, Mailchimp are top requests.
-6. Windows — WSL2 works today; native Bun on Windows is close.
+1. Qualify configured OAuth paths and account permissions for each adapter.
+2. Record genuine provider acceptance before making runtime claims.
+3. Improve errors around partial setup and recovery.
+4. Evaluate team credential-sharing requirements against actual installed interfaces.
+5. Extend the catalog only with qualified adapter contracts.
+6. Qualify each supported platform separately; source checks do not establish Windows or WSL acceptance.
 
 ## Try it
 
 ```bash
-brew install ashlrai/ashlr/stack
-stack init --template nextjs-supabase-posthog
-stack exec -- bun dev
+# Illustrative recorded public package setup; requires Bun 1.2+
+npm i -g @ashlr/stack@0.1.1
+# In a disposable project directory, using a qualified installed version:
+stack init --noInteractive
 ```
 
-Or from npm (requires 2FA): `npm i -g @ashlr/stack`.
+For reviewed source-template behavior, see the quickstart. A source example is not proof that public 0.1.1 exposes every candidate feature.
 
 - **Site:** [stack.ashlr.ai](https://stack.ashlr.ai)
 - **Docs:** [stack.ashlr.ai/docs](/docs/)
 - **Quickstart:** [stack.ashlr.ai/docs/quickstart](/docs/quickstart/)
 - **Repo:** [github.com/ashlrai/ashlr-stack](https://github.com/ashlrai/ashlr-stack)
 
-If it saves you the first hour, the experiment worked. If it gets in the
-way, file an issue — the roadmap is reshuffled around real users, not a
-whiteboard.
+Use the installed help, inspect results and report reproducible issues. This draft establishes no measured time saving, customer adoption or automatic application readiness.
 
 — The Ashlr team

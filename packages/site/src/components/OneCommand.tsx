@@ -63,17 +63,18 @@ const WITHOUT: { title: string; lines: StepLine[] }[] = [
 ];
 
 const WITH_LINES: StepLine[] = [
+  { t: "note", text: "Illustrative flow — no provider call runs in this panel" },
   { t: "cmd", text: "$ stack add supabase" },
   { t: "blank", text: "" },
   { t: "bare", text: "▲ stack  adding supabase" },
-  { t: "bare", text: "✓ OAuth (browser)               signed in as mason" },
-  { t: "bare", text: "✓ new project raven-prod        us-east-1" },
-  { t: "bare", text: "✓ secrets → phantom vault       URL · ANON · SERVICE_ROLE" },
-  { t: "bare", text: "✓ patched .env.local · .mcp.json · .stack.toml" },
-  { t: "bare", text: "✓ installed @supabase/supabase-js" },
+  { t: "bare", text: "→ approve browser sign-in if requested" },
+  { t: "bare", text: "→ create or attach a resource when supported" },
+  { t: "bare", text: "→ store returned credentials through Phantom" },
+  { t: "bare", text: "→ record service in .stack.toml; MCP if supplied" },
+  { t: "bare", text: "→ choose whether to install the SDK" },
   { t: "blank", text: "" },
-  { t: "ok", text: "✓ supabase ready · 4.2s" },
-  { t: "note", text: "  next: stack exec -- bun dev" },
+  { t: "ok", text: "Review the result; setup depends on provider access" },
+  { t: "note", text: "  next: verify your app and run stack doctor" },
 ];
 
 export default function OneCommand() {
@@ -92,7 +93,7 @@ export default function OneCommand() {
           active={tab === "without"}
           onClick={() => setTab("without")}
           label="Without Stack"
-          sublabel="8 steps · ~45 min"
+          sublabel="manual setup · example"
           id="tab-without"
           panelId="panel-without"
         />
@@ -100,7 +101,7 @@ export default function OneCommand() {
           active={tab === "with"}
           onClick={() => setTab("with")}
           label="With Stack"
-          sublabel="1 command · ~4 sec"
+          sublabel="guided setup · example"
           id="tab-with"
           panelId="panel-with"
           accent
@@ -170,12 +171,12 @@ export default function OneCommand() {
                       strokeLinecap="round"
                     />
                   </svg>
-                  45 minutes
+                  Manual setup
                 </span>
                 <span className="text-ink-600">·</span>
-                <span>Context-switches: 12</span>
+                <span>Several account and editor steps</span>
                 <span className="text-ink-600">·</span>
-                <span>Secrets pasted into plain text: at least 3</span>
+                <span>Keep credentials out of source files</span>
               </div>
             </motion.div>
           ) : (
@@ -207,9 +208,9 @@ export default function OneCommand() {
               </div>
 
               <div className="mt-4 grid sm:grid-cols-3 gap-3">
-                <Stat label="Duration" value="4.2s" sub="vs 45 min" />
-                <Stat label="Context switches" value="0" sub="vs 12" />
-                <Stat label="Secrets in plaintext" value="0" sub="vs ≥ 3" />
+                <Stat label="Workflow" value="Guided" sub="provider approval may be needed" />
+                <Stat label="Secrets" value="Phantom" sub="when setup returns credentials" />
+                <Stat label="App setup" value="Review" sub="SDK and runtime need verification" />
               </div>
             </motion.div>
           )}

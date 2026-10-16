@@ -2,6 +2,36 @@
 
 ## Unreleased
 
+### Docs
+
+- **Adding a provider** — [docs/adding-a-provider.md](docs/adding-a-provider.md) lists every file a new provider touches, and `provider-parity.test.ts` fails when the loader registry, the catalog and `docs/provider-auth-matrix.md` disagree (#18).
+
+### Bug fixes
+
+- **`stack apply` stops writing placeholder secrets.** Its wiring step ran `phantom add <KEY> TODO_STACK_APPLY --rotate` (then without `--rotate`) for every declared secret. Phantom Secrets refuses values in argv and has no `--rotate`, so every call failed and the printed `envelopes` count was always 0; on an older Phantom it could store `TODO_STACK_APPLY` and block the real value later. Apply now reads names from `phantom list --json` and prints `secrets in vault N · missing M · webhooks K`, plus a `not in Phantom:` line pointing at `phantom add <NAME>`. It never writes to the vault. `WireResult.envelopes` is replaced by `present` and `missing`. (Successor to #33.)
+
+- **Command errors are one line.** A command that fails outside a Stack project (`stack list`, `deps`, `info`, `remove`, ...) now prints `✗ No .stack.toml at <path>. Run \`stack init\` first.` on stderr and exits 1, instead of a stack trace followed by the same message again. `STACK_DEBUG=1` adds the stack. Usage errors still print usage. (`packages/cli/src/lib/run-cli.ts`, #19)
+
+- **CI workflow generation fails closed.** `stack ci init` now exits nonzero without creating or overwriting a workflow because the reviewed Phantom Secrets 0.7.9 source requires trusted-terminal approval for Cloud pull. Existing configuration and file guards remain; `--force` stays available as a compatibility flag and does not enable generation.
+
+- **Stack works with Phantom Secrets 0.7.9.** Phantom 0.7.3+ rejects `phantom add KEY VALUE` (argv is visible to other processes), never replaces a stored name, and only reveals or removes a secret in an attached terminal. Stack still passed values on argv, so every `stack add` failed against the released CLI, and `phantom list`'s table was parsed as secret names. Stack now pipes values to `phantom add KEY --stdin`, treats a repeat of its own identical write as done, reports any other existing name as `PHANTOM_SECRET_EXISTS`, reads names from `phantom list --json`, and has `stack remove` hand Phantom the terminal (or list the secrets Phantom kept). Reading a stored token back is no longer possible, so cached-token reuse falls back to prompting, and token-based healthchecks could not read the token (see the `stack doctor` fix below). `packages/core/src/__tests__/phantom-contract.test.ts` runs the wrapper against a real binary (`STACK_PHANTOM_CONTRACT_BIN=/path/to/phantom bun test phantom-contract`).
+
+- **`stack doctor` no longer calls a stored token missing.** Phantom Secrets 0.7.9 only reveals values in an attached terminal, so every token-based healthcheck reported `<TOKEN> missing from vault` and failed even when the token was stored. Doctor now checks names against `phantom list --json`: a token Phantom holds but would not reveal reports `unchecked` with a pointer to `phantom validate --check-all`, and only a name absent from the vault still fails as missing.
+
+### Agent-facing fixes
+
+- **`npx -y ashlr-stack-mcp` can run tools.** The MCP server spawned `stack` from PATH (absent under npx, and Haskell's `stack` when present). `ashlr-stack-mcp` now depends on `@ashlr/stack` and runs that package's bin with the current runtime; `STACK_BIN` still overrides, PATH is the last resort. Publish order is now core, cli, mcp. (`packages/mcp/src/stack-bin.ts`)
+- **`stack status --json` for agents and Phantom.** It prints one `ashlr.stack.status/v1` object: whether a `.stack.toml` exists, whether Phantom is installed and how many secrets it holds, and each service with its provider and secret names. A missing `.stack.toml` or Phantom is reported in the object with exit 0; an unreadable `.stack.toml` prints `{"error": ...}` and exits 1. Before, Phantom parsed the human table and listed zero services. The `stack_status` MCP tool takes `json: true` for the same output. The secret count is `null` when the vault cannot be read, and `stack info` shows `? unknown` instead of calling every secret missing.
+- **`stack_scan` over MCP returns results.** It now always passes `--json`; before, every call answered "no TTY detected".
+- **`stack recommend --category` matches any case.** `--category database` used to return no hits, because the filter compared against `Database` exactly. An unknown category now exits 1 and lists the valid ones, instead of returning an empty result.
+- **`stack sync` rejects an unknown platform first.** `stack sync --platform heroku` said "Unsupported platform" only after checking for Phantom. The `stack_sync` MCP schema now names the supported platforms, and the docs quote the error the MCP server actually sends when it can't run the CLI.
+- **No spinner escape codes in piped output.** `prompts.spinner()` prints plain lines when stdout is not a TTY or `CI` is set, so MCP results and CI logs stay clean. (`packages/cli/src/ui.ts`)
+- **`stack exec` stdout belongs to the command.** The intro banner is gone and errors go to stderr, so `stack exec -- cmd > out.json` captures only `cmd`.
+- **MCP `serverInfo.version` reads package.json** instead of a hard-coded `0.2.0`.
+- **Bare `stack env` / `stack templates`** run `show` / `list` instead of exiting 1.
+- **Release + docs name the MCP package correctly** (`ashlr-stack-mcp`, not `@ashlr/stack-mcp`), including the site's MCP setup snippet.
+- **CI smoke-tests the npm bundles under Node 20** (`stack --help`, MCP initialize, tools/list, `stack_scan`) via `scripts/node-smoke.mjs`.
+
 ## 0.2.1 (2026-10-12)
 
 - **Release workflow repaired.** A multi-line `git commit -m` in the Homebrew job ended the YAML block early and left a stray top-level key, so GitHub rejected `release.yml` on every push and the v0.2.0 npm publish never ran.

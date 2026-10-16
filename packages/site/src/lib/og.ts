@@ -22,7 +22,7 @@ export const DEFAULT_TWITTER_IMAGE = "/twitter-card.svg";
 
 export const DEFAULT_TITLE = "Ashlr Stack — The control plane for your entire dev stack";
 export const DEFAULT_DESCRIPTION =
-  "One command to provision, wire, and operate every third-party service in your project. 39 providers. CLI + MCP + Claude Code plugin.";
+  "Plan and configure supported services for a local development project, using Stack CLI workflows and its MCP bridge.";
 
 export interface OgMetaInput {
   title?: string;
@@ -59,7 +59,7 @@ export function buildOgMeta(input: OgMetaInput = {}): OgMetaTag[] {
   const canonical = input.canonical ?? `${SITE_URL}/`;
   const imageAlt =
     input.imageAlt ??
-    "Ashlr Stack — dark terminal with magenta triangle logo and the tagline 'The control plane for your entire dev stack.'";
+    "Ashlr Stack — orange Orbit & Spire mark with an illustrative Stack workflow. Credentials and client setup are still required.";
 
   return [
     { attr: "property", key: "og:site_name", value: SITE_NAME },

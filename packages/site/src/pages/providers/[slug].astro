@@ -54,11 +54,11 @@ const iconPath = getIconPath(iconSlug);
 
 const AUTH_EXPLAINERS: Record<string, string> = {
   oauth_pkce:
-    "Stack runs the provider's OAuth (PKCE) flow in your browser. You click Authorise, and Stack captures the token via a one-shot localhost callback server.",
+    "Where configured, the adapter can use OAuth (PKCE); otherwise a credential-paste branch may be required. Review its current setup prerequisites.",
   oauth_device:
-    "Stack runs the OAuth device flow. You paste a code into the provider's authorization page; Stack polls until you confirm.",
-  pat: "Paste a personal access token (PAT) once. Stack verifies it against the provider's API before writing to Phantom.",
-  api_key: "Paste a long-lived API key once. Stack verifies it against the provider's API before writing to Phantom.",
+    "The catalog describes an OAuth device flow. Actual adapter setup may use a token fallback; check the installed interface and provider permissions.",
+  pat: "Supply the PAT required by the adapter. Available verification and storage phases vary; a check is not proof of every permission or resource.",
+  api_key: "Supply the adapter's API-key inputs. Some checks only validate structure or a limited endpoint; additional credentials and manual setup may be needed.",
 };
 const AUTH_LABELS: Record<string, string> = {
   oauth_pkce: "OAuth (PKCE)",
@@ -101,19 +101,19 @@ const recommendBrief =
 const FAQ_ITEMS: Array<{ q: string; a: string }> = [
   {
     q: `Do I need a ${p.displayName} account to use it with Stack?`,
-    a: `Yes — Stack provisions ${p.displayName} on your behalf, but it authenticates as you. ${authExplainer} ${
+    a: `Use an existing ${p.displayName} account and permissions appropriate to the adapter. Creation or attachment behavior is provider-specific. ${authExplainer} ${
       p.authKind === "oauth_pkce" || p.authKind === "oauth_device"
-        ? `If you don't have an account yet, Stack can create one during the OAuth flow.`
-        : `If you don't have a credential yet, create one at ${p.dashboard} and paste it once.`
+        ? `OAuth does not establish automatic account signup; complete any required dashboard setup first.`
+        : `If you don't have a credential yet, create one at ${p.dashboard} and supply the required inputs; inspect verification and persistence results.`
     }`,
   },
   {
     q: `Where does Stack store my ${p.displayName} credentials?`,
-    a: `In Phantom Secrets, an E2E-encrypted local vault. Stack writes the secret slot names (${p.secrets.join(", ")}) into .stack.toml — the actual values live only in Phantom and never touch disk in plaintext.`,
+    a: `Credential persistence uses the installed Phantom Secrets interface. The catalog declares slot names (${p.secrets.join(", ")}); actual materialized outputs can differ. Stack handles supplied values in memory and records dedicated names in config; manual files and freeform metadata are not generally redacted.`,
   },
   {
     q: `Can I rotate or revoke this integration later?`,
-    a: `Yes. Run \`stack remove ${p.name}\` to pull the ${p.displayName} service back out (Phantom secrets deleted, MCP entry removed, .stack.toml cleaned up). Rotate the underlying ${p.displayName} credentials in their dashboard — ${p.dashboard} — and Stack's next \`doctor --fix\` will pick up the new values.`,
+    a: `Use \`stack remove ${p.name}\` for local ${p.displayName} configuration/MCP cleanup and attempted Phantom cleanup; upstream resources remain. Cleanup can refuse or leave keys stored. Rotate or revoke the underlying ${p.displayName} credentials through ${p.dashboard}, then update and verify each consumer separately. Doctor does not rotate tokens and can skip already-stored names.`,
   },
 ];
 
@@ -142,7 +142,7 @@ const templates = TEMPLATES_WITH_PROVIDER[p.name] ?? [];
 
 const pageUrl = `${SITE_URL}/providers/${p.name}/`;
 const title = `${p.displayName} — Ashlr Stack Provider`;
-const description = `${p.displayName}: ${p.blurb} Wire it into your project with one command via Ashlr Stack.`;
+const description = `${p.displayName}: ${p.blurb} Review adapter-specific setup, credential and MCP requirements in Ashlr Stack.`;
 
 const faq = faqPageSchema(
   FAQ_ITEMS.map((it) => ({ question: it.q, answer: it.a })),
@@ -181,7 +181,7 @@ const breadcrumbs = breadcrumbSchema([
         </span>
         {p.keyOnly && (
           <span class="text-[9px] font-semibold uppercase tracking-[0.1em] px-1.5 py-0.5 rounded border border-ink-600 bg-ink-800/60 text-ink-500">
-            KEY-ONLY · v0.2 adds provisioning
+            KEY-ONLY · supplied credential attachment
           </span>
         )}
       </div>
@@ -201,15 +201,17 @@ const breadcrumbs = breadcrumbSchema([
 
   <h2>One command</h2>
   <p>
-    Add <strong>{p.displayName}</strong> to any Ashlr Stack project with a single command. Stack runs the auth flow,
-    {p.authKind === "oauth_pkce" || p.authKind === "oauth_device" ? ` provisions the upstream resource via the ${p.displayName} Management API, ` : " verifies the credential, "}
-    and writes every secret slot into <a href="/docs/phantom/">Phantom</a>.
+    Run one provider setup from an initialized project. Its adapter may handle auth inputs,
+    {p.authKind === "oauth_pkce" || p.authKind === "oauth_device" ? ` use an available OAuth branch or a token fallback, ` : " run its available credential checks, "}
+    then attempt persistence through <a href="/docs/phantom/">Phantom</a>.
+    Supabase, Neon, Turso and Vercel have source resource-creation branches;
+    other adapters attach accounts or supplied credentials. Inspect actual results.
   </p>
 
   <Code code={`stack add ${p.name}`} lang="bash" theme="github-dark-dimmed" />
 
   <p>
-    Or describe what you're building and let Claude pick it up via{" "}
+    Or retrieve catalog matches for what you're building via{" "}
     <a href="/docs/recommend/"><code>stack recommend</code></a>:
   </p>
 
@@ -217,32 +219,35 @@ const breadcrumbs = breadcrumbSchema([
 
   <h2 id="auth">Auth flow</h2>
   <p>{authExplainer}</p>
-  <p>
+  <p class="break-words">
     <strong>How-to:</strong> {p.howTo}
   </p>
 
   <h2 id="secrets">Secret slots</h2>
   <p>
-    <code>stack add {p.name}</code> writes these <strong>{p.secrets.length}</strong> secret
-    {p.secrets.length === 1 ? " slot" : " slots"} into your <a href="/docs/phantom/">Phantom</a> vault:
+    <code>stack add {p.name}</code> has these <strong>{p.secrets.length}</strong> catalog secret
+    {p.secrets.length === 1 ? " slot" : " slots"}; verify which values its adapter actually materializes through <a href="/docs/phantom/">Phantom</a>:
   </p>
   <ul>
     {p.secrets.map((s) => <li><code>{s}</code></li>)}
   </ul>
   <p>
-    The values never leave Phantom in plaintext. Your <code>.env</code> file references slot
-    names, and <code>stack exec -- &lt;cmd&gt;</code> swaps them in at process-spawn time via
-    Phantom's local proxy.
+    Use <code>stack env export --example</code> for an empty-key skeleton.
+    Stack does not automatically fill env files or resolve credential placeholders.
+    <code>stack exec -- &lt;cmd&gt;</code> forwards to installed Phantom exec;
+    configure and verify the app separately.
   </p>
 
   {p.mcp && (
     <>
       <h2 id="mcp">MCP wiring</h2>
       <p>
-        <strong>{p.displayName}</strong> ships an MCP server.
+        <strong>{p.displayName}</strong> has an MCP entry in the catalog.
         {" "}
-        <code>stack add {p.name}</code> auto-wires it into <code>.mcp.json</code> so your{" "}
-        <a href="/docs/mcp/">Claude Code / Cursor / Windsurf</a> session can use it immediately.
+        An adapter may write a descriptor to <code>.mcp.json</code>. Inspect
+        the actual file and complete supported client and credential setup;
+        <a href="/docs/mcp/">Claude Code / Cursor / Windsurf</a> availability
+        is not established by the descriptor. Shell expressions in JSON remain literal.
       </p>
       <p class="text-ink-400 text-[13px]">
         {p.mcp.detail}
@@ -253,7 +258,7 @@ const breadcrumbs = breadcrumbSchema([
   {templates.length > 0 && (
     <>
       <h2 id="templates">Starter templates that include {p.displayName}</h2>
-      <p>Apply a pre-wired stack with one command:</p>
+      <p>Selected template init attempts provider setup by default; add --noProvision to inspect config first:</p>
       <ul>
         {templates.map((t) => (
           <li>
@@ -279,7 +284,7 @@ const breadcrumbs = breadcrumbSchema([
 
   {p.notes && (
     <>
-      <h2>v1 notes</h2>
+      <h2 id="v1-notes">Catalog notes</h2>
       <p class="text-ink-300">{p.notes}</p>
     </>
   )}

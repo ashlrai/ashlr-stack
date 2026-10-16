@@ -12,8 +12,7 @@ const categoryCount = CATEGORIES.length;
 const howTo = howToSchema({
   name: "Recommend and apply a Stack recipe",
   description:
-    "Describe what you're building, freeze the result as a Recipe, and apply it — provisioning providers and wiring Phantom rotation in one shot.",
-  totalTime: "PT3M",
+    "Retrieve catalog candidates, save a recipe, review its provider effects and inspect setup and optional wiring results.",
   url: pageUrl,
   steps: [
     {
@@ -23,7 +22,7 @@ const howTo = howToSchema({
     },
     {
       name: "Apply the recipe",
-      text: "Run `stack apply <recipe-id>` to replay `stack add` for each provider and pre-wire Phantom rotation envelopes + webhook stubs.",
+      text: "Run `stack apply <recipe-id>` after reviewing the saved recipe. It attempts provider setup and a names-only Phantom vault check plus webhook stubs; inspect partial results.",
       url: `${pageUrl}#stack-apply`,
     },
   ],
@@ -34,12 +33,12 @@ const faq = faqPageSchema(
     {
       question: "Can I use my own LLM?",
       answer:
-        "Yes. Set STACK_LM_URL to any OpenAI-compatible endpoint. Stack talks HTTP to LM Studio (localhost:1234) and Ollama (localhost:11434) out of the box.",
+        "STACK_LM_URL can select an OpenAI-compatible endpoint for optional synthesis. Default addresses are local LM Studio/Ollama; review any endpoint override and its authentication/privacy requirements before use.",
     },
     {
       question: "Does anything call Anthropic or OpenAI?",
       answer:
-        "No. All synthesis is local, or delegated to Claude Code via MCP. Stack's repo has zero remote-LLM SDKs.",
+        "Default recommendation is retrieval-only. --synth can contact the configured HTTP endpoint; local defaults do not guarantee every override is local. The external coding agent has its own provider and privacy settings.",
     },
     {
       question: "What if the SLM isn't running?",
@@ -53,7 +52,7 @@ const faq = faqPageSchema(
 
 <Docs
   title="AI recommend + apply"
-  description="Describe what you're building. Stack picks the providers, freezes a Recipe, and wires Phantom rotation + webhook stubs when you apply it."
+  description="Retrieve catalog matches, save a recipe and review provider setup. Optional wiring attempts are not accepted production rotation."
   eyebrow="Getting started"
   extraSchemas={[howTo, faq]}
 >
@@ -75,7 +74,7 @@ const faq = faqPageSchema(
   </div>
 
   <h2 id="quick-start">Quick start</h2>
-  <p>Three lines from a blank repo to a provisioned stack:</p>
+  <p>Save a recommendation, review it, then authorize setup in the intended directory:</p>
 
   <Code
     code={`stack recommend "B2B SaaS with auth, AI, and payments" --save
@@ -88,8 +87,8 @@ stack apply b2b-saas-with-auth-ai-and-paymen`}
 
   <h2>Two modes</h2>
   <p>
-    Stack runs in whichever mode matches where you're typing. Neither mode ever
-    calls a remote LLM from Stack itself.
+    Default recommendation is retrieval-only. Optional synthesis can contact
+    the configured HTTP endpoint; a local default does not constrain overrides.
   </p>
 
   <table>
@@ -109,7 +108,8 @@ stack apply b2b-saas-with-auth-ai-and-paymen`}
         </td>
         <td>
           Claude consumes Stack's retrieval output as grounded context and
-          writes the rationale itself. Stack never calls an LLM.
+          may write its own rationale. The MCP wrapper returns CLI text; the
+          external agent has its own provider settings.
         </td>
       </tr>
       <tr>
@@ -153,15 +153,14 @@ stack apply b2b-saas-with-auth-ai-and-paymen`}
         <td><code>--synth</code></td>
         <td class="text-ink-400 mono text-[12px]">boolean</td>
         <td>
-          Call the local SLM for model-authored rationales. Silently degrades
-          to retrieval-only when neither LM Studio nor Ollama is reachable.
+          Call the configured HTTP endpoint for model-authored rationales. Defaults are local; endpoint overrides may be remote. Inference failure can fall back to retrieval-only output.
         </td>
       </tr>
       <tr>
         <td><code>--json</code></td>
         <td class="text-ink-400 mono text-[12px]">boolean</td>
         <td>
-          Machine-readable output. Same shape the MCP server returns to Claude.
+          CLI JSON output; the MCP wrapper carries this inside text content.
         </td>
       </tr>
       <tr>
@@ -177,7 +176,7 @@ stack apply b2b-saas-with-auth-ai-and-paymen`}
         <td>
           Restrict to one category: <code>Database</code>, <code>Deploy</code>,{" "}
           <code>Cloud</code>, <code>AI</code>, <code>Analytics</code>,{" "}
-          <code>Errors</code>, <code>Payments</code>, <code>Code</code>,{" "}
+          <code>Observability</code>, <code>FeatureFlags</code>, <code>Errors</code>, <code>Payments</code>, <code>Code</code>,{" "}
           <code>Tickets</code>, <code>Email</code>, <code>Auth</code>.
         </td>
       </tr>
@@ -185,6 +184,7 @@ stack apply b2b-saas-with-auth-ai-and-paymen`}
   </table>
 
   <h3>Default output</h3>
+  <p>Illustrative output and scores; actual matches depend on the current catalog. Retrieval scores are not measured provider quality.</p>
   <Code
     code={`$ stack recommend "B2B SaaS with auth, AI, and payments"
 
@@ -204,7 +204,7 @@ stack apply b2b-saas-with-auth-ai-and-paymen`}
     add with: stack add xai
 
   ● Sentry  Errors  (2.48)
-    Error + performance tracking. Creates a project and fetches its DSN.
+    Error + performance tracking. Attaches to an existing project and reads its DSN when available.
     add with: stack add sentry
 
   ● OpenAI  AI  (2.23)
@@ -217,7 +217,7 @@ stack apply b2b-saas-with-auth-ai-and-paymen`}
 
   Top pick per category: Auth→clerk, Payments→stripe, AI→xai, Errors→sentry.
   No matches surfaced for: Database, Deploy, Cloud, Analytics, Code, Tickets, Email.
-  Apply a chosen set with: stack add clerk stripe xai (or supply your own list).
+  Apply a chosen set with: stack add clerk && stack add stripe && stack add xai (one command per service).
 
   Tip: rerun with \`--save\` to freeze as a recipe for \`stack apply\`.
 │
@@ -246,7 +246,7 @@ stack apply b2b-saas-with-auth-ai-and-paymen`}
   <p>
     With LM Studio or Ollama running, each hit gains a{" "}
     <code>why:</code> line authored by the model. Without either, the command
-    behaves exactly like the default — no prompts, no failures:
+    can fall back to retrieval-only output. Other I/O or setup errors remain possible. Illustrative synthesis output:
   </p>
   <Code
     code={`$ stack recommend "analytics + error tracking for a Next.js app" --synth
@@ -257,7 +257,7 @@ stack apply b2b-saas-with-auth-ai-and-paymen`}
     add with: stack add posthog
 
   ● Sentry  Errors  (4.77)
-    Error + performance tracking. Creates a project and fetches its DSN.
+    Error + performance tracking. Attaches to an existing project and reads its DSN when available.
     why: Sentry captures unhandled exceptions and Web Vitals without extra glue.
     add with: stack add sentry`}
     lang="text"
@@ -266,12 +266,11 @@ stack apply b2b-saas-with-auth-ai-and-paymen`}
 
   <h3><code>--json</code> — machine-readable</h3>
   <p>
-    Same shape the MCP server emits back to Claude. Good for scripts, CI, and
-    your own tooling:
+    This is illustrative CLI JSON, not the outer MCP text envelope. The
+    example fields and scores are not a live acceptance receipt:
   </p>
   <Code
-    code={`$ stack recommend "B2B SaaS with auth and payments" --json
-{
+    code={`{
   "query": "B2B SaaS with auth and payments",
   "hits": [
     {
@@ -333,12 +332,14 @@ stack apply b2b-saas-with-auth-ai-and-paymen`}
   </h2>
   <p>
     Replay a saved Recipe through the existing <code>stack add</code> pipeline,
-    then pre-wire Phantom rotation so the first provisioned credential lands
-    into an already-rotating envelope.
+    then check which declared secrets are in the Phantom vault. Setup may
+    create or attach resources and write credentials/config; the vault check
+    only reads names, and webhook stubs are not verified handlers.
   </p>
 
   <Code
-    code={`$ stack apply b2b-saas-with-auth
+    code={`# Illustrative replay; inspect actual setup and optional wiring results
+$ stack apply b2b-saas-with-auth
 
   recipe   b2b-saas-with-auth
   query    B2B SaaS with auth
@@ -348,7 +349,8 @@ stack apply b2b-saas-with-auth-ai-and-paymen`}
   › stack add sentry
   › stack add supabase
 
-  envelopes 3 · webhooks 2
+  secrets in vault 7 · missing 1 · webhooks 2
+  (not in Phantom: SENTRY_AUTH_TOKEN — store with \`phantom add <NAME>\`)
 
   › stack doctor
   ✓ b2b-saas-with-auth applied.`}
@@ -368,45 +370,54 @@ stack apply b2b-saas-with-auth-ai-and-paymen`}
         <td><code>--noWire</code></td>
         <td>
           Skip the Phantom-wire layer — pure <code>stack add</code> replay, no
-          envelopes, no webhook stubs. Use when you want to opt out of the
-          rotation-from-the-first-call moat.
+          vault check or webhook stubs. Provider setup and credential/config writes
+          still occur; this flag is not a dry run.
+        </td>
+      </tr>
+      <tr>
+        <td><code>--noRollback</code></td>
+        <td>
+          Skip the multi-service cleanup attempt after partial failure.
+          Existing provider resources, credentials or partial writes may remain;
+          this flag is not a dry run or a guarantee about upstream deletion.
         </td>
       </tr>
     </tbody>
   </table>
 
   <h3>What gets wired</h3>
-  <p>With the default flow (no <code>--noWire</code>) apply also writes:</p>
+  <p>After setup succeeds for an entry, the default flow can attempt these steps unless <code>--noWire</code> is set:</p>
   <ul>
     <li>
-      <strong>Phantom rotation envelopes</strong> — one per secret slot the
-      recipe's providers declare. The envelope rotates on a cadence from day
-      one, so the credential you just fetched is never the credential that
-      ships to prod a week later.
+      <strong>Phantom vault check</strong> — reads names from
+      <code>phantom list --json</code> (never values) and lists each declared
+      secret as in the vault or missing. It never writes to the vault; store
+      missing values with <code>phantom add &lt;NAME&gt;</code>.
     </li>
     <li>
       <strong>Webhook stubs</strong> — scaffolded verification + handler files
-      for any provider the recipe includes with a known rotation/webhook
-      contract: <code>stripe</code>, <code>clerk</code>, <code>supabase</code>,{" "}
-      <code>github</code>. Drop them into your app; they're ready to verify
-      signatures against Phantom-held secrets.
+      for selected providers in the helper: <code>stripe</code>, <code>clerk</code>, <code>supabase</code>,{" "}
+      <code>github</code>. Implement and verify handlers in the app before using them; generated
+      comments are not signature verification.
     </li>
     <li>
       <strong>Inline <code>stack doctor</code></strong> — runs at the end so
-      you see any red dots before <code>apply</code> exits.
+      you can inspect available checks. It is informational and not an
+      all-services-success gate for <code>apply</code>.
     </li>
   </ul>
 
   <div class="callout">
-    <strong>Idempotent.</strong> Re-running <code>stack apply</code> against
-    the same recipe is safe — providers already present short-circuit, and the
-    Phantom-wire pass de-duplicates envelopes by slot name.
+    <strong>Inspect before replay.</strong> Existing services can be skipped,
+    but partial provider, credential or optional wiring effects may remain.
+    Re-running <code>stack apply</code> is not a universal safe-retry guarantee.
   </div>
 
   <h2>MCP tools</h2>
   <p>
     Both commands are exposed as MCP tools so Claude Code (and any MCP-speaking
-    editor) can drive the full loop from a coding session. See the full{" "}
+    editor) can request these operations when its actual tools and project
+    context are configured. See the full{" "}
     <a href="/docs/mcp/">MCP integration docs</a> for setup.
   </p>
 
@@ -466,7 +477,8 @@ stack apply b2b-saas-with-auth-ai-and-paymen`}
     </div>
     <p class="text-[13px] text-ink-300 leading-relaxed mb-3">
       Replay a saved Recipe. Runs <code>stack add</code> for each provider,
-      then pre-wires Phantom rotation envelopes + webhook stubs.
+      then checks the Phantom vault and writes webhook stubs. The returned text
+      can include failures; setup and cleanup are not atomic.
     </p>
     <table>
       <thead>
@@ -490,7 +502,7 @@ stack apply b2b-saas-with-auth-ai-and-paymen`}
         <tr>
           <td><code class="mono text-[12px]">no_wire</code></td>
           <td class="text-ink-400 mono text-[12px]">boolean</td>
-          <td class="text-[13px]">Skip Phantom envelope + webhook wiring.</td>
+          <td class="text-[13px]">Skip the Phantom vault check and webhook stubs.</td>
         </tr>
       </tbody>
     </table>
@@ -498,7 +510,7 @@ stack apply b2b-saas-with-auth-ai-and-paymen`}
 
   <h3>In-session example</h3>
   <p>
-    A real back-and-forth once Stack's MCP server is installed in Claude Code:
+    Illustrative conversation, not a recorded customer or provider outcome:
   </p>
 
   <Code
@@ -513,14 +525,14 @@ Claude > I'll pick the providers first and freeze a recipe so you can
          neon (Database). Saved as recipe "saas-with-auth-payments-error".
 
          Want me to apply it now? This runs \`stack add\` for each and
-         pre-wires Phantom rotation + webhook stubs.
+         checks which secrets are already in Phantom.
 
 You > Yes.
 
 Claude > (calls stack_apply { recipe_id: "saas-with-auth-payments-error" })
 
-         ✓ 4 providers provisioned · 7 rotation envelopes · 3 webhook stubs
-         All services healthy (stack doctor).`}
+         Setup report: inspect added, skipped and failed entries.
+         Optional wiring counts and doctor checks need separate verification.`}
     lang="text"
     theme="github-dark-dimmed"
   />
@@ -528,8 +540,9 @@ Claude > (calls stack_apply { recipe_id: "saas-with-auth-payments-error" })
   <h2>Recipe file format</h2>
   <p>
     Recipes are plain TOML under <code>.stack/recipes/&lt;id&gt;.toml</code>.
-    Safe to commit — provider names are stable, the file contains no secrets
-    (credentials live in <a href="/docs/phantom/">Phantom</a>).
+    Recipes can include the original query and freeform rationales. Review
+    them before sharing; dedicated credential persistence uses
+    <a href="/docs/phantom/">Phantom</a>.
   </p>
 
   <Code
@@ -556,8 +569,8 @@ rationale = "auth"`}
   <p>
     The <code>id</code> is the first ~40 chars of the query, slugified. The{" "}
     <code>rationale</code> starts as the matched terms from retrieval and gets
-    overwritten when you re-run with <code>--synth</code> or when Claude
-    synthesizes via MCP.
+    may be updated when an authorized synthesis result is saved. An agent
+    writing prose externally does not itself rewrite the stored recipe.
   </p>
 
   <h2>How retrieval works</h2>
@@ -578,23 +591,23 @@ rationale = "auth"`}
   <p>
     Yes. Set <code>STACK_LM_URL</code> to any OpenAI-compatible endpoint. Stack
     talks plain HTTP to LM Studio (<code>localhost:1234</code>) and Ollama
-    (<code>localhost:11434</code>) out of the box — no SDKs, no API keys in the
-    Stack process.
+    (<code>localhost:11434</code>) by default. An override may contact another
+    host; verify its access and privacy requirements.
   </p>
 
   <h3>Does anything call Anthropic or OpenAI?</h3>
   <p>
-    No. All synthesis is either <strong>local</strong> (your SLM) or{" "}
-    <strong>delegated to Claude Code</strong> via MCP. Stack's repo has zero
-    remote-LLM SDKs. The user's LLM keys belong to Claude, not to us.
+    Default retrieval uses no model. <strong>Optional synthesis</strong> can
+    contact a configured endpoint, while <strong>the external coding agent</strong>
+    has its own provider settings. Absence of an SDK is not a no-network proof.
   </p>
 
   <h3>What if the SLM isn't running?</h3>
   <p>
     <code>--synth</code> silently falls back to retrieval-only output. The
-    command still exits <code>0</code>, the ranking is unchanged, and{" "}
-    <code>--save</code> writes the same Recipe shape. No prompts, no errors —
-    retrieval alone is the floor, synthesis is the bonus.
+    ranking remains retrieval-based, and <code>--save</code> can persist the
+    recipe. Endpoint fallback does not rule out other I/O errors or guarantee
+    an exit code of <code>0</code>.
   </p>
 
   <h2>What now?</h2>
@@ -631,7 +644,7 @@ rationale = "auth"`}
         Phantom Secrets
       </h3>
       <p class="text-[13px] text-ink-400 leading-relaxed">
-        Where the rotation envelopes <code class="mono text-ink-200">stack apply</code> wires actually live.
+        Credential persistence and the limits of optional <code class="mono text-ink-200">stack apply</code> wiring.
       </p>
     </a>
   </div>

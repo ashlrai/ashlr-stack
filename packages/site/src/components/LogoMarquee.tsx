@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
+import { PROVIDER_CATEGORIES } from "~/lib/providers-ref";
 
 /**
- * LogoMarquee — dual-row continuous-scroll wall of every provider we wire.
+ * LogoMarquee — dual-row continuous-scroll wall of catalog provider entries.
  *
  * Answers "what does Stack actually integrate?" in one glance, without the
  * user scrolling or clicking. Two rows scroll in opposite directions at
  * slightly different speeds so the eye keeps finding new logos.
  *
- * - Data: all entries in `packages/core/src/catalog.ts` (29 as of v0.1.1),
- *   threaded in via `iconPaths` from Hero.astro (same simple-icons pipeline
+ * - Data: all entries in `packages/core/src/catalog.ts`,
+ *   threaded in via `iconPaths` from index.astro (same simple-icons pipeline
  *   the rest of the site uses).
  * - Hover: pauses the row the mouse is over + pops the hovered chip +
  *   reveals `stack add <name>`.
@@ -53,7 +54,8 @@ export default function LogoMarquee({ providers, iconPaths = {} }: Props) {
       >
         <div className="mx-auto max-w-[1240px]">
           <div className="eyebrow mb-6 text-[color:var(--color-blade-400)]">
-            {providers.length} providers · 11 categories · all wired the same way
+            {providers.length} catalog entries · {PROVIDER_CATEGORIES.length} source categories ·
+            setup varies by provider
           </div>
           <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-7 lg:grid-cols-10 gap-3">
             {providers.map((p) => (
@@ -91,9 +93,9 @@ export default function LogoMarquee({ providers, iconPaths = {} }: Props) {
           <div className="eyebrow text-[color:var(--color-blade-400)]">Supported providers</div>
           <div className="text-[14px] text-[color:var(--color-ink-200)] mt-1">
             <span className="text-[color:var(--color-ink-50)] font-semibold">
-              {providers.length} providers
+              {providers.length} catalog entries
             </span>
-            , wired the same way.{" "}
+            , with provider-specific setup.{" "}
             <span className="text-[color:var(--color-ink-400)]">
               Click any logo to see what{" "}
               <code className="mono text-[color:var(--color-ink-100)]">stack add</code> does for it.

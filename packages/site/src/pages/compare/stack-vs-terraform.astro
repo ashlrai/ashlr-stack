@@ -15,12 +15,12 @@ const faq = faqPageSchema(
     {
       question: "Does Terraform have a Supabase or Stripe provider?",
       answer:
-        "There is a community Supabase provider with limited coverage and a Stripe provider that mostly wraps the API surface. Neither handles OAuth onboarding, project creation, secret extraction, or vault routing the way Stack does end-to-end. Stack treats these providers as first-class SaaS citizens, not API wrappers.",
+        "There is a community Supabase provider with limited coverage and a Stripe provider that mostly wraps the API surface. Stack supports Supabase project creation and Phantom credential routing. Its Stripe adapter currently verifies and stores an existing restricted key; provider behavior varies.",
     },
     {
       question: "Which should a two-person startup pick?",
       answer:
-        "If you deploy to Vercel, Fly, or Railway and rent the rest (Supabase, Stripe, Clerk, PostHog), Stack alone covers 90 percent of your setup. If you run on AWS primitives — EC2, RDS, VPCs — you need Terraform for infra and can add Stack for the SaaS layer on top.",
+        "If you deploy to Vercel, Fly, or Railway and rent the rest (Supabase, Stripe, Clerk, PostHog), Stack can help connect supported SaaS services. If you run on AWS primitives — EC2, RDS, VPCs — you need Terraform for infra and can add Stack for the SaaS layer on top.",
     },
   ],
   pageUrl,
@@ -40,11 +40,9 @@ const faq = faqPageSchema(
     primitives, and Terraform reconciles your described state against the
     cloud. It has the largest provider ecosystem in the industry (3,000+
     providers on the registry), mature state management, and is the default
-    choice for anything touching AWS, GCP, or Azure. Stack provisions the
-    other half of modern infrastructure — the third-party SaaS services
-    (Supabase, Stripe, Clerk, Vercel, PostHog, Sentry, and 23 more) — via
-    their Management APIs, with OAuth, secrets routed through Phantom, and
-    MCP-native automation. Stack is not a Terraform replacement. It's what
+    choice for anything touching AWS, GCP, or Azure. Stack connects
+    supported SaaS services through provider-specific setup, with secrets
+    routed through Phantom and MCP tooling. Stack is not a Terraform replacement. It's what
     you reach for when Terraform's provider coverage runs out.
   </p>
 
@@ -63,11 +61,11 @@ const faq = faqPageSchema(
       </tr>
       <tr>
         <td>Multi-region, multi-account, remote state, workspaces, policy-as-code (Sentinel / OPA).</td>
-        <td>You want <code>stack add stripe</code> to create the account, capture webhooks, and write the key to an encrypted vault.</td>
+        <td>You want <code>stack add stripe</code> to verify and store an existing restricted key in Phantom.</td>
       </tr>
       <tr>
         <td>Regulated industry with audit trails and drift detection at the cloud-primitive layer.</td>
-        <td>You are shipping a SaaS and want the third-party glue done in minutes rather than days.</td>
+        <td>You want to compose supported SaaS services with explicit provider authorization.</td>
       </tr>
     </tbody>
   </table>
@@ -104,7 +102,7 @@ const faq = faqPageSchema(
       </tr>
       <tr>
         <td>What it provisions</td>
-        <td>Supabase, Vercel, Stripe, Clerk, PostHog, Sentry, GitHub, Resend, Neon, Fly.io, Railway, and 18 more</td>
+        <td>Provider-specific setup for Supabase, Vercel, Stripe, Clerk, PostHog, Sentry, GitHub, Resend, Neon, Fly.io, Railway, and others</td>
         <td>AWS, GCP, Azure, Kubernetes, Cloudflare, 3,000+ providers</td>
       </tr>
       <tr>
@@ -114,7 +112,7 @@ const faq = faqPageSchema(
       </tr>
       <tr>
         <td>Secrets</td>
-        <td>E2E-encrypted via <a href="/docs/phantom/">Phantom</a>; never on disk in plaintext</td>
+        <td>Credential values routed through <a href="/docs/phantom/">Phantom</a>; <code>.stack.toml</code> records slot names</td>
         <td>Variables marked <code>sensitive</code>; state file contains plaintext secrets unless encrypted at rest</td>
       </tr>
       <tr>
@@ -151,8 +149,8 @@ const faq = faqPageSchema(
     first-class. In theory you can write HCL that creates a Stripe product,
     a Supabase branch, a Clerk application. In practice the ergonomics are
     wrong: you're spinning up a state backend, writing 80 lines of HCL, and
-    importing plaintext secrets — all to do what <code>stack add stripe</code>
-    does in one command with encrypted secrets by default.
+    handling credentials — while <code>stack add stripe</code> can verify
+    and store an existing restricted key through Phantom.
   </p>
   <p>
     The honest cases where Terraform's SaaS providers are the right answer:
@@ -164,24 +162,23 @@ const faq = faqPageSchema(
   <h2>Where Stack wins</h2>
   <ul>
     <li>
-      <strong>End-to-end SaaS provisioning.</strong> <code>stack add supabase</code>
-      drives the OAuth flow, calls the Supabase Management API to create a
-      project, waits for it to come online, extracts the service-role key and
-      anon key, writes them to Phantom, and regenerates <code>.env.local</code>
-      with <code>phm_*</code> tokens. Terraform's Supabase provider requires
-      you to already have a project and a PAT before HCL can do anything.
+      <strong>Provider-specific SaaS setup.</strong> <code>stack add supabase</code>
+      uses OAuth or a supplied PAT, calls the Supabase Management API to
+      create a project, fetches available service-role and anon keys, stores
+      credentials in Phantom, records slot names in <code>.stack.toml</code>,
+      and merges its MCP entry into <code>.mcp.json</code>. App environment
+      configuration is a separate step.
     </li>
     <li>
-      <strong>Secrets-safe by default.</strong> Stack never writes plaintext
-      secrets to disk. Terraform's state file contains secrets in plaintext
-      unless you configure encryption at rest. In day-to-day use this
-      difference is huge — an accidentally committed <code>terraform.tfstate</code>
-      has leaked AWS keys many times; a committed <code>.stack.toml</code>
-      contains slot names only.
+      <strong>Credential references in config.</strong> Stack routes provider
+      credential values through Phantom and records slot names in
+      <code>.stack.toml</code>. Treat Terraform state as sensitive and secure
+      its backend and access controls separately; Stack does not attest to
+      what other tools write to disk or logs.
     </li>
     <li>
       <strong>MCP-native.</strong> Stack's 19 MCP tools let an agent drive the
-      entire lifecycle — recommend, apply, doctor, rotate, remove — from a
+      supported lifecycle — recommend, apply, doctor, remove — from a
       Claude Code session. Terraform has no first-class MCP surface; you'd
       have to wrap the CLI yourself.
     </li>
@@ -192,8 +189,8 @@ const faq = faqPageSchema(
       whole category of operational overhead.
     </li>
     <li>
-      <strong>OAuth onboarding.</strong> Stack handles provider OAuth — you
-      click Authorise in a browser and Stack takes it from there. Terraform
+      <strong>OAuth where supported.</strong> Some Stack adapters use browser
+      authorization; others require an existing provider token. Terraform
       expects you to have created long-lived tokens in each provider's
       dashboard before <code>terraform apply</code> runs.
     </li>
@@ -239,8 +236,9 @@ const faq = faqPageSchema(
     CloudFront — and Stack owns the SaaS layer: Supabase for data, Stripe
     for billing, Clerk for auth, PostHog for analytics, Sentry for errors.
     Hand-offs happen via environment variables: Terraform outputs feed into
-    Stack config, and Stack-managed Phantom secrets can be injected into
-    Terraform runs via <code>phantom exec -- terraform apply</code>.
+    Stack config. <code>phantom exec -- terraform apply</code> delegates
+    the Terraform command to Phantom; verify its environment and state
+    handling separately.
   </p>
   <p>
     If you're on OpenTofu (the Apache 2.0 fork of Terraform), the same
@@ -271,16 +269,15 @@ const faq = faqPageSchema(
   <h3>Does Terraform have a Supabase or Stripe provider?</h3>
   <p>
     There is a community Supabase provider with limited coverage and a Stripe
-    provider that mostly wraps the API surface. Neither handles OAuth
-    onboarding, project creation, secret extraction, or vault routing the way
-    Stack does end-to-end. Stack treats these providers as first-class SaaS
-    citizens, not API wrappers.
+    provider that mostly wraps the API surface. Stack supports Supabase project creation and Phantom credential routing.
+    Its Stripe adapter verifies and stores an existing restricted key; setup
+    behavior varies by provider.
   </p>
 
   <h3>Which should a two-person startup pick?</h3>
   <p>
     If you deploy to Vercel, Fly, or Railway and rent the rest (Supabase,
-    Stripe, Clerk, PostHog), Stack alone covers 90 percent of your setup. If
+    Stripe, Clerk, PostHog), Stack can help connect supported SaaS services. If
     you run on AWS primitives — EC2, RDS, VPCs — you need Terraform for
     infra and can add Stack for the SaaS layer on top.
   </p>

@@ -13,9 +13,11 @@ describe("supabase provider (mocked fetch)", () => {
   let realFetch: typeof fetch;
 
   beforeEach(() => {
-    h = setupFakePhantom({
-      STACK_SUPABASE_ACCESS_TOKEN: "sbp_cached_valid_token",
-    });
+    // Provider logic after a token is read; real Phantom 0.7.9 refuses headless reveal.
+    h = setupFakePhantom(
+      { STACK_SUPABASE_ACCESS_TOKEN: "sbp_cached_valid_token" },
+      { legacyHeadlessReveal: true },
+    );
     realFetch = globalThis.fetch;
   });
 

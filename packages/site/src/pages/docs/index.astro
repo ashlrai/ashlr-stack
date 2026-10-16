@@ -6,7 +6,7 @@ import { DOCS_NAV } from "~/lib/docs-nav";
 
 <Docs
   title="Ashlr Stack docs"
-  description="The control plane for your entire dev stack — one command to provision, wire, and operate every third-party service in your project."
+  description="Reference for supported Stack provider setup, credential persistence and local configuration."
   eyebrow="Documentation"
 >
   <h2>Three paths to Stack</h2>
@@ -28,8 +28,8 @@ import { DOCS_NAV } from "~/lib/docs-nav";
       </h3>
       <p class="text-[13px] text-ink-400 leading-relaxed">
         Install, <code class="mono text-ink-200">stack init</code>, then
-        <code class="mono text-ink-200">stack add supabase</code>. Five minutes,
-        real output.
+        <code class="mono text-ink-200">stack add supabase</code>. Inspect
+        each setup result; shown outputs are illustrative.
       </p>
     </a>
 
@@ -45,7 +45,7 @@ import { DOCS_NAV } from "~/lib/docs-nav";
       </h3>
       <p class="text-[13px] text-ink-400 leading-relaxed">
         Every <code class="mono text-ink-200">stack</code> command with flags,
-        defaults, and real examples.
+        defaults, and illustrative examples.
       </p>
     </a>
 
@@ -60,7 +60,7 @@ import { DOCS_NAV } from "~/lib/docs-nav";
         Providers
       </h3>
       <p class="text-[13px] text-ink-400 leading-relaxed">
-        39 curated providers. What each one wires, which MCP it brings online,
+        39 source catalog entries. Adapter notes and available MCP descriptors,
         where its dashboard is.
       </p>
     </a>
@@ -69,16 +69,15 @@ import { DOCS_NAV } from "~/lib/docs-nav";
   <h2>What Stack is</h2>
   <p>
     Stack is a thin control plane over the services your app actually uses. It
-    drives the provider login, creates upstream resources (a Supabase project,
-    a Neon DB, a Sentry project), fetches their credentials, hands the secrets
-    to <a href="/docs/phantom/">Phantom</a> for encryption, and wires
-    <code>.env.local</code>, <code>.mcp.json</code>, and <code>.stack.toml</code>
-    in one shot.
+    drives provider login and supported creation or attachment, then attempts
+    credential writes through <a href="/docs/phantom/">Phantom</a>, optional
+    <code>.env.example</code> skeleton export, <code>.mcp.json</code> descriptors
+    and <code>.stack.toml</code> split config. Populated env files are not
+    generated automatically; writes and cleanup can be partial.
   </p>
 
   <Code
-    code={`# before: 45 minutes across 6 tabs
-# after:
+    code={`# inside an initialized project; setup can contact the provider
 stack add supabase`}
     lang="bash"
     theme="github-dark-dimmed"
@@ -87,9 +86,9 @@ stack add supabase`}
   <h2>What Stack isn't</h2>
   <ul>
     <li>
-      <strong>Not a secret manager.</strong> Every secret is stored by
-      <a href="/docs/phantom/">Phantom</a>. Stack only knows the <em>slot
-      names</em>.
+      <strong>Not a secret manager.</strong> Persistence uses
+      <a href="/docs/phantom/">Phantom</a>. Stack handles supplied values during
+      setup and records dedicated <em>slot names</em> in config.
     </li>
     <li>
       <strong>Not a deploy tool.</strong> We don't rebuild Vercel or Railway —
@@ -98,7 +97,8 @@ stack add supabase`}
     <li>
       <strong>Not a lock-in.</strong> Everything writes to standard files:
       <code>.env</code>, <code>.mcp.json</code>, <code>.stack.toml</code>
-      (TOML). Rip Stack out and your project still boots.
+      (TOML). Removing Stack does not migrate credentials or guarantee the app
+      still boots; inspect its runtime dependencies.
     </li>
   </ul>
 
@@ -141,10 +141,10 @@ stack add supabase`}
 
   <h2>Pre-alpha status</h2>
   <div class="callout callout-warn">
-    <strong>Heads up:</strong> Stack is <strong>v0.1</strong> — pre-alpha. Interfaces
-    are still moving, some OAuth apps aren't yet registered (so a handful of
-    providers fall back to paste-a-token flows), and error messages will get
-    cleaner with each release. See the <a href="/docs/faq/">FAQ</a> for the
+    <strong>Heads up:</strong> These docs describe reviewed <strong>source 0.2.1</strong>, not a new
+    publication. Recorded public CLI/MCP packages are <strong>0.1.1</strong>;
+    historical native <strong>0.2.0</strong> is separate. Check installed help;
+    provider access and client setup remain conditional. See the <a href="/docs/faq/">FAQ</a> for the
     honest caveats.
   </div>
 </Docs>

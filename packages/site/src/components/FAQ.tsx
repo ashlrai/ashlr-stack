@@ -19,42 +19,42 @@ export const QUESTIONS: Q[] = [
   {
     tag: "model",
     q: "Isn't this just a fancy .env file?",
-    a: "No — .env is the last step. Stack owns everything before: the provider-side OAuth, the upstream resource creation, the secret rotation surface. .env is where Stack *publishes* the result, but the secret value lives only in Phantom's E2E-encrypted vault. If you rotate a key in Phantom, every consumer (your dev server, your agent, CI) sees the new value on the next read — no file edits, no commits.",
+    a: "Stack coordinates provider login, resource creation or attachment, secret storage and MCP wiring. The add workflow writes secrets through Phantom and records Stack/MCP configuration. Run `stack env export --example` separately to create an .env.example skeleton with empty values; this does not export plaintext credentials.",
   },
   {
     tag: "security",
     q: "How does Stack handle secrets? Does it ever hold them in memory?",
-    a: "Stack holds slot names (phantom://supabase/SUPABASE_URL), not values. The CLI shells out to the Phantom binary whenever a value needs to be materialised, and the materialisation is scoped to a single subprocess call (stack exec -- …). The agent-facing MCP server is configured with the slot names; values are fetched per-tool-call, never cached. Stack's own code has no code path that can leak a secret outside the subprocess that asked for it.",
+    a: "Yes. Stack temporarily handles login credentials and materialized secret values in process memory during setup. Persistent values are stored through Phantom; Stack configuration records secret names, resource references and provider metadata. Provider errors and subprocess output can still contain sensitive information, so this is not a guarantee of global redaction.",
   },
   {
     tag: "comparison",
     q: "How is this different from Doppler, Infisical, 1Password secrets?",
-    a: "Those are pure secret managers. Stack is a thin coordinator on top of one: you use Phantom for storage, Stack for the provisioning + wiring workflow. Stack can provision a new Supabase project, a new Vercel token, a new Sentry DSN — not just store one you already have. The MCP integration is also specific: Stack wires .mcp.json so your Claude Code session sees a consistent stack without manual copy-paste.",
+    a: "Stack coordinates provisioning and configuration around a secret manager. Its adapters can create or attach Supabase and Vercel projects, or read a DSN from an existing Sentry project. Vercel expects a user-supplied token; Supabase and GitHub have OAuth paths when configured, with PAT fallbacks. Authentication and resource operations depend on the adapter.",
   },
   {
     tag: "agent",
     q: "Which AI clients / IDEs does Stack work with?",
-    a: "Claude Code is the primary surface (first-party plugin + MCP server). Anything that reads a standard .mcp.json — Cursor, Windsurf, Zed's AI panel, the Codex CLI, any Anthropic SDK client — picks up the same configuration. The .env side is framework-agnostic: Next.js, Bun, Deno, Rails, Django all read it the same way.",
+    a: "Stack includes a CLI, a Claude Code plugin and an MCP server. Other clients need compatible MCP configuration; a shared file alone does not establish client support. For local commands, `stack exec -- <command>` forwards execution to Phantom. The .env.example export is an empty-value skeleton, not automatic framework configuration.",
   },
   {
     tag: "lock-in",
     q: "What happens if I stop using Stack?",
-    a: "Your .env.local and .mcp.json are normal files. If you delete Stack, those files keep working — you'll just have raw phantom:// slots in .env that your shell won't resolve. Running `phantom export > .env.local` materialises every slot into literal values, at which point you can walk away with a conventional .env file and no trace of Stack left. Stack writes a managed block with `# Ashlr Stack — managed block` markers so unmanaged lines are never touched.",
+    a: "Provider resources and the Phantom vault are separate from Stack. Local Stack files describe services and resource references, while .mcp.json contains MCP configuration. Removing Stack does not convert Phantom references into literal credentials. `stack env export --example` writes an empty-value example file, not a plaintext migration or a managed block in .env.local.",
   },
   {
     tag: "scope",
-    q: "What's in v0.1 today vs later?",
-    a: "v0.1: the 39 providers in the catalog above, the CLI (26 commands), the Claude Code plugin, the MCP server, 5 starter templates. Full OAuth provisioning ships for Supabase + GitHub + Vercel + Cloudflare; the rest are API-key paste flows. Roadmap: Stripe Connect, AWS IAM role-chaining, an Ashlr-hosted control plane for team sync. Everything is MIT-licensed on GitHub.",
+    q: "Which workflows does the source implement?",
+    a: "The repository contains provider adapters, CLI workflows, a Claude Code plugin, an MCP server and starter templates. Some adapters create resources; others attach to an account or validate an existing key. OAuth requires the relevant client configuration. Check your installed version's help for its available commands; source capabilities do not establish a published release or provider activation.",
   },
   {
     tag: "cost",
     q: "What does Stack cost?",
-    a: "Stack is free and MIT-licensed. Phantom has a free tier for local-only vaults; Phantom Cloud (the team-sync surface) is paid but not required. Every underlying provider is billed by the provider — Stack doesn't mark anything up. The hosted control plane (coming soon) will have a free tier for solo developers.",
+    a: "Stack's code is MIT-licensed. Provider accounts and any separate Phantom service have their own terms and charges. A free CLI does not make the resources you provision free; check the provider's terms before creating them.",
   },
   {
     tag: "contrib",
     q: "Can I add a provider that isn't in the catalog?",
-    a: "Yes. Provider adapters live in packages/core/src/providers/*.ts and are a single file each — three exports: authKind, secrets[], and provision(ctx). The README walks through adding a new one in under 50 lines. PRs welcome.",
+    a: "Yes. Adapters implement the Provider interface in packages/core/src/providers/_base.ts, including login, provision and materialize. Register the adapter in packages/core/src/providers/index.ts and add focused tests. Health checks, dashboard links and resource teardown are optional capabilities, so document which operations the adapter supports.",
   },
 ];
 
@@ -73,7 +73,7 @@ function Row({ q, idx }: { q: Q; idx: number }) {
             {q.tag}
           </span>
         )}
-        <span className="flex-1 text-[15px] sm:text-[16px] text-[color:var(--color-ink-100)] tracking-tight font-medium">
+        <span className="min-w-0 flex-1 text-[15px] sm:text-[16px] text-[color:var(--color-ink-100)] tracking-tight font-medium">
           {q.q}
         </span>
         <span
@@ -88,7 +88,7 @@ function Row({ q, idx }: { q: Q; idx: number }) {
         className="overflow-hidden transition-[max-height] duration-300"
         style={{ maxHeight: open ? "400px" : "0px" }}
       >
-        <p className="pb-5 pl-[88px] sm:pl-[88px] pr-8 text-[14px] leading-[1.7] text-[color:var(--color-ink-300)] max-w-[780px]">
+        <p className="break-words pb-5 pl-0 sm:pl-[88px] pr-0 sm:pr-8 text-[14px] leading-[1.7] text-[color:var(--color-ink-300)] max-w-[780px]">
           {linkifyPhantom(q.a)}
         </p>
       </div>

@@ -8,14 +8,19 @@
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
-import { existsSync } from "node:fs";
+import { chmodSync, existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import packageManifest from "../package.json";
 
 const SERVER_PATH = join(import.meta.dir, "..", "dist", "server.js");
+// The server spawns the `stack` bin of its @ashlr/stack dependency (the
+// workspace's packages/cli), so tool calls need that dist built too.
+const CLI_DIR = join(import.meta.dir, "..", "..", "cli");
 
-// Expected tool names as defined in server.ts TOOLS array (19 tools).
+// Expected tool names as defined in src/tools.ts TOOLS array (19 tools).
 const EXPECTED_TOOL_NAMES = [
   "stack_init",
   "stack_import",
@@ -46,11 +51,14 @@ beforeAll(async () => {
   // CI (and a fresh clone) may not have run `bun run build` yet, so the
   // compiled server.js is missing. Build on demand so the test is self
   // contained.
-  if (!existsSync(SERVER_PATH)) {
-    const pkgDir = join(import.meta.dir, "..");
+  for (const [dist, pkgDir] of [
+    [SERVER_PATH, join(import.meta.dir, "..")],
+    [join(CLI_DIR, "dist", "index.js"), CLI_DIR],
+  ]) {
+    if (existsSync(dist)) continue;
     const build = spawnSync("bun", ["run", "build"], { cwd: pkgDir, stdio: "inherit" });
     if (build.status !== 0) {
-      throw new Error(`MCP server build failed (exit ${build.status}) — cannot run tests.`);
+      throw new Error(`Build of ${pkgDir} failed (exit ${build.status}) — cannot run tests.`);
     }
   }
 
@@ -79,6 +87,10 @@ afterAll(async () => {
 });
 
 describe("MCP server smoke tests", () => {
+  test("initialize reports the source package version", () => {
+    expect(client.getServerVersion()?.version).toBe(packageManifest.version);
+  });
+
   test("tools/list returns a non-empty tools array", async () => {
     const response = await client.listTools();
     expect(Array.isArray(response.tools)).toBe(true);
@@ -128,6 +140,62 @@ describe("MCP server smoke tests", () => {
       const required = (tool.inputSchema as { required?: string[] }).required!;
       expect(Array.isArray(required)).toBe(true);
       expect(required.length).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe("MCP server runtime", () => {
+  test("stack_scan runs the bundled CLI and returns JSON, not a TTY hint", async () => {
+    // The server was spawned without STACK_BIN (StdioClientTransport passes a
+    // minimal env), so this also proves the @ashlr/stack dependency resolves.
+    const project = mkdtempSync(join(tmpdir(), "stack-mcp-scan-"));
+    try {
+      writeFileSync(
+        join(project, "package.json"),
+        JSON.stringify({ dependencies: { "@supabase/supabase-js": "^2.45.0" } }),
+      );
+      const result = (await client.callTool({
+        name: "stack_scan",
+        arguments: { path: project },
+      })) as { isError?: boolean; content: Array<{ type: string; text: string }> };
+      const text = result.content[0]?.text ?? "";
+      expect(result.isError).toBeFalsy();
+      expect(text).not.toContain("no TTY detected");
+      expect(text).not.toContain("\u001b");
+      const parsed = JSON.parse(text) as { hits: Array<{ provider: string }> };
+      expect(parsed.hits.map((h) => h.provider)).toContain("supabase");
+    } finally {
+      rmSync(project, { recursive: true, force: true });
+    }
+  }, 20_000);
+});
+
+describe("MCP CLI completion", () => {
+  test.each([
+    { label: "completed success", script: "echo inert; exit 0", isError: false },
+    { label: "completed failure", script: "echo inert; exit 9", isError: true },
+    { label: "signal termination", script: "echo inert; kill -TERM $$", isError: true },
+  ])("$label is reported truthfully", async ({ script, isError }) => {
+    const root = mkdtempSync(join(tmpdir(), "stack-mcp-completion-"));
+    const fake = join(root, "stack");
+    writeFileSync(fake, `#!/bin/sh\n${script}\n`);
+    chmodSync(fake, 0o700);
+    const fixtureClient = new Client({ name: "inert-completion-test", version: "0.0.1" });
+    const fixtureTransport = new StdioClientTransport({
+      command: "node", args: [SERVER_PATH],
+      env: {
+        STACK_BIN: fake, HOME: root, TMPDIR: root,
+        PATH: process.env.PATH ?? "",
+      },
+    });
+    try {
+      await fixtureClient.connect(fixtureTransport);
+      const result = await fixtureClient.callTool({ name: "stack_providers", arguments: {} });
+      expect(result.isError).toBe(isError);
+      expect(result.content).toEqual([{ type: "text", text: "inert" }]);
+    } finally {
+      await fixtureClient.close();
+      rmSync(root, { recursive: true, force: true });
     }
   });
 });

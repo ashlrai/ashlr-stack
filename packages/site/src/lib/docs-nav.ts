@@ -39,13 +39,13 @@ export const DOCS_NAV: DocsNavGroup[] = [
       {
         label: "Quickstart",
         href: "/docs/quickstart/",
-        blurb: "From zero to `stack add supabase` in five minutes.",
+        blurb: "Prepare a project and inspect the supported `stack add supabase` workflow.",
       },
       {
         label: "AI recommend + apply",
         href: "/docs/recommend/",
         blurb:
-          "Describe what you're building — Stack picks providers and pre-wires Phantom rotation.",
+          "Retrieve provider suggestions, save a recipe, then review setup and optional wiring.",
       },
     ],
   },
@@ -60,7 +60,7 @@ export const DOCS_NAV: DocsNavGroup[] = [
       {
         label: "Config (.stack.toml)",
         href: "/docs/config/",
-        blurb: "The schema, the two-file split, and what's safe to commit.",
+        blurb: "Committed shape, local instance data and the merged library view.",
       },
       {
         label: "Providers",
@@ -70,7 +70,7 @@ export const DOCS_NAV: DocsNavGroup[] = [
       {
         label: "Templates",
         href: "/docs/templates/",
-        blurb: "Five starter stacks you can apply with one command.",
+        blurb: "Five starter service definitions with provider-specific setup.",
       },
     ],
   },
@@ -80,19 +80,18 @@ export const DOCS_NAV: DocsNavGroup[] = [
       {
         label: "stack add",
         href: "/docs/add/",
-        blurb: "SDK auto-install, transactional rollback, and generating .env.example.",
+        blurb: "Optional SDK install, best-effort rollback and empty-key .env.example export.",
       },
       {
         label: "Provider swap",
         href: "/docs/swap/",
-        blurb:
-          "Migrate between providers in the same category — Clerk → Auth0, Supabase → Neon, and 36 more pairs.",
+        blurb: "Plan supported same-category provider swaps and review partial-failure handling.",
       },
       {
         label: "Maintenance",
         href: "/docs/maintenance/",
         blurb:
-          "Keep .stack.toml in sync with your codebase using doctor --reconcile and remove --all-orphans.",
+          "Inspect source drift with doctor --reconcile; review local removal with remove --allOrphans.",
       },
     ],
   },
@@ -102,7 +101,7 @@ export const DOCS_NAV: DocsNavGroup[] = [
       {
         label: "Phantom Secrets",
         href: "/docs/phantom/",
-        blurb: "Why Stack doesn't store secrets — and where they actually live.",
+        blurb: "How Stack persists credentials through Phantom and handles config references.",
       },
       {
         label: "MCP (Claude, Cursor)",
@@ -112,7 +111,7 @@ export const DOCS_NAV: DocsNavGroup[] = [
       {
         label: "CI",
         href: "/docs/ci/",
-        blurb: "Run `stack doctor --json` on every push, with Phantom Cloud.",
+        blurb: "Understand why CI health workflow generation is unavailable.",
       },
     ],
   },
@@ -132,14 +131,12 @@ export const DOCS_NAV: DocsNavGroup[] = [
       {
         label: "Stack vs Railway",
         href: "/compare/stack-vs-railway/",
-        blurb:
-          "Railway is a deploy platform; Stack composes across 39 providers (Railway is one of them).",
+        blurb: "Compare Stack's catalog-driven setup with a deployment platform.",
       },
       {
         label: "Stack vs Doppler",
         href: "/compare/stack-vs-doppler/",
-        blurb:
-          "Doppler is a cloud secret manager; Stack + Phantom is local-first E2E vaulting tied to provisioning.",
+        blurb: "Compare project setup workflows and Phantom-backed credential persistence.",
       },
     ],
   },

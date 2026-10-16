@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { wirePhantomForRecipe } from "../ai/phantom-wire.ts";
 import type { Recipe } from "../ai/recipe.ts";
@@ -22,17 +22,16 @@ describe("ai/phantom-wire", () => {
     providers: [{ name: "stripe" }],
   };
 
-  it("calls `phantom add STRIPE_SECRET_KEY` and writes a webhook stub", async () => {
+  it("never writes to the vault, reports the missing secret, and writes a webhook stub", async () => {
     const result = await wirePhantomForRecipe(STRIPE_RECIPE, { cwd: harness.dir });
 
-    expect(result.envelopes).toContain("stripe:STRIPE_SECRET_KEY");
-
-    // Fake phantom treats `--rotate` as an unknown arg and succeeds anyway
-    // (our fake echoes success for unknown cases via the `*` branch exit 0),
-    // but we always log the call — so the `add` log should mention the key.
-    const adds = harness.callsTo("add");
-    const keys = adds.flatMap((c) => c.args);
-    expect(keys).toContain("STRIPE_SECRET_KEY");
+    // Phantom Secrets refuses values in argv and denies overwriting names, so
+    // apply must not try to plant placeholders. It only reads names.
+    expect(harness.callsTo("add")).toEqual([]);
+    expect(harness.callsTo("list")).toEqual([{ cmd: "list", args: ["--json"] }]);
+    expect(JSON.parse(readFileSync(harness.vaultPath, "utf-8"))).toEqual({});
+    expect(result.present).toEqual([]);
+    expect(result.missing).toContain("stripe:STRIPE_SECRET_KEY");
 
     const stubPath = join(harness.dir, ".stack/webhooks/stripe.ts");
     expect(existsSync(stubPath)).toBe(true);
@@ -42,19 +41,22 @@ describe("ai/phantom-wire", () => {
     expect(result.webhooks).toHaveLength(1);
   });
 
-  it("noWire: true skips envelopes and webhooks entirely", async () => {
+  it("noWire: true skips the vault check and webhooks entirely", async () => {
     const result = await wirePhantomForRecipe(STRIPE_RECIPE, {
       cwd: harness.dir,
       noWire: true,
     });
-    expect(result).toEqual({ envelopes: [], webhooks: [], skipped: [] });
+    expect(result).toEqual({ present: [], missing: [], webhooks: [], skipped: [] });
 
     const stubPath = join(harness.dir, ".stack/webhooks/stripe.ts");
     expect(existsSync(stubPath)).toBe(false);
     expect(harness.callsTo("add")).toEqual([]);
+    expect(harness.callsTo("list")).toEqual([]);
   });
 
-  it("creates envelopes for every secret on a multi-secret provider", async () => {
+  it("splits a multi-secret provider into present and missing", async () => {
+    harness.cleanup();
+    harness = setupFakePhantom({ SUPABASE_URL: "https://x.supabase.co", SUPABASE_ANON_KEY: "a" });
     const recipe: Recipe = {
       id: "supa",
       query: "database",
@@ -62,13 +64,22 @@ describe("ai/phantom-wire", () => {
       providers: [{ name: "supabase" }],
     };
     const result = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
-    expect(result.envelopes).toEqual([
-      "supabase:SUPABASE_URL",
-      "supabase:SUPABASE_ANON_KEY",
-      "supabase:SUPABASE_SERVICE_ROLE_KEY",
-    ]);
+    expect(result.present).toEqual(["supabase:SUPABASE_URL", "supabase:SUPABASE_ANON_KEY"]);
+    expect(result.missing).toEqual(["supabase:SUPABASE_SERVICE_ROLE_KEY"]);
+    expect(result.skipped).toEqual([]);
+    expect(harness.callsTo("add")).toEqual([]);
     // Supabase is webhook-capable in our moat list.
     expect(result.webhooks).toHaveLength(1);
+  });
+
+  it("skips providers when the vault can't be listed, but still writes stubs", async () => {
+    writeFileSync(harness.vaultPath, "not json");
+    const result = await wirePhantomForRecipe(STRIPE_RECIPE, { cwd: harness.dir });
+    expect(result.skipped).toEqual(["stripe"]);
+    expect(result.present).toEqual([]);
+    expect(result.missing).toEqual([]);
+    expect(result.webhooks).toHaveLength(1);
+    expect(harness.callsTo("add")).toEqual([]);
   });
 
   it("skips providers with no webhook stub without crashing", async () => {
@@ -80,6 +91,6 @@ describe("ai/phantom-wire", () => {
     };
     const result = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
     expect(result.webhooks).toEqual([]);
-    expect(result.envelopes.length).toBeGreaterThan(0);
+    expect(result.missing.length).toBeGreaterThan(0);
   });
 });

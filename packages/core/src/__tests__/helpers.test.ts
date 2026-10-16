@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { addSecret } from "../phantom.ts";
-import { bearerJsonHeaders, tryRevealSecret } from "../providers/_helpers.ts";
+import { bearerJsonHeaders, takeRevealRefusals, tryRevealSecret } from "../providers/_helpers.ts";
 import { type Harness, setupFakePhantom } from "./_harness.ts";
 
 /**
@@ -11,7 +10,12 @@ import { type Harness, setupFakePhantom } from "./_harness.ts";
 describe("provider helpers", () => {
   let h: Harness;
   beforeEach(() => {
-    h = setupFakePhantom({ PRESENT_KEY: "hello-world" });
+    // Legacy headless reveal exercises the helper's own logic; the last test
+    // below covers what Phantom Secrets 0.7.9 actually does.
+    h = setupFakePhantom(
+      { PRESENT_KEY: "hello-world", EMPTY_KEY: "" },
+      { legacyHeadlessReveal: true },
+    );
   });
   afterEach(() => h.cleanup());
 
@@ -20,13 +24,29 @@ describe("provider helpers", () => {
   });
 
   test("tryRevealSecret returns undefined for an empty value", async () => {
-    await addSecret("EMPTY_KEY", "");
     expect(await tryRevealSecret("EMPTY_KEY")).toBeUndefined();
   });
 
   test("tryRevealSecret returns undefined rather than throwing when phantom fails", async () => {
     // Never-stored key — phantom reveal returns an empty string, helper returns undefined.
     expect(await tryRevealSecret("NEVER_STORED_KEY")).toBeUndefined();
+  });
+
+  test("tryRevealSecret returns undefined when Phantom refuses headless reveal", async () => {
+    h.cleanup();
+    h = setupFakePhantom({ PRESENT_KEY: "hello-world" });
+    takeRevealRefusals();
+    expect(await tryRevealSecret("PRESENT_KEY")).toBeUndefined();
+    // The refusal is recorded by name so doctor can say "stored, unverified".
+    expect(takeRevealRefusals()).toEqual(["PRESENT_KEY"]);
+    expect(takeRevealRefusals()).toEqual([]);
+  });
+
+  test("a readable or absent value records no refusal", async () => {
+    takeRevealRefusals();
+    await tryRevealSecret("PRESENT_KEY");
+    await tryRevealSecret("NEVER_STORED_KEY");
+    expect(takeRevealRefusals()).toEqual([]);
   });
 
   test("bearerJsonHeaders returns the canonical shape", () => {

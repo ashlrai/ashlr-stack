@@ -1,69 +1,72 @@
 # Releasing Ashlr Stack
 
-Release cuts are fully automated by `.github/workflows/release.yml`.
+This is a reference to the current [publish script](../scripts/publish.sh) and
+[release workflow](../.github/workflows/release.yml). Follow the release authority
+in [AGENTS.md](../AGENTS.md). Verify source qualification, registry publication,
+and public artifacts separately.
 
-## Prerequisites (one-time)
+## Package identities
 
-1. **`NPM_TOKEN`** repository secret — an npm access token with publish rights to `@ashlr/stack`, `@ashlr/stack-core`, and `@ashlr/stack-mcp`. Set at `https://github.com/ashlrai/ashlr-stack/settings/secrets/actions`.
-2. Your local working tree matches `main` and `bun install` succeeds.
+The manifests name three packages:
 
-## Cutting a release
+- [`@ashlr/stack-core`](../packages/core/package.json)
+- [`ashlr-stack-mcp`](../packages/mcp/package.json), unscoped
+- [`@ashlr/stack`](../packages/cli/package.json)
 
-```sh
-# 1. Dry-run first to preview what will publish.
-scripts/publish.sh --version 0.1.0            # prompts, no --yes
+Source versions do not establish publication. Retain the existing 0.1.1 install
+guidance until a new version has publication and consumer verification.
 
-# 2. When dry-run looks right, push the tag.
-git tag v0.1.0
-git push origin v0.1.0
-```
+## Current script behavior
 
-The tag push triggers `.github/workflows/release.yml`, which:
+`scripts/publish.sh` accepts `--version`, `--yes` (or `-y`), and `--help`.
+Even without `--yes`, it temporarily rewrites all three manifest versions and
+`workspace:*` ranges, then runs `npm publish --dry-run` for each package. CLI/MCP
+publication hooks can build output before the confirmation prompt. There is no
+standalone read-only preview mode.
 
-1. **Compiles 4 binaries in parallel** via `bun build --compile`:
-   - `stack-linux-x64`
-   - `stack-linux-arm64`
-   - `stack-darwin-x64`
-   - `stack-darwin-arm64`
-   - Each gets a companion `.sha256` file.
-2. **Publishes to npm** (`scripts/publish.sh --version X.Y.Z --yes`):
-   - `@ashlr/stack-core`
-   - `@ashlr/stack-mcp`
-   - `@ashlr/stack`
-3. **Creates a GitHub Release** with all 8 assets + auto-generated changelog.
+Confirmation, or `--yes`, publishes core, CLI, then MCP (`ashlr-stack-mcp` depends on `@ashlr/stack`), creates a tag if absent,
+and attempts to push it. The exit trap restores the original manifests, including
+their versions; no source version commit is made. Existing tag targets are not
+checked against the publishing source. Tag push failure produces a warning.
 
-Prerelease tags (e.g. `v0.1.0-rc.1`) are automatically marked as pre-releases and get the `next` dist-tag on npm.
+The script selects no npm dist-tag. GitHub versions containing `-` are marked
+prereleases by the workflow, but npm's `next` tag is not selected.
 
-## After release
+## Current workflow behavior
 
-Verify:
+The workflow builds four native binaries and companion checksums, then invokes
+the script and can create a public GitHub release with eight files.
 
-```sh
-# Installs via the one-liner — should pick up the prebuilt binary.
-curl -fsSL https://stack.ashlr.ai/install.sh | bash
-stack --version
+Acceptance gaps remain:
 
-# npm publish succeeded?
-npm info @ashlr/stack version
+- npm publication uses `continue-on-error`; GitHub release creation checks binary
+  build success without requiring verified npm acceptance.
+- Nonempty `npm_otp` becomes `--otp=...`, which the script rejects.
+- Native builds precede npm manifest rewrites and npm-only OAuth client ID
+  injection. Version, source, and configuration agreement need verification.
+- Matching filenames establish neither public byte/checksum agreement nor npm
+  archive integrity and provenance.
 
-# GitHub Release assets visible?
-gh release view v0.1.0 --repo ashlrai/ashlr-stack
-```
+The workflow configures an OIDC attempt with `id-token: write`, npm 11.5.1 or
+newer, and provenance enabled. Its token fallback references `NPM_TOKEN`.
+Actual publisher connections, permissions, and accepted publication remain
+unverified here; no credential creation or settings change is prescribed.
 
-## Hotfix / re-run
+After GitHub release success, a qualifying `refs/tags/v...` run can update the
+Homebrew formula and commit/push to the tap, including dispatch on a tag ref.
+It uses an existing referenced tap credential or skips when unavailable. Verify
+actual tap commissioning and the remote formula separately.
 
-If a release fails partway through:
+## Qualification and partial failures
 
-- **npm publish failed** — fix the issue, bump the patch version, cut a new tag. npm versions are immutable; you can't re-publish `0.1.0`.
-- **Binary build failed on one arch** — re-run the failed matrix job from the Actions UI; `create-release` has `fail_on_unmatched_files: true` so it will only publish once every asset is present.
-- **Release workflow didn't trigger** — tags must match `v*.*.*` exactly. Push again with the right shape.
+[CI](../.github/workflows/ci.yml) checks tests/typechecks on Bun 1.2.0 and latest,
+the site check/build, and PR lint. Confirm required results for the exact source.
 
-## Manual trigger
+Completion requires reconciliation of source/tag/version, all three registry
+packages and archive integrity, CLI/MCP consumer behavior, and public binaries
+with checksums. Site deployment is separate.
 
-The workflow supports `workflow_dispatch` for emergency re-runs:
-
-```
-Actions → Release → Run workflow → version: 0.1.0
-```
-
-This bypasses the tag push but still expects `scripts/publish.sh` semantics (the tag will already exist from the previous attempt; `publish.sh` skips tagging if it's there).
+Preserve logs and original artifacts after failure or uncertainty, then inspect
+completed effects. Publication can be partial. Never automatically rerun,
+republish, recreate, or move tags; review the exact follow-up target and release
+authorization first.

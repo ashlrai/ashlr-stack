@@ -6,17 +6,16 @@ import { retrieve } from "../../../core/src/ai/catalog-index";
 /**
  * StackREPL — an in-browser pseudo-terminal that speaks `stack` commands.
  *
- * Short scripted intro (`stack init` → `stack ls`) to show the shape, then
+ * Short scripted intro (`stack init` → `stack providers`) to show the shape, then
  * unlocks and accepts typed input. Commands are parsed client-side and
  * matched against PROVIDERS_REF so every provider-specific output reflects
- * the real secrets + MCP wiring that the actual CLI would produce.
+ * the catalog slot names and MCP hints. All output is simulated, not actual CLI/provider results.
  *
  * Supported:
- *   stack help                     — list commands
+ *   stack --help                     — list commands
  *   stack init                     — fake init
- *   stack ls                       — show 39 providers
- *   stack add <name> [<name>...]   — simulate provider adds
- *   stack mcp list                 — show MCP servers
+ *   stack providers                — show catalog entries
+ *   stack add <name>              — simulate one provider plan
  *   stack doctor                   — fake health check
  *   stack open <name>              — dashboard URL for <name>
  *   clear                          — clear screen
@@ -38,19 +37,18 @@ function genId(): number {
 }
 
 const HELP_SOURCE: { kind: LineKind; text: string }[] = [
-  { kind: "out", text: "▲ stack · commands" },
+  { kind: "out", text: "▲ simulated Stack command examples" },
   { kind: "dim", text: "  stack init                       initialise the current directory" },
-  { kind: "dim", text: "  stack ls                          list the provider catalog" },
+  { kind: "dim", text: "  stack providers                   list the provider catalog" },
   {
     kind: "dim",
-    text: "  stack add <name> [<name>...]      provision + store secrets via Phantom",
+    text: "  stack add <name>                 plan one provider setup",
   },
   {
     kind: "dim",
-    text: '  stack recommend "<query>"         AI-assisted provider picks for your project',
+    text: '  stack recommend "<query>"         retrieve curated provider matches',
   },
-  { kind: "dim", text: "  stack mcp list                    list MCP servers Stack wires" },
-  { kind: "dim", text: "  stack doctor                      check the local install" },
+  { kind: "dim", text: "  stack doctor                      show an illustrative check report" },
   { kind: "dim", text: "  stack open <name>                 open a provider dashboard" },
   { kind: "dim", text: "  clear                             clear the screen" },
 ];
@@ -71,7 +69,7 @@ async function simulateAdd(
 ): Promise<void> {
   const authLabel =
     ref.authKind === "oauth_pkce"
-      ? "OAuth (PKCE) via the Ashlr Stack app"
+      ? "catalog OAuth (PKCE) requirement"
       : ref.authKind === "oauth_device"
         ? "OAuth device-code flow"
         : ref.authKind === "pat"
@@ -86,41 +84,46 @@ async function simulateAdd(
     mkLine(
       "work",
       `  ${ref.authKind === "oauth_pkce" ? "OAuth browser flow" : "credential check"}`,
-      "verified",
+      "not executed",
     ),
   );
   await sleep(reduced ? 0 : 400);
   push(
     mkLine(
       "work",
-      `  provisioning ${ref.displayName}`,
+      `  plan provider-specific setup for ${ref.displayName}`,
       ref.notes?.includes("stores")
-        ? "stored only, no upstream provisioning"
-        : "created upstream resource",
+        ? "catalog note only; no request sent"
+        : "resource behavior depends on the provider",
     ),
   );
   await sleep(reduced ? 0 : 600);
   push(
     mkLine(
       "work",
-      `  writing ${ref.secrets.length} secret${ref.secrets.length === 1 ? "" : "s"} → phantom vault`,
+      `  catalog: ${ref.secrets.length} secret slot${ref.secrets.length === 1 ? "" : "s"}; no values stored`,
       ref.secrets.join(" · "),
     ),
   );
   await sleep(reduced ? 0 : 300);
-  push(mkLine("work", `  patching .env.local · .stack.toml${ref.mcp ? " · .mcp.json" : ""}`));
+  push(
+    mkLine(
+      "work",
+      `  review .stack.toml${ref.mcp ? " and provider MCP configuration" : ""}; no files written`,
+    ),
+  );
   await sleep(reduced ? 0 : 280);
   if (ref.mcp) {
     push(
       mkLine(
         "work",
-        `  registering MCP server "${ref.mcp.name}"`,
+        `  catalog MCP hint "${ref.mcp.name}"; configure separately`,
         ref.mcp.detail.slice(0, 84) + (ref.mcp.detail.length > 84 ? "…" : ""),
       ),
     );
     await sleep(reduced ? 0 : 260);
   }
-  push(mkLine("ok", `✓ ${ref.displayName} ready`));
+  push(mkLine("ok", `Preview complete: ${ref.displayName}; setup and acceptance remain separate`));
 }
 
 function findRef(name: string): ProviderRef | null {
@@ -151,7 +154,7 @@ export default function StackREPL() {
     }
   }, [lines]);
 
-  // Scripted intro: stack init → stack ls
+  // Scripted intro: stack init → stack providers
   useEffect(() => {
     let cancelled = false;
 
@@ -161,24 +164,24 @@ export default function StackREPL() {
 
       push(mkLine("prompt", "stack init"));
       await sleep(reduced ? 0 : 400);
-      push(mkLine("out", "▲ stack  initialising · ~/projects/raven"));
+      push(mkLine("out", "▲ simulated init · no project files written"));
       await sleep(reduced ? 0 : LINE_DELAY);
       push(
         mkLine(
           "work",
-          "writing .stack.toml · .stack.local.toml",
-          "appended .stack.local.toml to .gitignore",
+          "expected shape: .stack.toml · .stack.local.toml",
+          "inspect ignore rules after real setup",
         ),
       );
       await sleep(reduced ? 0 : 500);
-      push(mkLine("work", "registering project · ~/.stack/projects.json"));
+      push(mkLine("work", "project registry is local; no registration runs in this demo"));
       await sleep(reduced ? 0 : 300);
-      push(mkLine("ok", "✓ ready · next: stack add <provider>"));
+      push(mkLine("ok", "Preview only · real next step: stack add <provider>"));
       await sleep(reduced ? 0 : 700);
 
       if (cancelled) return;
 
-      push(mkLine("prompt", "stack ls"));
+      push(mkLine("prompt", "stack providers"));
       await sleep(reduced ? 0 : 300);
       push(mkLine("out", `▲ stack  ${PROVIDERS_REF.length} providers available`));
 
@@ -203,7 +206,7 @@ export default function StackREPL() {
 
       if (cancelled) return;
       await sleep(reduced ? 0 : 400);
-      push(mkLine("ok", "✓ try: stack add <name> — or type 'stack help'"));
+      push(mkLine("ok", "✓ try: stack add <name> — or type 'stack --help'"));
       setBusy(false);
       setUnlocked(true);
     })();
@@ -228,7 +231,7 @@ export default function StackREPL() {
 
     const parts = cmd.split(/\s+/);
     if (parts[0] !== "stack") {
-      push(mkLine("err", `command not found: ${parts[0]} — try 'stack help'`));
+      push(mkLine("err", `command not found: ${parts[0]} — try 'stack --help'`));
       return;
     }
 
@@ -245,7 +248,7 @@ export default function StackREPL() {
         return;
       }
 
-      if (sub === "ls") {
+      if (sub === "providers") {
         push(mkLine("out", `▲ stack  ${PROVIDERS_REF.length} providers`));
         for (const r of PROVIDERS_REF) {
           push(
@@ -261,54 +264,47 @@ export default function StackREPL() {
       if (sub === "doctor") {
         push(mkLine("out", "▲ stack doctor"));
         await sleep(reduced ? 0 : 200);
-        push(mkLine("work", "bun >= 1.2      ", "1.2.14"));
+        push(mkLine("work", "runtime         ", "use the installed package requirements"));
         await sleep(reduced ? 0 : 140);
-        push(mkLine("work", "phantom cli     ", "0.4.1 · vault: ~/.phantom"));
+        push(
+          mkLine("work", "Phantom         ", "secret operations need a compatible installation"),
+        );
         await sleep(reduced ? 0 : 140);
-        push(mkLine("work", "claude code     ", "2.3.0 · MCP enabled"));
+        push(mkLine("work", "MCP client      ", "configure separately; no client detected here"));
         await sleep(reduced ? 0 : 140);
-        push(mkLine("work", "network         ", "api.stack.ashlr.ai reachable"));
+        push(
+          mkLine("work", "healthchecks    ", "provider-specific results; no network calls here"),
+        );
         await sleep(reduced ? 0 : 140);
-        push(mkLine("ok", "✓ all systems nominal"));
-        return;
-      }
-
-      if (sub === "mcp" && parts[2] === "list") {
-        const mcps = PROVIDERS_REF.filter((r) => r.mcp);
-        push(mkLine("out", `▲ stack mcp · ${mcps.length} servers registered`));
-        for (const r of mcps) {
-          push(
-            mkLine(
-              "out",
-              `  ${r.mcp?.name.padEnd(14)} ${r.mcp?.detail.slice(0, 62)}${(r.mcp?.detail.length ?? 0) > 62 ? "…" : ""}`,
-            ),
-          );
-        }
+        push(mkLine("ok", "Simulated report only · run real checks and inspect their results"));
         return;
       }
 
       if (sub === "open") {
         const ref = parts[2] ? findRef(parts[2]) : null;
         if (!ref) {
-          push(mkLine("err", `unknown provider: ${parts[2] ?? "(none)"} — try stack ls`));
+          push(mkLine("err", `unknown provider: ${parts[2] ?? "(none)"} — try stack providers`));
           return;
         }
-        push(mkLine("out", `▲ opening ${ref.dashboard || "(no dashboard URL)"}`));
+        push(mkLine("out", `Dashboard reference only: ${ref.dashboard || "(no dashboard URL)"}`));
         return;
       }
 
       if (sub === "add") {
         const names = parts.slice(2);
-        if (names.length === 0) {
+        if (names.length !== 1) {
           push(
-            mkLine("err", "usage: stack add <name> [<name>...]  (e.g. stack add supabase posthog)"),
+            mkLine(
+              "err",
+              "usage: stack add <name> — run one command per service (e.g. stack add supabase)",
+            ),
           );
           return;
         }
         for (const name of names) {
           const ref = findRef(name);
           if (!ref) {
-            push(mkLine("err", `unknown provider: ${name} — try stack ls`));
+            push(mkLine("err", `unknown provider: ${name} — try stack providers`));
             continue;
           }
           await simulateAdd(ref, push, reduced);
@@ -352,13 +348,13 @@ export default function StackREPL() {
         }
         const topNames = hits
           .slice(0, 3)
-          .map((h) => h.provider.name)
-          .join(" ");
-        push(mkLine("ok", `✓ try: stack add ${topNames}`));
+          .map((h) => `stack add ${h.provider.name}`)
+          .join(" && ");
+        push(mkLine("ok", `Try separate commands: ${topNames}`));
         return;
       }
 
-      push(mkLine("err", `unknown subcommand: ${sub} — try 'stack help'`));
+      push(mkLine("err", `unknown subcommand: ${sub} — try 'stack --help'`));
     } finally {
       setBusy(false);
       setTimeout(() => inputRef.current?.focus(), 0);
@@ -401,11 +397,10 @@ export default function StackREPL() {
 
   const suggestions = [
     'stack recommend "b2b saas with auth and payments"',
-    "stack add supabase posthog sentry",
-    "stack mcp list",
+    "stack add supabase",
     "stack doctor",
-    "stack ls",
-    "stack help",
+    "stack providers",
+    "stack --help",
   ];
 
   return (
@@ -426,7 +421,7 @@ export default function StackREPL() {
           <span className="w-2 h-2 rounded-full bg-[color:var(--color-steel-500)]" />
           <span className="w-2 h-2 rounded-full bg-[color:var(--color-blade-500)]" />
           <span className="ml-3 mono text-[11px] tracking-[0.14em] uppercase text-[color:var(--color-ink-400)]">
-            STK-01 · stack · interactive
+            STK-01 · SIMULATED · no provider or file effects
           </span>
         </div>
         <button

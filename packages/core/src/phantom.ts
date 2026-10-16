@@ -11,6 +11,16 @@ export interface PhantomExecResult {
   stdout: string;
   stderr: string;
   code: number;
+  signal?: NodeJS.Signals;
+  completion?: "exited" | "signal" | "unknown";
+}
+
+/** Interpret close fields only; this does not attest provider or vault state. */
+export function completionForClose(
+  code: number | null,
+  signal: NodeJS.Signals | null,
+): NonNullable<PhantomExecResult["completion"]> {
+  return signal ? "signal" : code === null ? "unknown" : "exited";
 }
 
 let cachedInstalled: boolean | undefined;
@@ -19,7 +29,7 @@ export async function isPhantomInstalled(): Promise<boolean> {
   if (cachedInstalled !== undefined) return cachedInstalled;
   try {
     const result = await exec(["--version"], { allowFailure: true });
-    cachedInstalled = result.code === 0;
+    cachedInstalled = result.code === 0 && result.completion === "exited";
   } catch {
     cachedInstalled = false;
   }
@@ -36,8 +46,6 @@ export interface ExecOptions {
   stdin?: string;
   /** If true, inherit stdio so interactive flows (OAuth browser) work. */
   interactive?: boolean;
-  /** Kill the child (SIGKILL) and reject if it runs longer than this many ms. */
-  timeoutMs?: number;
 }
 
 export async function exec(args: string[], opts: ExecOptions = {}): Promise<PhantomExecResult> {
@@ -49,24 +57,6 @@ export async function exec(args: string[], opts: ExecOptions = {}): Promise<Phan
 
     let stdout = "";
     let stderr = "";
-    let timedOut = false;
-    const timer =
-      opts.timeoutMs !== undefined
-        ? setTimeout(() => {
-            timedOut = true;
-            child.kill("SIGKILL");
-            // Reject now: a grandchild holding the pipes open would otherwise
-            // delay "close" until it exits on its own.
-            child.stdout?.destroy();
-            child.stderr?.destroy();
-            reject(
-              new StackError(
-                "PHANTOM_EXEC_FAILED",
-                `phantom ${formatArgsForError(args)} timed out after ${opts.timeoutMs}ms`,
-              ),
-            );
-          }, opts.timeoutMs)
-        : undefined;
 
     if (!opts.interactive) {
       child.stdout?.on("data", (chunk) => {
@@ -76,13 +66,15 @@ export async function exec(args: string[], opts: ExecOptions = {}): Promise<Phan
         stderr += chunk.toString();
       });
       if (opts.stdin !== undefined) {
+        // Phantom may refuse (e.g. an existing name) and exit before reading
+        // stdin; the exit code reports that, so a broken pipe is not fatal.
+        child.stdin?.on("error", () => {});
         child.stdin?.write(opts.stdin);
         child.stdin?.end();
       }
     }
 
     child.on("error", (err) => {
-      if (timer) clearTimeout(timer);
       if ((err as NodeJS.ErrnoException).code === "ENOENT") {
         reject(new PhantomNotInstalledError());
         return;
@@ -90,15 +82,22 @@ export async function exec(args: string[], opts: ExecOptions = {}): Promise<Phan
       reject(err);
     });
 
-    child.on("close", (code) => {
-      if (timer) clearTimeout(timer);
-      if (timedOut) return;
-      const result: PhantomExecResult = { stdout, stderr, code: code ?? 0 };
-      if (code !== 0 && !opts.allowFailure) {
+    child.on("close", (code, signal) => {
+      // A signal/unknown exit is not evidence that a vault mutation committed.
+      const result: PhantomExecResult = {
+        stdout,
+        stderr,
+        code: signal ? code || 1 : (code ?? 1),
+        completion: completionForClose(code, signal),
+        ...(signal ? { signal } : {}),
+      };
+      if (result.code !== 0 && !opts.allowFailure) {
         reject(
           new StackError(
             "PHANTOM_EXEC_FAILED",
-            `phantom ${formatArgsForError(args)} failed (exit ${code}): ${stderr.trim() || stdout.trim()}`,
+            result.completion === "exited"
+              ? `phantom ${formatArgsForError(args)} failed (exit ${result.code}): ${stderr.trim() || stdout.trim()}`
+              : `phantom ${formatArgsForError(args)} did not complete (${result.completion}); result unconfirmed`,
           ),
         );
         return;
@@ -108,69 +107,185 @@ export async function exec(args: string[], opts: ExecOptions = {}): Promise<Phan
   });
 }
 
+/**
+ * Store a NEW secret. The value goes over stdin (`phantom add KEY --stdin`):
+ * Phantom Secrets >= 0.7.3 rejects a positional value because argv is visible
+ * to process inspection. Phantom never replaces an existing name, so a
+ * every completed collision surfaces as `PHANTOM_SECRET_EXISTS`. Historical
+ * input equality is never evidence that the current vault still has that value.
+ */
 export async function addSecret(key: string, value: string, cwd?: string): Promise<void> {
+  // Phantom 0.7.9 reads one stdin line and strips CR/LF. Refuse values it
+  // cannot preserve before any subprocess, rather than silently truncating.
+  if (/[\r\n]/.test(value)) {
+    throw new StackError(
+      "PHANTOM_SECRET_VALUE_UNSUPPORTED",
+      "Phantom Secrets accepts one line per secret; CR/LF values cannot be stored unchanged.",
+    );
+  }
   await assertPhantomInstalled();
-  await exec(["add", key, value], { cwd });
-}
-
-export async function removeSecret(key: string, cwd?: string): Promise<void> {
-  await assertPhantomInstalled();
-  await exec(["remove", key], { cwd, allowFailure: true });
+  const result = await exec(["add", key, "--stdin"], { cwd, stdin: value, allowFailure: true });
+  // Collision wording from an interrupted child cannot attest a completed
+  // create-only refusal.
+  if (result.completion !== "exited") {
+    throw new StackError(
+      "PHANTOM_EXEC_FAILED",
+      "Phantom add did not complete; secret storage is unconfirmed.",
+    );
+  }
+  if (result.code === 0) {
+    return;
+  }
+  const detail = result.stderr.trim() || result.stdout.trim();
+  if (/already protected|already exists/i.test(detail)) {
+    throw new StackError(
+      "PHANTOM_SECRET_EXISTS",
+      `${key} is already stored in Phantom, and Phantom never replaces a stored secret. Run \`phantom remove ${key}\` in your terminal, then retry.`,
+    );
+  }
+  throw new StackError(
+    "PHANTOM_EXEC_FAILED",
+    `phantom add ${key} --stdin failed (exit ${result.code}): ${detail}`,
+  );
 }
 
 /**
- * Names of the secrets in the vault, read from `phantom list --json` (an array
- * of `{ name, detected_service, ... }`). The human-format `phantom list` has a
- * header, decorations and notes, so it is never parsed.
- *
- * Throws when the vault cannot be read (Phantom missing, non-zero exit such as
- * no .phantom.toml, timeout, or output that is not a JSON array of entries
- * with a string `name`), so callers never mistake an unreadable vault for an
- * empty one.
+ * Remove a secret. Phantom Secrets requires a typed confirmation in an
+ * attached terminal for `remove`, so headless callers (rollback, CI, agents)
+ * cannot remove anything. Pass `interactive: true` only from a human-driven
+ * CLI command with a TTY; Phantom then runs its own confirmation prompt.
+ * Returns true only when Phantom reports the secret removed.
  */
-export async function listSecrets(cwd?: string, timeoutMs = 10_000): Promise<string[]> {
+export async function removeSecret(
+  key: string,
+  cwd?: string,
+  opts: { interactive?: boolean } = {},
+): Promise<boolean> {
   await assertPhantomInstalled();
-  const { stdout } = await exec(["list", "--json"], { cwd, timeoutMs });
+  const result = await exec(["remove", key], {
+    cwd,
+    allowFailure: true,
+    interactive: opts.interactive === true,
+  });
+  const removed = result.code === 0 && result.completion === "exited";
+  return removed;
+}
+
+/**
+ * Secret names in the vault, from `phantom list --json` (never values). The
+ * human `phantom list` output is a decorated table and is not parsed.
+ */
+export async function listSecrets(cwd?: string): Promise<string[]> {
+  await assertPhantomInstalled();
+  const { stdout, code } = await exec(["list", "--json"], { cwd, allowFailure: true });
+  if (code !== 0) {
+    throw new StackError(
+      "PHANTOM_METADATA_UNAVAILABLE",
+      "Phantom secret inventory is unavailable; stored names are unknown.",
+    );
+  }
   let parsed: unknown;
   try {
     parsed = JSON.parse(stdout);
   } catch {
-    throw new StackError("PHANTOM_EXEC_FAILED", "phantom list --json did not print valid JSON");
+    throw new StackError(
+      "PHANTOM_OUTPUT_UNRECOGNIZED",
+      "phantom list --json did not return JSON; upgrade Phantom Secrets to 0.7.9 or newer.",
+    );
   }
   if (!Array.isArray(parsed)) {
-    throw new StackError("PHANTOM_EXEC_FAILED", "phantom list --json did not print a JSON array");
+    throw new StackError(
+      "PHANTOM_OUTPUT_UNRECOGNIZED",
+      "phantom list --json did not return an array.",
+    );
   }
-  return parsed.map((entry) => {
-    const name = (entry as { name?: unknown } | null)?.name;
-    if (typeof name !== "string") {
+  const names: string[] = [];
+  for (const entry of parsed) {
+    if (
+      !entry ||
+      typeof entry !== "object" ||
+      Array.isArray(entry) ||
+      !("name" in entry) ||
+      typeof entry.name !== "string" ||
+      entry.name.length === 0
+    ) {
       throw new StackError(
-        "PHANTOM_EXEC_FAILED",
-        "phantom list --json printed an entry without a string name",
+        "PHANTOM_OUTPUT_UNRECOGNIZED",
+        "phantom list --json contains unrecognized secret-name metadata.",
       );
     }
-    return name;
-  });
+    names.push(entry.name);
+  }
+  return names;
 }
 
 /**
- * Number of secrets in the vault, read from `phantom list --json` (an array
- * of `{ name, detected_service, ... }`). Returns null when the vault cannot be
- * read: Phantom missing, non-zero exit (e.g. no .phantom.toml), timeout, or
- * output that is not a JSON array of named entries.
+ * Number of secrets in the vault, from `phantom list --json`. Null when the
+ * inventory cannot be read (Phantom missing, no .phantom.toml, unrecognized
+ * output), so callers never report an unreadable vault as empty.
  */
-export async function countSecrets(cwd?: string, timeoutMs = 10_000): Promise<number | null> {
+export async function countSecrets(cwd?: string): Promise<number | null> {
   try {
     if (!(await isPhantomInstalled())) return null;
-    return (await listSecrets(cwd, timeoutMs)).length;
+    return (await listSecrets(cwd)).length;
   } catch {
     return null;
   }
 }
 
+/** Configuration observation only: no vault access, initialization or grants. */
+export async function assertProjectInitialized(cwd?: string): Promise<void> {
+  await assertPhantomInstalled();
+  const result = await exec(["status", "--json"], { cwd, allowFailure: true });
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(result.stdout);
+  } catch {
+    parsed = undefined;
+  }
+  if (
+    result.code !== 0 ||
+    !parsed ||
+    typeof parsed !== "object" ||
+    Array.isArray(parsed) ||
+    !("schema_version" in parsed) ||
+    parsed.schema_version !== 1 ||
+    !("inspection" in parsed) ||
+    parsed.inspection !== "metadata-only" ||
+    !("initialized" in parsed) ||
+    typeof parsed.initialized !== "boolean"
+  ) {
+    throw new StackError(
+      "PHANTOM_METADATA_UNAVAILABLE",
+      "Phantom project initialization is unknown. Use Phantom Secrets 0.7.9 or newer and check its metadata status before retrying.",
+    );
+  }
+  if (!parsed.initialized) {
+    throw new StackError(
+      "PHANTOM_PROJECT_NOT_INITIALIZED",
+      "Phantom project is not initialized or its configuration is unreadable. Review `phantom status --json`; for a new project run `phantom init --empty` in a trusted terminal, then retry.",
+    );
+  }
+}
+
+/**
+ * Read a secret value. Phantom Secrets >= 0.7.3 only reveals into an attached
+ * terminal after a typed confirmation, so from Stack (piped stdio) this fails
+ * with `PHANTOM_TRUSTED_TERMINAL_REQUIRED`. Callers must treat a stored value
+ * as unreadable and fall back to prompting.
+ */
 export async function revealSecret(key: string, cwd?: string): Promise<string> {
   await assertPhantomInstalled();
-  const { stdout } = await exec(["reveal", key], { cwd });
-  return stdout.trim();
+  const result = await exec(["reveal", key], { cwd, allowFailure: true });
+  if (result.code === 0) return result.stdout.trim();
+  const detail = result.stderr.trim();
+  if (/terminal/i.test(detail)) {
+    throw new StackError(
+      "PHANTOM_TRUSTED_TERMINAL_REQUIRED",
+      `Phantom only reveals ${key} in an attached terminal after typed confirmation; Stack cannot read it.`,
+    );
+  }
+  throw new StackError("PHANTOM_EXEC_FAILED", `phantom reveal ${key} failed (exit ${result.code})`);
 }
 
 export async function ensureInitialized(cwd?: string): Promise<void> {

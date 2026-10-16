@@ -52,6 +52,19 @@ jobs:
             console.log('stack recommend smoke ok: ' + names.join(', '));
           "
 
+      # The npm packages ship Bun-built bundles that run under Node >= 20.
+      # Build them and drive both under Node 20 so Node compat can't regress.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Smoke test dist bundles under Node 20
+        run: |
+          bun run --cwd packages/cli build
+          bun run --cwd packages/mcp build
+          node packages/cli/dist/index.js --help > /dev/null
+          node scripts/node-smoke.mjs
+
   site:
     name: Site build (astro check + build)
     runs-on: ubuntu-latest

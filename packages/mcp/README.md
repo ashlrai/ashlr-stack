@@ -1,6 +1,6 @@
 # ashlr-stack-mcp
 
-> MCP server for [Ashlr Stack](https://stack.ashlr.ai). Exposes 17 tools and 3 resources so Claude Code / Cursor / Windsurf / Codex can provision every third-party service in a project with one call.
+> MCP server for [Ashlr Stack](https://stack.ashlr.ai). Exposes 19 tools and up to 3 resources so Claude Code / Cursor / Windsurf / Codex can provision every third-party service in a project with one call.
 
 ## What it does
 
@@ -26,9 +26,11 @@ bun add -g ashlr-stack-mcp @ashlr/stack
 npm i -g ashlr-stack-mcp @ashlr/stack
 ```
 
+Every tool runs the `stack` CLI, so install `@ashlr/stack` alongside this package (or set `STACK_BIN` to the CLI). Without it the server starts and lists its tools, but each call returns "Could not run the 'stack' CLI" with the fix. The npm 0.1.1 release runs on Bun, so Bun must be installed.
+
 ## Wire it into your agent
 
-Drop this into your project's `.mcp.json` (Claude Code, Cursor, Windsurf, Codex — all read the same shape):
+Drop this into your project's `.mcp.json` (Claude Code, Cursor and Windsurf read this shape; Codex uses `codex mcp add ashlr-stack -- ashlr-stack-mcp`, which writes `~/.codex/config.toml`):
 
 ```json
 {
@@ -47,23 +49,28 @@ If you installed from source (no global bin), point at the entry directly:
   "mcpServers": {
     "ashlr-stack": {
       "command": "bun",
-      "args": ["run", "/absolute/path/to/ashlr-stack/packages/mcp/src/server.ts"]
+      "args": ["run", "/absolute/path/to/ashlr-stack/packages/mcp/src/server.ts"],
+      "env": { "STACK_BIN": "/absolute/path/to/ashlr-stack/packages/cli/src/index.ts" }
     }
   }
 }
 ```
 
-## Tools (17)
+## Tools (19)
 
 Provisioning: `stack_init`, `stack_add`, `stack_remove`, `stack_import`, `stack_scan`.
 
-Inspection: `stack_list`, `stack_info`, `stack_providers`, `stack_deps`, `stack_doctor`.
+Inspection: `stack_list`, `stack_info`, `stack_status`, `stack_providers`, `stack_templates_list`, `stack_deps`, `stack_doctor`.
 
-Env: `stack_env_show`, `stack_env_diff`, `stack_env_set`, `stack_env_unset`.
+Env: `stack_env_show`, `stack_env_diff`, `stack_sync`.
+
+Planning: `stack_recommend`, `stack_apply`.
 
 Project registry: `stack_projects_list`, `stack_upgrade`.
 
-## Resources (3)
+## Resources (up to 3)
+
+Each is listed only when the file exists in the server's working directory.
 
 - `stack://current/.stack.toml`
 - `stack://current/.stack.local.toml`

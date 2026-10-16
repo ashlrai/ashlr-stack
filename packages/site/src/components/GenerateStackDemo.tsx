@@ -6,11 +6,11 @@ import { useEffect, useRef, useState } from "react";
  * Renders as an expandable slot under the copy-pasteable Claude prompt.
  * Click ▶ Play → 6-second scripted animation:
  *   1. `stack recommend "..."` prompt types out
- *   2. 6 real provider chips (with simple-icons logos) stream in
- *   3. `stack apply <id>` stamps each provider with ✓
- *   4. Summary line: providers / secrets / wired time
+ *   2. 6 supported provider chips (with simple-icons logos) stream in
+ *   3. An illustrative `stack apply <id>` stamps each provider with ✓
+ *   4. Summary line: sample providers / declared credential slots
  *
- * The value prop lands in 6 seconds without the user touching the CLI.
+ * The scripted example plays in 6 seconds without touching the CLI.
  * Respects prefers-reduced-motion by snapping to the final frame.
  */
 
@@ -25,7 +25,7 @@ interface DemoProvider {
 
 // Hand-picked canonical SaaS starter. 6 providers keeps the chip strip tight
 // at mobile widths without crowding; all are in `packages/core/src/catalog.ts`
-// so the demo matches what `stack recommend` would actually return.
+// but this selection is illustrative, not a `stack recommend` result.
 const DEMO_STACK: DemoProvider[] = [
   { slug: "supabase", name: "Supabase", category: "Database", color: "3ECF8E", secrets: 3 },
   { slug: "vercel", name: "Vercel", category: "Deploy", color: "FFFFFF", secrets: 1 },
@@ -125,11 +125,11 @@ export default function GenerateStackDemo({ iconPaths = {} }: Props) {
       <div className="flex items-center justify-between gap-3 px-4 py-3 hairline-bottom">
         <div className="flex items-center gap-2 min-w-0">
           <span className="mono text-[10px] tracking-[0.18em] uppercase text-[color:var(--color-blade-400)]">
-            live demo
+            illustrative demo
           </span>
           <span className="text-[color:var(--color-ink-600)]">·</span>
           <span className="text-[11px] text-[color:var(--color-ink-400)] truncate">
-            one prompt, six providers wired
+            plan six providers · no accounts contacted
           </span>
         </div>
         <button
@@ -182,7 +182,7 @@ export default function GenerateStackDemo({ iconPaths = {} }: Props) {
               phase === "done") && (
               <div className="flex items-center gap-2 text-[color:var(--color-ink-400)]">
                 <span className="text-[color:var(--color-blade-400)]">○</span>
-                <span>stack recommend → retrieving top providers…</span>
+                <span>example recommendation → showing a possible stack…</span>
                 {(phase === "applying" || phase === "done") && (
                   <span className="text-[color:var(--color-ink-500)]">done</span>
                 )}
@@ -237,7 +237,9 @@ export default function GenerateStackDemo({ iconPaths = {} }: Props) {
             {(phase === "applying" || phase === "done") && (
               <div className="flex items-center gap-2 text-[color:var(--color-ink-400)] pt-2">
                 <span className="text-[color:var(--color-blade-400)]">○</span>
-                <span>stack apply {RECIPE_ID} → provisioning, vaulting secrets in Phantom…</span>
+                <span>
+                  example: stack apply {RECIPE_ID} → provider setup would require approval…
+                </span>
                 {phase === "done" && (
                   <span className="text-[color:var(--color-ink-500)]">done</span>
                 )}
@@ -252,14 +254,14 @@ export default function GenerateStackDemo({ iconPaths = {} }: Props) {
                   <span className="text-[color:var(--color-ink-50)] font-semibold">
                     {DEMO_STACK.length}
                   </span>{" "}
-                  providers wired
+                  providers in sample recipe
                 </span>
                 <span className="text-[color:var(--color-ink-600)]">·</span>
                 <span>
                   <span className="text-[color:var(--color-ink-50)] font-semibold">
                     {totalSecrets}
                   </span>{" "}
-                  secrets in{" "}
+                  catalog slots; after successful setup, returned values go to{" "}
                   <a
                     href="https://phm.dev"
                     target="_blank"
@@ -271,8 +273,8 @@ export default function GenerateStackDemo({ iconPaths = {} }: Props) {
                 </span>
                 <span className="text-[color:var(--color-ink-600)]">·</span>
                 <span>
-                  <span className="mono text-[color:var(--color-ink-100)]">.env</span> +{" "}
-                  <span className="mono text-[color:var(--color-ink-100)]">.mcp.json</span> written
+                  <span className="mono text-[color:var(--color-ink-100)]">.stack.toml</span> +{" "}
+                  <span className="mono text-[color:var(--color-ink-100)]">optional .mcp.json</span>
                 </span>
                 <a
                   href="#providers"

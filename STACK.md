@@ -19,10 +19,27 @@ third-party service in a developer's project with one command.
 
 ## Quick orientation
 
-- 22 CLI commands live under `packages/cli/src/commands/*.ts`
-- 23 providers under `packages/core/src/providers/*.ts` (factory: `_api-key.ts`; pilot: `supabase.ts`)
-- 17 MCP tools listed in `packages/mcp/src/server.ts` — each shells out to the CLI
-- 69 tests across `packages/core/src/__tests__/` — run with `bun test` from the repo root
+- 26 CLI commands live under `packages/cli/src/commands/*.ts`
+- 39 providers in 13 categories under `packages/core/src/providers/*.ts` (factory: `_api-key.ts`; pilot: `supabase.ts`)
+- 19 MCP tools listed in `packages/mcp/src/server.ts` — each shells out to the CLI (`STACK_BIN`, else `stack` on PATH)
+- Tests live in `packages/*/src/__tests__/` — run with `bun test` from the repo root
+
+## Agent quickstart (from a clone)
+
+```bash
+bun install --frozen-lockfile
+bun test                                   # full suite, no network or accounts
+bunx tsc --noEmit -p tsconfig.json
+bunx biome check .
+bun run packages/cli/src/index.ts --help   # the CLI from source
+```
+
+Things that trip agents up:
+
+- **No TTY.** Agent shells have no TTY. `stack scan` without flags only prints a hint and exits 0; use `stack scan --json`. `stack init` skips the template picker; pass `--template <name>` (see `stack templates list`).
+- **`stack init --dryRun` still writes.** It provisions nothing, but it writes `.stack.toml`, `.stack.local.toml` and `.gitignore` and registers the project in `~/.stack/projects.json`. Run it in a scratch directory, and set `STACK_REGISTRY_DIR` to a temp dir to keep `~/.stack` clean.
+- **MCP from source needs the CLI too.** Point the server at the source CLI with `STACK_BIN` (see `packages/mcp/README.md`), or every tool call fails with "Could not run the 'stack' CLI".
+- **`bun run build` rewrites tracked site files** (`packages/site/public/install.ps1`, `packages/site/src/data/CHANGELOG.md`, the generated CLI reference). Don't commit that churn with an unrelated change; `git checkout -- packages/site` after a local build.
 - Site is Astro 5 + Tailwind v4 + Framer Motion
 
 ## Coding conventions (actually followed here)

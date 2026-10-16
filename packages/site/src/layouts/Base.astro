@@ -161,23 +161,7 @@ const absoluteNext = nextLink ? toAbsoluteLink(nextLink) : undefined;
     <!-- Sitemap (emitted by @astrojs/sitemap) -->
     <link rel="sitemap" type="application/xml" href="/sitemap-index.xml" />
 
-    <!-- Self-hosted fonts — PP Monument Grotesk + Berkeley Mono. Dropped in
-         at public/fonts/{monument,berkeley}/. If the files are absent,
-         @font-face silently falls back to system fonts. -->
-    <link
-      rel="preload"
-      as="font"
-      href="/fonts/monument/PPMonumentGrotesk-Variable.woff2"
-      type="font/woff2"
-      crossorigin
-    />
-    <link
-      rel="preload"
-      as="font"
-      href="/fonts/berkeley/BerkeleyMono-Regular.woff2"
-      type="font/woff2"
-      crossorigin
-    />
+    <!-- Typography uses the system font stacks defined in global.css. -->
 
     <!-- JSON-LD structured data -->
     {

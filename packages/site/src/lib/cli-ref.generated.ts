@@ -249,7 +249,8 @@ export const CLI_COMMANDS: CliCommand[] = [
   },
   {
     name: "stack remove",
-    description: "Remove a service from the stack (vault entries and MCP config).",
+    description:
+      "Remove local service config and MCP wiring; attempt Phantom secret removal (headless runs may retain secrets).",
     synopsis: "stack remove [service] [--all] [--allOrphans] [--keepRemote]",
     flags: [
       {
@@ -264,7 +265,7 @@ export const CLI_COMMANDS: CliCommand[] = [
         synopsis: "--all",
         type: "boolean",
         default: false,
-        description: "Remove every service in this stack (with confirmation).",
+        description: "Remove every local service entry; prompt for confirmation in a terminal.",
       },
       {
         name: "allOrphans",
@@ -272,14 +273,14 @@ export const CLI_COMMANDS: CliCommand[] = [
         type: "boolean",
         default: false,
         description:
-          "Detect services configured in .stack.toml but no longer present in source, then remove them.",
+          "Detect services in .stack.toml no longer present in source, then remove their local entries.",
       },
       {
         name: "keepRemote",
         synopsis: "--keepRemote",
         type: "boolean",
         default: false,
-        description: "Leave the provider-side resource untouched (don't deprovision).",
+        description: "Compatibility flag; upstream resources are kept for every removal.",
       },
     ],
     examples: [
@@ -577,7 +578,8 @@ export const CLI_COMMANDS: CliCommand[] = [
   },
   {
     name: "stack apply",
-    description: "Apply a saved recipe: provision each provider + pre-wire Phantom rotation.",
+    description:
+      "Apply a saved recipe: provision each provider, check its secrets in Phantom, and add webhook stubs.",
     synopsis: "stack apply [id] [--noWire] [--noRollback]",
     flags: [
       {
@@ -592,7 +594,7 @@ export const CLI_COMMANDS: CliCommand[] = [
         synopsis: "--noWire",
         type: "boolean",
         default: false,
-        description: "Skip Phantom envelope + webhook pre-wiring (opts out of the moat).",
+        description: "Skip the Phantom vault check and webhook stubs.",
       },
       {
         name: "noRollback",
@@ -663,12 +665,12 @@ export const CLI_COMMANDS: CliCommand[] = [
   },
   {
     name: "stack ci",
-    description: "Scaffold CI integrations that run `stack doctor` on pushes + nightly.",
+    description: "Inspect CI health workflow availability.",
     synopsis: "stack ci <init>",
     subcommands: [
       {
         name: "stack ci init",
-        description: "Write .github/workflows/stack-ci.yml for GitHub Actions.",
+        description: "CI health workflow generation is currently unavailable.",
         synopsis: "stack ci init [--force]",
         flags: [
           {
@@ -676,7 +678,8 @@ export const CLI_COMMANDS: CliCommand[] = [
             synopsis: "--force",
             type: "boolean",
             default: false,
-            description: "Overwrite an existing stack-ci.yml.",
+            description:
+              "Compatibility flag; generation is unavailable and no workflow is overwritten.",
           },
         ],
         examples: [{ command: "stack ci init" }],
@@ -705,7 +708,15 @@ export const CLI_COMMANDS: CliCommand[] = [
   {
     name: "stack upgrade",
     description: "Check npm for a newer @ashlr/stack release.",
-    synopsis: "stack upgrade",
+    synopsis: "stack upgrade [--dryRun]",
+    flags: [
+      {
+        name: "dryRun",
+        synopsis: "--dryRun",
+        type: "boolean",
+        description: "Print what would be installed without running the install command.",
+      },
+    ],
     examples: [{ command: "stack upgrade" }],
     notes:
       "Checks the npm registry for a newer version, prints an install hint — does not auto-install.",

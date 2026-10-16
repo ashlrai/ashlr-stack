@@ -20,11 +20,13 @@ export const syncCommand = defineCommand({
   },
   async run({ args }) {
     intro(`stack sync ${args.platform}`);
-    await requirePhantom();
+    // Reject an unknown platform before asking for Phantom: the platform list
+    // does not depend on it, and an agent should get the real error first.
     if (!SUPPORTED.includes(args.platform as Platform)) {
-      outroError(`Unsupported platform. Use: ${SUPPORTED.join(", ")}`);
+      outroError(`Unsupported platform "${args.platform}". Use: ${SUPPORTED.join(", ")}`);
       return;
     }
+    await requirePhantom();
     const config = await readConfig();
     const entry = config.services[args.platform];
     if (!entry?.resource_id) {
