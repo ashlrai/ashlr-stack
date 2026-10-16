@@ -345,11 +345,11 @@
       "get": {
         "tags": ["management"],
         "operationId": "stack_apply",
-        "summary": "Apply a saved recipe through provider setup and optional Phantom wiring attempts.",
-        "description": "Runs the saved Recipe through provider setup, then attempts optional Phantom wiring and writes webhook stubs. Inspect failures and skips; rotating slots and complete setup are not guaranteed. --noWire skips the optional wiring layer, not provider credential writes. Requires local Stack configuration; partial failures can require manual cleanup.",
+        "summary": "Apply a saved recipe through provider setup, a Phantom vault check and webhook stubs.",
+        "description": "Runs the saved Recipe through provider setup, then reports which declared secrets are in the Phantom vault and which are missing (names only; it never writes to the vault) and writes webhook stubs. Inspect failures and skips; complete setup is not guaranteed. --noWire skips the vault check and stubs, not provider credential writes. Requires local Stack configuration; partial failures can require manual cleanup.",
         "parameters": [
           { "name": "recipeId", "in": "query", "schema": { "type": "string" }, "description": "Recipe id (filename stem in .stack/recipes/). Omit for an interactive picker." },
-          { "name": "noWire", "in": "query", "schema": { "type": "boolean", "default": false }, "description": "Skip optional Phantom wiring and webhook stubs; provider credential writes remain." }
+          { "name": "noWire", "in": "query", "schema": { "type": "boolean", "default": false }, "description": "Skip the Phantom vault check and webhook stubs; provider credential writes remain." }
         ],
         "responses": { "200": { "description": "Apply summary (each provider's add result + phantom-wire counts)." } }
       }

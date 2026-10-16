@@ -17,7 +17,7 @@ This file is prefixed with `_` so Astro treats it as a non-route.
 - `packages/site/public/mcp.json` — machine-readable catalog of the 19 MCP
   tools the `ashlr-stack-mcp` server exposes, plus three conditional raw-file
   resources (`stack://current/.stack.toml`, `.stack.local.toml`, `.mcp.json`).
-  Reviewed source 0.2.1 includes `stack_recommend` (catalog retrieval) and `stack_apply` (saved provider setup plus optional wiring attempts). Wiring includes TODO placeholders and commented webhook stubs; rotation is not completed. The recorded public npm 0.1.1 and historical native 0.2.0 artifacts are separate.
+  Reviewed source 0.2.1 includes `stack_recommend` (catalog retrieval) and `stack_apply` (saved provider setup, a names-only check of which declared secrets are in the Phantom vault, and commented webhook stubs; apply never writes to the vault). The recorded public npm 0.1.1 and historical native 0.2.0 artifacts are separate.
 - `packages/site/src/pages/docs/for-ai-agents.astro` — agent-oriented docs
   page with: per-provider trigger phrases, install recipe, MCP connection
   JSON snippet, capability matrix, copy-paste workflows, "when NOT to

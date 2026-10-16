@@ -261,7 +261,7 @@ npm i -g @ashlr/stack@0.1.1 ashlr-stack-mcp@0.1.1`}
         <tr>
           <td>Replay a saved recipe end-to-end</td>
           <td><code>stack apply &lt;recipe-id&gt;</code></td>
-          <td>Attempts provider setup, then optional Phantom envelope setup and webhook stubs for supported providers. Inspect failures and skips; working rotation is not established by this command.</td>
+          <td>Attempts provider setup, then reports which declared secrets are in the Phantom vault and which are missing (names only, no vault writes), and writes webhook stubs for supported providers. Inspect failures and skips.</td>
         </tr>
       </tbody>
     </table>
@@ -334,9 +334,9 @@ stack exec -- bun dev`}
     specific providers, the reviewed source offers a recommendation and apply
     pair. <code>stack_recommend</code> scores the curated catalog against the
     brief. <code>stack_apply</code> can then run provider setup from a saved
-    Recipe and attempt optional Phantom envelope setup and webhook stubs.
-    Check each provider result, skip, and credential separately; this does not
-    establish working rotation.
+    Recipe, report which declared secrets are in the Phantom vault and which
+    are missing, and write webhook stubs. Check each provider result, skip,
+    and missing secret separately.
   </p>
 
   <h3>CLI</h3>
@@ -352,7 +352,7 @@ stack recommend "B2B SaaS with auth, AI, and payments" --save
 # Replace REPLACE_WITH_SAVED_ID with the id reported by --save
 stack apply REPLACE_WITH_SAVED_ID
 
-# Skip optional envelope/webhook setup; provider credential writes still use Phantom
+# Skip the vault check and webhook stubs; provider credential writes still use Phantom
 stack apply REPLACE_WITH_SAVED_ID --noWire
 
 # Restrict to one category, machine-readable output

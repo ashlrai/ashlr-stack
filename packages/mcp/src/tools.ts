@@ -248,7 +248,7 @@ export const TOOLS: ToolDef[] = [
   {
     name: "stack_apply",
     description:
-      "Apply a saved Recipe through provider setup, then attempt optional Phantom wiring and write webhook stubs. Inspect failures and skips; working rotation is not established. no_wire:true skips the optional layer, not provider credential writes.",
+      "Apply a saved Recipe through provider setup, then report which declared secrets are in the Phantom vault and which are missing (names only; it never writes to the vault) and write webhook stubs. Inspect failures and skips. no_wire:true skips the vault check and stubs, not provider credential writes.",
     inputSchema: {
       type: "object",
       properties: {
@@ -258,7 +258,7 @@ export const TOOLS: ToolDef[] = [
         },
         no_wire: {
           type: "boolean",
-          description: "Skip Phantom envelope + webhook pre-wiring.",
+          description: "Skip the Phantom vault check and webhook stubs.",
         },
       },
       required: ["recipe_id"],

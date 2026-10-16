@@ -169,7 +169,9 @@ describe.skipIf(!enabled)("phantom CLI contract (real binary)", () => {
       },
       { cwd: project },
     );
-    expect(result.envelopes).toEqual([]);
+    expect(result.present).toEqual([]);
+    expect(result.missing).toContain("openai:OPENAI_API_KEY");
+    expect(result.skipped).toEqual([]);
     expect(vaultNames()).toEqual(before);
   });
 });

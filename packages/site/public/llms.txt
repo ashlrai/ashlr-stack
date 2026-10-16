@@ -110,7 +110,7 @@ The following examples are a subset. This source registers 39 providers across 1
 - `stack upgrade` — check registry metadata and print an update hint; it does not install the update.
 - `stack completion <shell>` — emit shell completions (bash, zsh, fish).
 - `stack recommend "<brief>" [--k N] [--category <name>] [--save] [--synth] [--json]` — free-text → curated providers (BM25 retrieval by default; `--synth` invokes a local SLM for rationales).
-- `stack apply <recipe-id> [--noWire]` — Provision recipe providers, then attempt optional Phantom wiring and write webhook stub files. Inspect failures and skipped entries; this source does not establish working rotating envelopes with Phantom Secrets 0.7.9. Use `--noWire` to skip the optional layer.
+- `stack apply <recipe-id> [--noWire]` — Provision recipe providers, then report which declared secrets are already in the Phantom vault and which are missing (names only; apply never writes to the vault), and write webhook stub files. Inspect failures and skipped entries. Use `--noWire` to skip the vault check and stubs.
 
 ## AI-assisted composition
 

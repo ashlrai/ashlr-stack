@@ -22,7 +22,7 @@ const howTo = howToSchema({
     },
     {
       name: "Apply the recipe",
-      text: "Run `stack apply <recipe-id>` after reviewing the saved recipe. It attempts provider setup and optional placeholder/stub wiring; inspect partial results.",
+      text: "Run `stack apply <recipe-id>` after reviewing the saved recipe. It attempts provider setup and a names-only Phantom vault check plus webhook stubs; inspect partial results.",
       url: `${pageUrl}#stack-apply`,
     },
   ],
@@ -332,9 +332,9 @@ stack apply b2b-saas-with-auth-ai-and-paymen`}
   </h2>
   <p>
     Replay a saved Recipe through the existing <code>stack add</code> pipeline,
-    then attempt optional wiring. Setup may create or attach resources and
-    write credentials/config; the helper's placeholder envelopes and webhook
-    stubs are not accepted rotation or verified handlers.
+    then check which declared secrets are in the Phantom vault. Setup may
+    create or attach resources and write credentials/config; the vault check
+    only reads names, and webhook stubs are not verified handlers.
   </p>
 
   <Code
@@ -349,7 +349,8 @@ $ stack apply b2b-saas-with-auth
   › stack add sentry
   › stack add supabase
 
-  optional envelope/stub counts do not prove active rotation
+  secrets in vault 7 · missing 1 · webhooks 2
+  (not in Phantom: SENTRY_AUTH_TOKEN — store with \`phantom add <NAME>\`)
 
   › stack doctor
   ✓ b2b-saas-with-auth applied.`}
@@ -369,7 +370,7 @@ $ stack apply b2b-saas-with-auth
         <td><code>--noWire</code></td>
         <td>
           Skip the Phantom-wire layer — pure <code>stack add</code> replay, no
-          envelopes or webhook stubs. Provider setup and credential/config writes
+          vault check or webhook stubs. Provider setup and credential/config writes
           still occur; this flag is not a dry run.
         </td>
       </tr>
@@ -388,10 +389,10 @@ $ stack apply b2b-saas-with-auth
   <p>After setup succeeds for an entry, the default flow can attempt these steps unless <code>--noWire</code> is set:</p>
   <ul>
     <li>
-      <strong>Phantom wiring attempts</strong> — the current helper uses
-      <code>TODO_STACK_APPLY</code> placeholder values and optional rotate
-      calls. Counts do not establish minted credentials, a working cadence or
-      production rotation.
+      <strong>Phantom vault check</strong> — reads names from
+      <code>phantom list --json</code> (never values) and lists each declared
+      secret as in the vault or missing. It never writes to the vault; store
+      missing values with <code>phantom add &lt;NAME&gt;</code>.
     </li>
     <li>
       <strong>Webhook stubs</strong> — scaffolded verification + handler files
@@ -476,7 +477,7 @@ $ stack apply b2b-saas-with-auth
     </div>
     <p class="text-[13px] text-ink-300 leading-relaxed mb-3">
       Replay a saved Recipe. Runs <code>stack add</code> for each provider,
-      then attempts optional placeholder/stub wiring. The returned text
+      then checks the Phantom vault and writes webhook stubs. The returned text
       can include failures; setup and cleanup are not atomic.
     </p>
     <table>
@@ -501,7 +502,7 @@ $ stack apply b2b-saas-with-auth
         <tr>
           <td><code class="mono text-[12px]">no_wire</code></td>
           <td class="text-ink-400 mono text-[12px]">boolean</td>
-          <td class="text-[13px]">Skip Phantom envelope + webhook wiring.</td>
+          <td class="text-[13px]">Skip the Phantom vault check and webhook stubs.</td>
         </tr>
       </tbody>
     </table>
@@ -524,7 +525,7 @@ Claude > I'll pick the providers first and freeze a recipe so you can
          neon (Database). Saved as recipe "saas-with-auth-payments-error".
 
          Want me to apply it now? This runs \`stack add\` for each and
-         attempts optional placeholder/stub wiring.
+         checks which secrets are already in Phantom.
 
 You > Yes.
 
