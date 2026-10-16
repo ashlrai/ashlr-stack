@@ -78,7 +78,9 @@ const CMD_META: Record<string, CmdMeta> = {
   info: {
     completesProviders: true,
   },
-  status: {},
+  status: {
+    flags: [{ name: "json" }],
+  },
   env: {
     subcommands: ["show", "diff", "export"],
   },

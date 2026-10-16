@@ -184,10 +184,20 @@ v.pop(sys.argv[2],None)
 with open(sys.argv[1],"w") as f: json.dump(v,f)
 ' "$VAULT" "$2" ;;
   list)
+    # Mirrors real Phantom Secrets output (crates/phantom-cli/src/commands/list.rs):
+    # --json prints a pretty array of { name, detected_service }; the human
+    # format prints a header, indented names and a note, or "! No secrets stored.".
     python3 -c 'import json,sys
-with open(sys.argv[1]) as f: v=json.load(f)
-for k in v: print(k)
-' "$VAULT" ;;
+with open(sys.argv[1]) as f: v = json.load(f)
+if "--json" in sys.argv[2:]:
+    print(json.dumps([{"name": k, "detected_service": None} for k in v], indent=2))
+elif not v:
+    print("! No secrets stored.")
+else:
+    print("-> %d secret(s) in vault (fake):\\n" % len(v))
+    for k in v: print("   - " + k)
+    print("\\nnote Values are never displayed. Use phantom add/remove to manage.")
+' "$VAULT" "$@" ;;
   reveal)
     python3 -c 'import json,sys
 with open(sys.argv[1]) as f: v=json.load(f)

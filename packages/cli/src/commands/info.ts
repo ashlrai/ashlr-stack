@@ -31,7 +31,16 @@ export const infoCommand = defineCommand({
     }
 
     const provider = await getProvider(entry.provider);
-    const vaultKeys = (await isPhantomInstalled()) ? new Set(await listSecrets()) : new Set();
+    // null = vault unreadable (Phantom missing, no .phantom.toml, timeout):
+    // show slot presence as unknown rather than reporting everything missing.
+    let vaultKeys: Set<string> | null = null;
+    if (await isPhantomInstalled()) {
+      try {
+        vaultKeys = new Set(await listSecrets());
+      } catch {
+        vaultKeys = null;
+      }
+    }
 
     console.log();
     console.log(`  ${colors.bold(provider.displayName)}  ${colors.dim(provider.category)}`);
@@ -52,6 +61,10 @@ export const infoCommand = defineCommand({
 
     console.log(`  ${colors.bold("secrets")}`);
     for (const slot of entry.secrets) {
+      if (!vaultKeys) {
+        console.log(`    ${colors.yellow("?")} ${slot.padEnd(30)} ${colors.yellow("unknown")}`);
+        continue;
+      }
       const present = vaultKeys.has(slot);
       const dot = present ? colors.green("●") : colors.red("○");
       const tag = present ? colors.dim("in vault") : colors.red("missing");

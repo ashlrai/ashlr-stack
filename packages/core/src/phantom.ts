@@ -219,6 +219,20 @@ export async function listSecrets(cwd?: string): Promise<string[]> {
   return names;
 }
 
+/**
+ * Number of secrets in the vault, from `phantom list --json`. Null when the
+ * inventory cannot be read (Phantom missing, no .phantom.toml, unrecognized
+ * output), so callers never report an unreadable vault as empty.
+ */
+export async function countSecrets(cwd?: string): Promise<number | null> {
+  try {
+    if (!(await isPhantomInstalled())) return null;
+    return (await listSecrets(cwd)).length;
+  } catch {
+    return null;
+  }
+}
+
 /** Configuration observation only: no vault access, initialization or grants. */
 export async function assertProjectInitialized(cwd?: string): Promise<void> {
   await assertPhantomInstalled();
