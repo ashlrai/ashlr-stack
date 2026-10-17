@@ -34,6 +34,13 @@ export interface UnknownFlag {
    * either (`stack -v list`) is reported as unknown for the subcommand.
    */
   before?: string;
+  /**
+   * Set when `flag` is not an option but a positional value the command has
+   * no slot for: citty dropped it, so `stack recommend build a saas` searched
+   * for "build" alone and `stack add supabase neon` added only supabase. Lists
+   * the positionals the command does take, in order.
+   */
+  extra?: string[];
 }
 
 type Resolvable<T> = T | Promise<T> | (() => T) | (() => Promise<T>);
@@ -67,21 +74,41 @@ export function closestName(name: string, candidates: string[], max = 2): string
   return best && best.d <= max ? best.n : undefined;
 }
 
-function check(tokens: string[], args: ArgsDef, command: string): UnknownFlag | null {
+function check(tokens: string[], args: ArgsDef, command: string, leaf = false): UnknownFlag | null {
   const long = new Set<string>(["help"]);
   const short = new Set<string>(["h"]);
+  // Options that take a value: a separate value token is not a positional.
+  const valued = new Set<string>();
+  const positionals: string[] = [];
   for (const [key, def] of Object.entries(args)) {
-    if (def.type === "positional") continue;
+    if (def.type === "positional") {
+      positionals.push(key);
+      continue;
+    }
     long.add(key);
     const aliases = "alias" in def && def.alias ? [def.alias].flat() : [];
     for (const alias of aliases) (alias.length === 1 ? short : long).add(alias);
+    if (def.type !== "boolean") for (const name of [key, ...aliases]) valued.add(name);
   }
-  for (const token of tokens) {
+  let seen = 0;
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i];
     if (token === "--") break;
-    if (!token.startsWith("-") || token === "-" || /^-\d/.test(token)) continue;
+    if (!token.startsWith("-") || token === "-" || /^-\d/.test(token)) {
+      seen++;
+      if (leaf && seen > positionals.length) return { flag: token, command, extra: positionals };
+      continue;
+    }
     if (token.startsWith("--")) {
       const name = camel(token.slice(2).split("=")[0]);
       const negated = name.startsWith("no") ? name.charAt(2).toLowerCase() + name.slice(3) : "";
+      if (
+        valued.has(name) &&
+        !token.includes("=") &&
+        i + 1 < tokens.length &&
+        tokens[i + 1] !== "--"
+      )
+        i++;
       if (long.has(name) || (negated && long.has(negated))) continue;
       const flag = token.split("=")[0];
       const best = closestName(
@@ -91,9 +118,20 @@ function check(tokens: string[], args: ArgsDef, command: string): UnknownFlag | 
       const suggestion = best ? `--${kebab(best)}` : undefined;
       return { flag, command, suggestion };
     }
-    for (const c of token.slice(1).split("=")[0]) {
+    const letters = token.slice(1).split("=")[0];
+    for (const c of letters) {
       if (!short.has(c)) return { flag: `-${c}`, command };
     }
+    // `-e prod`: a valued short option as the last letter takes the next token.
+    const last = letters.at(-1);
+    if (
+      last &&
+      valued.has(last) &&
+      !token.includes("=") &&
+      i + 1 < tokens.length &&
+      tokens[i + 1] !== "--"
+    )
+      i++;
   }
   return null;
 }
@@ -137,7 +175,7 @@ export async function findUnknownFlag<T extends ArgsDef = ArgsDef>(
       return await findUnknownFlag(sub, rawArgs.slice(index + 1), `${command} ${name}`);
     }
   }
-  return check(own, args, command);
+  return check(own, args, command, true);
 }
 
 /**
@@ -163,6 +201,13 @@ export async function commandPath<T extends ArgsDef = ArgsDef>(
 
 /** One line naming the option, the closest declared one, and where to look. */
 export function describeUnknownFlag(unknown: UnknownFlag): string {
+  if (unknown.extra) {
+    const takes =
+      unknown.extra.length === 0
+        ? "takes no arguments"
+        : `takes ${unknown.extra.map((name) => `<${kebab(name)}>`).join(" ")}`;
+    return `Unexpected argument "${unknown.flag}" for \`${unknown.command}\`, which ${takes}. Quote a value that contains spaces, or run the command once per value. Run \`${unknown.command} --help\` for usage.`;
+  }
   if (unknown.before) {
     return `Option ${unknown.flag} goes after the subcommand: run \`${unknown.command} ${unknown.flag}\` (see \`${unknown.command} --help\`).`;
   }

@@ -95,6 +95,38 @@ const main = defineCommand({
 
 const unknown = (argv: string[]) => findUnknownFlag(main, normalizeKebabFlags(argv));
 
+describe("extra positional arguments are refused", () => {
+  test("an unquoted multi-word query is refused instead of searching for its first word", () => {
+    // citty kept "build" and dropped "a saas", then searched for "build" alone.
+    const r = stack(["recommend", "build", "a", "saas", "--json"]);
+    expect(r.code).toBe(1);
+    const { error } = JSON.parse(r.stdout);
+    expect(error).toContain('Unexpected argument "a" for `stack recommend`, which takes <query>');
+    expect(error).toContain("Quote a value that contains spaces");
+  });
+
+  test("a second service and an argument to a command that takes none are named", async () => {
+    expect(await unknown(["add", "supabase", "neon"])).toMatchObject({
+      flag: "neon",
+      command: "stack add",
+      extra: ["service"],
+    });
+    expect(await unknown(["templates", "list", "x"])).toMatchObject({
+      flag: "x",
+      command: "stack templates list",
+      extra: [],
+    });
+  });
+
+  test("option values are not counted as positionals", async () => {
+    expect(await unknown(["add", "openai", "--region", "us-east-1"])).toBeNull();
+    expect(await unknown(["recommend", "--k", "3", "db"])).toBeNull();
+    expect(await unknown(["recommend", "db", "--k", "3", "extra"])).toMatchObject({
+      flag: "extra",
+    });
+  });
+});
+
 describe("findUnknownFlag accepts every declared spelling", () => {
   test.each([
     [["add", "openai", "--dry-run", "--use=res_1", "--region", "us-east-1"]],
