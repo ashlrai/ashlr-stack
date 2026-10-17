@@ -13,6 +13,7 @@
 ### Machine-readable output
 
 - **`stack list --json`, `stack providers --json` and `stack deps --json`.** These commands accepted `--json` but ignored it and printed human text with exit 0, so agents could not parse them. Each now prints one JSON object on stdout with no banner or ANSI: `ashlr.stack.list/v1` (project id, template, and each service with provider, resource id, region, secret names and MCP entry), `ashlr.stack.providers/v1` (every registered provider with category, auth kind and docs URL, plus any that failed to load), and `ashlr.stack.deps/v1` (services grouped by category, services whose provider is not registered, and totals). Without a `.stack.toml`, `list --json` and `deps --json` print `{"error": ...}` and exit 1. Human output is unchanged. The `stack_list`, `stack_providers` and `stack_deps` MCP tools take `json: true` for the same output.
+- **`stack projects list --json` and `stack templates list --json`.** Both ignored `--json` and printed the decorated human list, so the `stack_projects_list` and `stack_templates_list` MCP tools returned banner text an agent had to scrape. They now print one JSON object: `ashlr.stack.projects/v1` (each registered project with name, path, project id, template, service names and last-seen time) and `ashlr.stack.templates/v1` (each template with its services, providers, secret names and MCP entry). Bare `stack projects --json` and `stack templates --json` do the same. Both MCP tools take `json: true`.
 
 ### Install fixes
 
@@ -22,6 +23,7 @@
 
 ### Bug fixes
 
+- **`stack exec` no longer reports a killed command as success.** A wrapped command terminated by a signal (OOM kill, `kill -9`) left the exit code null and `stack exec` exited 0. It now exits 128 + the signal number (137 for SIGKILL) and says which signal. SIGINT, SIGTERM and SIGHUP sent to `stack exec` itself (an agent timeout, a supervisor) are forwarded to the wrapped command instead of killing only the wrapper and leaving the command running.
 - **MCP tools check their input before running the CLI.** A missing required argument reached the CLI as the literal string `undefined` (`stack_add {}` ran `stack add undefined`), and a value starting with `-` was parsed as a flag: `stack_remove {"service":"--all"}` ran `stack remove --all` and targeted every service instead of one. The server now returns an error naming the argument for a missing required field, a wrong type, or a leading `-`, and runs nothing.
 - **`stack apply` with a missing recipe writes nothing.** In a directory without `.stack.toml`, `stack apply <id>` for an id that does not exist (or bare `stack apply` with no recipes) auto-ran `stack init` first, leaving `.stack.toml`, `.stack.local.toml`, `.gitignore` and a `~/.stack/projects.json` entry behind before failing. The recipe is now resolved first.
 

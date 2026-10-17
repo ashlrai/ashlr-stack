@@ -15,9 +15,48 @@ import { colors, intro, outro, outroError } from "../ui.ts";
  *   stack projects remove <name|path>
  *   stack projects where <name>
  */
+/**
+ * Stable machine shape for `stack projects list --json`. Fields may be added
+ * but existing ones must not change meaning.
+ */
+export interface ProjectsReport {
+  schema: "ashlr.stack.projects/v1";
+  total: number;
+  projects: Array<{
+    name: string;
+    path: string;
+    project_id: string;
+    template: string | null;
+    services: string[];
+    last_seen: string;
+  }>;
+}
+
+export async function buildProjectsReport(): Promise<ProjectsReport> {
+  const projects = (await listProjects()).map((p) => ({
+    name: p.name,
+    path: p.path,
+    project_id: p.project_id,
+    template: p.template ?? null,
+    services: [...p.services],
+    last_seen: p.last_seen,
+  }));
+  return { schema: "ashlr.stack.projects/v1", total: projects.length, projects };
+}
+
 const projectsListCommand = defineCommand({
   meta: { name: "list", description: "List every Stack-enabled project on this machine." },
-  async run() {
+  args: {
+    json: {
+      type: "boolean",
+      description: "Emit machine-readable JSON (schema ashlr.stack.projects/v1).",
+    },
+  },
+  async run({ args }) {
+    if (args.json) {
+      process.stdout.write(`${JSON.stringify(await buildProjectsReport(), null, 2)}\n`);
+      return;
+    }
     intro("stack projects");
     const projects = await listProjects();
     if (projects.length === 0) {

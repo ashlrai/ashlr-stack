@@ -173,8 +173,14 @@
     {
       "name": "stack_projects_list",
       "description": "List projects recorded in the local Stack registry; this is not a filesystem-wide discovery scan.",
-      "cli": "stack projects list",
-      "inputSchema": { "type": "object", "properties": {}, "required": [] }
+      "cli": "stack projects list [--json]",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "json": { "type": "boolean", "description": "Machine-readable JSON (schema ashlr.stack.projects/v1)." }
+        },
+        "required": []
+      }
     },
     {
       "name": "stack_deps",
@@ -191,8 +197,14 @@
     {
       "name": "stack_templates_list",
       "description": "List available starter stack templates.",
-      "cli": "stack templates list",
-      "inputSchema": { "type": "object", "properties": {}, "required": [] }
+      "cli": "stack templates list [--json]",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "json": { "type": "boolean", "description": "Machine-readable JSON (schema ashlr.stack.templates/v1): each template with its services, providers and secret names." }
+        },
+        "required": []
+      }
     },
     {
       "name": "stack_upgrade",

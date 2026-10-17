@@ -214,8 +214,16 @@ export const TOOLS: ToolDef[] = [
     name: "stack_projects_list",
     description:
       "List projects recorded in the local Stack registry; this is not a filesystem-wide discovery scan.",
-    inputSchema: { type: "object", properties: {} },
-    cliArgs: () => ["projects", "list"],
+    inputSchema: {
+      type: "object",
+      properties: {
+        json: {
+          type: "boolean",
+          description: "Machine-readable JSON (schema ashlr.stack.projects/v1).",
+        },
+      },
+    },
+    cliArgs: (input) => (input.json ? ["projects", "list", "--json"] : ["projects", "list"]),
   },
   {
     name: "stack_deps",
@@ -234,8 +242,17 @@ export const TOOLS: ToolDef[] = [
   {
     name: "stack_templates_list",
     description: "List available starter stack templates.",
-    inputSchema: { type: "object", properties: {} },
-    cliArgs: () => ["templates", "list"],
+    inputSchema: {
+      type: "object",
+      properties: {
+        json: {
+          type: "boolean",
+          description:
+            "Machine-readable JSON (schema ashlr.stack.templates/v1): each template with its services, providers and secret names.",
+        },
+      },
+    },
+    cliArgs: (input) => (input.json ? ["templates", "list", "--json"] : ["templates", "list"]),
   },
   {
     name: "stack_upgrade",

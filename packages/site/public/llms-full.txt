@@ -414,9 +414,9 @@ The source declares these 19 tools. They are a subset of CLI commands; use each 
 - `stack_doctor` — `{ fix?: boolean, all?: boolean, json?: boolean }`
 - `stack_sync` — `{ platform: string }`
 - `stack_providers` — `{}`
-- `stack_projects_list` — `{}`
+- `stack_projects_list` — `{ json?: boolean }`
 - `stack_deps` — `{}`
-- `stack_templates_list` — `{}`
+- `stack_templates_list` — `{ json?: boolean }`
 - `stack_upgrade` — `{}`
 - `stack_recommend` — `{ query: string, k?: number, category?: string, save?: boolean }`
 - `stack_apply` — `{ recipe_id: string, no_wire?: boolean }`

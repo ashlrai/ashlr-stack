@@ -60,13 +60,13 @@ If you installed from source (no global bin), point at the entry directly:
 
 Provisioning: `stack_init`, `stack_add`, `stack_remove`, `stack_import`, `stack_scan`.
 
-Inspection: `stack_list`, `stack_info`, `stack_status`, `stack_providers`, `stack_templates_list`, `stack_deps`, `stack_doctor`. `stack_list`, `stack_providers` and `stack_deps` take `json: true` to return the CLI's `--json` object instead of human text.
+Inspection: `stack_list`, `stack_info`, `stack_status`, `stack_providers`, `stack_templates_list`, `stack_deps`, `stack_doctor`. `stack_list`, `stack_providers`, `stack_templates_list` and `stack_deps` take `json: true` to return the CLI's `--json` object instead of human text.
 
 Env: `stack_env_show`, `stack_env_diff`, `stack_sync`.
 
 Planning: `stack_recommend`, `stack_apply`.
 
-Project registry: `stack_projects_list`, `stack_upgrade`.
+Project registry: `stack_projects_list` (`json: true` returns `stack projects list --json`), `stack_upgrade`.
 
 ## Resources (up to 3)
 

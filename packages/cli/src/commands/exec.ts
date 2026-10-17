@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { constants } from "node:os";
 import { assertPhantomInstalled, hasConfig } from "@ashlr/stack-core";
 import { defineCommand } from "citty";
 import { colors } from "../ui.ts";
@@ -10,6 +11,19 @@ import { colors } from "../ui.ts";
 function fail(message: string): void {
   process.stderr.write(`${colors.red(`[stack exec] ${message}`)}\n`);
   process.exit(1);
+}
+
+const FORWARDED_SIGNALS: NodeJS.Signals[] = ["SIGINT", "SIGTERM", "SIGHUP"];
+
+/**
+ * Exit status for the wrapped command. A signal-terminated child has a null
+ * exit code; map it to the shell convention 128 + signal number so callers
+ * never read a killed command as success.
+ */
+export function exitCodeFor(code: number | null, signal: NodeJS.Signals | null): number {
+  if (code !== null) return code;
+  if (signal) return 128 + (constants.signals[signal] ?? 0);
+  return 1;
 }
 
 /**
@@ -48,11 +62,27 @@ export const execCommand = defineCommand({
     }
 
     const child = spawn("phantom", ["exec", "--", ...forwarded], { stdio: "inherit" });
-    child.on("close", (code) => {
-      if (code !== 0) {
-        process.stderr.write(colors.dim(`\n[stack exec] phantom exec exited ${code}\n`));
+
+    // A TERM/HUP/INT sent to `stack exec` alone (an agent's timeout, a
+    // supervisor) would otherwise kill only this wrapper and leave the
+    // wrapped command running. Forward it and wait for the child to exit.
+    const forward = (signal: NodeJS.Signals) => () => {
+      if (child.exitCode === null && child.signalCode === null) child.kill(signal);
+    };
+    const handlers = FORWARDED_SIGNALS.map((signal) => {
+      const handler = forward(signal);
+      process.on(signal, handler);
+      return [signal, handler] as const;
+    });
+
+    child.on("close", (code, signal) => {
+      for (const [sig, handler] of handlers) process.off(sig, handler);
+      const exitCode = exitCodeFor(code, signal);
+      if (exitCode !== 0) {
+        const how = signal ? `was killed by ${signal}` : `exited ${code}`;
+        process.stderr.write(colors.dim(`\n[stack exec] phantom exec ${how}\n`));
       }
-      process.exitCode = code ?? 0;
+      process.exitCode = exitCode;
     });
     child.on("error", (err) => {
       fail((err as Error).message);
