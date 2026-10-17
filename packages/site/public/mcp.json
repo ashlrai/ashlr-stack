@@ -145,10 +145,11 @@
     {
       "name": "stack_env_diff",
       "description": "Report which declared secrets are missing from the Phantom vault.",
-      "cli": "stack env diff",
+      "cli": "stack env diff [--json]",
       "inputSchema": {
         "type": "object",
         "properties": {
+          "json": { "type": "boolean", "description": "Machine-readable JSON (schema ashlr.stack.env-diff/v1, names and declaring service only); still an error result when any are missing." },
           "cwd": { "type": "string", "description": "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory." }
         },
         "required": []

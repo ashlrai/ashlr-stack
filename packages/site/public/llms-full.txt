@@ -198,7 +198,7 @@ stack exec -- pytest
 
 ### `stack env show` / `stack env diff` / `stack env export --example`
 
-`show` displays declared names and vault presence; `diff` reports missing names. These checks do not reveal values or establish equality, credential validity or provider health.
+`show` displays declared names and vault presence; `diff` reports missing names and exits 1 when any are missing. Both take `--json` (`ashlr.stack.env/v1`, `ashlr.stack.env-diff/v1`): names, presence and declaring service only. These checks do not reveal values or establish equality, credential validity or provider health.
 
 `export --example` separately writes `.env.example` with empty `KEY=` entries, not credentials or Phantom references. `--stdout` prints only that skeleton, so it can be redirected to a file; `--force` permits overwriting the example file. There are no `env set`, `env unset` or `--reveal` interfaces.
 
@@ -410,7 +410,7 @@ The source declares these 19 tools. They are a subset of CLI commands; use each 
 - `stack_info` — `{ service: string, json?: boolean, cwd?: string }`
 - `stack_status` — `{ json?: boolean, cwd?: string }`
 - `stack_env_show` — `{ json?: boolean, cwd?: string }`
-- `stack_env_diff` — `{ cwd?: string }`
+- `stack_env_diff` — `{ json?: boolean, cwd?: string }`
 - `stack_doctor` — `{ fix?: boolean, all?: boolean, json?: boolean, cwd?: string }`
 - `stack_sync` — `{ platform: string, cwd?: string }`
 - `stack_providers` — `{ json?: boolean }`

@@ -21,4 +21,11 @@ describe("json flag on stack_info and stack_env_show", () => {
     expect(env.cliArgs({})).toEqual(["env", "show"]);
     expect(env.cliArgs({ json: true })).toEqual(["env", "show", "--json"]);
   });
+
+  test("stack_env_diff passes --json only when asked", () => {
+    const diff = tool("stack_env_diff");
+    expect(diff.inputSchema.properties.json?.type).toBe("boolean");
+    expect(diff.cliArgs({})).toEqual(["env", "diff"]);
+    expect(diff.cliArgs({ json: true })).toEqual(["env", "diff", "--json"]);
+  });
 });

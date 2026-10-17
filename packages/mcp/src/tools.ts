@@ -199,8 +199,18 @@ export const TOOLS: ToolDef[] = [
   {
     name: "stack_env_diff",
     description: "Report which declared secrets are missing from the Phantom vault.",
-    inputSchema: { type: "object", properties: { cwd: CWD_INPUT } },
-    cliArgs: () => ["env", "diff"],
+    inputSchema: {
+      type: "object",
+      properties: {
+        json: {
+          type: "boolean",
+          description:
+            "Machine-readable JSON (schema ashlr.stack.env-diff/v1, names and declaring service only); still an error result when any are missing.",
+        },
+        cwd: CWD_INPUT,
+      },
+    },
+    cliArgs: (input) => (input.json ? ["env", "diff", "--json"] : ["env", "diff"]),
   },
   {
     name: "stack_doctor",

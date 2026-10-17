@@ -430,7 +430,17 @@ export const CLI_COMMANDS: CliCommand[] = [
       {
         name: "stack env diff",
         description: "Which declared secrets are missing from the vault?",
-        synopsis: "stack env diff",
+        synopsis: "stack env diff [--json]",
+        flags: [
+          {
+            name: "json",
+            synopsis: "--json",
+            type: "boolean",
+            default: false,
+            description:
+              "Emit machine-readable JSON (schema ashlr.stack.env-diff/v1, secret names only). Exits 1 when any are missing.",
+          },
+        ],
         examples: [{ command: "stack env diff" }],
       },
     ],

@@ -203,13 +203,19 @@ export const MCP_TOOLS: McpTool[] = [
     description: "Report which declared secrets are missing from the Phantom vault.",
     inputs: [
       {
+        name: "json",
+        type: "boolean",
+        description:
+          "Machine-readable JSON (schema ashlr.stack.env-diff/v1, names and declaring service only); still an error result when any are missing.",
+      },
+      {
         name: "cwd",
         type: "string",
         description:
           "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory.",
       },
     ],
-    cli: "stack env diff",
+    cli: "stack env diff [--json]",
   },
   {
     name: "stack_doctor",

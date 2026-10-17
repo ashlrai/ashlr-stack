@@ -93,6 +93,41 @@ async function runEnvShowJson(env: string): Promise<void> {
   }
 }
 
+/**
+ * `stack env diff --json`: the declared secret names missing from the vault,
+ * each with the service that declares it. Exits 1 when any are missing, like
+ * the human form, so a CI gate works either way. A missing project, missing
+ * Phantom or unreadable vault prints `{"error": ...}` and exits 1.
+ */
+async function runEnvDiffJson(): Promise<void> {
+  const fail = (error: string) => {
+    process.stdout.write(`${JSON.stringify({ error })}\n`);
+    process.exitCode = 1;
+  };
+  try {
+    if (!(await isPhantomInstalled())) {
+      fail("Phantom is not installed. Stack cannot read the vault without it.");
+      return;
+    }
+    const config = await readConfig();
+    const vaultKeys = new Set(await listSecrets());
+    const missing = Object.entries(config.services).flatMap(([service, entry]) =>
+      entry.secrets.filter((name) => !vaultKeys.has(name)).map((name) => ({ name, service })),
+    );
+    const declared = new Set(Object.values(config.services).flatMap((e) => e.secrets));
+    const report = {
+      schema: "ashlr.stack.env-diff/v1",
+      ok: missing.length === 0,
+      missing,
+      totals: { declared: declared.size, missing: missing.length },
+    };
+    process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
+    if (missing.length > 0) process.exitCode = 1;
+  } catch (err) {
+    fail((err as Error).message);
+  }
+}
+
 /** `stack env` — inspect the env-var map. Bare `stack env` runs `show`. */
 export const envCommand = defineCommand({
   meta: {
@@ -166,7 +201,19 @@ export const envCommand = defineCommand({
     }),
     diff: defineCommand({
       meta: { name: "diff", description: "Which declared secrets are missing from the vault?" },
-      async run() {
+      args: {
+        json: {
+          type: "boolean",
+          default: false,
+          description:
+            "Emit machine-readable JSON (schema ashlr.stack.env-diff/v1, secret names only). Exits 1 when any are missing.",
+        },
+      },
+      async run({ args }) {
+        if (args.json) {
+          await runEnvDiffJson();
+          return;
+        }
         intro("stack env diff");
         await requirePhantom();
         const config = await readConfig();
