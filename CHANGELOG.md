@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Agent-facing output
+
+- **The last lines of a failing command reach a pipe on Bun 1.2.** `outroError` exits the process, and Bun 1.2 dropped stdout still queued at exit, so a piped `stack apply` lost its final `Some providers failed: ...` line, `stack doctor` with many services lost most of its report, and an MCP `stack_add` returned only "Failed." The CLI now writes stdout and stderr synchronously under Bun, as Node already does for pipes, so nothing is pending when it exits.
+- **`stack doctor` with no services says so.** A `.stack.toml` with no services printed "All services healthy."; it now prints "No services to check" and how to add one (exit 0).
+- **`stack_add` without a terminal says what a person must do.** A provider that needs a pasted key or a browser sign-in failed over MCP with "no valid key in vault and session is non-interactive" (or "No valid Neon API key in vault."). The error now says the session has no terminal and to ask the user to run `stack add <provider>` in their own terminal.
+- **`stack info <service> --json` and `stack env show --json`.** One JSON object on stdout with no banner: `ashlr.stack.info/v1` (provider, resource, secret names with `in_vault`, MCP entry, healthcheck result) and `ashlr.stack.env/v1` (secret names per service with `in_vault`, plus `missing` and `orphans`). Values are never printed. A missing project or service prints `{"error": ...}` and exits 1. The `stack_info` and `stack_env_show` MCP tools take `json: true`.
+
 ### Agent onboarding
 
 - **`stack onboard` detects Codex, Claude Code, Cursor and Gemini CLI and registers the Phantom gateway (`ashlr-hub`, `ashlr mcp`) in each.** It prints a plan by default and writes nothing. `--apply` saves a timestamped backup of each existing config, adds only the `ashlr-hub` entry, keeps every other key, and re-checks each client afterwards. An existing `ashlr-hub` entry that differs is never overwritten. `--undo` restores the saved files byte for byte and refuses any file that changed since it was written. `--client`, `--all` (include clients that are not detected), `--home` and `--json` are supported. It never touches the network or a vendor CLI and writes no secret values.

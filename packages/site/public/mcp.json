@@ -93,11 +93,12 @@
     {
       "name": "stack_info",
       "description": "Inspect configured resource, auth kind, secret-name inventory and MCP metadata; attempt a healthcheck when the provider supports one.",
-      "cli": "stack info <service>",
+      "cli": "stack info <service> [--json]",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "service": { "type": "string", "description": "Service name." }
+          "service": { "type": "string", "description": "Service name." },
+          "json": { "type": "boolean", "description": "Machine-readable JSON (schema ashlr.stack.info/v1)." }
         },
         "required": ["service"]
       }
@@ -117,8 +118,14 @@
     {
       "name": "stack_env_show",
       "description": "Show which declared secrets are present in the Phantom vault (masked).",
-      "cli": "stack env show",
-      "inputSchema": { "type": "object", "properties": {}, "required": [] }
+      "cli": "stack env show [--json]",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "json": { "type": "boolean", "description": "Machine-readable JSON (schema ashlr.stack.env/v1, names only)." }
+        },
+        "required": []
+      }
     },
     {
       "name": "stack_env_diff",

@@ -123,10 +123,20 @@ export const TOOLS: ToolDef[] = [
       "Inspect configured resource, auth kind, secret-name inventory and MCP metadata; attempt a healthcheck when the provider supports one.",
     inputSchema: {
       type: "object",
-      properties: { service: { type: "string" } },
+      properties: {
+        service: { type: "string" },
+        json: {
+          type: "boolean",
+          description: "Machine-readable JSON (schema ashlr.stack.info/v1).",
+        },
+      },
       required: ["service"],
     },
-    cliArgs: (input) => ["info", String(input.service)],
+    cliArgs: (input) => {
+      const args = ["info", String(input.service)];
+      if (input.json) args.push("--json");
+      return args;
+    },
   },
   {
     name: "stack_status",
@@ -145,8 +155,16 @@ export const TOOLS: ToolDef[] = [
   {
     name: "stack_env_show",
     description: "Show which declared secrets are present in the Phantom vault (masked).",
-    inputSchema: { type: "object", properties: {} },
-    cliArgs: () => ["env", "show"],
+    inputSchema: {
+      type: "object",
+      properties: {
+        json: {
+          type: "boolean",
+          description: "Machine-readable JSON (schema ashlr.stack.env/v1, names only).",
+        },
+      },
+    },
+    cliArgs: (input) => (input.json ? ["env", "show", "--json"] : ["env", "show"]),
   },
   {
     name: "stack_env_diff",
