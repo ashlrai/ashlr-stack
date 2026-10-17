@@ -114,8 +114,16 @@ export const TOOLS: ToolDef[] = [
   {
     name: "stack_list",
     description: "List services configured in this stack.",
-    inputSchema: { type: "object", properties: {} },
-    cliArgs: () => ["list"],
+    inputSchema: {
+      type: "object",
+      properties: {
+        json: {
+          type: "boolean",
+          description: "Machine-readable JSON (schema ashlr.stack.list/v1).",
+        },
+      },
+    },
+    cliArgs: (input) => (input.json ? ["list", "--json"] : ["list"]),
   },
   {
     name: "stack_info",
@@ -209,8 +217,16 @@ export const TOOLS: ToolDef[] = [
     name: "stack_providers",
     description:
       "List the curated source provider catalog by category; inclusion does not attest complete provisioning or active credentials.",
-    inputSchema: { type: "object", properties: {} },
-    cliArgs: () => ["providers"],
+    inputSchema: {
+      type: "object",
+      properties: {
+        json: {
+          type: "boolean",
+          description: "Machine-readable JSON (schema ashlr.stack.providers/v1).",
+        },
+      },
+    },
+    cliArgs: (input) => (input.json ? ["providers", "--json"] : ["providers"]),
   },
   {
     name: "stack_projects_list",
@@ -222,8 +238,16 @@ export const TOOLS: ToolDef[] = [
   {
     name: "stack_deps",
     description: "Show the service dependency graph for the current stack.",
-    inputSchema: { type: "object", properties: {} },
-    cliArgs: () => ["deps"],
+    inputSchema: {
+      type: "object",
+      properties: {
+        json: {
+          type: "boolean",
+          description: "Machine-readable JSON (schema ashlr.stack.deps/v1).",
+        },
+      },
+    },
+    cliArgs: (input) => (input.json ? ["deps", "--json"] : ["deps"]),
   },
   {
     name: "stack_templates_list",

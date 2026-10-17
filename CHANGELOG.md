@@ -9,9 +9,17 @@
 - **`stack_add` without a terminal says what a person must do.** A provider that needs a pasted key or a browser sign-in failed over MCP with "no valid key in vault and session is non-interactive" (or "No valid Neon API key in vault."). The error now says the session has no terminal and to ask the user to run `stack add <provider>` in their own terminal.
 - **`stack info <service> --json` and `stack env show --json`.** One JSON object on stdout with no banner: `ashlr.stack.info/v1` (provider, resource, secret names with `in_vault`, MCP entry, healthcheck result) and `ashlr.stack.env/v1` (secret names per service with `in_vault`, plus `missing` and `orphans`). Values are never printed. A missing project or service prints `{"error": ...}` and exits 1. The `stack_info` and `stack_env_show` MCP tools take `json: true`.
 
+### Vendor-neutral MCP wiring
+
+- **Stack mirrors MCP entries into Cursor and Gemini CLI project configs.** When `.cursor/` or `.gemini/` already exists in the project, `stack add` also writes the server into `.cursor/mcp.json` and `.gemini/settings.json` (Gemini's `httpUrl`/`url` naming, no `type`), and `stack remove` takes it out again. Absent client dirs are never created, other keys and servers are preserved, and an unparseable client file is left untouched without failing the add.
+
 ### Agent onboarding
 
 - **`stack onboard` detects Codex, Claude Code, Cursor and Gemini CLI and registers the Phantom gateway (`ashlr-hub`, `ashlr mcp`) in each.** It prints a plan by default and writes nothing. `--apply` saves a timestamped backup of each existing config, adds only the `ashlr-hub` entry, keeps every other key, and re-checks each client afterwards. An existing `ashlr-hub` entry that differs is never overwritten. `--undo` restores the saved files byte for byte and refuses any file that changed since it was written. `--client`, `--all` (include clients that are not detected), `--home` and `--json` are supported. It never touches the network or a vendor CLI and writes no secret values.
+
+### Machine-readable output
+
+- **`stack list --json`, `stack providers --json` and `stack deps --json`.** These commands accepted `--json` but ignored it and printed human text with exit 0, so agents could not parse them. Each now prints one JSON object on stdout with no banner or ANSI: `ashlr.stack.list/v1` (project id, template, and each service with provider, resource id, region, secret names and MCP entry), `ashlr.stack.providers/v1` (every registered provider with category, auth kind and docs URL, plus any that failed to load), and `ashlr.stack.deps/v1` (services grouped by category, services whose provider is not registered, and totals). Without a `.stack.toml`, `list --json` and `deps --json` print `{"error": ...}` and exit 1. Human output is unchanged. The `stack_list`, `stack_providers` and `stack_deps` MCP tools take `json: true` for the same output.
 
 ### Install fixes
 
