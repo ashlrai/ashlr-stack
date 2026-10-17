@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Agent dead ends
+
+- **`stack ci` refuses with one actionable line instead of printing help.** Bare `stack ci` printed usage and `No command specified` with exit 1, and its only subcommand `init` is intentionally unavailable (the old workflow needed unattended Phantom Cloud pull, which requires trusted-terminal approval). `stack ci` and `stack ci init` now say what to run instead (`stack doctor` from a trusted terminal, or `stack doctor --reconcile --json` in CI) and exit 1. With `--json` they print `{"error": ...}` on stdout. No workflow is ever written.
+- **`stack swap` reports an unknown provider before the Phantom check.** A typo such as `stack swap clerkk auth0` on a machine without Phantom printed the Phantom install hint. Provider names, the category match and the `.stack.toml` entry are now validated first, as in `stack add`.
+
 ### Vendor-neutral MCP wiring
 
 - **Stack mirrors MCP entries into Cursor and Gemini CLI project configs.** When `.cursor/` or `.gemini/` already exists in the project, `stack add` also writes the server into `.cursor/mcp.json` and `.gemini/settings.json` (Gemini's `httpUrl`/`url` naming, no `type`), and `stack remove` takes it out again. Absent client dirs are never created, other keys and servers are preserved, and an unparseable client file is left untouched without failing the add.

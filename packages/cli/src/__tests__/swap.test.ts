@@ -246,3 +246,50 @@ esac
     expect(after.stdout + after.stderr).toContain("clerk");
   });
 });
+
+// ─── validation order (no Phantom on PATH) ────────────────────────────────────
+
+describe("stack swap validates provider names before the Phantom preflight", () => {
+  /** PATH holding only the bun binary's directory, so `phantom` is never found. */
+  function runWithoutPhantom(args: string[], cwd: string) {
+    const r = spawnSync(process.execPath, [CLI_ENTRY, ...args], {
+      encoding: "utf8",
+      cwd,
+      env: {
+        ...process.env,
+        PATH: dirname(process.execPath),
+        HOME: cwd,
+        NO_COLOR: "1",
+        CI: "1",
+        STACK_NO_TELEMETRY: "1",
+      },
+    });
+    return { out: (r.stdout ?? "") + (r.stderr ?? ""), code: r.status ?? 0 };
+  }
+
+  it("reports an unknown `from` provider, not the install hint", () => {
+    const dir = mkTmp();
+    seedConfig(dir, "clerk");
+    const { out, code } = runWithoutPhantom(["swap", "clerkk", "auth0"], dir);
+    expect(code).toBe(1);
+    expect(out).toContain('Unknown provider "clerkk"');
+    expect(out).not.toContain("Phantom Secrets isn't installed");
+  });
+
+  it("reports an unknown `to` provider, not the install hint", () => {
+    const dir = mkTmp();
+    seedConfig(dir, "clerk");
+    const { out, code } = runWithoutPhantom(["swap", "clerk", "auth00"], dir);
+    expect(code).toBe(1);
+    expect(out).toContain('Unknown provider "auth00"');
+    expect(out).not.toContain("Phantom Secrets isn't installed");
+  });
+
+  it("still asks for Phantom once both names are valid", () => {
+    const dir = mkTmp();
+    seedConfig(dir, "clerk");
+    const { out, code } = runWithoutPhantom(["swap", "clerk", "auth0"], dir);
+    expect(code).toBe(1);
+    expect(out).toContain("Phantom Secrets isn't installed");
+  });
+});
