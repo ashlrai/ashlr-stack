@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { findProviderRef, listSecrets, readConfig } from "@ashlr/stack-core";
+import { findProviderRef, isPhantomInstalled, listSecrets, readConfig } from "@ashlr/stack-core";
 import { defineCommand, runCommand } from "citty";
 import { requirePhantom } from "../lib/phantom-preflight.ts";
 import { colors, intro, outro, outroError } from "../ui.ts";
@@ -16,8 +16,17 @@ const envShowCommand = defineCommand({
   meta: { name: "show", description: "Show which secrets are present in Phantom." },
   args: {
     env: { type: "string", default: "dev", description: "Environment overlay to preview." },
+    json: {
+      type: "boolean",
+      default: false,
+      description: "Emit machine-readable JSON (schema ashlr.stack.env/v1, secret names only).",
+    },
   },
   async run({ args }) {
+    if (args.json) {
+      await runEnvShowJson(String(args.env));
+      return;
+    }
     intro(`stack env show (${args.env})`);
     await requirePhantom();
     const config = await readConfig();
@@ -47,6 +56,42 @@ const envShowCommand = defineCommand({
     );
   },
 });
+
+/**
+ * `stack env show --json`: which declared secret names are in the vault, as
+ * one JSON object (names only, never values). A missing project, missing
+ * Phantom or unreadable vault prints `{"error": ...}` and exits 1.
+ */
+async function runEnvShowJson(env: string): Promise<void> {
+  const fail = (error: string) => {
+    process.stdout.write(`${JSON.stringify({ error })}\n`);
+    process.exitCode = 1;
+  };
+  try {
+    if (!(await isPhantomInstalled())) {
+      fail("Phantom is not installed. Stack cannot read the vault without it.");
+      return;
+    }
+    const config = await readConfig();
+    const vaultKeys = new Set(await listSecrets());
+    const services = Object.entries(config.services).map(([name, entry]) => ({
+      name,
+      secrets: entry.secrets.map((secret) => ({ name: secret, in_vault: vaultKeys.has(secret) })),
+    }));
+    const declared = [...new Set(Object.values(config.services).flatMap((e) => e.secrets))];
+    const report = {
+      schema: "ashlr.stack.env/v1",
+      env,
+      services,
+      missing: declared.filter((k) => !vaultKeys.has(k)).sort(),
+      orphans: [...vaultKeys].filter((k) => !declared.includes(k)).sort(),
+      totals: { declared: declared.length, in_vault: vaultKeys.size },
+    };
+    process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
+  } catch (err) {
+    fail((err as Error).message);
+  }
+}
 
 /** `stack env` — inspect the env-var map. Bare `stack env` runs `show`. */
 export const envCommand = defineCommand({

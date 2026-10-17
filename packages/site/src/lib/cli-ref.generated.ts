@@ -308,7 +308,7 @@ export const CLI_COMMANDS: CliCommand[] = [
   {
     name: "stack info",
     description: "Show everything Stack knows about a configured service.",
-    synopsis: "stack info <service>",
+    synopsis: "stack info <service> [--json]",
     flags: [
       {
         name: "service",
@@ -316,6 +316,13 @@ export const CLI_COMMANDS: CliCommand[] = [
         type: "positional",
         required: true,
         description: "Service name.",
+      },
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        default: false,
+        description: "Emit machine-readable JSON (schema ashlr.stack.info/v1, secret names only).",
       },
     ],
     examples: [{ command: "stack info supabase" }],
@@ -344,7 +351,7 @@ export const CLI_COMMANDS: CliCommand[] = [
       {
         name: "stack env show",
         description: "Show which secrets are present in Phantom.",
-        synopsis: "stack env show [--env <env>]",
+        synopsis: "stack env show [--env <env>] [--json]",
         flags: [
           {
             name: "env",
@@ -352,6 +359,14 @@ export const CLI_COMMANDS: CliCommand[] = [
             type: "string",
             default: "dev",
             description: "Environment overlay to preview.",
+          },
+          {
+            name: "json",
+            synopsis: "--json",
+            type: "boolean",
+            default: false,
+            description:
+              "Emit machine-readable JSON (schema ashlr.stack.env/v1, secret names only).",
           },
         ],
         examples: [{ command: "stack env show" }, { command: "stack env show --env prod" }],

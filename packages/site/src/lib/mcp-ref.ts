@@ -110,8 +110,15 @@ export const MCP_TOOLS: McpTool[] = [
     name: "stack_info",
     description:
       "Inspect configured resource, auth kind, secret-name inventory and MCP metadata; attempt a healthcheck when the provider supports one.",
-    inputs: [{ name: "service", type: "string", required: true, description: "Service name." }],
-    cli: "stack info <service>",
+    inputs: [
+      { name: "service", type: "string", required: true, description: "Service name." },
+      {
+        name: "json",
+        type: "boolean",
+        description: "Machine-readable JSON (schema ashlr.stack.info/v1).",
+      },
+    ],
+    cli: "stack info <service> [--json]",
   },
   {
     name: "stack_status",
@@ -128,8 +135,14 @@ export const MCP_TOOLS: McpTool[] = [
   {
     name: "stack_env_show",
     description: "Show which declared secrets are present in the Phantom vault (masked).",
-    inputs: [],
-    cli: "stack env show",
+    inputs: [
+      {
+        name: "json",
+        type: "boolean",
+        description: "Machine-readable JSON (schema ashlr.stack.env/v1, names only).",
+      },
+    ],
+    cli: "stack env show [--json]",
   },
   {
     name: "stack_env_diff",

@@ -47,9 +47,8 @@ export const applyCommand = defineCommand({
   async run({ args }) {
     intro(`stack apply${args.noWire ? colors.dim(" (no-wire)") : ""}`);
 
-    // Resolve the recipe before auto-init: recipes live in .stack/recipes
-    // under cwd, so a missing or mistyped id must fail without writing
-    // .stack.toml, .stack.local.toml, .gitignore or a registry entry.
+    // Resolve the recipe first: a mistyped id must not leave a .stack.toml
+    // and a registry entry behind.
     const recipe = await pickRecipe(args.recipeId ? String(args.recipeId) : undefined);
     if (!recipe) return; // pickRecipe already surfaced the error.
 
@@ -155,7 +154,12 @@ async function pickRecipe(id?: string): Promise<Recipe | null> {
     try {
       return await readRecipe(id);
     } catch (err) {
-      outroError((err as Error).message);
+      const ids = (await listRecipes()).map((r) => r.id);
+      const next =
+        ids.length > 0
+          ? `Available: ${ids.join(", ")}.`
+          : 'Save one first with `stack recommend "<what you are building>" --save`.';
+      outroError(`${(err as Error).message.replace(/\.$/, "")}. ${next}`);
       return null;
     }
   }
