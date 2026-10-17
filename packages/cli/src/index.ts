@@ -35,7 +35,7 @@ import { checkForUpdate } from "./lib/update-check.ts";
 // Single source of truth for the CLI version. citty wires this into `--help`
 // and we also use it for `stack --version` (citty ships a standalone flag when
 // `version` is on the meta object — but older citty needs a fallback, below).
-const VERSION = "0.2.1";
+const VERSION = "0.2.2";
 
 const main = defineCommand({
   meta: {

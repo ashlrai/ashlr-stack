@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.2.2 (2026-10-17)
+
+0.2.1 was tagged but its npm publish failed, so nothing from 0.2.1 reached npm. 0.2.2 supersedes it: it ships everything listed here and under 0.2.1 below. Source versions (core, cli, mcp, `server.json`, `VERSION` in `packages/cli/src/index.ts`) are 0.2.2, which `scripts/publish.sh` checks before it publishes core, then cli, then mcp.
+
 ### Vendor-neutral MCP wiring
 
 - **Stack mirrors MCP entries into Cursor and Gemini CLI project configs.** When `.cursor/` or `.gemini/` already exists in the project, `stack add` also writes the server into `.cursor/mcp.json` and `.gemini/settings.json` (Gemini's `httpUrl`/`url` naming, no `type`), and `stack remove` takes it out again. Absent client dirs are never created, other keys and servers are preserved, and an unparseable client file is left untouched without failing the add.
