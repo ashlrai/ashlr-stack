@@ -113,3 +113,50 @@ export function describeUnknownFlag(unknown: UnknownFlag): string {
   const hint = unknown.suggestion ? ` Did you mean ${unknown.suggestion}?` : "";
   return `Unknown option ${unknown.flag} for \`${unknown.command}\`.${hint} Run \`${unknown.command} --help\` for its options.`;
 }
+
+/**
+ * Join `--opt value` into `--opt=value` for the string options a command with
+ * subcommands declares itself (bare `stack env --env prod`).
+ *
+ * citty names the subcommand by the first token that does not start with
+ * "-", so the separate value `prod` was taken for a subcommand and the run
+ * failed with "Unknown command prod", although `stack env --help` lists
+ * `--env`. Leaf commands and everything after the subcommand name are left
+ * to citty, which parses their values itself.
+ */
+export async function bindParentOptionValues<T extends ArgsDef = ArgsDef>(
+  cmd: CommandDef<T>,
+  rawArgs: string[],
+): Promise<string[]> {
+  const subCommands = await resolveValue(
+    cmd.subCommands as Resolvable<Record<string, Resolvable<CommandDef>>> | undefined,
+  );
+  if (!subCommands || Object.keys(subCommands).length === 0) return rawArgs;
+  const args = ((await resolveValue(cmd.args as Resolvable<ArgsDef>)) ?? {}) as ArgsDef;
+  const strings = new Set<string>();
+  for (const [key, def] of Object.entries(args)) {
+    if (def.type !== "string") continue;
+    strings.add(key);
+    const aliases = "alias" in def && def.alias ? [def.alias].flat() : [];
+    for (const alias of aliases) strings.add(alias);
+  }
+  const out: string[] = [];
+  for (let i = 0; i < rawArgs.length; i++) {
+    const token = rawArgs[i];
+    if (token === "--") return [...out, ...rawArgs.slice(i)];
+    if (!token.startsWith("-")) {
+      const sub = await resolveValue(subCommands[token]);
+      const rest = rawArgs.slice(i + 1);
+      return [...out, token, ...(sub ? await bindParentOptionValues(sub, rest) : rest)];
+    }
+    const name = token.startsWith("--") ? camel(token.slice(2)) : token.slice(1);
+    const next = rawArgs[i + 1];
+    if (!token.includes("=") && strings.has(name) && next !== undefined && next !== "--") {
+      out.push(`${token}=${next}`);
+      i++;
+      continue;
+    }
+    out.push(token);
+  }
+  return out;
+}

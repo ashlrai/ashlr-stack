@@ -183,3 +183,26 @@ describe("findUnknownFlag accepts every declared spelling", () => {
     }
   });
 });
+
+describe("a bare parent command's string option takes a separate value", () => {
+  test("`stack env --env prod` runs show with prod, not the subcommand `prod`", () => {
+    const r = stack(["env", "--env", "prod"]);
+    expect(r.stderr).not.toContain("Unknown command prod");
+    expect(`${r.stdout}${r.stderr}`).toMatch(/stack init|stack env show \(prod\)|\.stack\.toml/);
+  });
+
+  test("bindParentOptionValues joins only the parent's own string options", async () => {
+    const { bindParentOptionValues } = await import("../lib/unknown-flags.ts");
+    expect(await bindParentOptionValues(envCommand, ["--env", "prod"])).toEqual(["--env=prod"]);
+    expect(await bindParentOptionValues(envCommand, ["--json", "show", "--env", "x"])).toEqual([
+      "--json",
+      "show",
+      "--env",
+      "x",
+    ]);
+    expect(await bindParentOptionValues(envCommand, ["export", "--stdout"])).toEqual([
+      "export",
+      "--stdout",
+    ]);
+  });
+});

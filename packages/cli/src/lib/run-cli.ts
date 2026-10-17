@@ -1,6 +1,6 @@
 import { type ArgsDef, type CommandDef, runCommand, runMain } from "citty";
 import pc from "picocolors";
-import { describeUnknownFlag, findUnknownFlag } from "./unknown-flags.ts";
+import { bindParentOptionValues, describeUnknownFlag, findUnknownFlag } from "./unknown-flags.ts";
 
 export interface RunCliIo {
   stdout?: (line: string) => void;
@@ -22,9 +22,11 @@ const defaultIo: RunCliIo = {
  */
 export async function runCli<T extends ArgsDef = ArgsDef>(
   cmd: CommandDef<T>,
-  rawArgs: string[],
+  argv: string[],
   io: RunCliIo = defaultIo,
 ): Promise<number> {
+  // `stack env --env prod`: keep the value from being read as a subcommand.
+  const rawArgs = await bindParentOptionValues(cmd, argv);
   const wantsHelp = rawArgs.includes("--help") || rawArgs.includes("-h");
   const wantsVersion = rawArgs.length === 1 && rawArgs[0] === "--version";
   if (wantsHelp || wantsVersion) {
