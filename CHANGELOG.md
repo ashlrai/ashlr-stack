@@ -26,6 +26,12 @@
 
 - **`stack list --json`, `stack providers --json` and `stack deps --json`.** These commands accepted `--json` but ignored it and printed human text with exit 0, so agents could not parse them. Each now prints one JSON object on stdout with no banner or ANSI: `ashlr.stack.list/v1` (project id, template, and each service with provider, resource id, region, secret names and MCP entry), `ashlr.stack.providers/v1` (every registered provider with category, auth kind and docs URL, plus any that failed to load), and `ashlr.stack.deps/v1` (services grouped by category, services whose provider is not registered, and totals). Without a `.stack.toml`, `list --json` and `deps --json` print `{"error": ...}` and exit 1. Human output is unchanged. The `stack_list`, `stack_providers` and `stack_deps` MCP tools take `json: true` for the same output.
 
+### Usage errors exit non-zero
+
+- **`stack recommend` with no query, or a bad `--k`, exits 1.** No query (or a blank one, as `stack_recommend {"query":"   "}` sends) printed "nothing to recommend" with exit 0, and `--k abc`, `--k 0` or `--k 2.5` were silently replaced by the default of 6. Both now exit 1; `--json` still prints the "Provide a query" payload on stdout, and a bad `--k` names the value on stderr.
+- **`stack remove <name>` and `stack open <name>` name the configured services.** An unknown name only said "<name> is not in this stack."; it now lists what is configured, suggests a case-only match ("Did you mean openai?"), or says the stack has no services and to run `stack add <provider>`.
+- **`stack projects remove` only reports what it removed.** Any argument starting with `/` printed "Removed ... from registry." with exit 0, even when no project was registered there, and a relative path such as `.` was never matched. It now matches a registered name first, then the argument as a path from the current directory, and exits 1 with a pointer to `stack projects list` when nothing matched. `unregisterProject()` in `@ashlr/stack-core` now returns whether it removed an entry.
+
 ### Install fixes
 
 - **Packed npm tarballs include their bins.** `@ashlr/stack` and `ashlr-stack-mcp` built `dist/` only in `prepublishOnly`, which `npm pack` skips, so a packed tarball had no `dist/` and installing it gave no `stack` or `ashlr-stack-mcp` command. The build now runs in `prepack`, which both `npm pack` and `npm publish` run.

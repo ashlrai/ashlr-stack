@@ -1,6 +1,7 @@
 import { readConfig, scanSource, writeConfig } from "@ashlr/stack-core";
 import { removeMcpEntry } from "@ashlr/stack-core/mcp-writer";
 import { defineCommand } from "citty";
+import { notInStackMessage } from "../lib/not-in-stack.ts";
 import { removeVaultSecrets, requirePhantom } from "../lib/phantom-preflight.ts";
 import { colors, intro, outro, outroError, prompts } from "../ui.ts";
 
@@ -120,7 +121,7 @@ async function runRemoveOne(serviceName: string, keepRemote: boolean): Promise<v
   const config = await readConfig();
   const entry = config.services[serviceName];
   if (!entry) {
-    outroError(`${serviceName} is not in this stack.`);
+    outroError(notInStackMessage(serviceName, Object.keys(config.services)));
     return;
   }
 
