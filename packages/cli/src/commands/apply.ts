@@ -47,6 +47,12 @@ export const applyCommand = defineCommand({
   async run({ args }) {
     intro(`stack apply${args.noWire ? colors.dim(" (no-wire)") : ""}`);
 
+    // Resolve the recipe before auto-init: recipes live in .stack/recipes
+    // under cwd, so a missing or mistyped id must fail without writing
+    // .stack.toml, .stack.local.toml, .gitignore or a registry entry.
+    const recipe = await pickRecipe(args.recipeId ? String(args.recipeId) : undefined);
+    if (!recipe) return; // pickRecipe already surfaced the error.
+
     // The marketed golden path is `stack recommend --save && stack apply <id>`,
     // which must work from a blank directory. Auto-init if no .stack.toml so
     // the user isn't forced through a template picker they never asked for.
@@ -75,9 +81,6 @@ export const applyCommand = defineCommand({
         return;
       }
     }
-
-    const recipe = await pickRecipe(args.recipeId ? String(args.recipeId) : undefined);
-    if (!recipe) return; // pickRecipe already surfaced the error.
 
     await requirePhantom();
 

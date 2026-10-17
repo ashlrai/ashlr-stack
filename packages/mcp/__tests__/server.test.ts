@@ -190,6 +190,20 @@ describe("MCP server runtime", () => {
     expect(text).toContain(needle);
     expect(text).not.toContain('"hits"');
   }, 20_000);
+
+  test.each([
+    { label: "a flag as the service", name: "stack_remove", args: { service: "--all" } },
+    { label: "a missing service", name: "stack_add", args: {} },
+  ])("refuses $label before running the CLI", async ({ name, args }) => {
+    const result = (await client.callTool({ name, arguments: args })) as {
+      isError?: boolean;
+      content: Array<{ type: string; text: string }>;
+    };
+    const text = result.content[0]?.text ?? "";
+    expect(result.isError).toBe(true);
+    expect(text.startsWith(`${name}: `)).toBe(true);
+    expect(text).not.toContain("undefined");
+  }, 20_000);
 });
 
 describe("MCP CLI completion", () => {
