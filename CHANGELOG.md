@@ -24,6 +24,7 @@
 
 - **MCP tools check their input before running the CLI.** A missing required argument reached the CLI as the literal string `undefined` (`stack_add {}` ran `stack add undefined`), and a value starting with `-` was parsed as a flag: `stack_remove {"service":"--all"}` ran `stack remove --all` and targeted every service instead of one. The server now returns an error naming the argument for a missing required field, a wrong type, or a leading `-`, and runs nothing.
 - **`stack apply` with a missing recipe writes nothing.** In a directory without `.stack.toml`, `stack apply <id>` for an id that does not exist (or bare `stack apply` with no recipes) auto-ran `stack init` first, leaving `.stack.toml`, `.stack.local.toml`, `.gitignore` and a `~/.stack/projects.json` entry behind before failing. The recipe is now resolved first.
+- **`stack apply` and `stack init --template` keep going after a provider fails.** A failed `stack add` exited the process, so later providers never ran, the partial-failure rollback never happened and no summary was printed. Every provider is now tried, each failure is printed, and the run ends with `Some providers failed: <name>: <reason>; ...` and exit 1. A wrong recipe id now also lists the saved ids or says to run `stack recommend "..." --save`.
 
 ## 0.2.1 (2026-10-16)
 
