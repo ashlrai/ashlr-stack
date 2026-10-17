@@ -408,7 +408,7 @@ The source declares these 19 tools. They are a subset of CLI commands; use each 
 - `stack_remove` — `{ service: string, keepRemote?: boolean, cwd?: string }`
 - `stack_list` — `{ json?: boolean, cwd?: string }`
 - `stack_info` — `{ service: string, json?: boolean, cwd?: string }`
-- `stack_status` — `{ json?: boolean }`
+- `stack_status` — `{ json?: boolean, cwd?: string }`
 - `stack_env_show` — `{ json?: boolean, cwd?: string }`
 - `stack_env_diff` — `{ cwd?: string }`
 - `stack_doctor` — `{ fix?: boolean, all?: boolean, json?: boolean, cwd?: string }`
