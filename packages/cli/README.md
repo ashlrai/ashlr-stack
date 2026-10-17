@@ -81,7 +81,8 @@ A cheat sheet for the current source interface:
 | `stack remove <service>` | Remove local vault entries, MCP wiring and configuration (or use `--all`); this CLI does not deprovision upstream resources |
 | `stack list` | Show services wired into this project |
 | `stack info <service>` | Deep-dive on one service (resource, region, docs, MCP name) |
-| `stack doctor [--all] [--fix] [--json]` | Inspect health reports; `--fix` attempts supported repair, `--json` formats the report |
+| `stack status [--json]` | Phantom, services and config at a glance; `--json` prints a stable report (schema `ashlr.stack.status/v1`, secret names only) |
+| `stack doctor [--all] [--fix] [--json]` | Inspect health reports; `--fix` attempts supported repair, `--json` formats the report. Without `--all`, a directory with no `.stack.toml` is an error, not a healthy report |
 | `stack scan [--auto]` | Detect providers from package manifests, configs, `.env.example` |
 | `stack import [--from <file>]` | Migrate an existing `.env` into Phantom + `.stack.toml` |
 | `stack clone <git-url> [dir]` | git-clone + scan + next-steps |
@@ -97,6 +98,7 @@ A cheat sheet for the current source interface:
 | `stack upgrade` | Check npm for a newer `@ashlr/stack` release |
 | `stack login <provider>` | Refresh credentials for that provider; existing stored credentials are separate from setup staging |
 | `stack sync --platform <name>` | Push through Phantom to a configured Vercel, Railway or Fly target |
+| `stack onboard [--apply] [--undo]` | Detect Codex, Claude Code, Cursor and Gemini CLI and register the Phantom gateway (`ashlr-hub`) in each; plan only without `--apply`, existing config files backed up before writing; `--undo` restores them |
 
 Full reference with flags, subcommands, and examples: **[stack.ashlr.ai/docs/cli](https://stack.ashlr.ai/docs/cli)**.
 
