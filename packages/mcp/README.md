@@ -26,7 +26,7 @@ bun add -g ashlr-stack-mcp @ashlr/stack
 npm i -g ashlr-stack-mcp @ashlr/stack
 ```
 
-Every tool runs the `stack` CLI, so install `@ashlr/stack` alongside this package (or set `STACK_BIN` to the CLI). Without it the server starts and lists its tools, but each call returns "Could not run the 'stack' CLI" with the fix. The npm 0.1.1 release runs on Bun, so Bun must be installed.
+Every tool runs the `stack` CLI, so install `@ashlr/stack` alongside this package (or set `STACK_BIN` to the CLI). Without it the server starts and lists its tools, but each call returns "Could not run the 'stack' CLI" with the fix. The npm 0.1.1 release runs on Bun, so Bun must be installed. In source 0.2.1 this package depends on `@ashlr/stack` and runs that dependency's `stack` bin; the order is `STACK_BIN`, then that bin, then `stack` on PATH.
 
 ## Wire it into your agent
 

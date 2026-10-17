@@ -12,11 +12,11 @@
 - **Installers state the real provider count (39, not 23)**, and `release-artifacts.test.ts` checks it against the registry and that the site serves the same `install.sh`/`install.ps1` as `scripts/`.
 - **`install.sh` says how to get the MCP server after a binary install.** The prebuilt release binary is only `stack`; the installer now prints `npm i -g ashlr-stack-mcp` / `npx -y ashlr-stack-mcp`, and the MCP README no longer says the one-liner always installs both.
 
-### Recipe and MCP fixes
+### Bug fixes
 
-- **`stack apply` and `stack init --template` keep going after a provider fails.** A failed `stack add` exited the process, so later providers never ran, the partial-failure rollback never happened and no summary was printed. Every provider is now tried, each failure is printed, and the run ends with `Some providers failed: <name>: <reason>; ...` and exit 1.
-- **`stack apply <wrong-id>` no longer writes `.stack.toml` first.** The recipe is resolved before the auto-init, and the error lists the saved recipe ids or says to run `stack recommend "..." --save`.
-- **MCP tool calls are checked against their input schema.** A missing required argument reached the CLI as the string "undefined" (`stack_info {}` ran `stack info undefined`, and `stack_apply {}` ran `stack init` before failing). Missing or mistyped arguments now return an error naming the argument, and the CLI is not run.
+- **MCP tools check their input before running the CLI.** A missing required argument reached the CLI as the literal string `undefined` (`stack_add {}` ran `stack add undefined`), and a value starting with `-` was parsed as a flag: `stack_remove {"service":"--all"}` ran `stack remove --all` and targeted every service instead of one. The server now returns an error naming the argument for a missing required field, a wrong type, or a leading `-`, and runs nothing.
+- **`stack apply` with a missing recipe writes nothing.** In a directory without `.stack.toml`, `stack apply <id>` for an id that does not exist (or bare `stack apply` with no recipes) auto-ran `stack init` first, leaving `.stack.toml`, `.stack.local.toml`, `.gitignore` and a `~/.stack/projects.json` entry behind before failing. The recipe is now resolved first.
+- **`stack apply` and `stack init --template` keep going after a provider fails.** A failed `stack add` exited the process, so later providers never ran, the partial-failure rollback never happened and no summary was printed. Every provider is now tried, each failure is printed, and the run ends with `Some providers failed: <name>: <reason>; ...` and exit 1. A wrong recipe id now also lists the saved ids or says to run `stack recommend "..." --save`.
 
 ## 0.2.1 (2026-10-16)
 

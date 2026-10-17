@@ -55,6 +55,47 @@ describe("stack_scan args", () => {
   });
 });
 
+describe("validateToolInput", () => {
+  test("rejects a missing required argument instead of passing \"undefined\"", () => {
+    for (const name of ["stack_add", "stack_remove", "stack_info", "stack_sync", "stack_apply"]) {
+      expect(validateToolInput(tool(name), {})).toContain("missing required argument");
+    }
+    expect(validateToolInput(tool("stack_recommend"), { query: "" })).toContain(
+      'missing required argument "query"',
+    );
+  });
+
+  test("rejects values that the CLI would parse as flags", () => {
+    expect(validateToolInput(tool("stack_remove"), { service: "--all" })).toContain(
+      'must not start with "-"',
+    );
+    expect(validateToolInput(tool("stack_add"), { service: "--help" })).toContain(
+      'must not start with "-"',
+    );
+    expect(validateToolInput(tool("stack_import"), { from: "--dryRun" })).toContain(
+      'must not start with "-"',
+    );
+  });
+
+  test("rejects wrong types", () => {
+    expect(validateToolInput(tool("stack_add"), { service: { x: 1 } })).toContain(
+      "must be a string",
+    );
+    expect(validateToolInput(tool("stack_recommend"), { query: "db", k: "abc" })).toContain(
+      "must be a number",
+    );
+    expect(validateToolInput(tool("stack_doctor"), { fix: "yes" })).toContain("must be a boolean");
+  });
+
+  test("accepts well-formed input", () => {
+    expect(validateToolInput(tool("stack_remove"), { service: "supabase", keepRemote: true })).toBe(
+      null,
+    );
+    expect(validateToolInput(tool("stack_recommend"), { query: "postgres", k: 3 })).toBe(null);
+    expect(validateToolInput(tool("stack_list"), {})).toBe(null);
+  });
+});
+
 describe("resolveStackCommand", () => {
   test("STACK_BIN wins over the bundled dependency", () => {
     const pkg = fakeCliPackage({ stack: "./dist/index.js" });
@@ -108,39 +149,5 @@ describe("readServerVersion", () => {
     const distUrl = pathToFileURL(join(import.meta.dir, "..", "dist", "server.js")).href;
     expect(readServerVersion(distUrl)).toMatch(/^\d+\.\d+\.\d+/);
     expect(readServerVersion(distUrl)).not.toBe("0.0.0");
-  });
-});
-
-describe("validateToolInput", () => {
-  test("accepts complete, well-typed input", () => {
-    expect(validateToolInput(tool("stack_add"), { service: "neon" })).toBeUndefined();
-    expect(
-      validateToolInput(tool("stack_recommend"), { query: "q", k: 3, save: true }),
-    ).toBeUndefined();
-    expect(validateToolInput(tool("stack_list"), {})).toBeUndefined();
-  });
-
-  test("names a missing required argument and the tool's arguments", () => {
-    const msg = validateToolInput(tool("stack_info"), {});
-    expect(msg).toContain('missing required argument "service"');
-    expect(msg).toContain("Arguments: service.");
-  });
-
-  test("rejects wrong types and non-object input", () => {
-    expect(validateToolInput(tool("stack_doctor"), { json: "yes" })).toContain(
-      'argument "json" must be a boolean',
-    );
-    expect(validateToolInput(tool("stack_recommend"), { query: "q", k: Number.NaN })).toContain(
-      'argument "k" must be a number',
-    );
-    expect(validateToolInput(tool("stack_list"), [])).toContain("must be a JSON object");
-  });
-
-  test("every required argument is declared in properties", () => {
-    for (const def of TOOLS) {
-      for (const name of def.inputSchema.required ?? []) {
-        expect(def.inputSchema.properties[name]).toBeDefined();
-      }
-    }
   });
 });

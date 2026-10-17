@@ -75,11 +75,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       isError: true,
     };
   }
-  const invalid = validateToolInput(tool, request.params.arguments ?? {});
+  const input = (request.params.arguments ?? {}) as Record<string, unknown>;
+  const invalid = validateToolInput(tool, input);
   if (invalid) {
     return { content: [{ type: "text", text: invalid }], isError: true };
   }
-  const input = (request.params.arguments ?? {}) as Record<string, unknown>;
   const args = tool.cliArgs(input);
   const { stdout, stderr, code } = await runStack(args);
   const body = stdout.trim() + (stderr.trim() ? `\n\n[stderr]\n${stderr.trim()}` : "");

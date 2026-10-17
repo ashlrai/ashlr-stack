@@ -1,6 +1,14 @@
 import { afterEach, describe, expect, it } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -137,6 +145,22 @@ esac
     if (!Bun.version.startsWith("1.2.")) {
       expect(out).toContain("Some providers failed: openai:");
       expect(out).toContain("; anthropic:");
+    }
+  });
+
+  it("writes nothing when the recipe id is missing or there are no recipes", () => {
+    for (const args of [["apply", "does-not-exist"], ["apply"]]) {
+      const dir = mkTmp();
+      const home = mkTmp();
+      const result = spawnSync("bun", [CLI_ENTRY, ...args], {
+        encoding: "utf8",
+        cwd: dir,
+        env: { ...process.env, HOME: home, USERPROFILE: home, NO_COLOR: "1", CI: "1" },
+      });
+      expect(result.status).toBe(1);
+      expect(result.stdout + result.stderr).not.toContain("auto-running");
+      expect(readdirSync(dir)).toEqual([]);
+      expect(existsSync(join(home, ".stack", "projects.json"))).toBe(false);
     }
   });
 });

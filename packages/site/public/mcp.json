@@ -105,8 +105,14 @@
     {
       "name": "stack_status",
       "description": "Show Phantom + services + config at a glance.",
-      "cli": "stack status",
-      "inputSchema": { "type": "object", "properties": {}, "required": [] }
+      "cli": "stack status [--json]",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "json": { "type": "boolean", "description": "Machine-readable JSON (schema ashlr.stack.status/v1)." }
+        },
+        "required": []
+      }
     },
     {
       "name": "stack_env_show",
