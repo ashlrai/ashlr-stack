@@ -65,6 +65,13 @@ jobs:
           node packages/cli/dist/index.js --help > /dev/null
           node scripts/node-smoke.mjs
 
+      # Packs the three npm packages as scripts/publish.sh ships them, installs
+      # the tarballs together and drives the installed bins through the
+      # surface Phantom uses (status --json, MCP stack_status/stack_list).
+      - name: Release preflight (pack, install, Phantom contract)
+        if: matrix.bun == 'latest'
+        run: node scripts/release-preflight.mjs
+
   site:
     name: Site build (astro check + build)
     runs-on: ubuntu-latest
