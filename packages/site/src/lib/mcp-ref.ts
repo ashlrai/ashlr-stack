@@ -49,7 +49,7 @@ export const MCP_TOOLS: McpTool[] = [
   {
     name: "stack_import",
     description:
-      "Import nonempty new variables from an .env file into Phantom and record detected services; existing vault names are left unchanged.",
+      "Import nonempty new variables from an .env file into Phantom and record detected services; existing vault names are left unchanged. Returns ashlr.stack.import/v1 JSON naming what was stored, skipped and wired (names only, never values).",
     inputs: [
       { name: "from", type: "string", description: "Path to the .env file (default: .env)." },
       { name: "dryRun", type: "boolean", description: "Preview without writing." },
@@ -60,7 +60,7 @@ export const MCP_TOOLS: McpTool[] = [
           "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory.",
       },
     ],
-    cli: "stack import [--from <path>] [--dryRun]",
+    cli: "stack import --json [--from <path>] [--dryRun]",
   },
   {
     name: "stack_scan",

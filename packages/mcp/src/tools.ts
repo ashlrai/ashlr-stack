@@ -49,7 +49,7 @@ export const TOOLS: ToolDef[] = [
   {
     name: "stack_import",
     description:
-      "Import nonempty new variables from an .env file into Phantom and record detected services; existing vault names are left unchanged.",
+      "Import nonempty new variables from an .env file into Phantom and record detected services; existing vault names are left unchanged. Returns ashlr.stack.import/v1 JSON naming what was stored, skipped and wired (names only, never values).",
     inputSchema: {
       type: "object",
       properties: {
@@ -59,7 +59,9 @@ export const TOOLS: ToolDef[] = [
       },
     },
     cliArgs: (input) => {
-      const args = ["import"];
+      // --json so the caller learns which names were stored and which were
+      // skipped (already in the vault, or empty) instead of a summary count.
+      const args = ["import", "--json"];
       if (input.from) args.push("--from", String(input.from));
       if (input.dryRun) args.push("--dryRun");
       return args;
