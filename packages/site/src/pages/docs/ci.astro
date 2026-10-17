@@ -170,7 +170,7 @@ stack scan --json --confidence medium`}
       </tr>
       <tr>
         <td><code>--yes</code></td>
-        <td>Without <code>--json</code>, implies <code>--auto</code> and enables add attempts at or above the confidence tier without confirmation. With <code>--json</code>, scan reports hits and returns before adding services. Without either flag, a non-TTY run prints a hint.</td>
+        <td>Without <code>--json</code>, implies <code>--auto</code> and enables add attempts at or above the confidence tier without confirmation. With <code>--json</code>, scan reports hits and returns before adding services. Without either flag, a non-TTY run prints the read-only report; <code>--auto</code> without <code>--yes</code> exits 1.</td>
       </tr>
       <tr>
         <td><code>--confidence &lt;low|medium|high&gt;</code></td>

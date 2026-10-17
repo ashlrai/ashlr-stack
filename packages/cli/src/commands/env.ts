@@ -99,6 +99,8 @@ export const envCommand = defineCommand({
     name: "env",
     description: "Inspect the effective env-var map for this stack.",
   },
+  // Bare `stack env` runs `show`, so it takes the same options.
+  args: envShowCommand.args,
   subCommands: {
     show: envShowCommand,
     export: defineCommand({
@@ -124,7 +126,9 @@ export const envCommand = defineCommand({
         },
       },
       async run({ args }) {
-        intro("stack env export");
+        // With --stdout, stdout is the file (`stack env export --stdout > .env.example`),
+        // so no banner or outro goes there.
+        if (!args.stdout) intro("stack env export");
         const config = await readConfig();
         const lines: string[] = [];
 
@@ -147,7 +151,6 @@ export const envCommand = defineCommand({
 
         if (args.stdout) {
           process.stdout.write(content);
-          outro(colors.dim("printed to stdout."));
           return;
         }
 

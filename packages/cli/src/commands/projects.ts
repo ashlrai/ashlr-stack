@@ -85,6 +85,8 @@ export const projectsCommand = defineCommand({
     name: "projects",
     description: "Manage the cross-project registry at ~/.stack/projects.json.",
   },
+  // Bare `stack projects` runs `list`, so it takes the same options.
+  args: projectsListCommand.args,
   subCommands: {
     list: projectsListCommand,
     register: defineCommand({

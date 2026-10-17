@@ -347,6 +347,22 @@ export const CLI_COMMANDS: CliCommand[] = [
     name: "stack env",
     description: "Inspect the effective env-var map for this stack.",
     synopsis: "stack env <show|export|diff>",
+    flags: [
+      {
+        name: "env",
+        synopsis: "--env <env>",
+        type: "string",
+        default: "dev",
+        description: "Environment overlay to preview.",
+      },
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        default: false,
+        description: "Emit machine-readable JSON (schema ashlr.stack.env/v1, secret names only).",
+      },
+    ],
     subcommands: [
       {
         name: "stack env show",
@@ -642,6 +658,15 @@ export const CLI_COMMANDS: CliCommand[] = [
     name: "stack templates",
     description: "List or apply starter stack templates.",
     synopsis: "stack templates <list|apply>",
+    flags: [
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        default: false,
+        description: "Emit machine-readable JSON (schema ashlr.stack.templates/v1).",
+      },
+    ],
     subcommands: [
       {
         name: "stack templates list",
@@ -793,6 +818,15 @@ export const CLI_COMMANDS: CliCommand[] = [
     name: "stack projects",
     description: "Manage the cross-project registry at ~/.stack/projects.json.",
     synopsis: "stack projects <list|register|remove|where>",
+    flags: [
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        default: false,
+        description: "Emit machine-readable JSON (schema ashlr.stack.projects/v1).",
+      },
+    ],
     subcommands: [
       {
         name: "stack projects list",

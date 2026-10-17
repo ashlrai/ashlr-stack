@@ -123,7 +123,7 @@ stack doctor            # checks Phantom, checks each registered provider
 
 ## 3. CLI reference
 
-Run from the intended project directory and use each command's `--help`. Flags are command-specific: `--json` is not universal, and there is no global `--cwd`. Provider setup can create remote resources or use supplied credentials; select the intended account and project before executing it.
+Run from the intended project directory and use each command's `--help`. Flags are command-specific: `--json` is not universal, and there is no global `--cwd`. An option the command does not declare (a typo such as `--jsn`, or `--json` on a command without it) exits 1 and names the closest real option instead of being ignored. Provider setup can create remote resources or use supplied credentials; select the intended account and project before executing it.
 
 ### `stack init [--template <slug>]`
 
@@ -156,7 +156,7 @@ In an existing repo, detect services Stack could manage. Scans:
 - `.env.example` / `.env` keys (e.g., `SENTRY_DSN` → Sentry).
 - Config files (`next.config.js`, `wrangler.toml`, etc.).
 
-With `--auto`, offer setup for detections. `--json` emits detections without provisioning; `--yes` implies automatic setup at the selected confidence threshold. There is no `scan --dry-run` flag.
+With `--auto`, offer setup for detections. `--json` emits detections without provisioning; `--yes` implies automatic setup at the selected confidence threshold. Without a terminal, plain `stack scan` prints the same read-only report and `--auto` without `--yes` exits 1. There is no `scan --dry-run` flag.
 
 ### `stack import [--from <path>] [--dry-run]`
 
@@ -200,7 +200,7 @@ stack exec -- pytest
 
 `show` displays declared names and vault presence; `diff` reports missing names. These checks do not reveal values or establish equality, credential validity or provider health.
 
-`export --example` separately writes `.env.example` with empty `KEY=` entries, not credentials or Phantom references. `--stdout` previews that skeleton; `--force` permits overwriting the example file. There are no `env set`, `env unset` or `--reveal` interfaces.
+`export --example` separately writes `.env.example` with empty `KEY=` entries, not credentials or Phantom references. `--stdout` prints only that skeleton, so it can be redirected to a file; `--force` permits overwriting the example file. There are no `env set`, `env unset` or `--reveal` interfaces.
 
 ### `stack sync --platform <vercel|railway|fly>`
 

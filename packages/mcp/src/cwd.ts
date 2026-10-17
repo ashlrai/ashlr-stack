@@ -66,7 +66,13 @@ export function planToolCall(
   tool: ToolDef,
   input: Record<string, unknown>,
 ): { ok: true; args: string[]; cwd: string | undefined } | { ok: false; error: string } {
-  const invalid = validateToolInput(tool, input);
+  // `cwd` on a tool that does not declare it gets resolveToolCwd's specific
+  // "not project-scoped" error rather than the generic unknown-argument one,
+  // so validate the remaining arguments without it.
+  const rest = acceptsCwd(tool)
+    ? input
+    : Object.fromEntries(Object.entries(input).filter(([key]) => key !== "cwd"));
+  const invalid = validateToolInput(tool, rest);
   if (invalid) return { ok: false, error: invalid };
   const resolved = resolveToolCwd(tool, input);
   if (resolved.error !== undefined) return { ok: false, error: resolved.error };
