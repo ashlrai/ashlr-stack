@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Vendor-neutral MCP wiring
+
+- **Stack mirrors MCP entries into Cursor and Gemini CLI project configs.** When `.cursor/` or `.gemini/` already exists in the project, `stack add` also writes the server into `.cursor/mcp.json` and `.gemini/settings.json` (Gemini's `httpUrl`/`url` naming, no `type`), and `stack remove` takes it out again. Absent client dirs are never created, other keys and servers are preserved, and an unparseable client file is left untouched without failing the add.
+
 ### Agent onboarding
 
 - **`stack onboard` detects Codex, Claude Code, Cursor and Gemini CLI and registers the Phantom gateway (`ashlr-hub`, `ashlr mcp`) in each.** It prints a plan by default and writes nothing. `--apply` saves a timestamped backup of each existing config, adds only the `ashlr-hub` entry, keeps every other key, and re-checks each client afterwards. An existing `ashlr-hub` entry that differs is never overwritten. `--undo` restores the saved files byte for byte and refuses any file that changed since it was written. `--client`, `--all` (include clients that are not detected), `--home` and `--json` are supported. It never touches the network or a vendor CLI and writes no secret values.
