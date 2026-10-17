@@ -170,9 +170,13 @@ Clone a supported remote URL into the optional positional directory and inspect 
 
 Inspect the configured-service health report. `--fix` attempts supported remediation; existing vault names can skip repair and do not establish credential validity. `--all` selects registered projects. Inspect failures and partial outcomes rather than assuming every service is repaired.
 
-### `stack status`
+### `stack status [--json]`
 
-One-line summary per service: ok / broken / unconfigured.
+One-screen summary of Phantom, configured services and config. `--json` prints a stable report (schema `ashlr.stack.status/v1`) with secret names only, never values.
+
+### `stack onboard [--apply] [--undo]`
+
+Detect Codex, Claude Code, Cursor and Gemini CLI and register the Phantom gateway (`ashlr mcp`, server name `ashlr-hub`) in each one's config. Without `--apply` it only prints a plan. `--apply` backs up an existing config file before writing it and leaves an existing entry that differs untouched; `--undo` restores the backups (or removes files it created) and refuses a file that changed since. `--client claude,codex,cursor,gemini` limits the clients, `--all` also wires clients that are not detected, and `--json` prints the result.
 
 ### `stack info <service>`
 
@@ -404,7 +408,7 @@ The source declares these 19 tools. They are a subset of CLI commands; use each 
 - `stack_remove` — `{ service: string, keepRemote?: boolean }`
 - `stack_list` — `{}`
 - `stack_info` — `{ service: string }`
-- `stack_status` — `{}`
+- `stack_status` — `{ json?: boolean }`
 - `stack_env_show` — `{}`
 - `stack_env_diff` — `{}`
 - `stack_doctor` — `{ fix?: boolean, all?: boolean, json?: boolean }`

@@ -96,7 +96,8 @@ The following examples are a subset. This source registers 39 providers across 1
 - `stack import` — ingest an existing `.env` into Phantom + `.stack.toml`.
 - `stack clone <repo>` — git clone + scan.
 - `stack doctor [--fix] [--all]` — inspect service reports and supported remediation attempts; existing vault names can skip repair.
-- `stack status` — health summary of the current project.
+- `stack status [--json]` — summary of the current project; `--json` prints a stable report (schema `ashlr.stack.status/v1`, secret names only).
+- `stack onboard [--apply] [--undo]` — detect Codex, Claude Code, Cursor and Gemini CLI and register the Phantom gateway (`ashlr-hub`) in each; plan only without `--apply`, existing config files backed up before writing; `--undo` restores them.
 - `stack info <service>` — metadata for the selected service.
 - `stack open <provider>` — open the provider's web dashboard for this project.
 - `stack exec -- <cmd>` — forward to the installed `phantom exec` runtime in the current project.

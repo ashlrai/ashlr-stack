@@ -110,8 +110,14 @@ export const MCP_TOOLS: McpTool[] = [
   {
     name: "stack_status",
     description: "Show Phantom + services + config at a glance.",
-    inputs: [],
-    cli: "stack status",
+    inputs: [
+      {
+        name: "json",
+        type: "boolean",
+        description: "Machine-readable JSON (schema ashlr.stack.status/v1).",
+      },
+    ],
+    cli: "stack status [--json]",
   },
   {
     name: "stack_env_show",
