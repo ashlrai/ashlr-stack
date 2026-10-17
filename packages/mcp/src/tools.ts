@@ -15,6 +15,17 @@ export interface ToolDef {
   cliArgs: (input: Record<string, unknown>) => string[];
 }
 
+/**
+ * Optional `cwd` input shared by every project-scoped tool (one that reads or
+ * writes .stack.toml or other project files). Validated and resolved in
+ * cwd.ts; `cliArgs` never sees it, the spawned `stack` runs in it instead.
+ */
+export const CWD_INPUT = {
+  type: "string",
+  description:
+    "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory.",
+} as const;
+
 export const TOOLS: ToolDef[] = [
   {
     name: "stack_init",
@@ -25,6 +36,7 @@ export const TOOLS: ToolDef[] = [
       properties: {
         template: { type: "string", description: "Optional starter template name." },
         force: { type: "boolean", description: "Overwrite an existing .stack.toml." },
+        cwd: CWD_INPUT,
       },
     },
     cliArgs: (input) => {
@@ -43,6 +55,7 @@ export const TOOLS: ToolDef[] = [
       properties: {
         from: { type: "string", description: "Path to the .env file (default: .env)." },
         dryRun: { type: "boolean", description: "Preview without writing." },
+        cwd: CWD_INPUT,
       },
     },
     cliArgs: (input) => {
@@ -64,6 +77,7 @@ export const TOOLS: ToolDef[] = [
           type: "string",
           description: "Minimum confidence: low, medium, or high (default: medium).",
         },
+        cwd: CWD_INPUT,
       },
     },
     cliArgs: (input) => {
@@ -84,6 +98,7 @@ export const TOOLS: ToolDef[] = [
       properties: {
         service: { type: "string", description: "Service name (e.g. supabase, neon, vercel)." },
         use: { type: "string", description: "Existing resource id to attach to." },
+        cwd: CWD_INPUT,
       },
       required: ["service"],
     },
@@ -102,6 +117,7 @@ export const TOOLS: ToolDef[] = [
       properties: {
         service: { type: "string" },
         keepRemote: { type: "boolean" },
+        cwd: CWD_INPUT,
       },
       required: ["service"],
     },
@@ -121,6 +137,7 @@ export const TOOLS: ToolDef[] = [
           type: "boolean",
           description: "Machine-readable JSON (schema ashlr.stack.list/v1).",
         },
+        cwd: CWD_INPUT,
       },
     },
     cliArgs: (input) => (input.json ? ["list", "--json"] : ["list"]),
@@ -137,6 +154,7 @@ export const TOOLS: ToolDef[] = [
           type: "boolean",
           description: "Machine-readable JSON (schema ashlr.stack.info/v1).",
         },
+        cwd: CWD_INPUT,
       },
       required: ["service"],
     },
@@ -170,6 +188,7 @@ export const TOOLS: ToolDef[] = [
           type: "boolean",
           description: "Machine-readable JSON (schema ashlr.stack.env/v1, names only).",
         },
+        cwd: CWD_INPUT,
       },
     },
     cliArgs: (input) => (input.json ? ["env", "show", "--json"] : ["env", "show"]),
@@ -177,7 +196,7 @@ export const TOOLS: ToolDef[] = [
   {
     name: "stack_env_diff",
     description: "Report which declared secrets are missing from the Phantom vault.",
-    inputSchema: { type: "object", properties: {} },
+    inputSchema: { type: "object", properties: { cwd: CWD_INPUT } },
     cliArgs: () => ["env", "diff"],
   },
   {
@@ -190,6 +209,7 @@ export const TOOLS: ToolDef[] = [
         fix: { type: "boolean", description: "Attempt auto-remediation." },
         all: { type: "boolean", description: "Run across every registered project." },
         json: { type: "boolean", description: "Machine-readable JSON output." },
+        cwd: CWD_INPUT,
       },
     },
     cliArgs: (input) => {
@@ -208,6 +228,7 @@ export const TOOLS: ToolDef[] = [
       type: "object",
       properties: {
         platform: { type: "string", description: "One of: vercel, railway, fly." },
+        cwd: CWD_INPUT,
       },
       required: ["platform"],
     },
@@ -253,6 +274,7 @@ export const TOOLS: ToolDef[] = [
           type: "boolean",
           description: "Machine-readable JSON (schema ashlr.stack.deps/v1).",
         },
+        cwd: CWD_INPUT,
       },
     },
     cliArgs: (input) => (input.json ? ["deps", "--json"] : ["deps"]),
@@ -303,6 +325,7 @@ export const TOOLS: ToolDef[] = [
           description:
             "When true, also freeze the result to .stack/recipes/<id>.toml so you can run stack_apply. Returns the recipe id in the response.",
         },
+        cwd: CWD_INPUT,
       },
       required: ["query"],
     },
@@ -332,6 +355,7 @@ export const TOOLS: ToolDef[] = [
           type: "boolean",
           description: "Skip the Phantom vault check and webhook stubs.",
         },
+        cwd: CWD_INPUT,
       },
       required: ["recipe_id"],
     },

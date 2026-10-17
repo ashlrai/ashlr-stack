@@ -164,6 +164,8 @@ describe("findUnknownFlag accepts every declared spelling", () => {
       save: true,
       recipe_id: "r",
       no_wire: true,
+      // Never reaches the argv: the MCP server runs `stack` in this directory.
+      cwd: "/tmp",
     };
     for (const tool of TOOLS) {
       // A new MCP argument needs a sample value here, so its flag is checked too.

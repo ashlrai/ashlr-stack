@@ -56,6 +56,16 @@ If you installed from source (no global bin), point at the entry directly:
 }
 ```
 
+## Targeting a project (`cwd`)
+
+Every tool runs `stack` in the server's working directory unless you pass `cwd`. When your client starts the server outside the project (Claude Desktop, a global Cursor or Windsurf config), pass the project's absolute path:
+
+```json
+{ "name": "stack_list", "arguments": { "json": true, "cwd": "/home/me/code/my-app" } }
+```
+
+`cwd` is accepted by the project-scoped tools, the ones that read or write `.stack.toml` or other project files: `stack_init`, `stack_import`, `stack_scan`, `stack_add`, `stack_remove`, `stack_list`, `stack_info`, `stack_env_show`, `stack_env_diff`, `stack_doctor`, `stack_sync`, `stack_deps`, `stack_recommend` and `stack_apply`. It must be an absolute path to an existing directory; it is resolved with realpath, and a relative path, a missing path or a file returns an `isError` result without running anything. It grants nothing beyond what the server's own working directory already does. The global tools (`stack_providers`, `stack_projects_list`, `stack_templates_list`, `stack_upgrade`) and `stack_status` refuse `cwd` instead of ignoring it. There is no environment-variable default; start the server in the project or pass `cwd`.
+
 ## Tools (19)
 
 Provisioning: `stack_init`, `stack_add`, `stack_remove`, `stack_import`, `stack_scan`.
@@ -74,7 +84,7 @@ Every tool rejects an argument name its input schema does not declare, and lists
 
 ## Resources (up to 3)
 
-Each is listed only when the file exists in the server's working directory.
+Each is listed only when the file exists in the server's working directory (resources do not take `cwd`).
 
 - `stack://current/.stack.toml`
 - `stack://current/.stack.local.toml`

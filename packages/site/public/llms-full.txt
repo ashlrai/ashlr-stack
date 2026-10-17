@@ -401,25 +401,27 @@ Package: `ashlr-stack-mcp`.
 
 The source declares these 19 tools. They are a subset of CLI commands; use each advertised input schema, whose keys are not uniformly snake_case.
 
-- `stack_init` — `{ template?: string, force?: boolean }`
-- `stack_import` — `{ from?: string, dryRun?: boolean }`
-- `stack_scan` — `{ path?: string, confidence?: string }`
-- `stack_add` — `{ service: string, use?: string }`
-- `stack_remove` — `{ service: string, keepRemote?: boolean }`
-- `stack_list` — `{ json?: boolean }`
-- `stack_info` — `{ service: string, json?: boolean }`
+- `stack_init` — `{ template?: string, force?: boolean, cwd?: string }`
+- `stack_import` — `{ from?: string, dryRun?: boolean, cwd?: string }`
+- `stack_scan` — `{ path?: string, confidence?: string, cwd?: string }`
+- `stack_add` — `{ service: string, use?: string, cwd?: string }`
+- `stack_remove` — `{ service: string, keepRemote?: boolean, cwd?: string }`
+- `stack_list` — `{ json?: boolean, cwd?: string }`
+- `stack_info` — `{ service: string, json?: boolean, cwd?: string }`
 - `stack_status` — `{ json?: boolean }`
-- `stack_env_show` — `{ json?: boolean }`
-- `stack_env_diff` — `{}`
-- `stack_doctor` — `{ fix?: boolean, all?: boolean, json?: boolean }`
-- `stack_sync` — `{ platform: string }`
+- `stack_env_show` — `{ json?: boolean, cwd?: string }`
+- `stack_env_diff` — `{ cwd?: string }`
+- `stack_doctor` — `{ fix?: boolean, all?: boolean, json?: boolean, cwd?: string }`
+- `stack_sync` — `{ platform: string, cwd?: string }`
 - `stack_providers` — `{ json?: boolean }`
 - `stack_projects_list` — `{ json?: boolean }`
-- `stack_deps` — `{ json?: boolean }`
+- `stack_deps` — `{ json?: boolean, cwd?: string }`
 - `stack_templates_list` — `{ json?: boolean }`
 - `stack_upgrade` — `{}`
-- `stack_recommend` — `{ query: string, k?: number, category?: string, save?: boolean }`
-- `stack_apply` — `{ recipe_id: string, no_wire?: boolean }`
+- `stack_recommend` — `{ query: string, k?: number, category?: string, save?: boolean, cwd?: string }`
+- `stack_apply` — `{ recipe_id: string, no_wire?: boolean, cwd?: string }`
+
+`cwd?: string` is an absolute path to an existing project directory; the tool runs `stack` there instead of in the server's working directory (use it when the client starts the server outside the project). A relative path, a missing path or a file is refused before anything runs. Tools without `cwd` in their signature refuse it.
 
 The MCP wrapper forwards CLI stdout and stderr as text content and sets `isError` from the exit result. Individual commands may emit JSON; there is no universal structured receipt, sandbox or redaction guarantee. The server needs `stack` on PATH or an explicit `STACK_BIN`.
 
