@@ -55,6 +55,17 @@ describe("stack_scan args", () => {
   });
 });
 
+describe("stack_recommend args", () => {
+  test("passes every k to the CLI, including 0 and negatives, as --k=<n>", () => {
+    // `k: 0` used to be dropped and the default of 6 used, with no error.
+    const argv = (k: number) => tool("stack_recommend").cliArgs({ query: "db", k });
+    expect(argv(0)).toContain("--k=0");
+    expect(argv(-3)).toContain("--k=-3");
+    expect(argv(3)).toEqual(["recommend", "db", "--json", "--k=3"]);
+    expect(tool("stack_recommend").cliArgs({ query: "db" })).toEqual(["recommend", "db", "--json"]);
+  });
+});
+
 describe("validateToolInput", () => {
   test("rejects a missing required argument instead of passing \"undefined\"", () => {
     for (const name of ["stack_add", "stack_remove", "stack_info", "stack_sync", "stack_apply"]) {
@@ -62,6 +73,19 @@ describe("validateToolInput", () => {
     }
     expect(validateToolInput(tool("stack_recommend"), { query: "" })).toContain(
       'missing required argument "query"',
+    );
+  });
+
+  test("rejects blank strings instead of running the CLI with them", () => {
+    // `stack_info {"service":"  "}` used to run `stack info "  "`.
+    expect(validateToolInput(tool("stack_info"), { service: "  " })).toContain(
+      'missing required argument "service"',
+    );
+    expect(validateToolInput(tool("stack_sync"), { platform: " " })).toContain(
+      'missing required argument "platform"',
+    );
+    expect(validateToolInput(tool("stack_init"), { template: "   " })).toContain(
+      'argument "template" must not be blank',
     );
   });
 

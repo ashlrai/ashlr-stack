@@ -19,10 +19,6 @@ export function acceptsCwd(tool: ToolDef): boolean {
   return "cwd" in tool.inputSchema.properties;
 }
 
-function cwdNotSupported(tool: ToolDef): string {
-  return `${tool.name}: argument "cwd" is not supported by this tool; it is not project-scoped and runs in the server's working directory.`;
-}
-
 /**
  * Validate `input.cwd` for `tool`. Returns `{ cwd }` (realpath, or undefined
  * when not given, meaning the server's own working directory) or `{ error }`.
@@ -33,7 +29,11 @@ export function resolveToolCwd(
 ): { cwd: string | undefined; error?: undefined } | { cwd?: undefined; error: string } {
   const raw = input.cwd;
   if (raw === undefined || raw === null) return { cwd: undefined };
-  if (!acceptsCwd(tool)) return { error: cwdNotSupported(tool) };
+  if (!acceptsCwd(tool)) {
+    return {
+      error: `${tool.name}: argument "cwd" is not supported by this tool; it is not project-scoped and runs in the server's working directory.`,
+    };
+  }
   if (typeof raw !== "string") return { error: `${tool.name}: argument "cwd" must be a string.` };
   if (raw === "" || !isAbsolute(raw)) {
     return {
@@ -66,13 +66,13 @@ export function planToolCall(
   tool: ToolDef,
   input: Record<string, unknown>,
 ): { ok: true; args: string[]; cwd: string | undefined } | { ok: false; error: string } {
-  // `cwd` on a tool that does not declare it gets its own message. It has to
-  // be checked before validateToolInput, whose unknown-argument refusal would
-  // otherwise answer first with a generic "unknown argument" text.
-  if (input.cwd !== undefined && input.cwd !== null && !acceptsCwd(tool)) {
-    return { ok: false, error: cwdNotSupported(tool) };
-  }
-  const invalid = validateToolInput(tool, input);
+  // `cwd` on a tool that does not declare it gets resolveToolCwd's specific
+  // "not project-scoped" error rather than the generic unknown-argument one,
+  // so validate the remaining arguments without it.
+  const rest = acceptsCwd(tool)
+    ? input
+    : Object.fromEntries(Object.entries(input).filter(([key]) => key !== "cwd"));
+  const invalid = validateToolInput(tool, rest);
   if (invalid) return { ok: false, error: invalid };
   const resolved = resolveToolCwd(tool, input);
   if (resolved.error !== undefined) return { ok: false, error: resolved.error };

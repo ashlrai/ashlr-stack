@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+### Silent acceptance
+
+- **Unknown CLI options exit 1 instead of being ignored.** citty parses options a command does not declare and never complains, so `stack list --jsn` printed the human list with exit 0, `stack upgrade --json` printed its banner, and `stack --bogus` printed the welcome banner. Every command now refuses an option it does not declare, names the closest real one (`Did you mean --json?`) and points at its `--help`; with `--json` on the line the message is also `{"error": ...}` on stdout. Everything after `--`, `stack exec`'s forwarded command, `--no-<flag>` negation and negative numbers are left alone. Bare `stack env`, `stack templates` and `stack projects` now declare the options of the subcommand they run (`show`, `list`, `list`). A test checks that every argv the MCP server builds passes the guard. (`packages/cli/src/lib/unknown-flags.ts`)
+- **`stack scan` without a terminal prints its report.** It printed only a "no TTY detected" hint and exited 0, so an agent got neither results nor an error. Plain `stack scan` now prints the same read-only report (detections and `stack add` next steps, nothing written); `stack scan --auto` without `--yes` exits 1, since it would ask before each add.
+- **MCP: `stack_recommend {"k": 0}` is no longer the default of 6.** A zero `k` was dropped as falsy and a negative one reached the CLI as a flag (`Invalid --k with no value`). Every `k` is now passed as `--k=<n>`, so the CLI rejects 0, negatives and fractions by value.
+- **MCP: blank strings are rejected.** `stack_info {"service":"  "}` ran `stack info "  "` and `stack_sync {"platform":" "}` ran the sync check with a blank platform. A whitespace-only value now counts as missing for a required argument and is an error for an optional one.
+
+### Output and usage order
+
+- **`stack env export --stdout` prints only the skeleton.** The `stack env export` banner and a `printed to stdout.` outro went to stdout too, so `stack env export --stdout > .env.example` wrote them into the file.
+- **Bare `stack exec` says a command is missing.** It checked for `.stack.toml` and Phantom first, so with no command it answered "Run `stack init` first." or the Phantom install hint. It now says `Nothing to run. Usage: stack exec -- <command>` before anything else (exit 1).
+
+### MCP project targeting
+
+- **Project-scoped MCP tools take an optional `cwd`.** The server always ran `stack` in its own working directory and no tool took a project argument, so a host that starts the server outside the project (Claude Desktop, a global Cursor config) could not reach it: `stack_list` answered "No .stack.toml at <server dir>". `stack_init`, `stack_import`, `stack_scan`, `stack_add`, `stack_remove`, `stack_list`, `stack_info`, `stack_env_show`, `stack_env_diff`, `stack_doctor`, `stack_sync`, `stack_deps`, `stack_recommend` and `stack_apply` now accept `cwd`, an absolute path to an existing directory, and run `stack` there. It is resolved with realpath; a relative path, a missing path or a file is refused with an `isError` result before anything runs. Global tools (`stack_providers`, `stack_projects_list`, `stack_templates_list`, `stack_upgrade`) and `stack_status` refuse `cwd` rather than silently ignoring it. Resources still read the server's working directory.
+
 ### Agent dead ends
 
 - **`stack ci` refuses with one actionable line instead of printing help.** Bare `stack ci` printed usage and `No command specified` with exit 1, and its only subcommand `init` is intentionally unavailable (the old workflow needed unattended Phantom Cloud pull, which requires trusted-terminal approval). `stack ci` and `stack ci init` now say what to run instead (`stack doctor` from a trusted terminal, or `stack doctor --reconcile --json` in CI) and exit 1. With `--json` they print `{"error": ...}` on stdout. No workflow is ever written.
@@ -47,6 +63,7 @@
 ### Bug fixes
 
 - **`stack exec` no longer reports a killed command as success.** A wrapped command terminated by a signal (OOM kill, `kill -9`) left the exit code null and `stack exec` exited 0. It now exits 128 + the signal number (137 for SIGKILL) and says which signal. SIGINT, SIGTERM and SIGHUP sent to `stack exec` itself (an agent timeout, a supervisor) are forwarded to the wrapped command instead of killing only the wrapper and leaving the command running.
+- **One Ctrl-C reaches a command run by `stack exec` once.** On a terminal, Ctrl-C and hangup already go to the wrapped command (it shares the terminal's process group), and `stack exec` relayed them a second time, so tools that treat a second interrupt as "exit immediately" (terraform's "Two interrupts received") skipped their graceful shutdown. On a terminal `stack exec` now relays only SIGTERM and waits for the command; off a terminal (an agent or supervisor) it still relays SIGINT, SIGTERM and SIGHUP.
 - **MCP tools check their input before running the CLI.** A missing required argument reached the CLI as the literal string `undefined` (`stack_add {}` ran `stack add undefined`), and a value starting with `-` was parsed as a flag: `stack_remove {"service":"--all"}` ran `stack remove --all` and targeted every service instead of one. The server now returns an error naming the argument for a missing required field, a wrong type, or a leading `-`, and runs nothing.
 - **`stack apply` with a missing recipe writes nothing.** In a directory without `.stack.toml`, `stack apply <id>` for an id that does not exist (or bare `stack apply` with no recipes) auto-ran `stack init` first, leaving `.stack.toml`, `.stack.local.toml`, `.gitignore` and a `~/.stack/projects.json` entry behind before failing. The recipe is now resolved first.
 - **`stack apply` and `stack init --template` keep going after a provider fails.** A failed `stack add` exited the process, so later providers never ran, the partial-failure rollback never happened and no summary was printed. Every provider is now tried, each failure is printed, and the run ends with `Some providers failed: <name>: <reason>; ...` and exit 1. A wrong recipe id now also lists the saved ids or says to run `stack recommend "..." --save`.

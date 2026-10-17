@@ -70,6 +70,8 @@ const templatesListCommand = defineCommand({
 /** `stack templates` — list or apply starter templates. Bare `stack templates` runs `list`. */
 export const templatesCommand = defineCommand({
   meta: { name: "templates", description: "List or apply starter stack templates." },
+  // Bare `stack templates` runs `list`, so it takes the same options.
+  args: templatesListCommand.args,
   subCommands: {
     list: templatesListCommand,
     apply: defineCommand({

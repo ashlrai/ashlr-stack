@@ -1,12 +1,15 @@
 import { type ArgsDef, type CommandDef, runCommand, runMain } from "citty";
 import pc from "picocolors";
+import { describeUnknownFlag, findUnknownFlag } from "./unknown-flags.ts";
 
 export interface RunCliIo {
+  stdout?: (line: string) => void;
   stderr: (line: string) => void;
   env: NodeJS.ProcessEnv;
 }
 
 const defaultIo: RunCliIo = {
+  stdout: (line) => process.stdout.write(`${line}\n`),
   stderr: (line) => process.stderr.write(`${line}\n`),
   env: process.env,
 };
@@ -27,6 +30,16 @@ export async function runCli<T extends ArgsDef = ArgsDef>(
   if (wantsHelp || wantsVersion) {
     await runMain(cmd, { rawArgs });
     return 0;
+  }
+  // citty ignores options a command does not declare, so a typo (`--jsn`)
+  // ran the command without it and exited 0. Refuse before anything runs.
+  const unknown = await findUnknownFlag(cmd, rawArgs);
+  if (unknown) {
+    const message = describeUnknownFlag(unknown);
+    if (rawArgs.includes("--json")) io.stdout?.(JSON.stringify({ error: message }));
+    io.stderr(`  ${pc.red("✗")} ${message}`);
+    process.exitCode = 1;
+    return 1;
   }
   try {
     await runCommand(cmd, { rawArgs });

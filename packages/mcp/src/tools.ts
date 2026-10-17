@@ -81,8 +81,8 @@ export const TOOLS: ToolDef[] = [
       },
     },
     cliArgs: (input) => {
-      // Always --json: MCP has no TTY, and without it `stack scan` only prints
-      // a "no TTY detected" hint. --json is read-only (no prompts, no add).
+      // Always --json: without it `stack scan` prints a human report for a
+      // person to read. --json is read-only (no prompts, no add).
       const args = ["scan", "--json"];
       if (input.path) args.push("--path", String(input.path));
       if (input.confidence) args.push("--confidence", String(input.confidence));
@@ -332,7 +332,10 @@ export const TOOLS: ToolDef[] = [
     },
     cliArgs: (input) => {
       const args = ["recommend", String(input.query ?? ""), "--json"];
-      if (input.k) args.push("--k", String(input.k));
+      // `k: 0` used to be dropped (falsy) and the default of 6 was used. Pass
+      // every number as `--k=<n>` so the CLI rejects 0, negatives and
+      // fractions by value (a bare `-3` would be parsed as a flag).
+      if (input.k !== undefined && input.k !== null) args.push(`--k=${input.k}`);
       if (input.category) args.push("--category", String(input.category));
       if (input.save) args.push("--save");
       return args;
@@ -378,7 +381,9 @@ export const TOOLS: ToolDef[] = [
 export function validateToolInput(tool: ToolDef, input: Record<string, unknown>): string | null {
   for (const key of tool.inputSchema.required ?? []) {
     const value = input[key];
-    if (value === undefined || value === null || value === "") {
+    // A blank string (`"  "`) is as missing as an absent one: it used to run
+    // `stack info "  "` or `stack sync --platform " "`.
+    if (value === undefined || value === null || (typeof value === "string" && !value.trim())) {
       return `${tool.name}: missing required argument "${key}".`;
     }
   }
@@ -396,6 +401,9 @@ export function validateToolInput(tool: ToolDef, input: Record<string, unknown>)
     const actual = typeof value;
     if (spec.type === "number" ? !Number.isFinite(value) : actual !== spec.type) {
       return `${tool.name}: argument "${key}" must be a ${spec.type}.`;
+    }
+    if (actual === "string" && value !== "" && !(value as string).trim()) {
+      return `${tool.name}: argument "${key}" must not be blank.`;
     }
     if (actual === "string" && (value as string).startsWith("-")) {
       return `${tool.name}: argument "${key}" must not start with "-" (it would be read as a CLI flag).`;
