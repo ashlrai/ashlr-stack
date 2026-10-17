@@ -179,4 +179,16 @@ describe("structured-output tools", () => {
       expect(validateToolInput(def, { json: "yes" })).toContain('"json" must be a boolean');
     }
   });
+
+  test("stack_projects_list and stack_templates_list pass --json only when asked", () => {
+    for (const [name, command] of [
+      ["stack_projects_list", ["projects", "list"]],
+      ["stack_templates_list", ["templates", "list"]],
+    ] as const) {
+      const def = tool(name);
+      expect(def.inputSchema.properties.json?.type).toBe("boolean");
+      expect(def.cliArgs({})).toEqual([...command]);
+      expect(def.cliArgs({ json: true })).toEqual([...command, "--json"]);
+    }
+  });
 });

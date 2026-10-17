@@ -134,7 +134,15 @@ async function runInfoJson(service: string): Promise<void> {
     fail(`${service} is not in this stack. Run \`stack list\`.`);
     return;
   }
-  const provider = await getProvider(entry.provider);
+  let provider: Awaited<ReturnType<typeof getProvider>>;
+  try {
+    provider = await getProvider(entry.provider);
+  } catch (err) {
+    // A hand-edited or newer .stack.toml can name a provider this CLI lacks;
+    // keep the one-JSON-object contract instead of a human error line.
+    fail((err as Error).message);
+    return;
+  }
   const vaultKeys = await readVaultNames();
   let health: HealthStatus | null = null;
   if (provider.healthcheck) {

@@ -62,7 +62,12 @@ describe("stack templates list --json", () => {
     const neon = report.templates.find(
       (t: { name: string }) => t.name === "nextjs-neon-vercel-sentry",
     );
-    expect(neon.services).toEqual(["neon", "vercel", "sentry"]);
+    expect(report.total).toBe(report.templates.length);
+    expect(neon.services.map((s: { name: string }) => s.name)).toEqual([
+      "neon",
+      "vercel",
+      "sentry",
+    ]);
   });
 
   it("bare `stack templates --json` is the same report", () => {
@@ -83,7 +88,11 @@ describe("stack projects list --json", () => {
   it("prints an empty ashlr.stack.projects/v1 report on a fresh machine", () => {
     const { code, stdout } = stack(["projects", "list", "--json"]);
     expect(code).toBe(0);
-    expect(JSON.parse(stdout)).toEqual({ schema: "ashlr.stack.projects/v1", projects: [] });
+    expect(JSON.parse(stdout)).toEqual({
+      schema: "ashlr.stack.projects/v1",
+      total: 0,
+      projects: [],
+    });
   });
 
   it("lists registered projects with path, id, template and services", async () => {

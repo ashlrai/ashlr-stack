@@ -208,7 +208,7 @@
       "inputSchema": {
         "type": "object",
         "properties": {
-          "json": { "type": "boolean", "description": "Machine-readable JSON (schema ashlr.stack.templates/v1)." }
+          "json": { "type": "boolean", "description": "Machine-readable JSON (schema ashlr.stack.templates/v1): each template with its services, providers and secret names." }
         },
         "required": []
       }

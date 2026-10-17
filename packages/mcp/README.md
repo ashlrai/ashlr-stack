@@ -68,7 +68,7 @@ Env: `stack_env_show`, `stack_env_diff`, `stack_sync`.
 
 Planning: `stack_recommend`, `stack_apply`.
 
-Project registry: `stack_projects_list`, `stack_upgrade`.
+Project registry: `stack_projects_list` (`json: true` returns `stack projects list --json`), `stack_upgrade`.
 
 Every tool rejects an argument name its input schema does not declare, and lists the accepted ones, rather than running without it.
 

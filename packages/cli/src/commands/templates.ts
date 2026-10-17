@@ -13,20 +13,32 @@ import { colors, intro, outro, outroError, prompts, spinnerBridge } from "../ui.
 
 /**
  * Stable machine shape for `stack templates list --json`. Fields may be added
- * but existing ones must not change meaning.
+ * but existing ones must not change meaning. Secret *names* only.
  */
 export interface TemplatesReport {
   schema: "ashlr.stack.templates/v1";
-  templates: Array<{ name: string; services: string[] }>;
+  total: number;
+  templates: Array<{
+    name: string;
+    services: Array<{ name: string; provider: string; secrets: string[]; mcp: string | null }>;
+  }>;
 }
 
 export async function buildTemplatesReport(): Promise<TemplatesReport> {
   const templates: TemplatesReport["templates"] = [];
   for (const name of listTemplates()) {
     const template = await loadTemplate(name);
-    templates.push({ name, services: Object.keys(template?.services ?? {}) });
+    templates.push({
+      name,
+      services: Object.entries(template?.services ?? {}).map(([service, spec]) => ({
+        name: service,
+        provider: spec.provider ?? service,
+        secrets: [...(spec.secrets ?? [])],
+        mcp: spec.mcp ?? null,
+      })),
+    });
   }
-  return { schema: "ashlr.stack.templates/v1", templates };
+  return { schema: "ashlr.stack.templates/v1", total: templates.length, templates };
 }
 
 const templatesListCommand = defineCommand({

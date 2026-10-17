@@ -265,7 +265,8 @@ export const TOOLS: ToolDef[] = [
       properties: {
         json: {
           type: "boolean",
-          description: "Machine-readable JSON (schema ashlr.stack.templates/v1).",
+          description:
+            "Machine-readable JSON (schema ashlr.stack.templates/v1): each template with its services, providers and secret names.",
         },
       },
     },

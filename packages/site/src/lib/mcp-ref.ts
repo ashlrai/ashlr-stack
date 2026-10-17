@@ -220,7 +220,8 @@ export const MCP_TOOLS: McpTool[] = [
       {
         name: "json",
         type: "boolean",
-        description: "Machine-readable JSON (schema ashlr.stack.templates/v1).",
+        description:
+          "Machine-readable JSON (schema ashlr.stack.templates/v1): each template with its services, providers and secret names.",
       },
     ],
     cli: "stack templates list [--json]",

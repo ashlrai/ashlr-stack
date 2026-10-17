@@ -39,7 +39,9 @@ stack ci init --help
 stack ci init
 
 # Compatibility flag: still refuses; does not overwrite
-stack ci init --force`}
+stack ci init --force
+# Bare \`stack ci\` gives the same refusal; --json prints {"error": "..."}
+stack ci --json`}
     lang="bash"
     theme="github-dark-dimmed"
   />
@@ -51,7 +53,7 @@ stack ci init --force`}
   <h2 id="the-generated-workflow">Refusal output</h2>
 
   <Code
-    code={`CI health workflow unavailable: Phantom Cloud pull requires trusted-terminal approval. No workflow was written.`}
+    code={`CI health workflow unavailable: Phantom Cloud pull requires trusted-terminal approval. No workflow was written. Instead, run \`stack doctor\` from a trusted terminal, or \`stack doctor --reconcile --json\` in CI for a credential-free source-drift report.`}
     lang="text"
     theme="github-dark-dimmed"
   />
@@ -89,7 +91,7 @@ stack ci init --force`}
   <Code
     code={`# Illustrative source refusal; no workflow write
 $ stack ci init
-CI health workflow unavailable: Phantom Cloud pull requires trusted-terminal approval. No workflow was written.
+CI health workflow unavailable: Phantom Cloud pull requires trusted-terminal approval. No workflow was written. Instead, run \`stack doctor\` from a trusted terminal, or \`stack doctor --reconcile --json\` in CI for a credential-free source-drift report.
 $ echo $?
 1`}
     lang="bash"
