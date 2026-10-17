@@ -46,6 +46,7 @@ const templatesListCommand = defineCommand({
   args: {
     json: {
       type: "boolean",
+      default: false,
       description: "Emit machine-readable JSON (schema ashlr.stack.templates/v1).",
     },
   },
@@ -90,7 +91,7 @@ export const templatesCommand = defineCommand({
 
         const template = await loadTemplate(name);
         if (!template) {
-          outroError(`Unknown template: ${name}`);
+          outroError(`Unknown template: ${name}. Run \`stack templates list\` for the names.`);
           return;
         }
 

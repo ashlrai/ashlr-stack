@@ -215,7 +215,7 @@ export const MCP_TOOLS: McpTool[] = [
   },
   {
     name: "stack_templates_list",
-    description: "List available starter stack templates.",
+    description: "List available starter stack templates and the services each one adds.",
     inputs: [
       {
         name: "json",

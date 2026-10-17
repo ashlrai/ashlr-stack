@@ -203,7 +203,7 @@
     },
     {
       "name": "stack_templates_list",
-      "description": "List available starter stack templates.",
+      "description": "List available starter stack templates and the services each one adds.",
       "cli": "stack templates list [--json]",
       "inputSchema": {
         "type": "object",

@@ -94,7 +94,9 @@ export const initCommand = defineCommand({
     if (templateName) {
       const loaded = await loadTemplate(templateName);
       if (!loaded) {
-        outroError(`Unknown template: ${templateName}`);
+        outroError(
+          `Unknown template: ${templateName}. Run \`stack templates list\` for the names.`,
+        );
         return;
       }
       config = loaded;

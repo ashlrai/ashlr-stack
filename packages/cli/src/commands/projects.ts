@@ -50,6 +50,7 @@ const projectsListCommand = defineCommand({
   args: {
     json: {
       type: "boolean",
+      default: false,
       description: "Emit machine-readable JSON (schema ashlr.stack.projects/v1).",
     },
   },

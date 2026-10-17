@@ -87,12 +87,12 @@ A cheat sheet for the current source interface:
 | `stack import [--from <file>]` | Migrate an existing `.env` into Phantom + `.stack.toml` |
 | `stack clone <git-url> [dir]` | git-clone + scan + next-steps |
 | `stack providers [--json]` | Browse your installed provider catalog; `--json` prints `ashlr.stack.providers/v1` |
-| `stack templates list` | List starter provider presets |
+| `stack templates list [--json]` | List starter provider presets; `--json` prints `ashlr.stack.templates/v1` with each template's services |
 | `stack deps [--json]` | ASCII tree of this stack grouped by category; `--json` prints `ashlr.stack.deps/v1` |
 | `stack env show` / `stack env diff` | Effective env-var surface vs vault vs config |
 | `stack env export --example` | Write a separate `.env.example` with empty values; `--stdout` previews it |
 | `stack exec -- <cmd>` | Forward to the installed `phantom exec` runtime |
-| `stack projects list|register|remove|where` | Cross-project registry |
+| `stack projects list|register|remove|where` | Cross-project registry; `projects list --json` prints `ashlr.stack.projects/v1` |
 | `stack ci init` | Inspect unavailable CI health workflow generation; exits nonzero without writing a workflow |
 | `stack completion <bash\|zsh\|fish>` | Emit a shell-completion script |
 | `stack upgrade` | Check npm for a newer `@ashlr/stack` release |

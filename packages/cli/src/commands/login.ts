@@ -1,4 +1,4 @@
-import { type ProviderContext, getProvider } from "@ashlr/stack-core";
+import { type ProviderContext, getProvider, headlessAuthError } from "@ashlr/stack-core";
 import { defineCommand } from "citty";
 import { colors, intro, logEvent, outro, outroError } from "../ui.ts";
 
@@ -19,7 +19,11 @@ export const loginCommand = defineCommand({
         interactive: process.stdout.isTTY === true,
         log: logEvent,
       };
-      await provider.login(ctx);
+      // No terminal (agent, CI): name the command a person has to run, as
+      // `stack add` does, instead of stopping at "no valid key".
+      await provider.login(ctx).catch((err: unknown) => {
+        throw headlessAuthError(err, provider, ctx.interactive, "login");
+      });
       outro(colors.green(`${provider.displayName}: signed in.`));
     } catch (err) {
       outroError((err as Error).message);
