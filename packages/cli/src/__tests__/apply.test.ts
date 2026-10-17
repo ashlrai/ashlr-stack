@@ -1,6 +1,14 @@
 import { afterEach, describe, expect, it } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -16,11 +24,16 @@ import { fileURLToPath } from "node:url";
 
 const CLI_ENTRY = join(dirname(fileURLToPath(import.meta.url)), "..", "index.ts");
 
-function runCli(args: string[], cwd?: string): { stdout: string; stderr: string; code: number } {
+function runCli(
+  args: string[],
+  cwd?: string,
+  env: Record<string, string> = {},
+): { stdout: string; stderr: string; code: number } {
   const result = spawnSync("bun", [CLI_ENTRY, ...args], {
     encoding: "utf8",
     cwd,
-    env: { ...process.env, NO_COLOR: "1", CI: "1" },
+    env: { ...process.env, NO_COLOR: "1", CI: "1", ...env },
+    timeout: 20_000,
   });
   return {
     stdout: result.stdout ?? "",
@@ -76,6 +89,63 @@ describe("stack apply", () => {
     // recipe so the user knows what to fix.
     expect(code).toBeGreaterThan(0);
     expect(stdout + stderr).toContain("does-not-exist");
+  });
+
+  it("leaves a blank directory untouched when the recipe id is wrong", () => {
+    const dir = mkTmp();
+    const home = mkTmp();
+    const { stdout, stderr, code } = runCli(["apply", "typo-recipe"], dir, {
+      HOME: home,
+      STACK_REGISTRY_DIR: join(home, "registry"),
+    });
+    expect(code).toBeGreaterThan(0);
+    expect(stdout + stderr).toContain("stack recommend");
+    expect(existsSync(join(dir, ".stack.toml"))).toBe(false);
+    expect(existsSync(join(home, "registry"))).toBe(false);
+  });
+
+  it("tries every recipe provider and reports each failure", () => {
+    const dir = mkTmp();
+    const home = mkTmp();
+    const bin = join(home, "bin");
+    mkdirSync(bin);
+    // Inert Phantom: initialized, nothing stored, reveal refused (as headless).
+    writeFileSync(
+      join(bin, "phantom"),
+      `#!/bin/sh
+case "$1" in
+ --version) echo fixture;;
+ status) echo '{"schema_version":1,"inspection":"metadata-only","initialized":true}';;
+ list) echo '[]';;
+ *) echo 'Refusing without an attached terminal' >&2; exit 1;;
+esac
+`,
+    );
+    chmodSync(join(bin, "phantom"), 0o700);
+    mkdirSync(join(dir, ".stack", "recipes"), { recursive: true });
+    writeFileSync(
+      join(dir, ".stack", "recipes", "two-ai.toml"),
+      'id = "two-ai"\nquery = "ai"\ncreatedAt = "2026-10-17T00:00:00.000Z"\n\n[[providers]]\nname = "openai"\n\n[[providers]]\nname = "anthropic"\n',
+    );
+    const { stdout, stderr, code } = runCli(["apply", "two-ai"], dir, {
+      HOME: home,
+      STACK_REGISTRY_DIR: join(home, "registry"),
+      PATH: `${bin}:${process.env.PATH ?? ""}`,
+    });
+    const out = stdout + stderr;
+    expect(code).toBe(1);
+    // Before: the first failed `stack add` exited the process, so anthropic
+    // never ran and no summary was printed.
+    expect(out).toContain("stack add anthropic");
+    expect(out).toContain("✗ openai:");
+    expect(out).toContain("✗ anthropic:");
+    // The closing "Some providers failed: ..." summary goes through
+    // outroError, whose process.exit(1) can drop that last piped stdout write
+    // on Bun 1.2.x, so it is checked only where the runtime flushes it.
+    if (!Bun.version.startsWith("1.2.")) {
+      expect(out).toContain("Some providers failed: openai:");
+      expect(out).toContain("; anthropic:");
+    }
   });
 
   it("writes nothing when the recipe id is missing or there are no recipes", () => {

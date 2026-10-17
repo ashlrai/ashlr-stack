@@ -2,9 +2,16 @@
 
 ## Unreleased
 
+### Agent-facing output
+
+- **The last lines of a failing command reach a pipe on Bun 1.2.** `outroError` exits the process, and Bun 1.2 dropped stdout still queued at exit, so a piped `stack apply` lost its final `Some providers failed: ...` line, `stack doctor` with many services lost most of its report, and an MCP `stack_add` returned only "Failed." The CLI now writes stdout and stderr synchronously under Bun, as Node already does for pipes, so nothing is pending when it exits.
+- **`stack doctor` with no services says so.** A `.stack.toml` with no services printed "All services healthy."; it now prints "No services to check" and how to add one (exit 0).
+- **`stack_add` without a terminal says what a person must do.** A provider that needs a pasted key or a browser sign-in failed over MCP with "no valid key in vault and session is non-interactive" (or "No valid Neon API key in vault."). The error now says the session has no terminal and to ask the user to run `stack add <provider>` in their own terminal.
+- **`stack info <service> --json` and `stack env show --json`.** One JSON object on stdout with no banner: `ashlr.stack.info/v1` (provider, resource, secret names with `in_vault`, MCP entry, healthcheck result) and `ashlr.stack.env/v1` (secret names per service with `in_vault`, plus `missing` and `orphans`). Values are never printed. A missing project or service prints `{"error": ...}` and exits 1. The `stack_info` and `stack_env_show` MCP tools take `json: true`.
+
 ### Vendor-neutral MCP wiring
 
-- **Stack mirrors MCP entries into Cursor and Gemini CLI project configs.** When `.cursor/` or `.gemini/` already exists in the project, `stack add` also writes the server into `.cursor/mcp.json` and `.gemini/settings.json` (Gemini's `httpUrl`/`url` naming, no `type`), and `stack remove` takes it out again. Absent client dirs are never created, other keys and servers are preserved, and an unparseable client file is left untouched without failing the add.
+- **Stack mirrors MCP entries into Cursor and Gemini CLI project configs.** When `.cursor/` or `.gemini/` already exists in the project, `stack add` also writes the server into `.cursor/mcp.json` and `.gemini/settings.json` (Gemini's `httpUrl`/`url` naming, no `type`), and `stack remove` takes it out again. Absent client dirs are never created, other keys and servers are preserved, and an unparseable client file is left untouched without failing the add. A same-name entry the user wrote by hand in one of those files is never replaced, and `stack remove` (or a rolled-back `stack add`) deletes a client entry only when it still matches what Stack mirrored from `.mcp.json`.
 
 ### Agent onboarding
 
@@ -26,6 +33,7 @@
 - **`stack exec` no longer reports a killed command as success.** A wrapped command terminated by a signal (OOM kill, `kill -9`) left the exit code null and `stack exec` exited 0. It now exits 128 + the signal number (137 for SIGKILL) and says which signal. SIGINT, SIGTERM and SIGHUP sent to `stack exec` itself (an agent timeout, a supervisor) are forwarded to the wrapped command instead of killing only the wrapper and leaving the command running.
 - **MCP tools check their input before running the CLI.** A missing required argument reached the CLI as the literal string `undefined` (`stack_add {}` ran `stack add undefined`), and a value starting with `-` was parsed as a flag: `stack_remove {"service":"--all"}` ran `stack remove --all` and targeted every service instead of one. The server now returns an error naming the argument for a missing required field, a wrong type, or a leading `-`, and runs nothing.
 - **`stack apply` with a missing recipe writes nothing.** In a directory without `.stack.toml`, `stack apply <id>` for an id that does not exist (or bare `stack apply` with no recipes) auto-ran `stack init` first, leaving `.stack.toml`, `.stack.local.toml`, `.gitignore` and a `~/.stack/projects.json` entry behind before failing. The recipe is now resolved first.
+- **`stack apply` and `stack init --template` keep going after a provider fails.** A failed `stack add` exited the process, so later providers never ran, the partial-failure rollback never happened and no summary was printed. Every provider is now tried, each failure is printed, and the run ends with `Some providers failed: <name>: <reason>; ...` and exit 1. A wrong recipe id now also lists the saved ids or says to run `stack recommend "..." --save`.
 
 ## 0.2.1 (2026-10-16)
 

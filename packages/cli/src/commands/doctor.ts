@@ -145,6 +145,13 @@ export const doctorCommand = defineCommand({
 
     if (anyFailed)
       outroError("One or more services failed. Re-run with --fix to attempt remediation.");
+    else if (reports.every((r) => r.services.length === 0))
+      // Nothing was checked, which must not read as "healthy".
+      outro(
+        colors.yellow(
+          "No services to check. Add one with `stack add <provider>` (`stack providers` lists them).",
+        ),
+      );
     else outro(colors.green("All services healthy."));
   },
 });
