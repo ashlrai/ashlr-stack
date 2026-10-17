@@ -77,13 +77,14 @@ export async function registerProject(cwd: string): Promise<RegistryEntry | unde
   return entry;
 }
 
-export async function unregisterProject(path: string): Promise<void> {
+/** Drop `path` from the registry. Returns false (and writes nothing) when it was not registered. */
+export async function unregisterProject(path: string): Promise<boolean> {
   const resolved = resolve(path);
   const file = await readRegistryRaw();
-  await writeRegistryRaw({
-    version: "1",
-    projects: file.projects.filter((p) => p.path !== resolved),
-  });
+  const kept = file.projects.filter((p) => p.path !== resolved);
+  if (kept.length === file.projects.length) return false;
+  await writeRegistryRaw({ version: "1", projects: kept });
+  return true;
 }
 
 export async function listProjects(opts: { prune?: boolean } = {}): Promise<RegistryEntry[]> {

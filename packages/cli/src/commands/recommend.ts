@@ -178,6 +178,8 @@ export const recommendCommand = defineCommand({
   async run({ args }) {
     const query = typeof args.query === "string" ? args.query.trim() : "";
     if (!query) {
+      // No query is a usage error, not an empty result: exit 1 so an agent or
+      // script does not read "no hits" as "nothing in the catalog fits".
       if (args.json) {
         console.log(
           JSON.stringify(
@@ -191,15 +193,26 @@ export const recommendCommand = defineCommand({
             2,
           ),
         );
+        process.exitCode = 1;
         return;
       }
       intro("stack recommend");
       console.log(colors.dim('  Usage: stack recommend "B2B SaaS with auth, AI, and payments"\n'));
-      outro("No query — nothing to recommend.");
+      outroError("No query, nothing to recommend.");
       return;
     }
 
-    const k = Number.parseInt(String(args.k ?? "6"), 10);
+    const k = args.k === undefined ? 6 : Number(String(args.k).trim());
+    if (!Number.isInteger(k) || k < 1) {
+      const given = String(args.k) === "" ? "--k with no value" : `--k "${args.k}"`;
+      const message = `Invalid ${given}. Use a whole number of results, 1 or more (default 6).`;
+      if (args.json) {
+        console.error(message);
+        process.exit(1);
+      }
+      outroError(message);
+      return;
+    }
     let categories: RetrievalHit["provider"]["category"][] | undefined;
     if (args.category) {
       const wanted = String(args.category).trim().toLowerCase();
@@ -216,7 +229,7 @@ export const recommendCommand = defineCommand({
       categories = [match];
     }
     const hits = retrieve(query, {
-      k: Number.isFinite(k) && k > 0 ? k : 6,
+      k,
       categories,
     });
 
