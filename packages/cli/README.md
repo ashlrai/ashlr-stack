@@ -79,15 +79,15 @@ A cheat sheet for the current source interface:
 | `stack init [--template]` | Write Stack configuration in the current directory; optionally provision preset services |
 | `stack add [service]` | Add a provider (OAuth + provision + write secrets) |
 | `stack remove <service>` | Remove local vault entries, MCP wiring and configuration (or use `--all`); this CLI does not deprovision upstream resources |
-| `stack list` | Show services wired into this project |
+| `stack list [--json]` | Show services wired into this project; `--json` prints `ashlr.stack.list/v1` |
 | `stack info <service>` | Deep-dive on one service (resource, region, docs, MCP name) |
 | `stack doctor [--all] [--fix] [--json]` | Inspect health reports; `--fix` attempts supported repair, `--json` formats the report |
 | `stack scan [--auto]` | Detect providers from package manifests, configs, `.env.example` |
 | `stack import [--from <file>]` | Migrate an existing `.env` into Phantom + `.stack.toml` |
 | `stack clone <git-url> [dir]` | git-clone + scan + next-steps |
-| `stack providers` | Browse your installed provider catalog |
+| `stack providers [--json]` | Browse your installed provider catalog; `--json` prints `ashlr.stack.providers/v1` |
 | `stack templates list` | List starter provider presets |
-| `stack deps` | ASCII tree of this stack grouped by category |
+| `stack deps [--json]` | ASCII tree of this stack grouped by category; `--json` prints `ashlr.stack.deps/v1` |
 | `stack env show` / `stack env diff` | Effective env-var surface vs vault vs config |
 | `stack env export --example` | Write a separate `.env.example` with empty values; `--stdout` previews it |
 | `stack exec -- <cmd>` | Forward to the installed `phantom exec` runtime |

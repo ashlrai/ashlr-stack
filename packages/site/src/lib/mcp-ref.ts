@@ -97,8 +97,14 @@ export const MCP_TOOLS: McpTool[] = [
   {
     name: "stack_list",
     description: "List services configured in this stack.",
-    inputs: [],
-    cli: "stack list",
+    inputs: [
+      {
+        name: "json",
+        type: "boolean",
+        description: "Machine-readable JSON (schema ashlr.stack.list/v1).",
+      },
+    ],
+    cli: "stack list [--json]",
   },
   {
     name: "stack_info",
@@ -154,8 +160,14 @@ export const MCP_TOOLS: McpTool[] = [
     name: "stack_providers",
     description:
       "List the curated source provider catalog by category; inclusion does not attest complete provisioning or active credentials.",
-    inputs: [],
-    cli: "stack providers",
+    inputs: [
+      {
+        name: "json",
+        type: "boolean",
+        description: "Machine-readable JSON (schema ashlr.stack.providers/v1).",
+      },
+    ],
+    cli: "stack providers [--json]",
   },
   {
     name: "stack_projects_list",
@@ -167,8 +179,14 @@ export const MCP_TOOLS: McpTool[] = [
   {
     name: "stack_deps",
     description: "Show the service dependency graph for the current stack.",
-    inputs: [],
-    cli: "stack deps",
+    inputs: [
+      {
+        name: "json",
+        type: "boolean",
+        description: "Machine-readable JSON (schema ashlr.stack.deps/v1).",
+      },
+    ],
+    cli: "stack deps [--json]",
   },
   {
     name: "stack_templates_list",

@@ -151,3 +151,19 @@ describe("readServerVersion", () => {
     expect(readServerVersion(distUrl)).not.toBe("0.0.0");
   });
 });
+
+describe("structured-output tools", () => {
+  test("stack_list, stack_providers and stack_deps pass --json only when asked", () => {
+    for (const [name, command] of [
+      ["stack_list", "list"],
+      ["stack_providers", "providers"],
+      ["stack_deps", "deps"],
+    ] as const) {
+      const def = tool(name);
+      expect(def.inputSchema.properties.json?.type).toBe("boolean");
+      expect(def.cliArgs({})).toEqual([command]);
+      expect(def.cliArgs({ json: true })).toEqual([command, "--json"]);
+      expect(validateToolInput(def, { json: "yes" })).toContain('"json" must be a boolean');
+    }
+  });
+});

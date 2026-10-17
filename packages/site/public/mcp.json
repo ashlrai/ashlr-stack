@@ -87,8 +87,14 @@
     {
       "name": "stack_list",
       "description": "List services configured in this stack.",
-      "cli": "stack list",
-      "inputSchema": { "type": "object", "properties": {}, "required": [] }
+      "cli": "stack list [--json]",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "json": { "type": "boolean", "description": "Machine-readable JSON (schema ashlr.stack.list/v1)." }
+        },
+        "required": []
+      }
     },
     {
       "name": "stack_info",
@@ -149,8 +155,14 @@
     {
       "name": "stack_providers",
       "description": "List the curated source provider catalog by category; inclusion does not attest complete provisioning or active credentials.",
-      "cli": "stack providers",
-      "inputSchema": { "type": "object", "properties": {}, "required": [] }
+      "cli": "stack providers [--json]",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "json": { "type": "boolean", "description": "Machine-readable JSON (schema ashlr.stack.providers/v1)." }
+        },
+        "required": []
+      }
     },
     {
       "name": "stack_projects_list",
@@ -161,8 +173,14 @@
     {
       "name": "stack_deps",
       "description": "Show the service dependency graph for the current stack.",
-      "cli": "stack deps",
-      "inputSchema": { "type": "object", "properties": {}, "required": [] }
+      "cli": "stack deps [--json]",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "json": { "type": "boolean", "description": "Machine-readable JSON (schema ashlr.stack.deps/v1)." }
+        },
+        "required": []
+      }
     },
     {
       "name": "stack_templates_list",
