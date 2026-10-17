@@ -43,10 +43,11 @@ jobs:
           - target: bun-darwin-x64
             os: ubuntu-latest
             asset: stack-darwin-x64
-          # The one macOS job, kept there because it smoke-tests the binary
-          # natively.
+          # Cross-compiled here too, so npm never waits for a macOS slot (2h24m
+          # on v0.2.1). smoke-darwin-arm64 still runs it natively before the
+          # GitHub Release and Homebrew formula point at it.
           - target: bun-darwin-arm64
-            os: macos-latest
+            os: ubuntu-latest
             asset: stack-darwin-arm64
     steps:
       - uses: actions/checkout@v4
@@ -137,10 +138,10 @@ jobs:
           cat ${{ matrix.asset }}.sha256
 
       - name: Smoke test (native arch only)
-        # Only run the binary when it matches the runner arch — darwin-x64
-        # and linux-arm64 are cross-compiled on an x64 Linux runner, so they
-        # cannot execute there.
-        if: matrix.target == 'bun-linux-x64' || matrix.target == 'bun-darwin-arm64'
+        # Only run the binary when it matches the runner arch: the others are
+        # cross-compiled on an x64 Linux runner, so they cannot execute there.
+        # darwin-arm64 is run natively by smoke-darwin-arm64.
+        if: matrix.target == 'bun-linux-x64'
         run: |
           ./dist/${{ matrix.asset }} --help | head -20
           ./dist/${{ matrix.asset }} providers | head -5
@@ -150,6 +151,26 @@ jobs:
           name: ${{ matrix.asset }}
           path: dist/${{ matrix.asset }}*
           retention-days: 7
+
+  smoke-darwin-arm64:
+    name: Smoke stack-darwin-arm64 natively
+    needs: build-binaries
+    if: ${{ !cancelled() && needs.build-binaries.result == 'success' }}
+    runs-on: macos-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: stack-darwin-arm64
+          path: dist
+
+      - name: Verify checksum and run the binary
+        working-directory: dist
+        run: |
+          set -euo pipefail
+          shasum -a 256 -c stack-darwin-arm64.sha256
+          chmod +x stack-darwin-arm64
+          ./stack-darwin-arm64 --help | head -20
+          ./stack-darwin-arm64 providers | head -5
 
   publish-npm:
     name: Publish to npm
@@ -259,6 +280,16 @@ jobs:
           OAUTH_GITHUB_CLIENT_ID:   ${{ secrets.OAUTH_GITHUB_CLIENT_ID }}
         run: node scripts/inject-client-ids.mjs
 
+      # Packs and installs the three tarballs and drives the installed bins
+      # before the first real publish, so a broken package cannot land half
+      # published (core is on npm before cli and mcp).
+      - if: steps.gate.outputs.enabled == 'true'
+        name: Preflight packed packages
+        run: |
+          bun run --cwd packages/cli build
+          bun run --cwd packages/mcp build
+          node scripts/release-preflight.mjs
+
       - if: steps.gate.outputs.enabled == 'true'
         name: Publish @ashlr/stack-core + @ashlr/stack + ashlr-stack-mcp
         id: npm_publish
@@ -280,9 +311,9 @@ jobs:
 
   create-release:
     name: Create GitHub Release
-    # Both producer and npm job success are required before this downstream effect.
-    needs: [build-binaries, publish-npm]
-    if: ${{ !cancelled() && needs.build-binaries.result == 'success' && needs.publish-npm.result == 'success' }}
+    # Producer, native macOS smoke and npm job success are required before this downstream effect.
+    needs: [build-binaries, smoke-darwin-arm64, publish-npm]
+    if: ${{ !cancelled() && needs.build-binaries.result == 'success' && needs.smoke-darwin-arm64.result == 'success' && needs.publish-npm.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

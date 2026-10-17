@@ -123,7 +123,7 @@ stack doctor            # checks Phantom, checks each registered provider
 
 ## 3. CLI reference
 
-Run from the intended project directory and use each command's `--help`. Flags are command-specific: `--json` is not universal, and there is no global `--cwd`. Provider setup can create remote resources or use supplied credentials; select the intended account and project before executing it.
+Run from the intended project directory and use each command's `--help`. Flags are command-specific: `--json` is not universal, and there is no global `--cwd`. An option the command does not declare (a typo such as `--jsn`, or `--json` on a command without it) exits 1 and names the closest real option instead of being ignored. Options go after the subcommand: `stack list --json`, not `stack --json list`, which exits 1. With `--json`, a missing argument (such as `stack info --json` without a service) is `{"error": ...}` on stdout, exit 1. Provider setup can create remote resources or use supplied credentials; select the intended account and project before executing it.
 
 ### `stack init [--template <slug>]`
 
@@ -135,7 +135,7 @@ Choose a provider, or use the interactive picker when omitted. Authentication us
 
 ### `stack remove <provider> [--keep-remote]`
 
-Remove the service's local vault entries, MCP wiring and Stack configuration. The current CLI does not call provider deprovisioning; `--keep-remote` is parsed but is not proof of remote cleanup. Confirm the local target and inspect partial outcomes. `--all` and `--all-orphans` select broader local removal.
+Remove the service's local vault entries, MCP wiring and Stack configuration. The current CLI does not call provider deprovisioning; `--keep-remote` is parsed but is not proof of remote cleanup. Confirm the local target and inspect partial outcomes. `--all` and `--all-orphans` select broader local removal. `--json` never prompts and prints one object (schema `ashlr.stack.remove/v1`) whose `secrets_kept` names the secrets Phantom left stored; Phantom removes nothing without an attached terminal, so headless callers should show those names to the user for `phantom remove`.
 
 ### `stack list`
 
@@ -145,9 +145,9 @@ Services wired in the current project. Equivalent to reading `.stack.toml`, form
 
 List providers registered in your installed release, grouped by category. This source registers 39 across 13 categories. Category filtering is available in `recommend`, not as a `providers` flag.
 
-### `stack templates list` / `stack templates apply <name>`
+### `stack templates list [--json]` / `stack templates apply <name>`
 
-List provider presets, or apply a preset through the service setup flow. These presets configure services; they do not generate a complete application.
+List provider presets, or apply a preset through the service setup flow. These presets configure services; they do not generate a complete application. `--json` prints `ashlr.stack.templates/v1`: each template's name and the services it adds.
 
 ### `stack scan [--auto] [--json] [--path <path>]`
 
@@ -156,7 +156,7 @@ In an existing repo, detect services Stack could manage. Scans:
 - `.env.example` / `.env` keys (e.g., `SENTRY_DSN` → Sentry).
 - Config files (`next.config.js`, `wrangler.toml`, etc.).
 
-With `--auto`, offer setup for detections. `--json` emits detections without provisioning; `--yes` implies automatic setup at the selected confidence threshold. There is no `scan --dry-run` flag.
+With `--auto`, offer setup for detections. `--json` emits detections without provisioning; `--yes` implies automatic setup at the selected confidence threshold. Without a terminal, plain `stack scan` prints the same read-only report and `--auto` without `--yes` exits 1. There is no `scan --dry-run` flag.
 
 ### `stack import [--from <path>] [--dry-run]`
 
@@ -200,15 +200,15 @@ stack exec -- pytest
 
 `show` displays declared names and vault presence; `diff` reports missing names. These checks do not reveal values or establish equality, credential validity or provider health.
 
-`export --example` separately writes `.env.example` with empty `KEY=` entries, not credentials or Phantom references. `--stdout` previews that skeleton; `--force` permits overwriting the example file. There are no `env set`, `env unset` or `--reveal` interfaces.
+`export --example` separately writes `.env.example` with empty `KEY=` entries, not credentials or Phantom references. `--stdout` prints only that skeleton, so it can be redirected to a file; `--force` permits overwriting the example file. There are no `env set`, `env unset` or `--reveal` interfaces.
 
 ### `stack sync --platform <vercel|railway|fly>`
 
 Push through Phantom to the selected configured deployment target. This requires that platform's resource ID and project initialization; it does not pull upstream IDs into local configuration.
 
-### `stack projects list`
+### `stack projects list [--json]`
 
-Registered project metadata is stored in `~/.stack/projects.json`, or under the `STACK_REGISTRY_DIR` override.
+Registered project metadata is stored in `~/.stack/projects.json`, or under the `STACK_REGISTRY_DIR` override. `--json` prints `ashlr.stack.projects/v1`: each project's name, path, project id, template, services and last-seen time.
 
 ### `stack deps`
 
@@ -401,25 +401,27 @@ Package: `ashlr-stack-mcp`.
 
 The source declares these 19 tools. They are a subset of CLI commands; use each advertised input schema, whose keys are not uniformly snake_case.
 
-- `stack_init` — `{ template?: string, force?: boolean }`
-- `stack_import` — `{ from?: string, dryRun?: boolean }`
-- `stack_scan` — `{ path?: string, confidence?: string }`
-- `stack_add` — `{ service: string, use?: string }`
-- `stack_remove` — `{ service: string, keepRemote?: boolean }`
-- `stack_list` — `{ json?: boolean }`
-- `stack_info` — `{ service: string }`
-- `stack_status` — `{ json?: boolean }`
-- `stack_env_show` — `{}`
-- `stack_env_diff` — `{}`
-- `stack_doctor` — `{ fix?: boolean, all?: boolean, json?: boolean }`
-- `stack_sync` — `{ platform: string }`
+- `stack_init` — `{ template?: string, force?: boolean, cwd?: string }`
+- `stack_import` — `{ from?: string, dryRun?: boolean, cwd?: string }`
+- `stack_scan` — `{ path?: string, confidence?: string, cwd?: string }`
+- `stack_add` — `{ service: string, use?: string, cwd?: string }`
+- `stack_remove` — `{ service: string, keepRemote?: boolean, cwd?: string }`
+- `stack_list` — `{ json?: boolean, cwd?: string }`
+- `stack_info` — `{ service: string, json?: boolean, cwd?: string }`
+- `stack_status` — `{ json?: boolean, cwd?: string }`
+- `stack_env_show` — `{ json?: boolean, cwd?: string }`
+- `stack_env_diff` — `{ cwd?: string }`
+- `stack_doctor` — `{ fix?: boolean, all?: boolean, json?: boolean, cwd?: string }`
+- `stack_sync` — `{ platform: string, cwd?: string }`
 - `stack_providers` — `{ json?: boolean }`
-- `stack_projects_list` — `{}`
-- `stack_deps` — `{ json?: boolean }`
-- `stack_templates_list` — `{}`
+- `stack_projects_list` — `{ json?: boolean }`
+- `stack_deps` — `{ json?: boolean, cwd?: string }`
+- `stack_templates_list` — `{ json?: boolean }`
 - `stack_upgrade` — `{}`
-- `stack_recommend` — `{ query: string, k?: number, category?: string, save?: boolean }`
-- `stack_apply` — `{ recipe_id: string, no_wire?: boolean }`
+- `stack_recommend` — `{ query: string, k?: number, category?: string, save?: boolean, cwd?: string }`
+- `stack_apply` — `{ recipe_id: string, no_wire?: boolean, cwd?: string }`
+
+`cwd?: string` is an absolute path to an existing project directory; the tool runs `stack` there instead of in the server's working directory (use it when the client starts the server outside the project). A relative path, a missing path or a file is refused before anything runs. Tools without `cwd` in their signature refuse it.
 
 The MCP wrapper forwards CLI stdout and stderr as text content and sets `isError` from the exit result. Individual commands may emit JSON; there is no universal structured receipt, sandbox or redaction guarantee. The server needs `stack` on PATH or an explicit `STACK_BIN`.
 

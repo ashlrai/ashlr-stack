@@ -52,8 +52,6 @@ export const swapCommand = defineCommand({
 
     intro(`stack swap ${from} → ${to}${args.dryRun ? colors.dim(" (dry-run)") : ""}`);
 
-    if (!args.dryRun) await requirePhantom();
-
     // ── 0. No-op guard ────────────────────────────────────────────────────
     if (from === to) {
       outroError(
@@ -97,6 +95,10 @@ export const swapCommand = defineCommand({
       );
       return;
     }
+
+    // Validate names and config before the Phantom preflight so a typo reports
+    // "Unknown provider" instead of the install hint (same order as `stack add`).
+    if (!args.dryRun) await requirePhantom();
 
     // ── 4. Look up the swap pair ──────────────────────────────────────────
     const pair = findSwap(from, to);

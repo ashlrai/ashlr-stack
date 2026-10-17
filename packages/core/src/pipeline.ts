@@ -226,13 +226,15 @@ export function headlessAuthError(
   err: unknown,
   provider: { name: string; displayName: string },
   interactive: boolean,
+  command: "add" | "login" = "add",
 ): unknown {
   if (interactive || !(err instanceof StackError) || !err.code.endsWith("_AUTH_REQUIRED")) {
     return err;
   }
+  const outcome = command === "add" ? "nothing was added" : "no credential was changed";
   return new StackError(
     err.code,
-    `${err.message} ${provider.displayName} needs a credential entered in an interactive terminal, and this session has none (agent or CI). Ask the user to run \`stack add ${provider.name}\` in their own terminal, then retry; nothing was added.`,
+    `${err.message} ${provider.displayName} needs a credential entered in an interactive terminal, and this session has none (agent or CI). Ask the user to run \`stack ${command} ${provider.name}\` in their own terminal, then retry; ${outcome}.`,
     { cause: err },
   );
 }

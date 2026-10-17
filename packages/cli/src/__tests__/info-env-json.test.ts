@@ -78,6 +78,21 @@ describe("stack info --json", () => {
       rmSync(empty, { recursive: true, force: true });
     }
   });
+
+  it("a provider this CLI does not know is a JSON error, not an empty stdout", () => {
+    const odd = mkdtempSync(join(tmpdir(), "stack-info-json-odd-"));
+    try {
+      writeFileSync(
+        join(odd, ".stack.toml"),
+        `[stack]\nversion = "1"\n\n[services.weird]\nprovider = "bogus"\nsecrets = ["X_KEY"]\n`,
+      );
+      const { code, stdout } = stack(["info", "weird", "--json"], odd);
+      expect(code).toBe(1);
+      expect(JSON.parse(stdout).error).toContain("bogus");
+    } finally {
+      rmSync(odd, { recursive: true, force: true });
+    }
+  });
 });
 
 describe("stack env show --json", () => {

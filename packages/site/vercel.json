@@ -5,6 +5,7 @@
   "buildCommand": "bun run build",
   "installCommand": "bun install",
   "outputDirectory": "dist",
+  "ignoreCommand": "sh ../../scripts/vercel-ignore-site.sh",
   "cleanUrls": true,
   "trailingSlash": false,
   "headers": [

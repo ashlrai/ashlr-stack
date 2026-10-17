@@ -37,6 +37,12 @@ export const MCP_TOOLS: McpTool[] = [
         type: "boolean",
         description: "Overwrite an existing .stack.toml.",
       },
+      {
+        name: "cwd",
+        type: "string",
+        description:
+          "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory.",
+      },
     ],
     cli: "stack init --noInteractive [--template <name>] [--force]",
   },
@@ -47,6 +53,12 @@ export const MCP_TOOLS: McpTool[] = [
     inputs: [
       { name: "from", type: "string", description: "Path to the .env file (default: .env)." },
       { name: "dryRun", type: "boolean", description: "Preview without writing." },
+      {
+        name: "cwd",
+        type: "string",
+        description:
+          "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory.",
+      },
     ],
     cli: "stack import [--from <path>] [--dryRun]",
   },
@@ -60,6 +72,12 @@ export const MCP_TOOLS: McpTool[] = [
         name: "confidence",
         type: "string",
         description: "Minimum confidence: low, medium, or high (default: medium).",
+      },
+      {
+        name: "cwd",
+        type: "string",
+        description:
+          "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory.",
       },
     ],
     cli: "stack scan [--path <dir>] [--confidence low|medium|high]",
@@ -76,13 +94,19 @@ export const MCP_TOOLS: McpTool[] = [
         description: "Service name (e.g. supabase, neon, vercel).",
       },
       { name: "use", type: "string", description: "Existing resource id to attach to." },
+      {
+        name: "cwd",
+        type: "string",
+        description:
+          "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory.",
+      },
     ],
     cli: "stack add <service> [--use <id>]",
   },
   {
     name: "stack_remove",
     description:
-      "Remove local service configuration and its MCP entry, and attempt Phantom secret cleanup. Upstream resources are kept; headless cleanup or refused confirmation can leave secrets stored.",
+      "Remove local service configuration and its MCP entry, and attempt Phantom secret cleanup. Returns JSON (ashlr.stack.remove/v1); `secrets_kept` lists names Phantom left stored, which headless runs always do, for the user to remove with `phantom remove` in a terminal. Upstream resources are kept.",
     inputs: [
       { name: "service", type: "string", required: true, description: "Service name." },
       {
@@ -91,8 +115,14 @@ export const MCP_TOOLS: McpTool[] = [
         description:
           "Accepted and forwarded flag; this CLI performs local removal without upstream deletion either way.",
       },
+      {
+        name: "cwd",
+        type: "string",
+        description:
+          "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory.",
+      },
     ],
-    cli: "stack remove <service> [--keepRemote]",
+    cli: "stack remove <service> --json [--keepRemote]",
   },
   {
     name: "stack_list",
@@ -102,6 +132,12 @@ export const MCP_TOOLS: McpTool[] = [
         name: "json",
         type: "boolean",
         description: "Machine-readable JSON (schema ashlr.stack.list/v1).",
+      },
+      {
+        name: "cwd",
+        type: "string",
+        description:
+          "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory.",
       },
     ],
     cli: "stack list [--json]",
@@ -117,6 +153,12 @@ export const MCP_TOOLS: McpTool[] = [
         type: "boolean",
         description: "Machine-readable JSON (schema ashlr.stack.info/v1).",
       },
+      {
+        name: "cwd",
+        type: "string",
+        description:
+          "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory.",
+      },
     ],
     cli: "stack info <service> [--json]",
   },
@@ -128,6 +170,12 @@ export const MCP_TOOLS: McpTool[] = [
         name: "json",
         type: "boolean",
         description: "Machine-readable JSON (schema ashlr.stack.status/v1).",
+      },
+      {
+        name: "cwd",
+        type: "string",
+        description:
+          "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory.",
       },
     ],
     cli: "stack status [--json]",
@@ -141,13 +189,26 @@ export const MCP_TOOLS: McpTool[] = [
         type: "boolean",
         description: "Machine-readable JSON (schema ashlr.stack.env/v1, names only).",
       },
+      {
+        name: "cwd",
+        type: "string",
+        description:
+          "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory.",
+      },
     ],
     cli: "stack env show [--json]",
   },
   {
     name: "stack_env_diff",
     description: "Report which declared secrets are missing from the Phantom vault.",
-    inputs: [],
+    inputs: [
+      {
+        name: "cwd",
+        type: "string",
+        description:
+          "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory.",
+      },
+    ],
     cli: "stack env diff",
   },
   {
@@ -158,6 +219,12 @@ export const MCP_TOOLS: McpTool[] = [
       { name: "fix", type: "boolean", description: "Attempt auto-remediation." },
       { name: "all", type: "boolean", description: "Run across every registered project." },
       { name: "json", type: "boolean", description: "Machine-readable JSON output." },
+      {
+        name: "cwd",
+        type: "string",
+        description:
+          "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory.",
+      },
     ],
     cli: "stack doctor [--fix] [--all] [--json]",
   },
@@ -171,6 +238,12 @@ export const MCP_TOOLS: McpTool[] = [
         type: "string",
         required: true,
         description: "One of: vercel, railway, fly.",
+      },
+      {
+        name: "cwd",
+        type: "string",
+        description:
+          "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory.",
       },
     ],
     cli: "stack sync --platform <name>",
@@ -192,8 +265,14 @@ export const MCP_TOOLS: McpTool[] = [
     name: "stack_projects_list",
     description:
       "List projects recorded in the local Stack registry; this is not a filesystem-wide discovery scan.",
-    inputs: [],
-    cli: "stack projects list",
+    inputs: [
+      {
+        name: "json",
+        type: "boolean",
+        description: "Machine-readable JSON (schema ashlr.stack.projects/v1).",
+      },
+    ],
+    cli: "stack projects list [--json]",
   },
   {
     name: "stack_deps",
@@ -204,14 +283,27 @@ export const MCP_TOOLS: McpTool[] = [
         type: "boolean",
         description: "Machine-readable JSON (schema ashlr.stack.deps/v1).",
       },
+      {
+        name: "cwd",
+        type: "string",
+        description:
+          "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory.",
+      },
     ],
     cli: "stack deps [--json]",
   },
   {
     name: "stack_templates_list",
-    description: "List available starter stack templates.",
-    inputs: [],
-    cli: "stack templates list",
+    description: "List available starter stack templates and the services each one adds.",
+    inputs: [
+      {
+        name: "json",
+        type: "boolean",
+        description:
+          "Machine-readable JSON (schema ashlr.stack.templates/v1): each template with its services, providers and secret names.",
+      },
+    ],
+    cli: "stack templates list [--json]",
   },
   {
     name: "stack_upgrade",
@@ -246,6 +338,12 @@ export const MCP_TOOLS: McpTool[] = [
         type: "boolean",
         description: "Freeze the result to .stack/recipes/<id>.toml so you can run stack_apply.",
       },
+      {
+        name: "cwd",
+        type: "string",
+        description:
+          "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory.",
+      },
     ],
     cli: 'stack recommend "<query>" --json [--k <n>] [--category <name>] [--save]',
   },
@@ -264,6 +362,12 @@ export const MCP_TOOLS: McpTool[] = [
         name: "no_wire",
         type: "boolean",
         description: "Skip optional Phantom wiring and webhook stubs.",
+      },
+      {
+        name: "cwd",
+        type: "string",
+        description:
+          "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory.",
       },
     ],
     cli: "stack apply <recipe_id> [--noWire]",

@@ -11,9 +11,50 @@ import {
 import { defineCommand, runCommand } from "citty";
 import { colors, intro, outro, outroError, prompts, spinnerBridge } from "../ui.ts";
 
+/**
+ * Stable machine shape for `stack templates list --json`. Fields may be added
+ * but existing ones must not change meaning. Secret *names* only.
+ */
+export interface TemplatesReport {
+  schema: "ashlr.stack.templates/v1";
+  total: number;
+  templates: Array<{
+    name: string;
+    services: Array<{ name: string; provider: string; secrets: string[]; mcp: string | null }>;
+  }>;
+}
+
+export async function buildTemplatesReport(): Promise<TemplatesReport> {
+  const templates: TemplatesReport["templates"] = [];
+  for (const name of listTemplates()) {
+    const template = await loadTemplate(name);
+    templates.push({
+      name,
+      services: Object.entries(template?.services ?? {}).map(([service, spec]) => ({
+        name: service,
+        provider: spec.provider ?? service,
+        secrets: [...(spec.secrets ?? [])],
+        mcp: spec.mcp ?? null,
+      })),
+    });
+  }
+  return { schema: "ashlr.stack.templates/v1", total: templates.length, templates };
+}
+
 const templatesListCommand = defineCommand({
   meta: { name: "list", description: "List available templates." },
-  run() {
+  args: {
+    json: {
+      type: "boolean",
+      default: false,
+      description: "Emit machine-readable JSON (schema ashlr.stack.templates/v1).",
+    },
+  },
+  async run({ args }) {
+    if (args.json) {
+      process.stdout.write(`${JSON.stringify(await buildTemplatesReport(), null, 2)}\n`);
+      return;
+    }
     intro("stack templates");
     const names = listTemplates();
     if (names.length === 0) {
@@ -29,6 +70,8 @@ const templatesListCommand = defineCommand({
 /** `stack templates` — list or apply starter templates. Bare `stack templates` runs `list`. */
 export const templatesCommand = defineCommand({
   meta: { name: "templates", description: "List or apply starter stack templates." },
+  // Bare `stack templates` runs `list`, so it takes the same options.
+  args: templatesListCommand.args,
   subCommands: {
     list: templatesListCommand,
     apply: defineCommand({
@@ -50,7 +93,7 @@ export const templatesCommand = defineCommand({
 
         const template = await loadTemplate(name);
         if (!template) {
-          outroError(`Unknown template: ${name}`);
+          outroError(`Unknown template: ${name}. Run \`stack templates list\` for the names.`);
           return;
         }
 

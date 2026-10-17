@@ -55,6 +55,33 @@ describe("stack_scan args", () => {
   });
 });
 
+describe("stack_remove args", () => {
+  test("always passes --json so the caller sees which secrets Phantom kept", () => {
+    expect(tool("stack_remove").cliArgs({ service: "openai" })).toEqual([
+      "remove",
+      "openai",
+      "--json",
+    ]);
+    expect(tool("stack_remove").cliArgs({ service: "openai", keepRemote: true })).toEqual([
+      "remove",
+      "openai",
+      "--json",
+      "--keepRemote",
+    ]);
+  });
+});
+
+describe("stack_recommend args", () => {
+  test("passes every k to the CLI, including 0 and negatives, as --k=<n>", () => {
+    // `k: 0` used to be dropped and the default of 6 used, with no error.
+    const argv = (k: number) => tool("stack_recommend").cliArgs({ query: "db", k });
+    expect(argv(0)).toContain("--k=0");
+    expect(argv(-3)).toContain("--k=-3");
+    expect(argv(3)).toEqual(["recommend", "db", "--json", "--k=3"]);
+    expect(tool("stack_recommend").cliArgs({ query: "db" })).toEqual(["recommend", "db", "--json"]);
+  });
+});
+
 describe("validateToolInput", () => {
   test("rejects a missing required argument instead of passing \"undefined\"", () => {
     for (const name of ["stack_add", "stack_remove", "stack_info", "stack_sync", "stack_apply"]) {
@@ -62,6 +89,19 @@ describe("validateToolInput", () => {
     }
     expect(validateToolInput(tool("stack_recommend"), { query: "" })).toContain(
       'missing required argument "query"',
+    );
+  });
+
+  test("rejects blank strings instead of running the CLI with them", () => {
+    // `stack_info {"service":"  "}` used to run `stack info "  "`.
+    expect(validateToolInput(tool("stack_info"), { service: "  " })).toContain(
+      'missing required argument "service"',
+    );
+    expect(validateToolInput(tool("stack_sync"), { platform: " " })).toContain(
+      'missing required argument "platform"',
+    );
+    expect(validateToolInput(tool("stack_init"), { template: "   " })).toContain(
+      'argument "template" must not be blank',
     );
   });
 
@@ -85,6 +125,16 @@ describe("validateToolInput", () => {
       "must be a number",
     );
     expect(validateToolInput(tool("stack_doctor"), { fix: "yes" })).toContain("must be a boolean");
+  });
+
+  test("rejects an argument name the tool does not declare, listing the accepted ones", () => {
+    // `catgory` used to be dropped and stack_recommend ran unfiltered, reporting success.
+    const typo = validateToolInput(tool("stack_recommend"), { query: "db", catgory: "Database" });
+    expect(typo).toContain('unknown argument "catgory"');
+    expect(typo).toContain("category");
+    expect(validateToolInput(tool("stack_upgrade"), { force: true })).toContain(
+      "takes no arguments",
+    );
   });
 
   test("accepts well-formed input", () => {
@@ -153,17 +203,32 @@ describe("readServerVersion", () => {
 });
 
 describe("structured-output tools", () => {
-  test("stack_list, stack_providers and stack_deps pass --json only when asked", () => {
+  test("list-style tools pass --json only when asked", () => {
     for (const [name, command] of [
       ["stack_list", "list"],
       ["stack_providers", "providers"],
       ["stack_deps", "deps"],
+      ["stack_templates_list", "templates list"],
+      ["stack_projects_list", "projects list"],
+    ] as const) {
+      const def = tool(name);
+      const argv = command.split(" ");
+      expect(def.inputSchema.properties.json?.type).toBe("boolean");
+      expect(def.cliArgs({})).toEqual(argv);
+      expect(def.cliArgs({ json: true })).toEqual([...argv, "--json"]);
+      expect(validateToolInput(def, { json: "yes" })).toContain('"json" must be a boolean');
+    }
+  });
+
+  test("stack_projects_list and stack_templates_list pass --json only when asked", () => {
+    for (const [name, command] of [
+      ["stack_projects_list", ["projects", "list"]],
+      ["stack_templates_list", ["templates", "list"]],
     ] as const) {
       const def = tool(name);
       expect(def.inputSchema.properties.json?.type).toBe("boolean");
-      expect(def.cliArgs({})).toEqual([command]);
-      expect(def.cliArgs({ json: true })).toEqual([command, "--json"]);
-      expect(validateToolInput(def, { json: "yes" })).toContain('"json" must be a boolean');
+      expect(def.cliArgs({})).toEqual([...command]);
+      expect(def.cliArgs({ json: true })).toEqual([...command, "--json"]);
     }
   });
 });

@@ -11,8 +11,17 @@ import { colors } from "../ui.ts";
  * when Phantom is absent so callers can early-return without their own
  * try/catch.
  */
-export async function requirePhantom(): Promise<boolean> {
+export async function requirePhantom(opts: { json?: boolean } = {}): Promise<boolean> {
   if (await isPhantomInstalled()) return true;
+
+  if (opts.json) {
+    // `--json` callers promise one JSON object on stdout, so the install hint
+    // goes in the error field instead of a decorated block.
+    process.stdout.write(
+      `${JSON.stringify({ error: "Phantom Secrets isn't installed. Install it with `brew install ashlrai/phantom/phantom` (or see phm.dev), then re-run this command." })}\n`,
+    );
+    process.exit(1);
+  }
 
   console.log();
   console.log(`  ${colors.red("✗")} Phantom Secrets isn't installed.`);
@@ -33,11 +42,12 @@ export async function requirePhantom(): Promise<boolean> {
  * Phantom kept. Phantom Secrets (>= 0.7.3) asks for a typed confirmation per
  * secret in an attached terminal and removes nothing headlessly, so Stack
  * hands it the terminal when there is one and otherwise lists the leftovers
- * instead of claiming they were deleted.
+ * instead of claiming they were deleted. `quiet` skips that list for callers
+ * that report the kept names themselves (`stack remove --json`).
  */
 export async function removeVaultSecrets(
   secrets: string[],
-  opts: { interactive?: boolean } = {},
+  opts: { interactive?: boolean; quiet?: boolean } = {},
 ): Promise<string[]> {
   const interactive =
     opts.interactive ?? (process.stdin.isTTY === true && process.stdout.isTTY === true);
@@ -51,7 +61,7 @@ export async function removeVaultSecrets(
     }
     if (!removed) kept.push(secret);
   }
-  if (kept.length > 0) {
+  if (kept.length > 0 && !opts.quiet) {
     console.log();
     console.log(
       `  ${colors.yellow("!")} Phantom kept ${kept.length} secret(s). Remove them in your terminal if you no longer need them:`,

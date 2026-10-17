@@ -285,11 +285,11 @@ stack add supabase --dryRun`}
 
   <h3>Scan an existing repo</h3>
   <Code
-    code={`# Dry-run detection
-stack scan
+    code={`# Read-only detection report (writes nothing); --json to parse it
+stack scan --json
 
-# High-confidence signals; --auto may run provider setup, so review matches
-stack scan --auto --confidence high`}
+# Headless: add high-confidence matches without prompting (runs provider setup)
+stack scan --yes --confidence high`}
     lang="bash"
     theme="github-dark-dimmed"
   />

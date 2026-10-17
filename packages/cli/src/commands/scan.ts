@@ -25,7 +25,8 @@ import { colors, intro, outro, outroError, prompts, spinnerBridge } from "../ui.
  *                  Default: "high" when --yes is set, "medium" otherwise.
  *   --json         Emit detection results as JSON and exit 0. No prompts, no add.
  *
- * Non-TTY + no flags: prints a one-line CI usage hint and exits 0.
+ * Non-TTY + no flags: prints the same read-only report and exits 0.
+ * Non-TTY + --auto without --yes: exits 1 (it would prompt before each add).
  */
 export const scanCommand = defineCommand({
   meta: {
@@ -109,15 +110,17 @@ export const scanCommand = defineCommand({
       return;
     }
 
-    // ── Non-TTY without CI flags: hint and exit ─────────────────────────────
-    if (!isTTY && !isYes) {
-      console.log(
-        "stack scan: no TTY detected. Run with --json for machine-readable output, or --yes to accept high-confidence hits headlessly.",
+    // ── Non-TTY --auto: it would prompt for each add, so refuse ──────────────
+    // Bare `stack scan` without a terminal prints the read-only report below;
+    // it used to print only a hint and exit 0, so an agent got no results.
+    if (!isTTY && isAuto && !isYes) {
+      outroError(
+        "stack scan --auto asks before each add and there is no terminal. Use --yes to add high-confidence hits headlessly, or --json for the report.",
       );
       return;
     }
 
-    // ── Human-readable header (interactive or --yes headless) ─────────────
+    // ── Human-readable report (TTY, headless report, or --yes) ──────────────
     intro("stack scan");
 
     if (filtered.length === 0) {

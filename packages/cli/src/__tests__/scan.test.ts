@@ -160,26 +160,37 @@ describe("stack scan --confidence", () => {
 // ── Non-TTY without flags ──────────────────────────────────────────────────
 
 describe("stack scan non-TTY without flags", () => {
-  test("prints CI usage hint and exits 0 when not a TTY and no CI flags given", () => {
+  function headless(args: string[]) {
     const cwd = tmp({
       "package.json": JSON.stringify({
         dependencies: { "@supabase/supabase-js": "^2.45.0" },
       }),
     });
-    // Omit CI=1 from env; spawnSync already has no TTY (not a terminal).
-    // We DO need to strip CI from env so the --yes path isn't triggered.
-    const env: Record<string, string> = { NO_COLOR: "1" };
-    // Remove CI from env if present
+    // spawnSync has no TTY. Strip CI so nothing else changes the path taken.
     const baseEnv = { ...process.env };
     baseEnv.CI = undefined;
-    const result = spawnSync("bun", [CLI_ENTRY, "scan", "--path", cwd], {
+    const result = spawnSync("bun", [CLI_ENTRY, "scan", ...args, "--path", cwd], {
       encoding: "utf8",
       env: { ...baseEnv, NO_COLOR: "1" },
     });
-    expect(result.status ?? 0).toBe(0);
-    const combined = (result.stdout ?? "") + (result.stderr ?? "");
-    expect(combined).toMatch(/--json|--yes|no TTY/i);
-    void env; // suppress unused warning
+    return { code: result.status, stdout: result.stdout ?? "", stderr: result.stderr ?? "" };
+  }
+
+  test("prints the detected providers and next steps, exit 0", () => {
+    // It used to print only a "no TTY detected" hint, so an agent got no results.
+    const r = headless([]);
+    expect(r.code).toBe(0);
+    expect(r.stdout).toContain("supabase");
+    expect(r.stdout).toContain("stack add supabase");
+    expect(r.stdout).toContain("nothing written");
+    expect(r.stdout).not.toMatch(/no TTY/i);
+  });
+
+  test("--auto without --yes exits 1 and names --yes and --json", () => {
+    const r = headless(["--auto"]);
+    expect(r.code).toBe(1);
+    expect(r.stdout + r.stderr).toContain("--yes");
+    expect(r.stdout + r.stderr).toContain("--json");
   });
 });
 

@@ -56,11 +56,21 @@ If you installed from source (no global bin), point at the entry directly:
 }
 ```
 
+## Targeting a project (`cwd`)
+
+Every tool runs `stack` in the server's working directory unless you pass `cwd`. When your client starts the server outside the project (Claude Desktop, a global Cursor or Windsurf config), pass the project's absolute path:
+
+```json
+{ "name": "stack_list", "arguments": { "json": true, "cwd": "/home/me/code/my-app" } }
+```
+
+`cwd` is accepted by the project-scoped tools, the ones that read or write `.stack.toml` or other project files: `stack_init`, `stack_import`, `stack_scan`, `stack_add`, `stack_remove`, `stack_list`, `stack_info`, `stack_status`, `stack_env_show`, `stack_env_diff`, `stack_doctor`, `stack_sync`, `stack_deps`, `stack_recommend` and `stack_apply`. It must be an absolute path to an existing directory; it is resolved with realpath, and a relative path, a missing path or a file returns an `isError` result without running anything. It grants nothing beyond what the server's own working directory already does. The global tools (`stack_providers`, `stack_projects_list`, `stack_templates_list`, `stack_upgrade`) refuse `cwd` instead of ignoring it. There is no environment-variable default; start the server in the project or pass `cwd`.
+
 ## Tools (19)
 
 Provisioning: `stack_init`, `stack_add`, `stack_remove`, `stack_import`, `stack_scan`.
 
-Inspection: `stack_list`, `stack_info`, `stack_status`, `stack_providers`, `stack_templates_list`, `stack_deps`, `stack_doctor`. `stack_list`, `stack_providers` and `stack_deps` take `json: true` to return the CLI's `--json` object instead of human text.
+Inspection: `stack_list`, `stack_info`, `stack_status`, `stack_providers`, `stack_templates_list`, `stack_deps`, `stack_doctor`. `stack_list`, `stack_providers`, `stack_deps`, `stack_templates_list` and `stack_projects_list` take `json: true` to return the CLI's `--json` object instead of human text.
 
 Env: `stack_env_show`, `stack_env_diff`, `stack_sync`.
 
@@ -68,11 +78,13 @@ Env: `stack_env_show`, `stack_env_diff`, `stack_sync`.
 
 Planning: `stack_recommend`, `stack_apply`.
 
-Project registry: `stack_projects_list`, `stack_upgrade`.
+Project registry: `stack_projects_list` (`json: true` returns `stack projects list --json`), `stack_upgrade`.
+
+Every tool rejects an argument name its input schema does not declare, and lists the accepted ones, rather than running without it. A blank string (`"  "`) counts as missing for a required argument and is rejected for an optional one.
 
 ## Resources (up to 3)
 
-Each is listed only when the file exists in the server's working directory.
+Each is listed only when the file exists in the server's working directory (resources do not take `cwd`).
 
 - `stack://current/.stack.toml`
 - `stack://current/.stack.local.toml`

@@ -15,6 +15,17 @@ export interface ToolDef {
   cliArgs: (input: Record<string, unknown>) => string[];
 }
 
+/**
+ * Optional `cwd` input shared by every project-scoped tool (one that reads or
+ * writes .stack.toml or other project files). Validated and resolved in
+ * cwd.ts; `cliArgs` never sees it, the spawned `stack` runs in it instead.
+ */
+export const CWD_INPUT = {
+  type: "string",
+  description:
+    "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory.",
+} as const;
+
 export const TOOLS: ToolDef[] = [
   {
     name: "stack_init",
@@ -25,6 +36,7 @@ export const TOOLS: ToolDef[] = [
       properties: {
         template: { type: "string", description: "Optional starter template name." },
         force: { type: "boolean", description: "Overwrite an existing .stack.toml." },
+        cwd: CWD_INPUT,
       },
     },
     cliArgs: (input) => {
@@ -43,6 +55,7 @@ export const TOOLS: ToolDef[] = [
       properties: {
         from: { type: "string", description: "Path to the .env file (default: .env)." },
         dryRun: { type: "boolean", description: "Preview without writing." },
+        cwd: CWD_INPUT,
       },
     },
     cliArgs: (input) => {
@@ -64,11 +77,12 @@ export const TOOLS: ToolDef[] = [
           type: "string",
           description: "Minimum confidence: low, medium, or high (default: medium).",
         },
+        cwd: CWD_INPUT,
       },
     },
     cliArgs: (input) => {
-      // Always --json: MCP has no TTY, and without it `stack scan` only prints
-      // a "no TTY detected" hint. --json is read-only (no prompts, no add).
+      // Always --json: without it `stack scan` prints a human report for a
+      // person to read. --json is read-only (no prompts, no add).
       const args = ["scan", "--json"];
       if (input.path) args.push("--path", String(input.path));
       if (input.confidence) args.push("--confidence", String(input.confidence));
@@ -84,6 +98,7 @@ export const TOOLS: ToolDef[] = [
       properties: {
         service: { type: "string", description: "Service name (e.g. supabase, neon, vercel)." },
         use: { type: "string", description: "Existing resource id to attach to." },
+        cwd: CWD_INPUT,
       },
       required: ["service"],
     },
@@ -96,17 +111,20 @@ export const TOOLS: ToolDef[] = [
   {
     name: "stack_remove",
     description:
-      "Remove local service configuration and its MCP entry, and attempt Phantom secret cleanup. Upstream resources are kept; headless cleanup or refused confirmation can leave secrets stored.",
+      "Remove local service configuration and its MCP entry, and attempt Phantom secret cleanup. Returns JSON (ashlr.stack.remove/v1); `secrets_kept` lists names Phantom left stored, which headless runs always do, for the user to remove with `phantom remove` in a terminal. Upstream resources are kept.",
     inputSchema: {
       type: "object",
       properties: {
         service: { type: "string" },
         keepRemote: { type: "boolean" },
+        cwd: CWD_INPUT,
       },
       required: ["service"],
     },
     cliArgs: (input) => {
-      const args = ["remove", String(input.service)];
+      // --json so the caller gets `secrets_kept` (Phantom removes nothing
+      // headlessly) instead of a banner that reads like a full removal.
+      const args = ["remove", String(input.service), "--json"];
       if (input.keepRemote) args.push("--keepRemote");
       return args;
     },
@@ -121,6 +139,7 @@ export const TOOLS: ToolDef[] = [
           type: "boolean",
           description: "Machine-readable JSON (schema ashlr.stack.list/v1).",
         },
+        cwd: CWD_INPUT,
       },
     },
     cliArgs: (input) => (input.json ? ["list", "--json"] : ["list"]),
@@ -137,6 +156,7 @@ export const TOOLS: ToolDef[] = [
           type: "boolean",
           description: "Machine-readable JSON (schema ashlr.stack.info/v1).",
         },
+        cwd: CWD_INPUT,
       },
       required: ["service"],
     },
@@ -156,6 +176,7 @@ export const TOOLS: ToolDef[] = [
           type: "boolean",
           description: "Machine-readable JSON (schema ashlr.stack.status/v1).",
         },
+        cwd: CWD_INPUT,
       },
     },
     cliArgs: (input) => (input.json ? ["status", "--json"] : ["status"]),
@@ -170,6 +191,7 @@ export const TOOLS: ToolDef[] = [
           type: "boolean",
           description: "Machine-readable JSON (schema ashlr.stack.env/v1, names only).",
         },
+        cwd: CWD_INPUT,
       },
     },
     cliArgs: (input) => (input.json ? ["env", "show", "--json"] : ["env", "show"]),
@@ -177,7 +199,7 @@ export const TOOLS: ToolDef[] = [
   {
     name: "stack_env_diff",
     description: "Report which declared secrets are missing from the Phantom vault.",
-    inputSchema: { type: "object", properties: {} },
+    inputSchema: { type: "object", properties: { cwd: CWD_INPUT } },
     cliArgs: () => ["env", "diff"],
   },
   {
@@ -190,6 +212,7 @@ export const TOOLS: ToolDef[] = [
         fix: { type: "boolean", description: "Attempt auto-remediation." },
         all: { type: "boolean", description: "Run across every registered project." },
         json: { type: "boolean", description: "Machine-readable JSON output." },
+        cwd: CWD_INPUT,
       },
     },
     cliArgs: (input) => {
@@ -208,6 +231,7 @@ export const TOOLS: ToolDef[] = [
       type: "object",
       properties: {
         platform: { type: "string", description: "One of: vercel, railway, fly." },
+        cwd: CWD_INPUT,
       },
       required: ["platform"],
     },
@@ -232,8 +256,16 @@ export const TOOLS: ToolDef[] = [
     name: "stack_projects_list",
     description:
       "List projects recorded in the local Stack registry; this is not a filesystem-wide discovery scan.",
-    inputSchema: { type: "object", properties: {} },
-    cliArgs: () => ["projects", "list"],
+    inputSchema: {
+      type: "object",
+      properties: {
+        json: {
+          type: "boolean",
+          description: "Machine-readable JSON (schema ashlr.stack.projects/v1).",
+        },
+      },
+    },
+    cliArgs: (input) => (input.json ? ["projects", "list", "--json"] : ["projects", "list"]),
   },
   {
     name: "stack_deps",
@@ -245,15 +277,25 @@ export const TOOLS: ToolDef[] = [
           type: "boolean",
           description: "Machine-readable JSON (schema ashlr.stack.deps/v1).",
         },
+        cwd: CWD_INPUT,
       },
     },
     cliArgs: (input) => (input.json ? ["deps", "--json"] : ["deps"]),
   },
   {
     name: "stack_templates_list",
-    description: "List available starter stack templates.",
-    inputSchema: { type: "object", properties: {} },
-    cliArgs: () => ["templates", "list"],
+    description: "List available starter stack templates and the services each one adds.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        json: {
+          type: "boolean",
+          description:
+            "Machine-readable JSON (schema ashlr.stack.templates/v1): each template with its services, providers and secret names.",
+        },
+      },
+    },
+    cliArgs: (input) => (input.json ? ["templates", "list", "--json"] : ["templates", "list"]),
   },
   {
     name: "stack_upgrade",
@@ -286,12 +328,16 @@ export const TOOLS: ToolDef[] = [
           description:
             "When true, also freeze the result to .stack/recipes/<id>.toml so you can run stack_apply. Returns the recipe id in the response.",
         },
+        cwd: CWD_INPUT,
       },
       required: ["query"],
     },
     cliArgs: (input) => {
       const args = ["recommend", String(input.query ?? ""), "--json"];
-      if (input.k) args.push("--k", String(input.k));
+      // `k: 0` used to be dropped (falsy) and the default of 6 was used. Pass
+      // every number as `--k=<n>` so the CLI rejects 0, negatives and
+      // fractions by value (a bare `-3` would be parsed as a flag).
+      if (input.k !== undefined && input.k !== null) args.push(`--k=${input.k}`);
       if (input.category) args.push("--category", String(input.category));
       if (input.save) args.push("--save");
       return args;
@@ -312,6 +358,7 @@ export const TOOLS: ToolDef[] = [
           type: "boolean",
           description: "Skip the Phantom vault check and webhook stubs.",
         },
+        cwd: CWD_INPUT,
       },
       required: ["recipe_id"],
     },
@@ -330,21 +377,35 @@ export const TOOLS: ToolDef[] = [
  * Without this a missing required field reached the CLI as the literal string
  * "undefined" (`stack add undefined`), and a value starting with "-" was parsed
  * as a flag: `stack_remove {"service":"--all"}` ran `stack remove --all` and
- * removed every service instead of one.
+ * removed every service instead of one. Keys the schema does not declare are
+ * rejected rather than silently ignored.
  */
 export function validateToolInput(tool: ToolDef, input: Record<string, unknown>): string | null {
   for (const key of tool.inputSchema.required ?? []) {
     const value = input[key];
-    if (value === undefined || value === null || value === "") {
+    // A blank string (`"  "`) is as missing as an absent one: it used to run
+    // `stack info "  "` or `stack sync --platform " "`.
+    if (value === undefined || value === null || (typeof value === "string" && !value.trim())) {
       return `${tool.name}: missing required argument "${key}".`;
     }
   }
   for (const [key, value] of Object.entries(input)) {
     const spec = tool.inputSchema.properties[key];
-    if (!spec || value === undefined || value === null) continue;
+    if (!spec) {
+      // A misspelled key (`catgory` for `category`) used to be dropped and the
+      // tool ran without it, reporting success on a request it never honored.
+      const known = Object.keys(tool.inputSchema.properties);
+      return `${tool.name}: unknown argument "${key}". ${
+        known.length ? `Accepted: ${known.join(", ")}.` : "This tool takes no arguments."
+      }`;
+    }
+    if (value === undefined || value === null) continue;
     const actual = typeof value;
     if (spec.type === "number" ? !Number.isFinite(value) : actual !== spec.type) {
       return `${tool.name}: argument "${key}" must be a ${spec.type}.`;
+    }
+    if (actual === "string" && value !== "" && !(value as string).trim()) {
+      return `${tool.name}: argument "${key}" must not be blank.`;
     }
     if (actual === "string" && (value as string).startsWith("-")) {
       return `${tool.name}: argument "${key}" must not start with "-" (it would be read as a CLI flag).`;

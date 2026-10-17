@@ -251,7 +251,7 @@ export const CLI_COMMANDS: CliCommand[] = [
     name: "stack remove",
     description:
       "Remove local service config and MCP wiring; attempt Phantom secret removal (headless runs may retain secrets).",
-    synopsis: "stack remove [service] [--all] [--allOrphans] [--keepRemote]",
+    synopsis: "stack remove [service] [--all] [--allOrphans] [--keepRemote] [--json]",
     flags: [
       {
         name: "service",
@@ -281,6 +281,14 @@ export const CLI_COMMANDS: CliCommand[] = [
         type: "boolean",
         default: false,
         description: "Compatibility flag; upstream resources are kept for every removal.",
+      },
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        default: false,
+        description:
+          "Emit machine-readable JSON (schema ashlr.stack.remove/v1) naming the secrets Phantom kept. Never prompts.",
       },
     ],
     examples: [
@@ -347,6 +355,22 @@ export const CLI_COMMANDS: CliCommand[] = [
     name: "stack env",
     description: "Inspect the effective env-var map for this stack.",
     synopsis: "stack env <show|export|diff>",
+    flags: [
+      {
+        name: "env",
+        synopsis: "--env <env>",
+        type: "string",
+        default: "dev",
+        description: "Environment overlay to preview.",
+      },
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        default: false,
+        description: "Emit machine-readable JSON (schema ashlr.stack.env/v1, secret names only).",
+      },
+    ],
     subcommands: [
       {
         name: "stack env show",
@@ -642,11 +666,29 @@ export const CLI_COMMANDS: CliCommand[] = [
     name: "stack templates",
     description: "List or apply starter stack templates.",
     synopsis: "stack templates <list|apply>",
+    flags: [
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        default: false,
+        description: "Emit machine-readable JSON (schema ashlr.stack.templates/v1).",
+      },
+    ],
     subcommands: [
       {
         name: "stack templates list",
         description: "List available templates.",
-        synopsis: "stack templates list",
+        synopsis: "stack templates list [--json]",
+        flags: [
+          {
+            name: "json",
+            synopsis: "--json",
+            type: "boolean",
+            default: false,
+            description: "Emit machine-readable JSON (schema ashlr.stack.templates/v1).",
+          },
+        ],
         examples: [{ command: "stack templates list" }],
       },
       {
@@ -784,11 +826,29 @@ export const CLI_COMMANDS: CliCommand[] = [
     name: "stack projects",
     description: "Manage the cross-project registry at ~/.stack/projects.json.",
     synopsis: "stack projects <list|register|remove|where>",
+    flags: [
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        default: false,
+        description: "Emit machine-readable JSON (schema ashlr.stack.projects/v1).",
+      },
+    ],
     subcommands: [
       {
         name: "stack projects list",
         description: "List every Stack-enabled project on this machine.",
-        synopsis: "stack projects list",
+        synopsis: "stack projects list [--json]",
+        flags: [
+          {
+            name: "json",
+            synopsis: "--json",
+            type: "boolean",
+            default: false,
+            description: "Emit machine-readable JSON (schema ashlr.stack.projects/v1).",
+          },
+        ],
         examples: [{ command: "stack projects list" }],
       },
       {
@@ -836,13 +896,23 @@ export const CLI_COMMANDS: CliCommand[] = [
   },
   {
     name: "stack ci",
-    description: "Inspect CI health workflow availability.",
+    description: "CI workflow generation (unavailable; use `stack doctor` instead).",
     synopsis: "stack ci <init>",
+    flags: [
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        default: false,
+        description: "Emit the refusal as JSON ({ error }) on stdout.",
+      },
+    ],
     subcommands: [
       {
         name: "stack ci init",
-        description: "CI health workflow generation is currently unavailable.",
-        synopsis: "stack ci init [--force]",
+        description:
+          "Unavailable: refuses with what to run instead (stack doctor). Never writes a workflow.",
+        synopsis: "stack ci init [--force] [--json]",
         flags: [
           {
             name: "force",
@@ -851,6 +921,13 @@ export const CLI_COMMANDS: CliCommand[] = [
             default: false,
             description:
               "Compatibility flag; generation is unavailable and no workflow is overwritten.",
+          },
+          {
+            name: "json",
+            synopsis: "--json",
+            type: "boolean",
+            default: false,
+            description: "Emit the refusal as JSON ({ error }) on stdout.",
           },
         ],
         examples: [{ command: "stack ci init" }],

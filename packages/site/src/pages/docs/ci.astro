@@ -39,7 +39,9 @@ stack ci init --help
 stack ci init
 
 # Compatibility flag: still refuses; does not overwrite
-stack ci init --force`}
+stack ci init --force
+# Bare \`stack ci\` gives the same refusal; --json prints {"error": "..."}
+stack ci --json`}
     lang="bash"
     theme="github-dark-dimmed"
   />
@@ -51,7 +53,7 @@ stack ci init --force`}
   <h2 id="the-generated-workflow">Refusal output</h2>
 
   <Code
-    code={`CI health workflow unavailable: Phantom Cloud pull requires trusted-terminal approval. No workflow was written.`}
+    code={`CI health workflow unavailable: Phantom Cloud pull requires trusted-terminal approval. No workflow was written. Instead, run \`stack doctor\` from a trusted terminal, or \`stack doctor --reconcile --json\` in CI for a credential-free source-drift report.`}
     lang="text"
     theme="github-dark-dimmed"
   />
@@ -89,7 +91,7 @@ stack ci init --force`}
   <Code
     code={`# Illustrative source refusal; no workflow write
 $ stack ci init
-CI health workflow unavailable: Phantom Cloud pull requires trusted-terminal approval. No workflow was written.
+CI health workflow unavailable: Phantom Cloud pull requires trusted-terminal approval. No workflow was written. Instead, run \`stack doctor\` from a trusted terminal, or \`stack doctor --reconcile --json\` in CI for a credential-free source-drift report.
 $ echo $?
 1`}
     lang="bash"
@@ -168,7 +170,7 @@ stack scan --json --confidence medium`}
       </tr>
       <tr>
         <td><code>--yes</code></td>
-        <td>Without <code>--json</code>, implies <code>--auto</code> and enables add attempts at or above the confidence tier without confirmation. With <code>--json</code>, scan reports hits and returns before adding services. Without either flag, a non-TTY run prints a hint.</td>
+        <td>Without <code>--json</code>, implies <code>--auto</code> and enables add attempts at or above the confidence tier without confirmation. With <code>--json</code>, scan reports hits and returns before adding services. Without either flag, a non-TTY run prints the read-only report; <code>--auto</code> without <code>--yes</code> exits 1.</td>
       </tr>
       <tr>
         <td><code>--confidence &lt;low|medium|high&gt;</code></td>
