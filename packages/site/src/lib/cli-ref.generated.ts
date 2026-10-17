@@ -836,13 +836,23 @@ export const CLI_COMMANDS: CliCommand[] = [
   },
   {
     name: "stack ci",
-    description: "Inspect CI health workflow availability.",
+    description: "CI workflow generation (unavailable; use `stack doctor` instead).",
     synopsis: "stack ci <init>",
+    flags: [
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        default: false,
+        description: "Emit the refusal as JSON ({ error }) on stdout.",
+      },
+    ],
     subcommands: [
       {
         name: "stack ci init",
-        description: "CI health workflow generation is currently unavailable.",
-        synopsis: "stack ci init [--force]",
+        description:
+          "Unavailable: refuses with what to run instead (stack doctor). Never writes a workflow.",
+        synopsis: "stack ci init [--force] [--json]",
         flags: [
           {
             name: "force",
@@ -851,6 +861,13 @@ export const CLI_COMMANDS: CliCommand[] = [
             default: false,
             description:
               "Compatibility flag; generation is unavailable and no workflow is overwritten.",
+          },
+          {
+            name: "json",
+            synopsis: "--json",
+            type: "boolean",
+            default: false,
+            description: "Emit the refusal as JSON ({ error }) on stdout.",
           },
         ],
         examples: [{ command: "stack ci init" }],

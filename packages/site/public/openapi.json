@@ -297,7 +297,7 @@
       "get": {
         "tags": ["meta"],
         "operationId": "stack_ci",
-        "summary": "Inspect CI health workflow availability.",
+        "summary": "CI workflow generation (unavailable; use `stack doctor` instead).",
         "parameters": [
           { "name": "sub", "in": "query", "schema": { "type": "string", "enum": ["init"], "default": "init" }, "description": "Subcommand." },
           { "name": "force", "in": "query", "schema": { "type": "boolean", "default": false }, "description": "Compatibility flag; generation is unavailable and no workflow is overwritten." }

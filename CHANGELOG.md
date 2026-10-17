@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Agent dead ends
+
+- **`stack ci` refuses with one actionable line instead of printing help.** Bare `stack ci` printed usage and `No command specified` with exit 1, and its only subcommand `init` is intentionally unavailable (the old workflow needed unattended Phantom Cloud pull, which requires trusted-terminal approval). `stack ci` and `stack ci init` now say what to run instead (`stack doctor` from a trusted terminal, or `stack doctor --reconcile --json` in CI) and exit 1. With `--json` they print `{"error": ...}` on stdout. No workflow is ever written.
+- **`stack swap` reports an unknown provider before the Phantom check.** A typo such as `stack swap clerkk auth0` on a machine without Phantom printed the Phantom install hint. Provider names, the category match and the `.stack.toml` entry are now validated first, as in `stack add`.
+
 ### Agent-facing output
 
 - **The last lines of a failing command reach a pipe on Bun 1.2.** `outroError` exits the process, and Bun 1.2 dropped stdout still queued at exit, so a piped `stack apply` lost its final `Some providers failed: ...` line, `stack doctor` with many services lost most of its report, and an MCP `stack_add` returned only "Failed." The CLI now writes stdout and stderr synchronously under Bun, as Node already does for pipes, so nothing is pending when it exits.
