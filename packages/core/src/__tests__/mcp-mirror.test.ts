@@ -81,4 +81,36 @@ describe("mcp-writer client mirroring", () => {
       expect(m.b.command).toBe("y");
     }
   });
+
+  test("a user's own same-name entry is neither overwritten nor deleted", async () => {
+    // Cursor and Gemini configs are user-owned. A hand-written "github" entry
+    // must survive `stack add github` and its rollback or `stack remove`.
+    const cwd = tmp();
+    mkdirSync(join(cwd, ".cursor"));
+    mkdirSync(join(cwd, ".gemini"));
+    const mine = { command: "my-github-mcp", env: { TOKEN: "${env:GH}" } };
+    for (const p of [join(cwd, ".cursor", "mcp.json"), join(cwd, ".gemini", "settings.json")]) {
+      writeFileSync(p, JSON.stringify({ mcpServers: { github: mine } }));
+    }
+    await mergeMcpEntry({ name: "github", type: "stdio", command: "npx", args: ["-y", "gh"] }, cwd);
+    expect(readJson(join(cwd, ".mcp.json")).mcpServers.github.command).toBe("npx");
+    for (const p of [join(cwd, ".cursor", "mcp.json"), join(cwd, ".gemini", "settings.json")]) {
+      expect(readJson(p).mcpServers.github).toEqual(mine);
+    }
+    await removeMcpEntry("github", cwd);
+    expect(readJson(join(cwd, ".mcp.json")).mcpServers.github).toBeUndefined();
+    for (const p of [join(cwd, ".cursor", "mcp.json"), join(cwd, ".gemini", "settings.json")]) {
+      expect(readJson(p).mcpServers.github).toEqual(mine);
+    }
+  });
+
+  test("an entry Stack mirrored earlier is updated when the provider entry changes", async () => {
+    const cwd = tmp();
+    mkdirSync(join(cwd, ".cursor"));
+    await mergeMcpEntry({ name: "s", type: "stdio", command: "npx", args: ["v1"] }, cwd);
+    await mergeMcpEntry({ name: "s", type: "stdio", command: "npx", args: ["v2"] }, cwd);
+    expect(readJson(join(cwd, ".cursor", "mcp.json")).mcpServers.s.args).toEqual(["v2"]);
+    await removeMcpEntry("s", cwd);
+    expect(readJson(join(cwd, ".cursor", "mcp.json")).mcpServers.s).toBeUndefined();
+  });
 });
