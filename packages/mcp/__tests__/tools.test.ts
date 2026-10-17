@@ -55,6 +55,22 @@ describe("stack_scan args", () => {
   });
 });
 
+describe("stack_remove args", () => {
+  test("always passes --json so the caller sees which secrets Phantom kept", () => {
+    expect(tool("stack_remove").cliArgs({ service: "openai" })).toEqual([
+      "remove",
+      "openai",
+      "--json",
+    ]);
+    expect(tool("stack_remove").cliArgs({ service: "openai", keepRemote: true })).toEqual([
+      "remove",
+      "openai",
+      "--json",
+      "--keepRemote",
+    ]);
+  });
+});
+
 describe("stack_recommend args", () => {
   test("passes every k to the CLI, including 0 and negatives, as --k=<n>", () => {
     // `k: 0` used to be dropped and the default of 6 used, with no error.

@@ -33,8 +33,22 @@ export const removeCommand = defineCommand({
       default: false,
       description: "Compatibility flag; upstream resources are kept for every removal.",
     },
+    json: {
+      type: "boolean",
+      default: false,
+      description:
+        "Emit machine-readable JSON (schema ashlr.stack.remove/v1) naming the secrets Phantom kept. Never prompts.",
+    },
   },
   async run({ args }) {
+    if (args.json) {
+      const mode = args.allOrphans ? "orphans" : args.all ? "all" : "one";
+      return runRemoveJson(
+        mode,
+        args.service ? String(args.service) : undefined,
+        Boolean(args.keepRemote),
+      );
+    }
     if (args.allOrphans) return runRemoveAllOrphans(Boolean(args.keepRemote));
     if (args.all) return runRemoveAll(Boolean(args.keepRemote));
     if (!args.service) {
@@ -203,4 +217,81 @@ async function runRemoveAll(keepRemote: boolean): Promise<void> {
       `Removed ${serviceNames.length} local service(s), ${removedSecrets} Phantom secret(s) (upstream resources kept).`,
     ),
   );
+}
+
+/**
+ * `stack remove --json`: one JSON object on stdout, no banner and no prompts
+ * (the same as a run without a terminal). Phantom removes nothing headlessly,
+ * so `secrets_kept` is how a caller learns which names are still stored and
+ * need `phantom remove` in a terminal. Errors print `{"error": ...}` and exit 1.
+ */
+async function runRemoveJson(
+  mode: "one" | "all" | "orphans",
+  service: string | undefined,
+  keepRemote: boolean,
+): Promise<void> {
+  const fail = (error: string) => {
+    process.stdout.write(`${JSON.stringify({ error })}\n`);
+    process.exit(1);
+  };
+  let config: Awaited<ReturnType<typeof readConfig>>;
+  try {
+    config = await readConfig();
+  } catch (err) {
+    fail((err as Error).message);
+    return;
+  }
+
+  let targets: string[];
+  if (mode === "one") {
+    if (!service) {
+      fail(
+        "Missing service name. Pass --all to remove every service, or --allOrphans to remove drift.",
+      );
+      return;
+    }
+    if (!config.services[service]) {
+      fail(notInStackMessage(service, Object.keys(config.services)));
+      return;
+    }
+    targets = [service];
+  } else if (mode === "all") {
+    targets = Object.keys(config.services);
+  } else {
+    const detected = new Set((await scanSource(process.cwd())).map((d) => d.provider));
+    targets = Object.keys(config.services).filter((name) => !detected.has(name));
+  }
+
+  const secrets = targets.flatMap((name) => config.services[name].secrets);
+  if (secrets.length > 0) await requirePhantom({ json: true });
+
+  const removed: {
+    service: string;
+    secrets_removed: string[];
+    secrets_kept: string[];
+    mcp_removed: string | null;
+  }[] = [];
+  for (const name of targets) {
+    const entry = config.services[name];
+    const kept = await removeVaultSecrets(entry.secrets, { interactive: false, quiet: true });
+    if (entry.mcp) await removeMcpEntry(entry.mcp);
+    removed.push({
+      service: name,
+      secrets_removed: entry.secrets.filter((s) => !kept.includes(s)),
+      secrets_kept: kept,
+      mcp_removed: entry.mcp ?? null,
+    });
+    delete config.services[name];
+  }
+  if (targets.length > 0) await writeConfig(config);
+
+  const report = {
+    schema: "ashlr.stack.remove/v1",
+    mode,
+    removed,
+    secrets_kept: removed.flatMap((r) => r.secrets_kept),
+    upstream_kept: true,
+    keep_remote: keepRemote,
+  };
+  process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
 }

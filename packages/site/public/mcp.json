@@ -77,8 +77,8 @@
     },
     {
       "name": "stack_remove",
-      "description": "Remove local service configuration and its MCP entry, and attempt Phantom secret cleanup. Upstream resources are kept; headless cleanup or refused confirmation can leave secrets stored.",
-      "cli": "stack remove <service> [--keepRemote]",
+      "description": "Remove local service configuration and its MCP entry, and attempt Phantom secret cleanup. Returns JSON (ashlr.stack.remove/v1); `secrets_kept` lists names Phantom left stored, which headless runs always do, for the user to remove with `phantom remove` in a terminal. Upstream resources are kept.",
+      "cli": "stack remove <service> --json [--keepRemote]",
       "inputSchema": {
         "type": "object",
         "properties": {
