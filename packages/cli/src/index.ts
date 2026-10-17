@@ -28,7 +28,6 @@ import { syncCommand } from "./commands/sync.ts";
 import { telemetryCommand } from "./commands/telemetry.ts";
 import { templatesCommand } from "./commands/templates.ts";
 import { upgradeCommand } from "./commands/upgrade.ts";
-import { normalizeKebabFlags } from "./lib/normalize-args.ts";
 import { runCli } from "./lib/run-cli.ts";
 import { installSynchronousStdio } from "./lib/sync-stdout.ts";
 import { checkForUpdate } from "./lib/update-check.ts";
@@ -125,9 +124,10 @@ const main = defineCommand({
 installSynchronousStdio();
 const _startMs = Date.now();
 void checkForUpdate(VERSION);
-// Normalize kebab-case flags (`--dry-run`) to the camelCase keys our commands
-// declare (`dryRun`) before citty parses them — see lib/normalize-args.ts.
-runCli(main, normalizeKebabFlags(process.argv.slice(2))).finally(() => {
+// runCli rejects undeclared flags (lib/unknown-flags.ts), then normalizes
+// kebab-case flags (`--dry-run`) to the camelCase keys our commands declare
+// (`dryRun`) before citty parses them — see lib/normalize-args.ts.
+runCli(main, process.argv.slice(2)).finally(() => {
   void emitTelemetry({
     type: "command",
     command: process.argv[2] ?? "unknown",
