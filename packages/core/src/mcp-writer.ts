@@ -28,6 +28,7 @@ export async function mergeMcpEntry(
 ): Promise<void> {
   const path = join(cwd, MCP_FILENAME);
   const current = await readMcp(path);
+  const previous = current.mcpServers[entry.name];
   current.mcpServers[entry.name] = toJsonShape(entry);
   await writeFile(path, `${JSON.stringify(current, null, 2)}\n`, "utf-8");
 
@@ -36,7 +37,17 @@ export async function mergeMcpEntry(
     const target = join(cwd, t.dir, t.file);
     try {
       const doc = await readMcp(target);
-      doc.mcpServers[entry.name] = toClientShape(entry, t.client);
+      const next = toClientShape(entry, t.client);
+      const existing = doc.mcpServers[entry.name];
+      // Client configs are user-owned: replace a same-name entry only when it
+      // is what Stack itself mirrored (now or from the previous .mcp.json
+      // entry). A hand-written entry is left as it is.
+      if (existing !== undefined) {
+        if (sameJson(existing, next)) continue;
+        const mirrored = previous && toClientShape(asEntry(entry.name, previous), t.client);
+        if (!mirrored || !sameJson(existing, mirrored)) continue;
+      }
+      doc.mcpServers[entry.name] = next;
       await writeFile(target, `${JSON.stringify(doc, null, 2)}\n`, "utf-8");
     } catch {
       // A client file Stack cannot parse is left untouched: .mcp.json is the
@@ -49,17 +60,22 @@ export async function removeMcpEntry(name: string, cwd: string = process.cwd()):
   const path = join(cwd, MCP_FILENAME);
   if (!existsSync(path)) return;
   const current = await readMcp(path);
-  if (current.mcpServers[name]) {
+  const previous = current.mcpServers[name];
+  if (previous) {
     delete current.mcpServers[name];
     await writeFile(path, `${JSON.stringify(current, null, 2)}\n`, "utf-8");
   }
+  // Without a .mcp.json entry there is nothing to prove a client entry of the
+  // same name was written by Stack, so the client configs are not touched.
+  if (!previous) return;
 
   for (const t of MIRROR_TARGETS) {
     const target = join(cwd, t.dir, t.file);
     if (!existsSync(target)) continue;
     try {
       const doc = await readMcp(target);
-      if (doc.mcpServers[name]) {
+      const existing = doc.mcpServers[name];
+      if (existing && sameJson(existing, toClientShape(asEntry(name, previous), t.client))) {
         delete doc.mcpServers[name];
         await writeFile(target, `${JSON.stringify(doc, null, 2)}\n`, "utf-8");
       }
@@ -105,4 +121,25 @@ function toClientShape(entry: McpServerEntry, client: MirrorClient): Record<stri
   if (entry.env) out.env = entry.env;
   if (entry.headers) out.headers = entry.headers;
   return out;
+}
+
+/** Rebuild an entry from its `.mcp.json` shape (the inverse of toJsonShape). */
+function asEntry(name: string, json: Record<string, unknown>): McpServerEntry {
+  return { ...json, name } as McpServerEntry;
+}
+
+function sameJson(a: unknown, b: unknown): boolean {
+  return JSON.stringify(sortKeys(a)) === JSON.stringify(sortKeys(b));
+}
+
+function sortKeys(v: unknown): unknown {
+  if (Array.isArray(v)) return v.map(sortKeys);
+  if (v && typeof v === "object") {
+    return Object.fromEntries(
+      Object.entries(v as Record<string, unknown>)
+        .sort(([x], [y]) => (x < y ? -1 : x > y ? 1 : 0))
+        .map(([k, val]) => [k, sortKeys(val)]),
+    );
+  }
+  return v;
 }
