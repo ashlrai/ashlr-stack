@@ -251,7 +251,7 @@ export const CLI_COMMANDS: CliCommand[] = [
     name: "stack remove",
     description:
       "Remove local service config and MCP wiring; attempt Phantom secret removal (headless runs may retain secrets).",
-    synopsis: "stack remove [service] [--all] [--allOrphans] [--keepRemote]",
+    synopsis: "stack remove [service] [--all] [--allOrphans] [--keepRemote] [--json]",
     flags: [
       {
         name: "service",
@@ -281,6 +281,14 @@ export const CLI_COMMANDS: CliCommand[] = [
         type: "boolean",
         default: false,
         description: "Compatibility flag; upstream resources are kept for every removal.",
+      },
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        default: false,
+        description:
+          "Emit machine-readable JSON (schema ashlr.stack.remove/v1) naming the secrets Phantom kept. Never prompts.",
       },
     ],
     examples: [
