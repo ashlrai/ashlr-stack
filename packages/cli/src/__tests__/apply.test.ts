@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -76,5 +76,21 @@ describe("stack apply", () => {
     // recipe so the user knows what to fix.
     expect(code).toBeGreaterThan(0);
     expect(stdout + stderr).toContain("does-not-exist");
+  });
+
+  it("writes nothing when the recipe id is missing or there are no recipes", () => {
+    for (const args of [["apply", "does-not-exist"], ["apply"]]) {
+      const dir = mkTmp();
+      const home = mkTmp();
+      const result = spawnSync("bun", [CLI_ENTRY, ...args], {
+        encoding: "utf8",
+        cwd: dir,
+        env: { ...process.env, HOME: home, USERPROFILE: home, NO_COLOR: "1", CI: "1" },
+      });
+      expect(result.status).toBe(1);
+      expect(result.stdout + result.stderr).not.toContain("auto-running");
+      expect(readdirSync(dir)).toEqual([]);
+      expect(existsSync(join(home, ".stack", "projects.json"))).toBe(false);
+    }
   });
 });

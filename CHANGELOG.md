@@ -12,6 +12,11 @@
 - **Installers state the real provider count (39, not 23)**, and `release-artifacts.test.ts` checks it against the registry and that the site serves the same `install.sh`/`install.ps1` as `scripts/`.
 - **`install.sh` says how to get the MCP server after a binary install.** The prebuilt release binary is only `stack`; the installer now prints `npm i -g ashlr-stack-mcp` / `npx -y ashlr-stack-mcp`, and the MCP README no longer says the one-liner always installs both.
 
+### Bug fixes
+
+- **MCP tools check their input before running the CLI.** A missing required argument reached the CLI as the literal string `undefined` (`stack_add {}` ran `stack add undefined`), and a value starting with `-` was parsed as a flag: `stack_remove {"service":"--all"}` ran `stack remove --all` and targeted every service instead of one. The server now returns an error naming the argument for a missing required field, a wrong type, or a leading `-`, and runs nothing.
+- **`stack apply` with a missing recipe writes nothing.** In a directory without `.stack.toml`, `stack apply <id>` for an id that does not exist (or bare `stack apply` with no recipes) auto-ran `stack init` first, leaving `.stack.toml`, `.stack.local.toml`, `.gitignore` and a `~/.stack/projects.json` entry behind before failing. The recipe is now resolved first.
+
 ## 0.2.1 (2026-10-16)
 
 0.2.1 was never published, so everything below ships in it, along with the 2026-10-12 notes further down. Source versions (core, cli, mcp, `server.json`, `VERSION` in `packages/cli/src/index.ts`) are already 0.2.1, which `scripts/publish.sh` checks before it publishes core, then cli, then mcp.

@@ -280,3 +280,33 @@ export const TOOLS: ToolDef[] = [
     },
   },
 ];
+
+/**
+ * Check a tools/call payload against the tool's inputSchema before any argv is
+ * built. Returns an error message, or null when the input is usable.
+ *
+ * Without this a missing required field reached the CLI as the literal string
+ * "undefined" (`stack add undefined`), and a value starting with "-" was parsed
+ * as a flag: `stack_remove {"service":"--all"}` ran `stack remove --all` and
+ * removed every service instead of one.
+ */
+export function validateToolInput(tool: ToolDef, input: Record<string, unknown>): string | null {
+  for (const key of tool.inputSchema.required ?? []) {
+    const value = input[key];
+    if (value === undefined || value === null || value === "") {
+      return `${tool.name}: missing required argument "${key}".`;
+    }
+  }
+  for (const [key, value] of Object.entries(input)) {
+    const spec = tool.inputSchema.properties[key];
+    if (!spec || value === undefined || value === null) continue;
+    const actual = typeof value;
+    if (spec.type === "number" ? !Number.isFinite(value) : actual !== spec.type) {
+      return `${tool.name}: argument "${key}" must be a ${spec.type}.`;
+    }
+    if (actual === "string" && (value as string).startsWith("-")) {
+      return `${tool.name}: argument "${key}" must not start with "-" (it would be read as a CLI flag).`;
+    }
+  }
+  return null;
+}
