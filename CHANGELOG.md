@@ -2,7 +2,13 @@
 
 ## Unreleased
 
+## 0.2.2 (2026-10-17)
+
+0.2.1 was tagged but its npm publish failed, so nothing from 0.2.1 reached npm. 0.2.2 supersedes it: it ships everything listed here and under 0.2.1 below. Source versions (core, cli, mcp, `server.json`, `VERSION` in `packages/cli/src/index.ts`) are 0.2.2, which `scripts/publish.sh` checks before it publishes core, then cli, then mcp.
+
 ### Round 9: usage errors an agent can act on
+
+Covers #67, #68, #70, #73, #74, #75 and #76 together with the sections below.
 
 - **An option before the subcommand is refused.** `stack --json list` passed the unknown-option guard, because the root declares `--json` for `stack --version`, and citty never hands a subcommand the options typed before its name: `list` printed the human error and `stack env --json show` the human report. An option before a subcommand name now exits 1. When the subcommand takes it, the message says where it goes (`Option --json goes after the subcommand: run \`stack list --json\``); otherwise it is an unknown option for that subcommand (`stack -v list`). With `--json` on the line the message is also `{"error": ...}` on stdout.
 - **A missing argument under `--json` is a JSON error.** `stack info --json` with no service printed the usage text on stdout, so an agent parsing it got no JSON. A usage error that citty raises (a missing required positional) now prints `{"error": "Missing required positional argument: SERVICE. Run \`stack info --help\` for usage."}` on stdout and the same line on stderr when `--json` is on the line (exit 1). Without `--json` the usage text is unchanged.
@@ -50,6 +56,8 @@
 
 - **Stack mirrors MCP entries into Cursor and Gemini CLI project configs.** When `.cursor/` or `.gemini/` already exists in the project, `stack add` also writes the server into `.cursor/mcp.json` and `.gemini/settings.json` (Gemini's `httpUrl`/`url` naming, no `type`), and `stack remove` takes it out again. Absent client dirs are never created, other keys and servers are preserved, and an unparseable client file is left untouched without failing the add. A same-name entry the user wrote by hand in one of those files is never replaced, and `stack remove` (or a rolled-back `stack add`) deletes a client entry only when it still matches what Stack mirrored from `.mcp.json`.
 
+- **User-written Cursor and Gemini entries are kept** on `stack add`, `stack remove` and rollback (#60).
+
 ### Agent onboarding
 
 - **`stack onboard` detects Codex, Claude Code, Cursor and Gemini CLI and registers the Phantom gateway (`ashlr-hub`, `ashlr mcp`) in each.** It prints a plan by default and writes nothing. `--apply` saves a timestamped backup of each existing config, adds only the `ashlr-hub` entry, keeps every other key, and re-checks each client afterwards. An existing `ashlr-hub` entry that differs is never overwritten. `--undo` restores the saved files byte for byte and refuses any file that changed since it was written. `--client`, `--all` (include clients that are not detected), `--home` and `--json` are supported. It never touches the network or a vendor CLI and writes no secret values.
@@ -64,6 +72,14 @@
 - **`stack recommend` with no query, or a bad `--k`, exits 1.** No query (or a blank one, as `stack_recommend {"query":"   "}` sends) printed "nothing to recommend" with exit 0, and `--k abc`, `--k 0` or `--k 2.5` were silently replaced by the default of 6. Both now exit 1; `--json` still prints the "Provide a query" payload on stdout, and a bad `--k` names the value on stderr.
 - **`stack remove <name>` and `stack open <name>` name the configured services.** An unknown name only said "<name> is not in this stack."; it now lists what is configured, suggests a case-only match ("Did you mean openai?"), or says the stack has no services and to run `stack add <provider>`.
 - **`stack projects remove` only reports what it removed.** Any argument starting with `/` printed "Removed ... from registry." with exit 0, even when no project was registered there, and a relative path such as `.` was never matched. It now matches a registered name first, then the argument as a path from the current directory, and exits 1 with a pointer to `stack projects list` when nothing matched. `unregisterProject()` in `@ashlr/stack-core` now returns whether it removed an entry.
+
+### Tests
+
+- The site's agent-facing doc facts are pinned to their sources of truth by a test (#59).
+
+### Release process
+
+- The release workflow runs a pack-and-install preflight on pull requests, and the npm publish no longer waits for the macOS build (#66).
 
 ### Install fixes
 
