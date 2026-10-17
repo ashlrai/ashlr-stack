@@ -135,7 +135,7 @@ Choose a provider, or use the interactive picker when omitted. Authentication us
 
 ### `stack remove <provider> [--keep-remote]`
 
-Remove the service's local vault entries, MCP wiring and Stack configuration. The current CLI does not call provider deprovisioning; `--keep-remote` is parsed but is not proof of remote cleanup. Confirm the local target and inspect partial outcomes. `--all` and `--all-orphans` select broader local removal.
+Remove the service's local vault entries, MCP wiring and Stack configuration. The current CLI does not call provider deprovisioning; `--keep-remote` is parsed but is not proof of remote cleanup. Confirm the local target and inspect partial outcomes. `--all` and `--all-orphans` select broader local removal. `--json` never prompts and prints one object (schema `ashlr.stack.remove/v1`) whose `secrets_kept` names the secrets Phantom left stored; Phantom removes nothing without an attached terminal, so headless callers should show those names to the user for `phantom remove`.
 
 ### `stack list`
 

@@ -111,7 +111,7 @@ export const TOOLS: ToolDef[] = [
   {
     name: "stack_remove",
     description:
-      "Remove local service configuration and its MCP entry, and attempt Phantom secret cleanup. Upstream resources are kept; headless cleanup or refused confirmation can leave secrets stored.",
+      "Remove local service configuration and its MCP entry, and attempt Phantom secret cleanup. Returns JSON (ashlr.stack.remove/v1); `secrets_kept` lists names Phantom left stored, which headless runs always do, for the user to remove with `phantom remove` in a terminal. Upstream resources are kept.",
     inputSchema: {
       type: "object",
       properties: {
@@ -122,7 +122,9 @@ export const TOOLS: ToolDef[] = [
       required: ["service"],
     },
     cliArgs: (input) => {
-      const args = ["remove", String(input.service)];
+      // --json so the caller gets `secrets_kept` (Phantom removes nothing
+      // headlessly) instead of a banner that reads like a full removal.
+      const args = ["remove", String(input.service), "--json"];
       if (input.keepRemote) args.push("--keepRemote");
       return args;
     },

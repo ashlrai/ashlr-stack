@@ -106,7 +106,7 @@ export const MCP_TOOLS: McpTool[] = [
   {
     name: "stack_remove",
     description:
-      "Remove local service configuration and its MCP entry, and attempt Phantom secret cleanup. Upstream resources are kept; headless cleanup or refused confirmation can leave secrets stored.",
+      "Remove local service configuration and its MCP entry, and attempt Phantom secret cleanup. Returns JSON (ashlr.stack.remove/v1); `secrets_kept` lists names Phantom left stored, which headless runs always do, for the user to remove with `phantom remove` in a terminal. Upstream resources are kept.",
     inputs: [
       { name: "service", type: "string", required: true, description: "Service name." },
       {
@@ -122,7 +122,7 @@ export const MCP_TOOLS: McpTool[] = [
           "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory.",
       },
     ],
-    cli: "stack remove <service> [--keepRemote]",
+    cli: "stack remove <service> --json [--keepRemote]",
   },
   {
     name: "stack_list",
