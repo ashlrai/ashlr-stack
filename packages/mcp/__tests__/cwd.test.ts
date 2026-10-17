@@ -236,6 +236,29 @@ describe("cwd input: stdio server started in another directory", () => {
     expect(result.content[0]?.text ?? "").toContain("openai");
   }, 20_000);
 
+  test("stack_status json with cwd reports the project's .stack.toml", async () => {
+    const result = await call("stack_status", { json: true, cwd: projectDir });
+    expect(result.isError).toBeFalsy();
+    const parsed = JSON.parse(result.content[0]?.text ?? "") as {
+      schema: string;
+      config: { present: boolean };
+      services: Array<{ name: string }>;
+    };
+    expect(parsed.schema).toBe("ashlr.stack.status/v1");
+    expect(parsed.config.present).toBe(true);
+    expect(parsed.services.map((s) => s.name)).toEqual(["openai"]);
+  }, 20_000);
+
+  test("cwd on a global tool gets its own refusal, not a generic unknown-argument one", async () => {
+    // validateToolInput's unknown-argument check used to answer first, so the
+    // dedicated message (and the unit test asserting it) never fired.
+    const result = await call("stack_providers", { cwd: projectDir });
+    expect(result.isError).toBe(true);
+    expect(result.content[0]?.text ?? "").toContain(
+      'stack_providers: argument "cwd" is not supported by this tool',
+    );
+  }, 20_000);
+
   test("stack_init with cwd writes .stack.toml there, not in the server's directory", async () => {
     const result = await call("stack_init", { cwd: initDir });
     expect(result.isError).toBeFalsy();
