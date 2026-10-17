@@ -1,6 +1,11 @@
 import { type ArgsDef, type CommandDef, runCommand, runMain } from "citty";
 import pc from "picocolors";
-import { bindParentOptionValues, commandPath, describeUnknownFlag, findUnknownFlag } from "./unknown-flags.ts";
+import {
+  bindParentOptionValues,
+  commandPath,
+  describeUnknownFlag,
+  findUnknownFlag,
+} from "./unknown-flags.ts";
 
 export interface RunCliIo {
   stdout?: (line: string) => void;
