@@ -72,7 +72,9 @@ export async function addService(opts: AddServiceOpts): Promise<AddServiceResult
 
   beginCredentialStage(ctx);
   try {
-    const auth = await provider.login(ctx);
+    const auth = await provider.login(ctx).catch((err: unknown) => {
+      throw headlessAuthError(err, provider, ctx.interactive);
+    });
     credentialPhase(ctx, "provision");
     const resource = await provider.provision(ctx, auth, {
       existingResourceId,
@@ -212,4 +214,25 @@ export async function addService(opts: AddServiceOpts): Promise<AddServiceResult
   } finally {
     closeCredentialStage(ctx);
   }
+}
+
+/**
+ * A provider that needs a pasted key or a browser sign-in cannot get one in
+ * a session without a terminal (an agent's MCP call, CI), and Phantom will
+ * not hand a stored key back to one either. Say so and name the command a
+ * person can run, instead of only "no valid key".
+ */
+export function headlessAuthError(
+  err: unknown,
+  provider: { name: string; displayName: string },
+  interactive: boolean,
+): unknown {
+  if (interactive || !(err instanceof StackError) || !err.code.endsWith("_AUTH_REQUIRED")) {
+    return err;
+  }
+  return new StackError(
+    err.code,
+    `${err.message} ${provider.displayName} needs a credential entered in an interactive terminal, and this session has none (agent or CI). Ask the user to run \`stack add ${provider.name}\` in their own terminal, then retry; nothing was added.`,
+    { cause: err },
+  );
 }
