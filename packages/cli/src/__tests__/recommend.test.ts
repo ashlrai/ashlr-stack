@@ -144,4 +144,30 @@ describe("stack recommend --json", () => {
     expect(payload.hits).toEqual([]);
     expect(payload.guidance).toContain("No strong matches");
   });
+
+  it("exits 1 when no query is given, in JSON and human mode", () => {
+    const json = runCli(["recommend", "--json"]);
+    expect(json.code).toBe(1);
+    expect(JSON.parse(json.stdout).guidance).toContain("Provide a query");
+    const blank = runCli(["recommend", "   ", "--json"]);
+    expect(blank.code).toBe(1);
+    const human = runCli(["recommend"]);
+    expect(human.code).toBe(1);
+    expect(human.stdout + human.stderr).toContain("No query");
+  });
+
+  it("rejects a --k that is not a whole number of 1 or more", () => {
+    for (const k of ["abc", "0", "2.5"]) {
+      const { stdout, stderr, code } = runCli(["recommend", "postgres", "--k", k, "--json"]);
+      expect(code).toBe(1);
+      expect(stdout).toBe("");
+      expect(stderr).toContain(`Invalid --k "${k}"`);
+    }
+  });
+
+  it("honours a valid --k", () => {
+    const { stdout, code } = runCli(["recommend", "postgres database", "--k", "2", "--json"]);
+    expect(code).toBe(0);
+    expect(JSON.parse(stdout).hits.length).toBe(2);
+  });
 });
