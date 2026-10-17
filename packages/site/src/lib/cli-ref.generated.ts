@@ -646,7 +646,16 @@ export const CLI_COMMANDS: CliCommand[] = [
       {
         name: "stack templates list",
         description: "List available templates.",
-        synopsis: "stack templates list",
+        synopsis: "stack templates list [--json]",
+        flags: [
+          {
+            name: "json",
+            synopsis: "--json",
+            type: "boolean",
+            default: false,
+            description: "Emit machine-readable JSON (schema ashlr.stack.templates/v1).",
+          },
+        ],
         examples: [{ command: "stack templates list" }],
       },
       {
@@ -788,7 +797,16 @@ export const CLI_COMMANDS: CliCommand[] = [
       {
         name: "stack projects list",
         description: "List every Stack-enabled project on this machine.",
-        synopsis: "stack projects list",
+        synopsis: "stack projects list [--json]",
+        flags: [
+          {
+            name: "json",
+            synopsis: "--json",
+            type: "boolean",
+            default: false,
+            description: "Emit machine-readable JSON (schema ashlr.stack.projects/v1).",
+          },
+        ],
         examples: [{ command: "stack projects list" }],
       },
       {

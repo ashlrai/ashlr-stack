@@ -192,8 +192,14 @@ export const MCP_TOOLS: McpTool[] = [
     name: "stack_projects_list",
     description:
       "List projects recorded in the local Stack registry; this is not a filesystem-wide discovery scan.",
-    inputs: [],
-    cli: "stack projects list",
+    inputs: [
+      {
+        name: "json",
+        type: "boolean",
+        description: "Machine-readable JSON (schema ashlr.stack.projects/v1).",
+      },
+    ],
+    cli: "stack projects list [--json]",
   },
   {
     name: "stack_deps",
@@ -209,9 +215,15 @@ export const MCP_TOOLS: McpTool[] = [
   },
   {
     name: "stack_templates_list",
-    description: "List available starter stack templates.",
-    inputs: [],
-    cli: "stack templates list",
+    description: "List available starter stack templates and the services each one adds.",
+    inputs: [
+      {
+        name: "json",
+        type: "boolean",
+        description: "Machine-readable JSON (schema ashlr.stack.templates/v1).",
+      },
+    ],
+    cli: "stack templates list [--json]",
   },
   {
     name: "stack_upgrade",

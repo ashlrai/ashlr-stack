@@ -232,8 +232,16 @@ export const TOOLS: ToolDef[] = [
     name: "stack_projects_list",
     description:
       "List projects recorded in the local Stack registry; this is not a filesystem-wide discovery scan.",
-    inputSchema: { type: "object", properties: {} },
-    cliArgs: () => ["projects", "list"],
+    inputSchema: {
+      type: "object",
+      properties: {
+        json: {
+          type: "boolean",
+          description: "Machine-readable JSON (schema ashlr.stack.projects/v1).",
+        },
+      },
+    },
+    cliArgs: (input) => (input.json ? ["projects", "list", "--json"] : ["projects", "list"]),
   },
   {
     name: "stack_deps",
@@ -251,9 +259,17 @@ export const TOOLS: ToolDef[] = [
   },
   {
     name: "stack_templates_list",
-    description: "List available starter stack templates.",
-    inputSchema: { type: "object", properties: {} },
-    cliArgs: () => ["templates", "list"],
+    description: "List available starter stack templates and the services each one adds.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        json: {
+          type: "boolean",
+          description: "Machine-readable JSON (schema ashlr.stack.templates/v1).",
+        },
+      },
+    },
+    cliArgs: (input) => (input.json ? ["templates", "list", "--json"] : ["templates", "list"]),
   },
   {
     name: "stack_upgrade",
@@ -330,7 +346,8 @@ export const TOOLS: ToolDef[] = [
  * Without this a missing required field reached the CLI as the literal string
  * "undefined" (`stack add undefined`), and a value starting with "-" was parsed
  * as a flag: `stack_remove {"service":"--all"}` ran `stack remove --all` and
- * removed every service instead of one.
+ * removed every service instead of one. Keys the schema does not declare are
+ * rejected rather than silently ignored.
  */
 export function validateToolInput(tool: ToolDef, input: Record<string, unknown>): string | null {
   for (const key of tool.inputSchema.required ?? []) {
@@ -341,7 +358,15 @@ export function validateToolInput(tool: ToolDef, input: Record<string, unknown>)
   }
   for (const [key, value] of Object.entries(input)) {
     const spec = tool.inputSchema.properties[key];
-    if (!spec || value === undefined || value === null) continue;
+    if (!spec) {
+      // A misspelled key (`catgory` for `category`) used to be dropped and the
+      // tool ran without it, reporting success on a request it never honored.
+      const known = Object.keys(tool.inputSchema.properties);
+      return `${tool.name}: unknown argument "${key}". ${
+        known.length ? `Accepted: ${known.join(", ")}.` : "This tool takes no arguments."
+      }`;
+    }
+    if (value === undefined || value === null) continue;
     const actual = typeof value;
     if (spec.type === "number" ? !Number.isFinite(value) : actual !== spec.type) {
       return `${tool.name}: argument "${key}" must be a ${spec.type}.`;

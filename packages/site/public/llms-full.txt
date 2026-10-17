@@ -145,9 +145,9 @@ Services wired in the current project. Equivalent to reading `.stack.toml`, form
 
 List providers registered in your installed release, grouped by category. This source registers 39 across 13 categories. Category filtering is available in `recommend`, not as a `providers` flag.
 
-### `stack templates list` / `stack templates apply <name>`
+### `stack templates list [--json]` / `stack templates apply <name>`
 
-List provider presets, or apply a preset through the service setup flow. These presets configure services; they do not generate a complete application.
+List provider presets, or apply a preset through the service setup flow. These presets configure services; they do not generate a complete application. `--json` prints `ashlr.stack.templates/v1`: each template's name and the services it adds.
 
 ### `stack scan [--auto] [--json] [--path <path>]`
 
@@ -206,9 +206,9 @@ stack exec -- pytest
 
 Push through Phantom to the selected configured deployment target. This requires that platform's resource ID and project initialization; it does not pull upstream IDs into local configuration.
 
-### `stack projects list`
+### `stack projects list [--json]`
 
-Registered project metadata is stored in `~/.stack/projects.json`, or under the `STACK_REGISTRY_DIR` override.
+Registered project metadata is stored in `~/.stack/projects.json`, or under the `STACK_REGISTRY_DIR` override. `--json` prints `ashlr.stack.projects/v1`: each project's name, path, project id, template, services and last-seen time.
 
 ### `stack deps`
 
@@ -407,16 +407,16 @@ The source declares these 19 tools. They are a subset of CLI commands; use each 
 - `stack_add` — `{ service: string, use?: string }`
 - `stack_remove` — `{ service: string, keepRemote?: boolean }`
 - `stack_list` — `{ json?: boolean }`
-- `stack_info` — `{ service: string }`
+- `stack_info` — `{ service: string, json?: boolean }`
 - `stack_status` — `{ json?: boolean }`
-- `stack_env_show` — `{}`
+- `stack_env_show` — `{ json?: boolean }`
 - `stack_env_diff` — `{}`
 - `stack_doctor` — `{ fix?: boolean, all?: boolean, json?: boolean }`
 - `stack_sync` — `{ platform: string }`
 - `stack_providers` — `{ json?: boolean }`
-- `stack_projects_list` — `{}`
+- `stack_projects_list` — `{ json?: boolean }`
 - `stack_deps` — `{ json?: boolean }`
-- `stack_templates_list` — `{}`
+- `stack_templates_list` — `{ json?: boolean }`
 - `stack_upgrade` — `{}`
 - `stack_recommend` — `{ query: string, k?: number, category?: string, save?: boolean }`
 - `stack_apply` — `{ recipe_id: string, no_wire?: boolean }`

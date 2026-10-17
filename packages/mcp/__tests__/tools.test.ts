@@ -87,6 +87,16 @@ describe("validateToolInput", () => {
     expect(validateToolInput(tool("stack_doctor"), { fix: "yes" })).toContain("must be a boolean");
   });
 
+  test("rejects an argument name the tool does not declare, listing the accepted ones", () => {
+    // `catgory` used to be dropped and stack_recommend ran unfiltered, reporting success.
+    const typo = validateToolInput(tool("stack_recommend"), { query: "db", catgory: "Database" });
+    expect(typo).toContain('unknown argument "catgory"');
+    expect(typo).toContain("category");
+    expect(validateToolInput(tool("stack_upgrade"), { force: true })).toContain(
+      "takes no arguments",
+    );
+  });
+
   test("accepts well-formed input", () => {
     expect(validateToolInput(tool("stack_remove"), { service: "supabase", keepRemote: true })).toBe(
       null,
@@ -153,16 +163,19 @@ describe("readServerVersion", () => {
 });
 
 describe("structured-output tools", () => {
-  test("stack_list, stack_providers and stack_deps pass --json only when asked", () => {
+  test("list-style tools pass --json only when asked", () => {
     for (const [name, command] of [
       ["stack_list", "list"],
       ["stack_providers", "providers"],
       ["stack_deps", "deps"],
+      ["stack_templates_list", "templates list"],
+      ["stack_projects_list", "projects list"],
     ] as const) {
       const def = tool(name);
+      const argv = command.split(" ");
       expect(def.inputSchema.properties.json?.type).toBe("boolean");
-      expect(def.cliArgs({})).toEqual([command]);
-      expect(def.cliArgs({ json: true })).toEqual([command, "--json"]);
+      expect(def.cliArgs({})).toEqual(argv);
+      expect(def.cliArgs({ json: true })).toEqual([...argv, "--json"]);
       expect(validateToolInput(def, { json: "yes" })).toContain('"json" must be a boolean');
     }
   });
