@@ -70,7 +70,7 @@ Planning: `stack_recommend`, `stack_apply`.
 
 Project registry: `stack_projects_list` (`json: true` returns `stack projects list --json`), `stack_upgrade`.
 
-Every tool rejects an argument name its input schema does not declare, and lists the accepted ones, rather than running without it.
+Every tool rejects an argument name its input schema does not declare, and lists the accepted ones, rather than running without it. A blank string (`"  "`) counts as missing for a required argument and is rejected for an optional one.
 
 ## Resources (up to 3)
 

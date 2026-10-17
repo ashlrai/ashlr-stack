@@ -88,6 +88,20 @@ describe("stack env export --example --stdout", () => {
     }
   });
 
+  it("stdout is only the file: every line is a comment, KEY= or blank", () => {
+    // `stack env export --stdout > .env.example` used to capture the
+    // "stack env export" banner and a "printed to stdout." outro too.
+    const dir = makeTmp();
+    writeStackToml(dir);
+
+    const { stdout, code } = runCli(["env", "export", "--stdout"], dir);
+    expect(code).toBe(0);
+    for (const line of stdout.split("\n")) {
+      expect(line).toMatch(/^(#.*|[A-Z_]+=|)$/);
+    }
+    expect(stdout.startsWith("# ")).toBe(true);
+  });
+
   it("preserves service order from .stack.toml", () => {
     const dir = makeTmp();
     writeStackToml(dir);

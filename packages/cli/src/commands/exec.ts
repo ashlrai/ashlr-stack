@@ -41,6 +41,16 @@ export const execCommand = defineCommand({
     _: { type: "positional", required: false, description: "Command to run after --" },
   },
   async run({ rawArgs }) {
+    // Usage first: bare `stack exec` used to answer with the Phantom install
+    // hint (or "run stack init") instead of saying a command was missing.
+    // Forward everything after `--` (or everything after `exec`) to `phantom exec`.
+    const sep = rawArgs.indexOf("--");
+    const forwarded = sep >= 0 ? rawArgs.slice(sep + 1) : rawArgs;
+    if (forwarded.length === 0) {
+      fail("Nothing to run. Usage: stack exec -- <command>");
+      return;
+    }
+
     if (!hasConfig()) {
       fail("No .stack.toml found. Run `stack init` first.");
       return;
@@ -50,14 +60,6 @@ export const execCommand = defineCommand({
       await assertPhantomInstalled();
     } catch (err) {
       fail((err as Error).message);
-      return;
-    }
-
-    // Forward everything after `--` (or everything after `exec`) to `phantom exec`.
-    const sep = rawArgs.indexOf("--");
-    const forwarded = sep >= 0 ? rawArgs.slice(sep + 1) : rawArgs;
-    if (forwarded.length === 0) {
-      fail("Nothing to run. Usage: stack exec -- <command>");
       return;
     }
 

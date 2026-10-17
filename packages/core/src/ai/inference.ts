@@ -335,7 +335,7 @@ function isMcpMode(env: Record<string, string | undefined>): boolean {
  * Pick the right backend for the current process.
  *
  * Decision order:
- *   1. `preferLocal` — always local (CLI `stack recommend --local` path).
+ *   1. `preferLocal` — always local (the CLI's `stack recommend --synth` path).
  *   2. MCP env vars set → Claude delegated mode.
  *   3. Otherwise → local SLM (fail loudly if unreachable).
  *

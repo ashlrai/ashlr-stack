@@ -66,6 +66,19 @@ describe("stack exec stdout", () => {
     expect(r.stdout).toBe("");
     expect(r.stderr).toContain("No .stack.toml found");
   });
+
+  test("bare stack exec says a command is missing, even without a project or Phantom", () => {
+    // It used to answer with "run stack init" or the Phantom install hint.
+    const cwd = tmp("stack-exec-bare-");
+    const r = spawnSync("bun", [CLI_ENTRY, "exec"], {
+      cwd,
+      encoding: "utf8",
+      env: { HOME: cwd, NO_COLOR: "1", STACK_TELEMETRY: "0", PATH: dirname(process.execPath) },
+    });
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain("Nothing to run. Usage: stack exec -- <command>");
+    expect(r.stderr).not.toContain("Phantom");
+  });
 });
 
 describe("stack exec exit status", () => {
