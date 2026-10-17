@@ -117,3 +117,40 @@ describe("stack env show --json", () => {
     }
   });
 });
+
+describe("stack env diff --json", () => {
+  it("names each missing secret with its service and exits 1", () => {
+    const { code, stdout } = stack(["env", "diff", "--json"]);
+    expect(code).toBe(1);
+    expect(stdout).not.toContain(STORED_VALUE);
+    expect(JSON.parse(stdout)).toEqual({
+      schema: "ashlr.stack.env-diff/v1",
+      ok: false,
+      missing: [{ name: "RESEND_API_KEY", service: "resend" }],
+      totals: { declared: 2, missing: 1 },
+    });
+  });
+
+  it("exits 0 with ok true when every declared secret is stored", () => {
+    writeFileSync(
+      join(dir, ".stack.toml"),
+      `[stack]\nversion = "1"\n\n[services.openai]\nprovider = "openai"\nsecrets = ["OPENAI_API_KEY"]\n`,
+    );
+    const { code, stdout } = stack(["env", "diff", "--json"]);
+    expect(code).toBe(0);
+    const report = JSON.parse(stdout);
+    expect(report.ok).toBe(true);
+    expect(report.missing).toEqual([]);
+  });
+
+  it("prints a JSON error outside a project", () => {
+    const empty = mkdtempSync(join(tmpdir(), "stack-env-diff-empty-"));
+    try {
+      const { code, stdout } = stack(["env", "diff", "--json"], empty);
+      expect(code).toBe(1);
+      expect(typeof JSON.parse(stdout).error).toBe("string");
+    } finally {
+      rmSync(empty, { recursive: true, force: true });
+    }
+  });
+});
