@@ -55,6 +55,19 @@ describe("stack_scan args", () => {
   });
 });
 
+describe("stack_import args", () => {
+  test("always passes --json so the caller sees which names were stored", () => {
+    expect(tool("stack_import").cliArgs({})).toEqual(["import", "--json"]);
+    expect(tool("stack_import").cliArgs({ from: ".env.local", dryRun: true })).toEqual([
+      "import",
+      "--json",
+      "--from",
+      ".env.local",
+      "--dryRun",
+    ]);
+  });
+});
+
 describe("stack_remove args", () => {
   test("always passes --json so the caller sees which secrets Phantom kept", () => {
     expect(tool("stack_remove").cliArgs({ service: "openai" })).toEqual([

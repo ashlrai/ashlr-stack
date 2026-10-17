@@ -160,7 +160,7 @@ With `--auto`, offer setup for detections. `--json` emits detections without pro
 
 ### `stack import [--from <path>] [--dry-run]`
 
-Read the selected existing file (default `.env`) and import recognized entries through Phantom with Stack configuration. Existing secret names are skipped rather than overwritten. Preview with `--dry-run`; writing flows require initialized project metadata first.
+Read the selected existing file (default `.env`) and import recognized entries through Phantom with Stack configuration. Existing secret names are skipped rather than overwritten. Preview with `--dry-run`; writing flows require initialized project metadata first. `--json` prints one `ashlr.stack.import/v1` object with secret names only: `stored`, `skipped_existing`, `skipped_empty`, the detected `providers`, `unattributed` names and `services_added`/`services_kept`; an error carries `stored` when some names were written before it.
 
 ### `stack clone <git-url> [dir]`
 

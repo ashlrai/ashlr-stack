@@ -38,8 +38,18 @@ export const importCommand = defineCommand({
       default: false,
       description: "Print what would happen without writing anything.",
     },
+    json: {
+      type: "boolean",
+      default: false,
+      description:
+        "Emit machine-readable JSON (schema ashlr.stack.import/v1, names only): what was stored, skipped and wired.",
+    },
   },
   async run({ args }) {
+    if (args.json) {
+      await runImportJson(String(args.from), Boolean(args.dryRun));
+      return;
+    }
     intro("stack import");
 
     const envPath = join(process.cwd(), String(args.from));
@@ -133,3 +143,90 @@ export const importCommand = defineCommand({
     );
   },
 });
+
+/**
+ * `stack import --json`: one JSON object on stdout, secret names only, never a
+ * value. `stored` is what reached Phantom; `skipped_existing` were already in
+ * the vault (Phantom never replaces a name) and `skipped_empty` had no value.
+ * An error prints `{"error": ...}` and exits 1, with `stored` naming anything
+ * written before it, so a caller can tell a clean failure from a partial one.
+ */
+async function runImportJson(from: string, dryRun: boolean): Promise<void> {
+  const stored: string[] = [];
+  const fail = (error: string) => {
+    process.stdout.write(`${JSON.stringify(stored.length > 0 ? { error, stored } : { error })}\n`);
+    process.exitCode = 1;
+  };
+  try {
+    const envPath = join(process.cwd(), from);
+    if (!existsSync(envPath)) {
+      fail(`${envPath} not found.`);
+      return;
+    }
+    let phantomInstalled = true;
+    try {
+      await assertPhantomInstalled();
+    } catch (err) {
+      if (!dryRun) {
+        fail((err as Error).message);
+        return;
+      }
+      phantomInstalled = false;
+    }
+
+    const entries = parseEnv(await readFile(envPath, "utf-8"));
+    const grouped = groupByProvider(entries.map((e) => e.key));
+    const registered = new Set(listProviderNames());
+    const detected = Object.keys(grouped).filter((p) => registered.has(p));
+    const unattributed = entries
+      .map((e) => e.key)
+      .filter((name) => !detected.some((p) => grouped[p].includes(name)));
+    const providers = Object.fromEntries(detected.map((p) => [p, grouped[p]]));
+
+    const skippedExisting: string[] = [];
+    const skippedEmpty = entries.filter((e) => e.value.length === 0).map((e) => e.key);
+    const servicesAdded: string[] = [];
+    const servicesKept: string[] = [];
+
+    if (!dryRun && entries.length > 0) {
+      await assertProjectInitialized(process.cwd());
+      const existing = new Set(await listSecrets());
+      for (const { key, value } of entries) {
+        if (value.length === 0) continue;
+        if (existing.has(key)) {
+          skippedExisting.push(key);
+          continue;
+        }
+        await addSecret(key, value);
+        stored.push(key);
+      }
+      const config = hasConfig() ? await readConfig() : emptyConfig();
+      for (const provider of detected) {
+        if (config.services[provider]) {
+          servicesKept.push(provider);
+          continue;
+        }
+        config.services[provider] = toServiceEntry(provider, grouped[provider]);
+        servicesAdded.push(provider);
+      }
+      await writeConfig(config);
+    }
+
+    const report = {
+      schema: "ashlr.stack.import/v1",
+      from,
+      dry_run: dryRun,
+      phantom_installed: phantomInstalled,
+      providers,
+      unattributed,
+      stored,
+      skipped_existing: skippedExisting,
+      skipped_empty: skippedEmpty,
+      services_added: servicesAdded,
+      services_kept: servicesKept,
+    };
+    process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
+  } catch (err) {
+    fail((err as Error).message);
+  }
+}

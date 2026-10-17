@@ -97,7 +97,7 @@ export const CLI_COMMANDS: CliCommand[] = [
   {
     name: "stack import",
     description: "Import an existing .env into Phantom + .stack.toml.",
-    synopsis: "stack import [--from <path>] [--dryRun]",
+    synopsis: "stack import [--from <path>] [--dryRun] [--json]",
     flags: [
       {
         name: "from",
@@ -112,6 +112,14 @@ export const CLI_COMMANDS: CliCommand[] = [
         type: "boolean",
         default: false,
         description: "Print what would happen without writing anything.",
+      },
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        default: false,
+        description:
+          "Emit machine-readable JSON (schema ashlr.stack.import/v1, names only): what was stored, skipped and wired.",
       },
     ],
     examples: [{ command: "stack import" }, { command: "stack import --from .env.local --dryRun" }],

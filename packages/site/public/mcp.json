@@ -35,8 +35,8 @@
     },
     {
       "name": "stack_import",
-      "description": "Import nonempty new variables from an .env file into Phantom and record detected services; existing vault names are left unchanged.",
-      "cli": "stack import [--from <path>] [--dryRun]",
+      "description": "Import nonempty new variables from an .env file into Phantom and record detected services; existing vault names are left unchanged. Returns ashlr.stack.import/v1 JSON naming what was stored, skipped and wired (names only, never values).",
+      "cli": "stack import --json [--from <path>] [--dryRun]",
       "inputSchema": {
         "type": "object",
         "properties": {
