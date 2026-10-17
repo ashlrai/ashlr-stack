@@ -186,6 +186,16 @@ export async function writeConfig(config: StackConfig, cwd: string = process.cwd
 // Helpers
 // ---------------------------------------------------------------------------
 
+function setOwnService<T>(services: Record<string, T>, name: string, entry: T): void {
+  // Service names are data, including __proto__; never invoke prototype setters.
+  Object.defineProperty(services, name, {
+    value: entry,
+    enumerable: true,
+    configurable: true,
+    writable: true,
+  });
+}
+
 function split(config: StackConfig): { shape: ShapeFile; instance: InstanceFile } {
   const shape: ShapeFile = {
     stack: {
@@ -200,18 +210,18 @@ function split(config: StackConfig): { shape: ShapeFile; instance: InstanceFile 
     services: {},
   };
   for (const [name, entry] of Object.entries(config.services)) {
-    shape.services[name] = {
+    setOwnService(shape.services, name, {
       provider: entry.provider,
       secrets: entry.secrets,
       ...(entry.mcp ? { mcp: entry.mcp } : {}),
-    };
+    });
     const inst: InstanceFile["services"][string] = {};
     if (entry.resource_id) inst.resource_id = entry.resource_id;
     if (entry.region) inst.region = entry.region;
     if (entry.meta) inst.meta = entry.meta;
     if (entry.created_at) inst.created_at = entry.created_at;
     if (entry.created_by) inst.created_by = entry.created_by;
-    if (Object.keys(inst).length > 0) instance.services[name] = inst;
+    if (Object.keys(inst).length > 0) setOwnService(instance.services, name, inst);
   }
   return { shape, instance };
 }
@@ -219,8 +229,9 @@ function split(config: StackConfig): { shape: ShapeFile; instance: InstanceFile 
 function merge(shape: ShapeFile, instance: InstanceFile): StackConfig {
   const services: Record<string, ServiceEntry> = {};
   for (const [name, s] of Object.entries(shape.services ?? {})) {
-    const i = instance.services?.[name] ?? {};
-    services[name] = {
+    const i =
+      instance.services && Object.hasOwn(instance.services, name) ? instance.services[name] : {};
+    setOwnService(services, name, {
       provider: s.provider,
       secrets: s.secrets,
       ...(s.mcp ? { mcp: s.mcp } : {}),
@@ -229,7 +240,7 @@ function merge(shape: ShapeFile, instance: InstanceFile): StackConfig {
       ...(i.meta ? { meta: i.meta } : {}),
       created_at: i.created_at ?? "1970-01-01T00:00:00Z",
       ...(i.created_by ? { created_by: i.created_by } : {}),
-    };
+    });
   }
   return {
     stack: {
@@ -258,7 +269,7 @@ function normalizeLegacy(raw: Record<string, unknown>): StackConfig {
     environments,
   };
   for (const [name, entry] of Object.entries(services)) {
-    out.services[name] = {
+    setOwnService(out.services, name, {
       provider: (entry.provider as string) ?? name,
       secrets: (entry.secrets as string[]) ?? [],
       ...(typeof entry.mcp === "string" ? { mcp: entry.mcp } : {}),
@@ -267,7 +278,7 @@ function normalizeLegacy(raw: Record<string, unknown>): StackConfig {
       ...(entry.meta ? { meta: entry.meta as Record<string, unknown> } : {}),
       created_at: (entry.created_at as string) ?? new Date().toISOString(),
       ...(typeof entry.created_by === "string" ? { created_by: entry.created_by } : {}),
-    };
+    });
   }
   return out;
 }
