@@ -1,3 +1,4 @@
+import { resolve } from "node:path";
 import {
   findProjectByName,
   listProjects,
@@ -112,12 +113,16 @@ export const projectsCommand = defineCommand({
       async run({ args }) {
         intro("stack projects remove");
         const target = String(args.target);
-        const match = target.startsWith("/") ? target : (await findProjectByName(target))?.path;
-        if (!match) {
-          outroError(`No registered project matches "${target}".`);
+        // A registered name first, then the argument as a path (absolute or
+        // relative to cwd). Only claim success when an entry was dropped.
+        const byName = await findProjectByName(target);
+        const removed = await unregisterProject(byName?.path ?? resolve(target));
+        if (!removed) {
+          outroError(
+            `No registered project matches "${target}". Run \`stack projects list\` for names and paths.`,
+          );
           return;
         }
-        await unregisterProject(match);
         outro(colors.green(`Removed ${target} from registry.`));
       },
     }),

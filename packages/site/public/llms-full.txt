@@ -406,16 +406,16 @@ The source declares these 19 tools. They are a subset of CLI commands; use each 
 - `stack_scan` — `{ path?: string, confidence?: string }`
 - `stack_add` — `{ service: string, use?: string }`
 - `stack_remove` — `{ service: string, keepRemote?: boolean }`
-- `stack_list` — `{}`
-- `stack_info` — `{ service: string }`
+- `stack_list` — `{ json?: boolean }`
+- `stack_info` — `{ service: string, json?: boolean }`
 - `stack_status` — `{ json?: boolean }`
-- `stack_env_show` — `{}`
+- `stack_env_show` — `{ json?: boolean }`
 - `stack_env_diff` — `{}`
 - `stack_doctor` — `{ fix?: boolean, all?: boolean, json?: boolean }`
 - `stack_sync` — `{ platform: string }`
-- `stack_providers` — `{}`
+- `stack_providers` — `{ json?: boolean }`
 - `stack_projects_list` — `{ json?: boolean }`
-- `stack_deps` — `{}`
+- `stack_deps` — `{ json?: boolean }`
 - `stack_templates_list` — `{ json?: boolean }`
 - `stack_upgrade` — `{}`
 - `stack_recommend` — `{ query: string, k?: number, category?: string, save?: boolean }`

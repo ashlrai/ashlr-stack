@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import { platform } from "node:os";
 import { getProvider, readConfig } from "@ashlr/stack-core";
 import { defineCommand } from "citty";
+import { notInStackMessage } from "../lib/not-in-stack.ts";
 import { colors, intro, outro, outroError } from "../ui.ts";
 
 export const openCommand = defineCommand({
@@ -14,7 +15,7 @@ export const openCommand = defineCommand({
     const config = await readConfig();
     const entry = config.services[args.service];
     if (!entry) {
-      outroError(`${args.service} is not in this stack.`);
+      outroError(notInStackMessage(args.service, Object.keys(config.services)));
       return;
     }
     const provider = await getProvider(args.service);
