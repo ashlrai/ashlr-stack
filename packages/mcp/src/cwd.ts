@@ -66,6 +66,12 @@ export function planToolCall(
   tool: ToolDef,
   input: Record<string, unknown>,
 ): { ok: true; args: string[]; cwd: string | undefined } | { ok: false; error: string } {
+  // A `cwd` on a tool that is not project-scoped gets the specific message
+  // (why it is refused) rather than the generic unknown-argument one.
+  if (input.cwd !== undefined && input.cwd !== null && !acceptsCwd(tool)) {
+    const refused = resolveToolCwd(tool, input);
+    if (refused.error !== undefined) return { ok: false, error: refused.error };
+  }
   const invalid = validateToolInput(tool, input);
   if (invalid) return { ok: false, error: invalid };
   const resolved = resolveToolCwd(tool, input);
