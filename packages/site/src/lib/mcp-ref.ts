@@ -171,6 +171,12 @@ export const MCP_TOOLS: McpTool[] = [
         type: "boolean",
         description: "Machine-readable JSON (schema ashlr.stack.status/v1).",
       },
+      {
+        name: "cwd",
+        type: "string",
+        description:
+          "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory.",
+      },
     ],
     cli: "stack status [--json]",
   },

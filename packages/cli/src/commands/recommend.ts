@@ -175,7 +175,7 @@ export const recommendCommand = defineCommand({
       required: false,
     },
   },
-  async run({ args }) {
+  async run({ args, rawArgs }) {
     const query = typeof args.query === "string" ? args.query.trim() : "";
     if (!query) {
       // No query is a usage error, not an empty result: exit 1 so an agent or
@@ -204,7 +204,14 @@ export const recommendCommand = defineCommand({
 
     const k = args.k === undefined ? 6 : Number(String(args.k).trim());
     if (!Number.isInteger(k) || k < 1) {
-      const given = String(args.k) === "" ? "--k with no value" : `--k "${args.k}"`;
+      // citty reads the "-1" of `--k -1` as a short option, so k arrives
+      // empty; name the value that was typed instead of "no value".
+      const after = rawArgs[rawArgs.indexOf("--k") + 1];
+      const typed =
+        String(args.k) === "" && rawArgs.includes("--k") && after && /^-\d/.test(after)
+          ? after
+          : String(args.k);
+      const given = typed === "" ? "--k with no value" : `--k "${typed}"`;
       const message = `Invalid ${given}. Use a whole number of results, 1 or more (default 6).`;
       if (args.json) {
         console.error(message);

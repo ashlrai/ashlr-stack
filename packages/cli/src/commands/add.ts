@@ -10,6 +10,7 @@ import {
 } from "@ashlr/stack-core";
 import { defineCommand } from "citty";
 import { requirePhantom } from "../lib/phantom-preflight.ts";
+import { closestName } from "../lib/unknown-flags.ts";
 import { colors, intro, outro, outroError, prompts, spinnerBridge } from "../ui.ts";
 
 export const addCommand = defineCommand({
@@ -65,20 +66,29 @@ export interface AddArgs {
  * provider fails, then roll back and report every failure.
  */
 export async function runAdd(args: AddArgs): Promise<void> {
-  if (!hasConfig()) {
+  const available = listProviderNames();
+  let service = args.service ? String(args.service) : undefined;
+  const title = (name: string) => `stack add ${name}${args.dryRun ? colors.dim(" (dry-run)") : ""}`;
+
+  // Usage and provider-name errors come before the project check, so a typo
+  // outside a project says the provider is unknown instead of "Run `stack
+  // init` first", which would only lead to the same error after init.
+  if (!service && !process.stdout.isTTY) {
     intro("stack add");
+    throw new Error("No service specified. Usage: stack add <service>");
+  }
+  if (service && !available.includes(service)) {
+    intro(title(service));
+    await printUnknownProvider(service, available);
+  }
+
+  if (!hasConfig()) {
+    intro(service ? title(service) : "stack add");
     throw new Error("No .stack.toml found. Run `stack init` first.");
   }
 
-  const available = listProviderNames();
-
   // Interactive picker when no service argument is provided.
-  let service = args.service ? String(args.service) : undefined;
   if (!service) {
-    if (!process.stdout.isTTY) {
-      intro("stack add");
-      throw new Error("No service specified. Usage: stack add <service>");
-    }
     const grouped = await groupProvidersForPicker(available);
     const picked = await prompts.select({
       message: "Which service to add?",
@@ -91,32 +101,7 @@ export async function runAdd(args: AddArgs): Promise<void> {
     service = String(picked);
   }
 
-  intro(`stack add ${service}${args.dryRun ? colors.dim(" (dry-run)") : ""}`);
-
-  if (!available.includes(service)) {
-    // Group the catalog by category so the suggestion doesn't wrap into an
-    // unreadable one-line comma list on narrow terminals.
-    const byCat: Record<string, string[]> = {};
-    for (const name of available) {
-      try {
-        const p = await getProvider(name);
-        if (!byCat[p.category]) byCat[p.category] = [];
-        byCat[p.category].push(p.name);
-      } catch {
-        /* skip */
-      }
-    }
-    const lines = Object.entries(byCat)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([cat, names]) => `  ${colors.bold(cat.padEnd(10))} ${names.sort().join("  ")}`);
-    console.log();
-    console.log(`  Unknown provider ${colors.red(`"${service}"`)}.`);
-    console.log();
-    console.log(colors.dim("  Available providers:"));
-    for (const line of lines) console.log(line);
-    console.log();
-    throw new Error("Pick one from the catalog above.");
-  }
+  intro(title(service));
 
   if (!args.dryRun) {
     await requirePhantom();
@@ -190,6 +175,40 @@ export async function runAdd(args: AddArgs): Promise<void> {
     spinner.stop(colors.red("Failed."));
     throw err;
   }
+}
+
+/**
+ * Print the catalog grouped by category and throw. Names the closest provider
+ * when the typo is within two edits (`supabse` -> supabase).
+ */
+async function printUnknownProvider(service: string, available: string[]): Promise<never> {
+  // Group the catalog by category so the suggestion doesn't wrap into an
+  // unreadable one-line comma list on narrow terminals.
+  const byCat: Record<string, string[]> = {};
+  for (const name of available) {
+    try {
+      const p = await getProvider(name);
+      if (!byCat[p.category]) byCat[p.category] = [];
+      byCat[p.category].push(p.name);
+    } catch {
+      /* skip */
+    }
+  }
+  const lines = Object.entries(byCat)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([cat, names]) => `  ${colors.bold(cat.padEnd(10))} ${names.sort().join("  ")}`);
+  console.log();
+  console.log(`  Unknown provider ${colors.red(`"${service}"`)}.`);
+  console.log();
+  console.log(colors.dim("  Available providers:"));
+  for (const line of lines) console.log(line);
+  console.log();
+  const near = closestName(service, available);
+  throw new Error(
+    near
+      ? `Unknown provider "${service}". Did you mean ${near}? Run \`stack add ${near}\`.`
+      : "Pick one from the catalog above.",
+  );
 }
 
 async function handleSdkInstall(pkgs: string[], mode: string, dryRun: boolean): Promise<void> {

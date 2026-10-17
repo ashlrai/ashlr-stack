@@ -60,7 +60,9 @@ export const onboardCommand = defineCommand({
         }
         if (r.refused.length > 0) process.exitCode = 1;
       } catch (err) {
-        console.error(colors.red((err as Error).message));
+        const message = (err as Error).message;
+        if (args.json) console.log(JSON.stringify({ error: message }));
+        console.error(colors.red(message));
         process.exitCode = 1;
       }
       return;
@@ -74,12 +76,12 @@ export const onboardCommand = defineCommand({
         .filter(Boolean) as AgentClient[];
       const bad = clients.filter((c) => !AGENT_CLIENTS.includes(c));
       if (bad.length > 0 || clients.length === 0) {
-        console.error(
-          colors.red(
-            `Unknown client: ${bad.join(", ") || "(none)"}. Use: ${AGENT_CLIENTS.join(", ")}.`,
-          ),
-        );
-        process.exitCode = 2;
+        // A usage error exits 1 like every other command's, and --json gets
+        // `{"error"}` on stdout instead of nothing to parse.
+        const message = `Unknown client: ${bad.join(", ") || "(none)"}. Use: ${AGENT_CLIENTS.join(", ")}.`;
+        if (args.json) console.log(JSON.stringify({ error: message }));
+        console.error(colors.red(message));
+        process.exitCode = 1;
         return;
       }
     }

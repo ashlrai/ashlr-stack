@@ -62,6 +62,15 @@ describe("command errors", () => {
     expect(`${r.stdout}${r.stderr}`).toContain("USAGE stack info");
   });
 
+  test("a usage error under --json is one JSON error on stdout, no usage text", () => {
+    const r = stack(["info", "--json"]);
+    expect(r.code).toBe(1);
+    expect(r.stdout).not.toContain("USAGE");
+    const parsed = JSON.parse(r.stdout) as { error: string };
+    expect(parsed.error).toContain("Missing required positional argument: SERVICE");
+    expect(parsed.error).toContain("Run `stack info --help` for usage.");
+  });
+
   test("--version still prints the version", () => {
     const r = stack(["--version"]);
     expect(r.code).toBe(0);
