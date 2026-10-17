@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### MCP project targeting
+
+- **Project-scoped MCP tools take an optional `cwd`.** The server always ran `stack` in its own working directory and no tool took a project argument, so a host that starts the server outside the project (Claude Desktop, a global Cursor config) could not reach it: `stack_list` answered "No .stack.toml at <server dir>". `stack_init`, `stack_import`, `stack_scan`, `stack_add`, `stack_remove`, `stack_list`, `stack_info`, `stack_env_show`, `stack_env_diff`, `stack_doctor`, `stack_sync`, `stack_deps`, `stack_recommend` and `stack_apply` now accept `cwd`, an absolute path to an existing directory, and run `stack` there. It is resolved with realpath; a relative path, a missing path or a file is refused with an `isError` result before anything runs. Global tools (`stack_providers`, `stack_projects_list`, `stack_templates_list`, `stack_upgrade`) and `stack_status` refuse `cwd` rather than silently ignoring it. Resources still read the server's working directory.
+
 ### Agent dead ends
 
 - **`stack ci` refuses with one actionable line instead of printing help.** Bare `stack ci` printed usage and `No command specified` with exit 1, and its only subcommand `init` is intentionally unavailable (the old workflow needed unattended Phantom Cloud pull, which requires trusted-terminal approval). `stack ci` and `stack ci init` now say what to run instead (`stack doctor` from a trusted terminal, or `stack doctor --reconcile --json` in CI) and exit 1. With `--json` they print `{"error": ...}` on stdout. No workflow is ever written.
