@@ -16,6 +16,24 @@ function fail(message: string): void {
 const FORWARDED_SIGNALS: NodeJS.Signals[] = ["SIGINT", "SIGTERM", "SIGHUP"];
 
 /**
+ * Signals a terminal sends to the whole foreground process group (Ctrl-C,
+ * hangup; on Windows the console sends Ctrl-C to every attached process).
+ * The wrapped command shares that group, so it already has the signal.
+ */
+const TERMINAL_SIGNALS: ReadonlySet<NodeJS.Signals> = new Set(["SIGINT", "SIGHUP"]);
+
+/**
+ * Whether `stack exec` should relay `signal` to the wrapped command. On a
+ * terminal, Ctrl-C already reached the command; relaying it would deliver a
+ * second SIGINT, which many tools read as "force quit now" (terraform's "Two
+ * interrupts received. Exiting immediately."). Off a terminal (an agent or
+ * supervisor signalling this pid) every forwarded signal is relayed.
+ */
+export function shouldRelaySignal(signal: NodeJS.Signals, onTerminal: boolean): boolean {
+  return !(onTerminal && TERMINAL_SIGNALS.has(signal));
+}
+
+/**
  * Exit status for the wrapped command. A signal-terminated child has a null
  * exit code; map it to the shell convention 128 + signal number so callers
  * never read a killed command as success.
@@ -66,7 +84,13 @@ export const execCommand = defineCommand({
     // A TERM/HUP/INT sent to `stack exec` alone (an agent's timeout, a
     // supervisor) would otherwise kill only this wrapper and leave the
     // wrapped command running. Forward it and wait for the child to exit.
+    // On a terminal, Ctrl-C/hangup already reached the command (same process
+    // group), so stack only keeps waiting for it instead of sending a second one.
+    const onTerminal = [process.stdin, process.stdout, process.stderr].some(
+      (stream) => stream.isTTY === true,
+    );
     const forward = (signal: NodeJS.Signals) => () => {
+      if (!shouldRelaySignal(signal, onTerminal)) return;
       if (child.exitCode === null && child.signalCode === null) child.kill(signal);
     };
     const handlers = FORWARDED_SIGNALS.map((signal) => {
