@@ -64,6 +64,8 @@ Inspection: `stack_list`, `stack_info`, `stack_status`, `stack_providers`, `stac
 
 Env: `stack_env_show`, `stack_env_diff`, `stack_sync`.
 
+`stack_info` and `stack_env_show` take `json: true` to return `stack info --json` (`ashlr.stack.info/v1`) and `stack env show --json` (`ashlr.stack.env/v1`) instead of human text.
+
 Planning: `stack_recommend`, `stack_apply`.
 
 Project registry: `stack_projects_list`, `stack_upgrade`.

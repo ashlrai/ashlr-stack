@@ -1,6 +1,6 @@
 import { readConfig, writeConfig } from "@ashlr/stack-core";
 import { removeMcpEntry } from "@ashlr/stack-core/mcp-writer";
-import { addCommand } from "../commands/add.ts";
+import { runAdd } from "../commands/add.ts";
 import { colors, prompts } from "../ui.ts";
 import { removeVaultSecrets } from "./phantom-preflight.ts";
 
@@ -21,17 +21,17 @@ export interface ProvisionLoopResult {
  * Shared provisioning loop used by both `stack apply` and `stack init
  * --template`. Iterates over `targets` in order (intentionally serial — some
  * providers depend on cwd state written by earlier steps), calling
- * `stack add <name>` for each one via `addCommand`.
+ * `stack add <name>` for each one via `runAdd`.
  *
  * On partial failure, offers to roll back the successful adds unless
  * `opts.rollback` is false. In non-TTY mode (CI), rolls back automatically.
  *
  * When `opts.dryRun` is true, only prints what would be provisioned — no
- * `addCommand` calls, no rollback.
+ * `runAdd` calls, no rollback.
  *
  * The helper lives in `packages/cli/src/lib/` (not in `@ashlr/stack-core`)
  * because it imports spinner/prompt helpers from `../ui.ts` and calls
- * `addCommand` directly — both of which are CLI-layer concerns.
+ * `runAdd` directly — both of which are CLI-layer concerns.
  */
 export async function provisionProviders(
   targets: ProvisionTarget[],
@@ -53,15 +53,14 @@ export async function provisionProviders(
   for (const { name } of targets) {
     try {
       console.log(colors.dim(`  › stack add ${name}`));
-      await addCommand.run?.({
-        args: { service: name, dryRun: false, _: [] },
-        cmd: addCommand,
-        rawArgs: [name],
-        data: undefined,
-      } as unknown as Parameters<NonNullable<typeof addCommand.run>>[0]);
+      // runAdd throws instead of exiting, so one failed provider does not
+      // end the loop before the rest run and the rollback below.
+      await runAdd({ service: name, dryRun: false });
       succeeded.push(name);
     } catch (err) {
-      failures.push({ name, message: (err as Error).message });
+      const message = (err as Error).message;
+      console.log(`  ${colors.red("✗")} ${name}: ${message}`);
+      failures.push({ name, message });
     }
   }
 

@@ -30,6 +30,7 @@ import { templatesCommand } from "./commands/templates.ts";
 import { upgradeCommand } from "./commands/upgrade.ts";
 import { normalizeKebabFlags } from "./lib/normalize-args.ts";
 import { runCli } from "./lib/run-cli.ts";
+import { installSynchronousStdio } from "./lib/sync-stdout.ts";
 import { checkForUpdate } from "./lib/update-check.ts";
 
 // Single source of truth for the CLI version. citty wires this into `--help`
@@ -119,6 +120,9 @@ const main = defineCommand({
   },
 });
 
+// Before any output: outroError exits the process, and Bun 1.2 drops queued
+// stdout writes on exit unless they were written synchronously.
+installSynchronousStdio();
 const _startMs = Date.now();
 void checkForUpdate(VERSION);
 // Normalize kebab-case flags (`--dry-run`) to the camelCase keys our commands
