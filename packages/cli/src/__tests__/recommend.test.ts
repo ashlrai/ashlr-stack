@@ -165,6 +165,17 @@ describe("stack recommend --json", () => {
     }
   });
 
+  it("names a negative --k given as a separate token", () => {
+    // `--k -1` reached the command as an empty --k, reported as "no value".
+    for (const k of ["-1", "-3"]) {
+      const { stdout, stderr, code } = runCli(["recommend", "postgres", "--k", k, "--json"]);
+      expect(code).toBe(1);
+      expect(stdout).toBe("");
+      expect(stderr).toContain(`Invalid --k "${k}"`);
+      expect(stderr).not.toContain("no value");
+    }
+  });
+
   it("honours a valid --k", () => {
     const { stdout, code } = runCli(["recommend", "postgres database", "--k", "2", "--json"]);
     expect(code).toBe(0);

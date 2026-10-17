@@ -58,6 +58,19 @@ describe("unknown options are refused", () => {
     expect(JSON.parse(r.stdout).error).toContain("Unknown option --json for `stack upgrade`");
   });
 
+  test("an option before the subcommand is refused and moved after it", () => {
+    // `stack --json list` passed the guard (the root declares --json for
+    // --version) and list never saw it: human output, exit 1 or 0.
+    const r = stack(["--json", "list"]);
+    expect(r.code).toBe(1);
+    expect(JSON.parse(r.stdout).error).toContain(
+      "Option --json goes after the subcommand: run `stack list --json`",
+    );
+    const v = stack(["-v", "list"]);
+    expect(v.code).toBe(1);
+    expect(v.stderr).toContain("Unknown option -v for `stack list`");
+  });
+
   test("an unknown root option is refused instead of printing the banner", () => {
     const r = stack(["--bogus"]);
     expect(r.code).toBe(1);
@@ -110,6 +123,16 @@ describe("findUnknownFlag accepts every declared spelling", () => {
       command: "stack",
     });
     expect(await unknown(["upgrade", "-x"])).toMatchObject({ flag: "-x" });
+    expect(await unknown(["env", "--json", "show"])).toMatchObject({
+      flag: "--json",
+      command: "stack env show",
+      before: "show",
+    });
+    expect(await unknown(["--json", "upgrade"])).toMatchObject({
+      flag: "--json",
+      command: "stack upgrade",
+      before: undefined,
+    });
   });
 
   test("every argv the MCP server builds passes the guard", async () => {

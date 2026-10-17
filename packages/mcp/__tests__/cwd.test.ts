@@ -216,6 +216,20 @@ describe("cwd input: stdio server started in another directory", () => {
     expect(parsed.services.map((s) => s.name)).toEqual(["openai"]);
   }, 20_000);
 
+  test("stack_status json with cwd reports the project's config, not the server's", async () => {
+    const result = await call("stack_status", { json: true, cwd: projectDir });
+    expect(result.isError).toBeFalsy();
+    const parsed = JSON.parse(result.content[0]?.text ?? "") as {
+      schema: string;
+      config: { present: boolean; project_id: string | null };
+      services: Array<{ name: string }>;
+    };
+    expect(parsed.schema).toBe("ashlr.stack.status/v1");
+    expect(parsed.config.present).toBe(true);
+    expect(parsed.config.project_id).toBe("stk_cwd00001");
+    expect(parsed.services.map((s) => s.name)).toEqual(["openai"]);
+  }, 20_000);
+
   test("stack_deps json with cwd reads the project's graph", async () => {
     const result = await call("stack_deps", { json: true, cwd: projectDir });
     expect(result.isError).toBeFalsy();

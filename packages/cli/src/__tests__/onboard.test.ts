@@ -46,9 +46,18 @@ describe("stack onboard", () => {
     expect(existsSync(join(home, ".gemini", "settings.json"))).toBe(false);
   });
 
-  test("rejects an unknown client with exit code 2", () => {
+  test("rejects an unknown client with exit code 1, as JSON with --json", () => {
     const r = run("--client", "vim");
-    expect(r.status).toBe(2);
-    expect(`${r.stdout}${r.stderr}`).toContain("Unknown client");
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain("Unknown client: vim");
+    const j = run("--client", "vim", "--json");
+    expect(j.status).toBe(1);
+    expect(JSON.parse(j.stdout).error).toContain("Unknown client: vim");
+  });
+
+  test("--undo --json with nothing to undo is a JSON error", () => {
+    const r = run("--undo", "--json");
+    expect(r.status).toBe(1);
+    expect(JSON.parse(r.stdout).error).toContain("nothing to undo");
   });
 });
