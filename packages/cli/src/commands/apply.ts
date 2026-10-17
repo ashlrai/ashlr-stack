@@ -47,6 +47,11 @@ export const applyCommand = defineCommand({
   async run({ args }) {
     intro(`stack apply${args.noWire ? colors.dim(" (no-wire)") : ""}`);
 
+    // Resolve the recipe first: a mistyped id must not leave a .stack.toml
+    // and a registry entry behind.
+    const recipe = await pickRecipe(args.recipeId ? String(args.recipeId) : undefined);
+    if (!recipe) return; // pickRecipe already surfaced the error.
+
     // The marketed golden path is `stack recommend --save && stack apply <id>`,
     // which must work from a blank directory. Auto-init if no .stack.toml so
     // the user isn't forced through a template picker they never asked for.
@@ -75,9 +80,6 @@ export const applyCommand = defineCommand({
         return;
       }
     }
-
-    const recipe = await pickRecipe(args.recipeId ? String(args.recipeId) : undefined);
-    if (!recipe) return; // pickRecipe already surfaced the error.
 
     await requirePhantom();
 
@@ -152,7 +154,12 @@ async function pickRecipe(id?: string): Promise<Recipe | null> {
     try {
       return await readRecipe(id);
     } catch (err) {
-      outroError((err as Error).message);
+      const ids = (await listRecipes()).map((r) => r.id);
+      const next =
+        ids.length > 0
+          ? `Available: ${ids.join(", ")}.`
+          : 'Save one first with `stack recommend "<what you are building>" --save`.';
+      outroError(`${(err as Error).message.replace(/\.$/, "")}. ${next}`);
       return null;
     }
   }

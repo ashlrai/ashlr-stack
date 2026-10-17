@@ -19,7 +19,7 @@ import {
   ReadResourceRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { readServerVersion, resolveStackCommand } from "./stack-bin.ts";
-import { TOOLS } from "./tools.ts";
+import { TOOLS, validateToolInput } from "./tools.ts";
 
 const STACK = resolveStackCommand();
 
@@ -74,6 +74,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       content: [{ type: "text", text: `Unknown tool: ${request.params.name}` }],
       isError: true,
     };
+  }
+  const invalid = validateToolInput(tool, request.params.arguments ?? {});
+  if (invalid) {
+    return { content: [{ type: "text", text: invalid }], isError: true };
   }
   const input = (request.params.arguments ?? {}) as Record<string, unknown>;
   const args = tool.cliArgs(input);

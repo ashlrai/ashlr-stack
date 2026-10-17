@@ -14,7 +14,7 @@ import {
   resolveCliPackageJson,
   resolveStackCommand,
 } from "../src/stack-bin.ts";
-import { TOOLS } from "../src/tools.ts";
+import { TOOLS, validateToolInput } from "../src/tools.ts";
 
 const created: string[] = [];
 afterEach(() => {
@@ -108,5 +108,39 @@ describe("readServerVersion", () => {
     const distUrl = pathToFileURL(join(import.meta.dir, "..", "dist", "server.js")).href;
     expect(readServerVersion(distUrl)).toMatch(/^\d+\.\d+\.\d+/);
     expect(readServerVersion(distUrl)).not.toBe("0.0.0");
+  });
+});
+
+describe("validateToolInput", () => {
+  test("accepts complete, well-typed input", () => {
+    expect(validateToolInput(tool("stack_add"), { service: "neon" })).toBeUndefined();
+    expect(
+      validateToolInput(tool("stack_recommend"), { query: "q", k: 3, save: true }),
+    ).toBeUndefined();
+    expect(validateToolInput(tool("stack_list"), {})).toBeUndefined();
+  });
+
+  test("names a missing required argument and the tool's arguments", () => {
+    const msg = validateToolInput(tool("stack_info"), {});
+    expect(msg).toContain('missing required argument "service"');
+    expect(msg).toContain("Arguments: service.");
+  });
+
+  test("rejects wrong types and non-object input", () => {
+    expect(validateToolInput(tool("stack_doctor"), { json: "yes" })).toContain(
+      'argument "json" must be a boolean',
+    );
+    expect(validateToolInput(tool("stack_recommend"), { query: "q", k: Number.NaN })).toContain(
+      'argument "k" must be a number',
+    );
+    expect(validateToolInput(tool("stack_list"), [])).toContain("must be a JSON object");
+  });
+
+  test("every required argument is declared in properties", () => {
+    for (const def of TOOLS) {
+      for (const name of def.inputSchema.required ?? []) {
+        expect(def.inputSchema.properties[name]).toBeDefined();
+      }
+    }
   });
 });

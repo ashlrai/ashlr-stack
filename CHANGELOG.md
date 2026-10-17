@@ -12,6 +12,12 @@
 - **Installers state the real provider count (39, not 23)**, and `release-artifacts.test.ts` checks it against the registry and that the site serves the same `install.sh`/`install.ps1` as `scripts/`.
 - **`install.sh` says how to get the MCP server after a binary install.** The prebuilt release binary is only `stack`; the installer now prints `npm i -g ashlr-stack-mcp` / `npx -y ashlr-stack-mcp`, and the MCP README no longer says the one-liner always installs both.
 
+### Recipe and MCP fixes
+
+- **`stack apply` and `stack init --template` keep going after a provider fails.** A failed `stack add` exited the process, so later providers never ran, the partial-failure rollback never happened and no summary was printed. Every provider is now tried, each failure is printed, and the run ends with `Some providers failed: <name>: <reason>; ...` and exit 1.
+- **`stack apply <wrong-id>` no longer writes `.stack.toml` first.** The recipe is resolved before the auto-init, and the error lists the saved recipe ids or says to run `stack recommend "..." --save`.
+- **MCP tool calls are checked against their input schema.** A missing required argument reached the CLI as the string "undefined" (`stack_info {}` ran `stack info undefined`, and `stack_apply {}` ran `stack init` before failing). Missing or mistyped arguments now return an error naming the argument, and the CLI is not run.
+
 ## 0.2.1 (2026-10-16)
 
 0.2.1 was never published, so everything below ships in it, along with the 2026-10-12 notes further down. Source versions (core, cli, mcp, `server.json`, `VERSION` in `packages/cli/src/index.ts`) are already 0.2.1, which `scripts/publish.sh` checks before it publishes core, then cli, then mcp.

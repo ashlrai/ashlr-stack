@@ -221,3 +221,41 @@ describe("MCP CLI completion", () => {
     }
   });
 });
+
+describe("MCP argument validation", () => {
+  test("missing or mistyped arguments are refused before the CLI runs", async () => {
+    // Before: stack_apply {} reached the CLI as `apply undefined`, which
+    // auto-ran `stack init` and wrote .stack.toml before failing.
+    const root = mkdtempSync(join(tmpdir(), "stack-mcp-args-"));
+    const marker = join(root, "ran");
+    const fake = join(root, "stack");
+    writeFileSync(fake, `#!/bin/sh\necho "$@" >> '${marker}'\n`);
+    chmodSync(fake, 0o700);
+    const fixtureClient = new Client({ name: "args-test", version: "0.0.1" });
+    const fixtureTransport = new StdioClientTransport({
+      command: "node",
+      args: [SERVER_PATH],
+      env: { STACK_BIN: fake, HOME: root, TMPDIR: root, PATH: process.env.PATH ?? "" },
+    });
+    try {
+      await fixtureClient.connect(fixtureTransport);
+      for (const [name, args, needle] of [
+        ["stack_apply", {}, 'missing required argument "recipe_id"'],
+        ["stack_add", { service: "" }, 'missing required argument "service"'],
+        ["stack_sync", {}, 'missing required argument "platform"'],
+        ["stack_recommend", { query: "postgres", k: "two" }, 'argument "k" must be a number'],
+      ] as const) {
+        const result = (await fixtureClient.callTool({ name, arguments: args })) as {
+          isError?: boolean;
+          content: Array<{ type: string; text: string }>;
+        };
+        expect(result.isError).toBe(true);
+        expect(result.content[0]?.text ?? "").toContain(needle);
+      }
+      expect(existsSync(marker)).toBe(false);
+    } finally {
+      await fixtureClient.close();
+      rmSync(root, { recursive: true, force: true });
+    }
+  }, 20_000);
+});

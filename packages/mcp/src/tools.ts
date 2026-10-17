@@ -280,3 +280,37 @@ export const TOOLS: ToolDef[] = [
     },
   },
 ];
+
+/**
+ * Check a tools/call payload against the tool's inputSchema before anything is
+ * spawned. Without this a missing `service` reached the CLI as the literal
+ * string "undefined", and `stack_apply {}` auto-ran `stack init` first.
+ * Returns an error message, or undefined when the input is acceptable.
+ */
+export function validateToolInput(tool: ToolDef, input: unknown): string | undefined {
+  if (input === null || typeof input !== "object" || Array.isArray(input)) {
+    return `${tool.name}: arguments must be a JSON object.`;
+  }
+  const args = input as Record<string, unknown>;
+  const props = tool.inputSchema.properties;
+  const usage = () => {
+    const names = Object.keys(props);
+    return names.length > 0 ? ` Arguments: ${names.join(", ")}.` : "";
+  };
+  for (const name of tool.inputSchema.required ?? []) {
+    const value = args[name];
+    if (value === undefined || value === null || value === "") {
+      return `${tool.name}: missing required argument "${name}" (${props[name]?.type ?? "string"}).${usage()}`;
+    }
+  }
+  for (const [name, value] of Object.entries(args)) {
+    const expected = props[name]?.type;
+    if (expected === undefined || value === undefined || value === null) continue;
+    const actual = typeof value;
+    const ok = actual === expected && (actual !== "number" || Number.isFinite(value));
+    if (!ok) {
+      return `${tool.name}: argument "${name}" must be a ${expected}, got ${JSON.stringify(value)}.`;
+    }
+  }
+  return undefined;
+}
