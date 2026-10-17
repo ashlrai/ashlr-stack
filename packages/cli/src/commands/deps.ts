@@ -1,6 +1,66 @@
-import { getProvider, readConfig } from "@ashlr/stack-core";
+import { type StackConfig, getProvider, readConfig } from "@ashlr/stack-core";
 import { defineCommand } from "citty";
 import { colors, intro, outro } from "../ui.ts";
+
+/**
+ * Stable machine shape for `stack deps --json`. Fields may be added but
+ * existing ones must not change meaning. Secret *names* only, never values.
+ * Services whose provider is not in the registry are listed in `unresolved`
+ * (the human graph omits them) but still count toward `totals`.
+ */
+export interface DepsReport {
+  schema: "ashlr.stack.deps/v1";
+  project_id: string | null;
+  template: string | null;
+  categories: Array<{
+    category: string;
+    services: Array<{
+      name: string;
+      provider: string;
+      displayName: string;
+      secrets: string[];
+      mcp: string | null;
+    }>;
+  }>;
+  unresolved: string[];
+  totals: { services: number; secrets: number; mcp: number };
+}
+
+export async function buildDepsReport(config: StackConfig): Promise<DepsReport> {
+  const services = Object.entries(config.services);
+  const byCategory = new Map<string, DepsReport["categories"][number]["services"]>();
+  const unresolved: string[] = [];
+  for (const [name, entry] of services) {
+    try {
+      const p = await getProvider(entry.provider);
+      const list = byCategory.get(p.category) ?? [];
+      list.push({
+        name,
+        provider: entry.provider,
+        displayName: p.displayName,
+        secrets: [...(entry.secrets ?? [])],
+        mcp: entry.mcp ?? null,
+      });
+      byCategory.set(p.category, list);
+    } catch {
+      unresolved.push(name);
+    }
+  }
+  return {
+    schema: "ashlr.stack.deps/v1",
+    project_id: config.stack.project_id ?? null,
+    template: config.stack.template ?? null,
+    categories: [...byCategory.keys()]
+      .sort()
+      .map((category) => ({ category, services: byCategory.get(category) ?? [] })),
+    unresolved,
+    totals: {
+      services: services.length,
+      secrets: services.reduce((acc, [, e]) => acc + (e.secrets?.length ?? 0), 0),
+      mcp: services.filter(([, e]) => e.mcp).length,
+    },
+  };
+}
 
 /**
  * `stack deps` — render an ASCII dependency graph of the services Stack has
@@ -13,7 +73,27 @@ export const depsCommand = defineCommand({
     name: "deps",
     description: "Show the service dependency graph for this stack.",
   },
-  async run() {
+  args: {
+    json: {
+      type: "boolean",
+      description: "Emit machine-readable JSON (schema ashlr.stack.deps/v1).",
+    },
+  },
+  async run({ args }) {
+    if (args.json) {
+      let config: StackConfig;
+      try {
+        config = await readConfig();
+      } catch (err) {
+        process.stdout.write(
+          `${JSON.stringify({ error: err instanceof Error ? err.message : String(err) })}\n`,
+        );
+        process.exit(1);
+      }
+      process.stdout.write(`${JSON.stringify(await buildDepsReport(config), null, 2)}\n`);
+      return;
+    }
+
     intro("stack deps");
     const config = await readConfig();
     const services = Object.entries(config.services);

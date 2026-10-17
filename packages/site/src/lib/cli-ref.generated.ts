@@ -291,8 +291,19 @@ export const CLI_COMMANDS: CliCommand[] = [
   {
     name: "stack list",
     description: "List services configured in this stack.",
-    synopsis: "stack list",
-    examples: [{ command: "stack list" }],
+    synopsis: "stack list [--json]",
+    flags: [
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        description: "Emit machine-readable JSON (schema ashlr.stack.list/v1).",
+      },
+    ],
+    examples: [
+      { command: "stack list" },
+      { command: "stack list --json", comment: "# ashlr.stack.list/v1 for agents" },
+    ],
   },
   {
     name: "stack info",
@@ -388,8 +399,19 @@ export const CLI_COMMANDS: CliCommand[] = [
   {
     name: "stack deps",
     description: "Show the service dependency graph for this stack.",
-    synopsis: "stack deps",
-    examples: [{ command: "stack deps" }],
+    synopsis: "stack deps [--json]",
+    flags: [
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        description: "Emit machine-readable JSON (schema ashlr.stack.deps/v1).",
+      },
+    ],
+    examples: [
+      { command: "stack deps" },
+      { command: "stack deps --json", comment: "# ashlr.stack.deps/v1 for agents" },
+    ],
     notes:
       "Renders an ASCII tree grouped by category, with every secret slot annotated beneath its service.",
   },
@@ -639,8 +661,19 @@ export const CLI_COMMANDS: CliCommand[] = [
   {
     name: "stack providers",
     description: "List every curated provider Stack can wire up.",
-    synopsis: "stack providers",
-    examples: [{ command: "stack providers" }],
+    synopsis: "stack providers [--json]",
+    flags: [
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        description: "Emit machine-readable JSON (schema ashlr.stack.providers/v1).",
+      },
+    ],
+    examples: [
+      { command: "stack providers" },
+      { command: "stack providers --json", comment: "# ashlr.stack.providers/v1 for agents" },
+    ],
   },
   {
     name: "stack recommend",
