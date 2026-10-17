@@ -35,14 +35,16 @@ jobs:
           - target: bun-linux-arm64
             os: ubuntu-latest
             asset: stack-linux-arm64
-          # GitHub's macos-13 (Intel) runner image is being phased out and
-          # the queue regularly sits for 30+ minutes. Bun cross-compiles
-          # cleanly from arm64 → x64 via `--target=bun-darwin-x64`, so we
-          # run both darwin builds on macos-latest (M1/M2) and skip the
-          # Intel-runner dependency entirely.
+          # Bun cross-compiles to every target from any host and ad-hoc signs
+          # the Mach-O itself (LC_CODE_SIGNATURE is present when built on
+          # Linux), and this binary is never executed on its runner, so it is
+          # built on ubuntu. On macos-latest it queued behind the arm64 build
+          # for the shared macOS slots: 4h40m before a 20s compile on v0.2.1.
           - target: bun-darwin-x64
-            os: macos-latest
+            os: ubuntu-latest
             asset: stack-darwin-x64
+          # The one macOS job, kept there because it smoke-tests the binary
+          # natively.
           - target: bun-darwin-arm64
             os: macos-latest
             asset: stack-darwin-arm64
@@ -136,8 +138,8 @@ jobs:
 
       - name: Smoke test (native arch only)
         # Only run the binary when it matches the runner arch — darwin-x64
-        # is cross-compiled on an arm64 runner, so we can't execute it here
-        # without Rosetta; the linux-arm64 case is similar.
+        # and linux-arm64 are cross-compiled on an x64 Linux runner, so they
+        # cannot execute there.
         if: matrix.target == 'bun-linux-x64' || matrix.target == 'bun-darwin-arm64'
         run: |
           ./dist/${{ matrix.asset }} --help | head -20
