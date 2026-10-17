@@ -18,15 +18,22 @@ import {
   ListToolsRequestSchema,
   ReadResourceRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
+import { planToolCall } from "./cwd.ts";
 import { readServerVersion, resolveStackCommand } from "./stack-bin.ts";
-import { TOOLS, validateToolInput } from "./tools.ts";
+import { TOOLS } from "./tools.ts";
 
 const STACK = resolveStackCommand();
 
-function runStack(args: string[]): Promise<{ stdout: string; stderr: string; code: number }> {
+function runStack(
+  args: string[],
+  cwd: string | undefined,
+): Promise<{ stdout: string; stderr: string; code: number }> {
   return new Promise((resolve) => {
     const child = spawn(STACK.command, [...STACK.prefixArgs, ...args], {
-      env: { ...process.env, NO_COLOR: "1", CI: "1" },
+      // A project-scoped tool's validated `cwd` (realpath); otherwise inherit
+      // the server's own working directory.
+      cwd,
+      env: { ...process.env, ...(cwd ? { PWD: cwd } : {}), NO_COLOR: "1", CI: "1" },
       stdio: ["ignore", "pipe", "pipe"],
     });
     let stdout = "";
@@ -76,12 +83,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     };
   }
   const input = (request.params.arguments ?? {}) as Record<string, unknown>;
-  const invalid = validateToolInput(tool, input);
-  if (invalid) {
-    return { content: [{ type: "text", text: invalid }], isError: true };
+  const plan = planToolCall(tool, input);
+  if (!plan.ok) {
+    return { content: [{ type: "text", text: plan.error }], isError: true };
   }
-  const args = tool.cliArgs(input);
-  const { stdout, stderr, code } = await runStack(args);
+  const { args, cwd } = plan;
+  const { stdout, stderr, code } = await runStack(args, cwd);
   const body = stdout.trim() + (stderr.trim() ? `\n\n[stderr]\n${stderr.trim()}` : "");
   return {
     content: [{ type: "text", text: body || `(stack ${args.join(" ")} exit ${code})` }],
