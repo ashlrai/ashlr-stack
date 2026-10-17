@@ -149,6 +149,7 @@ const COMMANDS = [
   "doctor",
   "exec",
   "sync",
+  "onboard",
   "open",
   "login",
   "templates",

@@ -249,6 +249,13 @@ const EXTRAS: Record<string, CommandExtra> = {
   sync: {
     examples: [{ command: "stack sync --platform vercel" }],
   },
+  onboard: {
+    examples: [
+      { command: "stack onboard", comment: "plan only, nothing is written" },
+      { command: "stack onboard --apply" },
+      { command: "stack onboard --undo" },
+    ],
+  },
   open: {
     examples: [
       { command: "stack open supabase" },
@@ -455,6 +462,7 @@ const COMMAND_ORDER = [
   "exec",
   "swap",
   "sync",
+  "onboard",
   "open",
   "login",
   "telemetry",
