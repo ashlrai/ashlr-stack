@@ -84,3 +84,29 @@ describe("stack add --dry-run", () => {
     expect(out).not.toContain(PREVIEW);
   });
 });
+
+describe("stack add <unknown provider>", () => {
+  it("outside a project, says the provider is unknown and names the close one", () => {
+    const dir = mkdtempSync(join(tmpdir(), "stack-add-noproj-"));
+    createdDirs.push(dir);
+    const { stdout, stderr, code } = runCli(["add", "supabse"], dir);
+    const out = stdout + stderr;
+    expect(code).toBe(1);
+    expect(out).toContain('Unknown provider "supabse". Did you mean supabase?');
+    expect(out).not.toContain("No .stack.toml found");
+  });
+
+  it("a name with no close match still points at the catalog", () => {
+    const { stdout, stderr, code } = runCli(["add", "zzzzzzzz"], mkTmp());
+    expect(code).toBe(1);
+    expect(stdout + stderr).toContain("Pick one from the catalog above.");
+  });
+
+  it("a known provider outside a project still says to run stack init", () => {
+    const dir = mkdtempSync(join(tmpdir(), "stack-add-noproj-"));
+    createdDirs.push(dir);
+    const { stdout, stderr, code } = runCli(["add", "supabase"], dir);
+    expect(code).toBe(1);
+    expect(stdout + stderr).toContain("No .stack.toml found. Run `stack init` first.");
+  });
+});

@@ -174,6 +174,7 @@ export const TOOLS: ToolDef[] = [
           type: "boolean",
           description: "Machine-readable JSON (schema ashlr.stack.status/v1).",
         },
+        cwd: CWD_INPUT,
       },
     },
     cliArgs: (input) => (input.json ? ["status", "--json"] : ["status"]),

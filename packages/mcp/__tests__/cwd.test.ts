@@ -35,6 +35,7 @@ const PROJECT_SCOPED = [
   "stack_remove",
   "stack_list",
   "stack_info",
+  "stack_status",
   "stack_env_show",
   "stack_env_diff",
   "stack_doctor",
@@ -212,6 +213,20 @@ describe("cwd input: stdio server started in another directory", () => {
       services: Array<{ name: string }>;
     };
     expect(parsed.schema).toBe("ashlr.stack.list/v1");
+    expect(parsed.services.map((s) => s.name)).toEqual(["openai"]);
+  }, 20_000);
+
+  test("stack_status json with cwd reports the project's config, not the server's", async () => {
+    const result = await call("stack_status", { json: true, cwd: projectDir });
+    expect(result.isError).toBeFalsy();
+    const parsed = JSON.parse(result.content[0]?.text ?? "") as {
+      schema: string;
+      config: { present: boolean; project_id: string | null };
+      services: Array<{ name: string }>;
+    };
+    expect(parsed.schema).toBe("ashlr.stack.status/v1");
+    expect(parsed.config.present).toBe(true);
+    expect(parsed.config.project_id).toBe("stk_cwd00001");
     expect(parsed.services.map((s) => s.name)).toEqual(["openai"]);
   }, 20_000);
 

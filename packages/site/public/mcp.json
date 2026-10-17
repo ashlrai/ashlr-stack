@@ -123,7 +123,8 @@
       "inputSchema": {
         "type": "object",
         "properties": {
-          "json": { "type": "boolean", "description": "Machine-readable JSON (schema ashlr.stack.status/v1)." }
+          "json": { "type": "boolean", "description": "Machine-readable JSON (schema ashlr.stack.status/v1)." },
+          "cwd": { "type": "string", "description": "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory." }
         },
         "required": []
       }

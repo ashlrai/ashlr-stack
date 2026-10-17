@@ -1,6 +1,6 @@
 import { type ArgsDef, type CommandDef, runCommand, runMain } from "citty";
 import pc from "picocolors";
-import { describeUnknownFlag, findUnknownFlag } from "./unknown-flags.ts";
+import { commandPath, describeUnknownFlag, findUnknownFlag } from "./unknown-flags.ts";
 
 export interface RunCliIo {
   stdout?: (line: string) => void;
@@ -49,6 +49,16 @@ export async function runCli<T extends ArgsDef = ArgsDef>(
     // parsing its arguments, before any command body runs. runMain re-parses,
     // prints the matching usage and the error, and exits 1.
     if (error instanceof Error && error.name === "CLIError") {
+      // With --json the caller parses stdout, so usage text there is noise
+      // (`stack info --json` printed the info usage and no JSON at all).
+      if (rawArgs.includes("--json")) {
+        const path = await commandPath(cmd, rawArgs);
+        const message = `${error.message}. Run \`${path} --help\` for usage.`;
+        io.stdout?.(JSON.stringify({ error: message }));
+        io.stderr(`  ${pc.red("✗")} ${message}`);
+        process.exitCode = 1;
+        return 1;
+      }
       await runMain(cmd, { rawArgs });
       return 1;
     }
