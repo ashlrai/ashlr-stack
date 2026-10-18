@@ -55,6 +55,12 @@ describe("stack_scan args", () => {
   });
 });
 
+describe("stack_upgrade args", () => {
+  test("always passes --json", () => {
+    expect(tool("stack_upgrade").cliArgs({})).toEqual(["upgrade", "--json"]);
+  });
+});
+
 describe("stack_import args", () => {
   test("always passes --json so the caller sees which names were stored", () => {
     expect(tool("stack_import").cliArgs({})).toEqual(["import", "--json"]);

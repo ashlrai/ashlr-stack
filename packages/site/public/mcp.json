@@ -234,8 +234,8 @@
     },
     {
       "name": "stack_upgrade",
-      "description": "Check npm for a newer @ashlr/stack release.",
-      "cli": "stack upgrade",
+      "description": "Check npm for a newer @ashlr/stack release. Returns ashlr.stack.upgrade/v1 JSON (current, latest, status, install command); installs nothing.",
+      "cli": "stack upgrade --json",
       "inputSchema": { "type": "object", "properties": {}, "required": [] }
     },
     {

@@ -974,13 +974,21 @@ export const CLI_COMMANDS: CliCommand[] = [
   {
     name: "stack upgrade",
     description: "Check npm for a newer @ashlr/stack release.",
-    synopsis: "stack upgrade [--dryRun]",
+    synopsis: "stack upgrade [--dryRun] [--json]",
     flags: [
       {
         name: "dryRun",
         synopsis: "--dryRun",
         type: "boolean",
         description: "Print what would be installed without running the install command.",
+      },
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        default: false,
+        description:
+          "Emit machine-readable JSON (schema ashlr.stack.upgrade/v1): current, latest, status and the install command.",
       },
     ],
     examples: [{ command: "stack upgrade" }],

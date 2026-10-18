@@ -22,8 +22,18 @@ export const upgradeCommand = defineCommand({
       alias: "n",
       description: "Print what would be installed without running the install command.",
     },
+    json: {
+      type: "boolean",
+      default: false,
+      description:
+        "Emit machine-readable JSON (schema ashlr.stack.upgrade/v1): current, latest, status and the install command.",
+    },
   },
   async run({ args }) {
+    if (args.json) {
+      await runUpgradeJson();
+      return;
+    }
     intro("stack upgrade");
     try {
       const res = await fetch(`https://registry.npmjs.org/${encodeURIComponent(PKG)}/latest`);
@@ -68,6 +78,57 @@ export const upgradeCommand = defineCommand({
     }
   },
 });
+
+export interface UpgradeReport {
+  schema: "ashlr.stack.upgrade/v1";
+  package: string;
+  current: string;
+  latest: string;
+  status: "up_to_date" | "update_available" | "ahead";
+  /** The command a person runs to upgrade; null unless an update exists. Never run by Stack. */
+  install: string | null;
+}
+
+/** The `--json` report for a known registry version. Pure, for tests. */
+export function buildUpgradeReport(current: string, latest: string): UpgradeReport {
+  const status =
+    latest === current ? "up_to_date" : isNewer(latest, current) ? "update_available" : "ahead";
+  return {
+    schema: "ashlr.stack.upgrade/v1",
+    package: PKG,
+    current,
+    latest,
+    status,
+    install: status === "update_available" ? `bun add -g ${PKG}@${latest}` : null,
+  };
+}
+
+/**
+ * `stack upgrade --json`: one JSON object on stdout, no banner. It only reads
+ * the registry and installs nothing. An unreachable or malformed registry
+ * prints `{"error": ...}` and exits 1.
+ */
+export async function runUpgradeJson(current: string = CURRENT_VERSION): Promise<void> {
+  const fail = (error: string) => {
+    process.stdout.write(`${JSON.stringify({ error, current })}\n`);
+    process.exitCode = 1;
+  };
+  try {
+    const res = await fetch(`https://registry.npmjs.org/${encodeURIComponent(PKG)}/latest`);
+    if (!res.ok) {
+      fail(`npm registry returned ${res.status}.`);
+      return;
+    }
+    const latest = ((await res.json()) as { version?: unknown }).version;
+    if (typeof latest !== "string" || !latest) {
+      fail("npm registry response missing version field.");
+      return;
+    }
+    process.stdout.write(`${JSON.stringify(buildUpgradeReport(current, latest), null, 2)}\n`);
+  } catch (err) {
+    fail(`Couldn't reach npm: ${(err as Error).message}`);
+  }
+}
 
 function isNewer(a: string, b: string): boolean {
   const pa = a.split(".").map((x) => Number.parseInt(x, 10));
