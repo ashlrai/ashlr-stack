@@ -168,7 +168,7 @@ describe("stack upgrade --json", () => {
       expect(process.exitCode).toBe(1);
     } finally {
       globalThis.fetch = origFetch;
-      process.exitCode = origExit;
+      process.exitCode = origExit ?? 0;
     }
   });
 });
