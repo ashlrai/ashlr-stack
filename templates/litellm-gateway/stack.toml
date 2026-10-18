@@ -1,0 +1,44 @@
+# Provider keys for a LiteLLM gateway that holds placeholders, never real keys.
+#
+# This template declares the provider key slots a LiteLLM proxy would call.
+# The real values stay in Phantom Secrets. Run the proxy under `phantom exec`
+# so its environment, config, logs and database only ever contain `phm_`
+# placeholders. Read README.md in this directory before starting the proxy:
+# it carries the version pin, isolation and Cursor guidance.
+#
+# Not declared here: LITELLM_MASTER_KEY. Stack has no LiteLLM provider, so
+# create that one yourself with `phantom add LITELLM_MASTER_KEY` and keep it
+# out of agent environments.
+
+[stack]
+version = "1"
+project_id = "stk_template"
+template = "litellm-gateway"
+
+[services.openai]
+provider = "openai"
+secrets = ["OPENAI_API_KEY"]
+created_at = "1970-01-01T00:00:00Z"
+created_by = "template"
+
+[services.anthropic]
+provider = "anthropic"
+secrets = ["ANTHROPIC_API_KEY"]
+created_at = "1970-01-01T00:00:00Z"
+created_by = "template"
+
+[services.xai]
+provider = "xai"
+secrets = ["XAI_API_KEY"]
+created_at = "1970-01-01T00:00:00Z"
+created_by = "template"
+
+[services.deepseek]
+provider = "deepseek"
+secrets = ["DEEPSEEK_API_KEY"]
+created_at = "1970-01-01T00:00:00Z"
+created_by = "template"
+
+[[environments]]
+name = "dev"
+default = true
