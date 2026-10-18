@@ -1,0 +1,17 @@
+# Starter for a Temporal worker whose credentials come from Phantom Secrets.
+#
+# No provider services are declared on purpose: Stack has no Temporal provider,
+# so the worker's credentials (TEMPORAL_API_KEY, or a TLS client key and cert)
+# are created outside Stack with `phantom add`. Read README.md in this
+# directory before running a worker.
+
+[stack]
+version = "1"
+project_id = "stk_template"
+template = "temporal-worker-phantom"
+
+[services]
+
+[[environments]]
+name = "dev"
+default = true

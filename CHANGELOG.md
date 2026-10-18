@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Templates
+
+- **`temporal-worker-phantom` template.** Guidance for a Temporal worker whose credentials come from Phantom (`phantom exec`), with no services declared because Stack has no Temporal provider. Experimental: not run against a Temporal cluster.
+
 ## 0.2.2 (2026-10-17)
 
 0.2.1 was tagged but its npm publish failed, so nothing from 0.2.1 reached npm. 0.2.2 supersedes it: it ships everything listed here and under 0.2.1 below. Source versions (core, cli, mcp, `server.json`, `VERSION` in `packages/cli/src/index.ts`) are 0.2.2, which `scripts/publish.sh` checks before it publishes core, then cli, then mcp.
