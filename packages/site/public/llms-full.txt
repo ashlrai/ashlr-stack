@@ -224,7 +224,7 @@ Refresh credentials for the specified provider. This explicit login is separate 
 
 ### `stack upgrade`
 
-Check registry metadata and print an install/update hint. This command does not install the update.
+Check registry metadata and print an install/update hint. This command does not install the update. `--json` prints `ashlr.stack.upgrade/v1`: `current`, `latest`, `status` (`up_to_date`, `update_available` or `ahead`) and the `install` command when an update exists; a registry error is `{"error": ...}` with exit 1.
 
 ### `stack completion <bash|zsh|fish>`
 

@@ -313,9 +313,10 @@ export const MCP_TOOLS: McpTool[] = [
   },
   {
     name: "stack_upgrade",
-    description: "Check npm for a newer @ashlr/stack release.",
+    description:
+      "Check npm for a newer @ashlr/stack release. Returns ashlr.stack.upgrade/v1 JSON (current, latest, status, install command); installs nothing.",
     inputs: [],
-    cli: "stack upgrade",
+    cli: "stack upgrade --json",
   },
   {
     name: "stack_recommend",

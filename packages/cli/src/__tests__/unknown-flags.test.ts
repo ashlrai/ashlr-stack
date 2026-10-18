@@ -11,6 +11,7 @@ import { envCommand } from "../commands/env.ts";
 import { execCommand } from "../commands/exec.ts";
 import { initCommand } from "../commands/init.ts";
 import { recommendCommand } from "../commands/recommend.ts";
+import { syncCommand } from "../commands/sync.ts";
 import { templatesCommand } from "../commands/templates.ts";
 import { upgradeCommand } from "../commands/upgrade.ts";
 import { normalizeKebabFlags } from "../lib/normalize-args.ts";
@@ -52,10 +53,10 @@ describe("unknown options are refused", () => {
   });
 
   test("an option the command lacks is an error, as JSON on stdout when --json was asked for", () => {
-    // `stack upgrade` has no --json; it used to print its human banner with exit 0.
-    const r = stack(["upgrade", "--json"]);
+    // `stack sync` has no --json; it used to print its human banner instead.
+    const r = stack(["sync", "--platform", "vercel", "--json"]);
     expect(r.code).toBe(1);
-    expect(JSON.parse(r.stdout).error).toContain("Unknown option --json for `stack upgrade`");
+    expect(JSON.parse(r.stdout).error).toContain("Unknown option --json for `stack sync`");
   });
 
   test("an option before the subcommand is refused and moved after it", () => {
@@ -88,6 +89,7 @@ const main = defineCommand({
     exec: execCommand,
     init: initCommand,
     recommend: recommendCommand,
+    sync: syncCommand,
     templates: templatesCommand,
     upgrade: upgradeCommand,
   },
@@ -160,9 +162,9 @@ describe("findUnknownFlag accepts every declared spelling", () => {
       command: "stack env show",
       before: "show",
     });
-    expect(await unknown(["--json", "upgrade"])).toMatchObject({
+    expect(await unknown(["--json", "sync", "--platform", "vercel"])).toMatchObject({
       flag: "--json",
-      command: "stack upgrade",
+      command: "stack sync",
       before: undefined,
     });
   });

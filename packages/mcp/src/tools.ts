@@ -311,9 +311,10 @@ export const TOOLS: ToolDef[] = [
   },
   {
     name: "stack_upgrade",
-    description: "Check npm for a newer @ashlr/stack release.",
+    description:
+      "Check npm for a newer @ashlr/stack release. Returns ashlr.stack.upgrade/v1 JSON (current, latest, status, install command); installs nothing.",
     inputSchema: { type: "object", properties: {} },
-    cliArgs: () => ["upgrade"],
+    cliArgs: () => ["upgrade", "--json"],
   },
   {
     name: "stack_recommend",
