@@ -9,6 +9,7 @@
     "packages/*"
   ],
   "scripts": {
+    "check:crypto": "node --test scripts/check-crypto.node-tests.mjs && node scripts/check-crypto.mjs",
     "build": "bun run --filter '*' build",
     "typecheck": "bunx tsc --noEmit -p tsconfig.json",
     "test": "bun test",
