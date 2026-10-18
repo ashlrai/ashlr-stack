@@ -15,7 +15,7 @@ export const PATTERNS = [
 const SKIP_DIRS = new Set(['node_modules', 'target', '.git', 'dist', 'build', 'coverage', '.next', 'docs']);
 const EXTS = new Set(['.ts', '.tsx', '.js', '.mjs', '.cjs', '.rs', '.toml']);
 
-export function scan(root, { allow = {}, dirs = ['.'], selfNames = ['check-crypto.mjs', 'check-crypto.test.mjs'] } = {}) {
+export function scan(root, { allow = {}, dirs = ['.'], selfNames = ['check-crypto.mjs', 'check-crypto.node-tests.mjs'] } = {}) {
   const hits = [];
   const walk = (dir) => {
     for (const name of readdirSync(dir)) {
