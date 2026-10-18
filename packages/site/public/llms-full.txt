@@ -141,9 +141,9 @@ Remove the service's local vault entries, MCP wiring and Stack configuration. Th
 
 Services wired in the current project. Equivalent to reading `.stack.toml`, formatted.
 
-### `stack providers`
+### `stack providers [--category <category>] [--json]`
 
-List providers registered in your installed release, grouped by category. This source registers 39 across 13 categories. Category filtering is available in `recommend`, not as a `providers` flag.
+List providers registered in your installed release, grouped by category. This source registers 39 across 13 categories. `--category` (any case) lists one category; an unknown one exits 1 and names the valid categories. `--json` prints `ashlr.stack.providers/v1` with the filter in `category`.
 
 ### `stack templates list [--json]` / `stack templates apply <name>`
 
@@ -413,7 +413,7 @@ The source declares these 19 tools. They are a subset of CLI commands; use each 
 - `stack_env_diff` — `{ json?: boolean, cwd?: string }`
 - `stack_doctor` — `{ fix?: boolean, all?: boolean, json?: boolean, cwd?: string }`
 - `stack_sync` — `{ platform: string, cwd?: string }`
-- `stack_providers` — `{ json?: boolean }`
+- `stack_providers` — `{ category?: string, json?: boolean }`
 - `stack_projects_list` — `{ json?: boolean }`
 - `stack_deps` — `{ json?: boolean, cwd?: string }`
 - `stack_templates_list` — `{ json?: boolean }`
