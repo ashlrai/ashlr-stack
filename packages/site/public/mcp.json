@@ -186,10 +186,11 @@
     {
       "name": "stack_providers",
       "description": "List the curated source provider catalog by category; inclusion does not attest complete provisioning or active credentials.",
-      "cli": "stack providers [--json]",
+      "cli": "stack providers [--category <category>] [--json]",
       "inputSchema": {
         "type": "object",
         "properties": {
+          "category": { "type": "string", "description": "Only this category, any case (e.g. ai, database, payments)." },
           "json": { "type": "boolean", "description": "Machine-readable JSON (schema ashlr.stack.providers/v1)." }
         },
         "required": []

@@ -166,3 +166,30 @@ describe("stack providers --json", () => {
     });
   });
 });
+
+describe("stack providers --category", () => {
+  test("lists one category in any case and says which", () => {
+    const r = stack(["providers", "--category", "DataBase", "--json"], tmp(), true);
+    expect(r.code).toBe(0);
+    const report = JSON.parse(r.stdout);
+    expect(report.category).toBe("database");
+    expect(report.providers.length).toBeGreaterThan(0);
+    expect(report.providers).toHaveLength(report.total);
+    for (const p of report.providers) expect(p.category).toBe("database");
+  });
+
+  test("the unfiltered report carries category null", () => {
+    const report = JSON.parse(stack(["providers", "--json"], tmp(), true).stdout);
+    expect(report.category).toBeNull();
+  });
+
+  test("an unknown category exits 1 and names the valid ones", () => {
+    const r = stack(["providers", "--category", "dbs", "--json"], tmp(), true);
+    expect(r.code).toBe(1);
+    const { error } = JSON.parse(r.stdout);
+    expect(error).toContain('Unknown category "dbs"');
+    expect(error).toContain("database");
+    const human = stack(["providers", "--category", "dbs"], tmp(), true);
+    expect(human.code).toBe(1);
+  });
+});

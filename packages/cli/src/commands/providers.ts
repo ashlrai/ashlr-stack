@@ -1,6 +1,6 @@
-import { getProvider, listProviderNames } from "@ashlr/stack-core";
+import { PROVIDER_CATEGORIES, getProvider, listProviderNames } from "@ashlr/stack-core";
 import { defineCommand } from "citty";
-import { colors, intro } from "../ui.ts";
+import { colors, intro, outroError } from "../ui.ts";
 
 interface ProviderRow {
   name: string;
@@ -14,21 +14,39 @@ interface ProviderRow {
  * Stable machine shape for `stack providers --json`. Fields may be added but
  * existing ones must not change meaning. `total` counts registry names, so a
  * provider that failed to load is listed in `unavailable` instead of `providers`.
+ * With `--category`, `category` names it and `total` counts the providers in
+ * that category; `unavailable` still lists every load failure, since a
+ * provider that failed to load has no known category.
  */
 export interface ProvidersReport {
   schema: "ashlr.stack.providers/v1";
+  category: string | null;
   total: number;
   providers: ProviderRow[];
   unavailable: string[];
 }
 
-export async function buildProvidersReport(): Promise<ProvidersReport> {
+/** Provider modules name their category in lower case ("database"). */
+const CATEGORIES = PROVIDER_CATEGORIES.map((c) => c.toLowerCase());
+
+/** The provider category matching `input` in any case, or null. */
+export function resolveCategory(input: string): string | null {
+  const wanted = input.trim().toLowerCase();
+  return CATEGORIES.find((c) => c === wanted) ?? null;
+}
+
+export function unknownCategoryMessage(input: string): string {
+  return `Unknown category "${input}". Use one of: ${CATEGORIES.join(", ")}`;
+}
+
+export async function buildProvidersReport(category?: string): Promise<ProvidersReport> {
   const names = listProviderNames();
   const providers: ProviderRow[] = [];
   const unavailable: string[] = [];
   for (const name of names) {
     try {
       const p = await getProvider(name);
+      if (category && p.category !== category) continue;
       providers.push({
         name: p.name,
         displayName: p.displayName,
@@ -40,20 +58,46 @@ export async function buildProvidersReport(): Promise<ProvidersReport> {
       unavailable.push(name);
     }
   }
-  return { schema: "ashlr.stack.providers/v1", total: names.length, providers, unavailable };
+  return {
+    schema: "ashlr.stack.providers/v1",
+    category: category ?? null,
+    total: category ? providers.length : names.length,
+    providers,
+    unavailable,
+  };
 }
 
 export const providersCommand = defineCommand({
   meta: { name: "providers", description: "List every curated provider Stack can wire up." },
   args: {
+    category: {
+      type: "string",
+      description: `Only this category, any case (${CATEGORIES.join(", ")}).`,
+      required: false,
+    },
     json: {
       type: "boolean",
       description: "Emit machine-readable JSON (schema ashlr.stack.providers/v1).",
     },
   },
   async run({ args }) {
+    let category: string | undefined;
+    if (args.category !== undefined) {
+      const match = resolveCategory(String(args.category));
+      if (!match) {
+        const message = unknownCategoryMessage(String(args.category));
+        if (args.json) {
+          console.log(JSON.stringify({ error: message }));
+          process.exitCode = 1;
+          return;
+        }
+        outroError(message);
+        return;
+      }
+      category = match;
+    }
     if (args.json) {
-      process.stdout.write(`${JSON.stringify(await buildProvidersReport(), null, 2)}\n`);
+      process.stdout.write(`${JSON.stringify(await buildProvidersReport(category), null, 2)}\n`);
       return;
     }
 
@@ -66,6 +110,7 @@ export const providersCommand = defineCommand({
     for (const name of names) {
       try {
         const p = await getProvider(name);
+        if (category && p.category !== category) continue;
         if (!byCategory[p.category]) byCategory[p.category] = [];
         byCategory[p.category].push({
           name: p.name,
@@ -88,7 +133,9 @@ export const providersCommand = defineCommand({
       }
       console.log();
     }
-    console.log(colors.dim(`  ${names.length} providers total. Add one with: stack add <name>`));
+    const shown = category ? (byCategory[category]?.length ?? 0) : names.length;
+    const scope = category ? `in ${category}` : "total";
+    console.log(colors.dim(`  ${shown} providers ${scope}. Add one with: stack add <name>`));
     console.log();
   },
 });
