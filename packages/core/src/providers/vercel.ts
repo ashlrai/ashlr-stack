@@ -131,7 +131,7 @@ const vercel: Provider = {
 
 export default vercel;
 
-function authHeaders(token: string): HeadersInit {
+function authHeaders(token: string): NonNullable<RequestInit["headers"]> {
   return { Authorization: `Bearer ${token}`, "content-type": "application/json" };
 }
 
