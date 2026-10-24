@@ -37,7 +37,8 @@ describe("config carrying 21+ provider entries still round-trips", () => {
   });
 
   afterEach(() => {
-    if (previousRegistryDir === undefined) process.env.STACK_REGISTRY_DIR = undefined;
+    if (previousRegistryDir === undefined)
+      Reflect.deleteProperty(process.env, "STACK_REGISTRY_DIR");
     else process.env.STACK_REGISTRY_DIR = previousRegistryDir;
   });
 

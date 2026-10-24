@@ -23,8 +23,8 @@ beforeEach(() => {
   tmpDir = mkdtempSync(join(tmpdir(), "update-check-test-"));
   cacheFilePath = join(tmpDir, "update-check.json");
 
-  process.env.STACK_NO_UPDATE_CHECK = undefined;
-  process.env.CI = undefined;
+  Reflect.deleteProperty(process.env, "STACK_NO_UPDATE_CHECK");
+  Reflect.deleteProperty(process.env, "CI");
 
   origWrite = process.stderr.write.bind(process.stderr);
 });
