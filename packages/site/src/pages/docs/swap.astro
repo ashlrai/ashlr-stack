@@ -11,9 +11,10 @@ import { Code } from "astro:components";
   <h2>What it does</h2>
   <p>
     <code>stack swap &lt;from&gt; &lt;to&gt;</code> replaces one provider with
-    another in the same category. It runs the full deprovision → provision
-    sequence atomically: if any step fails, Stack rolls back and your project is
-    left in its original state.
+    another in the same category by setting up the destination first, then
+    attempting aliases and local cleanup of the source. It does not delete the
+    old upstream resource or provide an atomic whole-swap guarantee. Inspect
+    partial failures and remaining configuration or secrets.
   </p>
 
   <p>38 preset pairs are built in across six categories:</p>
@@ -69,9 +70,9 @@ stack swap clerk auth0 --dry-run`}
 
   <ol>
     <li>Stack checks that <code>from</code> is configured in <code>.stack.toml</code>.</li>
-    <li>Stack provisions <code>to</code> (OAuth, API calls, secrets into Phantom). The OAuth callback listens on <code>http://127.0.0.1:8787/callback</code> — register that URI in your provider app for a clean single redirect URI.</li>
-    <li>Stack removes the <code>from</code> service — deprovisioning upstream resources and deleting its Phantom secrets.</li>
-    <li><code>.stack.toml</code> and <code>.mcp.json</code> are rewritten.</li>
+    <li>Stack runs provider setup for <code>to</code>; authentication and resource operations depend on that adapter and its configured credentials.</li>
+    <li>Unless <code>--keep-from</code> is set, Stack attempts Phantom secret cleanup and removes the local <code>from</code> service/MCP entry. The old upstream resource is kept; secrets can remain when terminal confirmation is unavailable or refused.</li>
+    <li>Local configuration updates can be partial. A source-cleanup failure does not revert the destination setup; review warnings and finish cleanup manually.</li>
   </ol>
 
   <h2>Env-key aliases</h2>
@@ -79,9 +80,10 @@ stack swap clerk auth0 --dry-run`}
     Some pairs use different env variable names for the same concept. For
     example, Supabase writes <code>SUPABASE_URL</code> while Neon writes
     <code>DATABASE_URL</code>. After a <code>supabase → neon</code> swap, Stack
-    automatically aliases <code>DATABASE_URL</code> back to
-    <code>SUPABASE_URL</code> in Phantom so existing code references keep
-    working without a source change.
+    attempts to mirror <code>DATABASE_URL</code> into
+    <code>SUPABASE_URL</code> in Phantom. Stored-value access or a write can
+    be refused, so an alias is not guaranteed; inspect warnings and configure
+    the required value yourself through Phantom's trusted-terminal flow.
   </p>
 
   <div class="callout callout-warn">
@@ -109,29 +111,28 @@ stack swap clerk auth0 --dry-run`}
       </tr>
       <tr>
         <td><code>--no-rollback</code></td>
-        <td>On failure, leave partial state in place instead of rolling back. Use only when debugging a broken provisioner — the default rollback is almost always what you want.</td>
+        <td>Accepted by this source, but not used or forwarded by the swap implementation. It does not disable the destination add workflow's failure cleanup.</td>
       </tr>
     </tbody>
   </table>
 
   <h2>Rollback on failure</h2>
   <p>
-    If provisioning <code>to</code> fails partway through, Stack calls
-    <code>deprovision</code> on the partially-created upstream resource and
-    removes any Phantom secrets that were written. Your original
-    <code>from</code> service is left intact. See{" "}
+    If destination setup fails after creating a resource, the add workflow
+    attempts cleanup, including upstream teardown only when the provider
+    supports it. Vault removal and teardown can fail or leave secrets stored;
+    inspect the reported partial failure. Source removal begins only after
+    destination setup succeeds, and later cleanup failure does not undo that
+    success. See{" "}
     <a href="/docs/add/#transactional-rollback">Transactional rollback</a> for
     the full failure-handling model.
   </p>
 
-  <h2>Discover available swaps</h2>
+  <h2>Inspect available options</h2>
 
   <Code
-    code={`# See which providers your current project can swap to
-stack swap --suggest
-
-# Or list all 38 built-in pairs
-stack swap --list`}
+    code={`# Inspect the options supported by your installed CLI
+stack swap --help`}
     lang="bash"
     theme="github-dark-dimmed"
   />

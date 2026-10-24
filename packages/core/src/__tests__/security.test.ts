@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { addSecret, exec, revealSecret } from "../phantom.ts";
+import { addSecret, exec } from "../phantom.ts";
 import { type Harness, readVault, setupFakePhantom } from "./_harness.ts";
 
 /**
@@ -52,19 +52,18 @@ describe("security — fake phantom harness handles hostile secret values", () =
   test("a secret containing single quotes does not break the harness", async () => {
     const hostile = `value-with-'-quote-and-\"-and-$VAR-and-\\backslash`;
     await addSecret("HOSTILE_KEY", hostile);
-    const revealed = await revealSecret("HOSTILE_KEY");
-    expect(revealed).toBe(hostile);
     const vault = await readVault(h.dir);
     expect(vault.HOSTILE_KEY).toBe(hostile);
   });
 
-  test("a secret containing a newline survives round-trip", async () => {
+  test("a secret containing a newline is refused before any Phantom call", async () => {
     const hostile = "first-line\n-second-line";
-    await addSecret("MULTILINE_KEY", hostile);
-    // revealSecret trims trailing whitespace via stdout.trim() — that's fine,
-    // but round-tripping the full value via the vault file should preserve it.
+    await expect(addSecret("MULTILINE_KEY", hostile)).rejects.toMatchObject({
+      code: "PHANTOM_SECRET_VALUE_UNSUPPORTED",
+    });
     const vault = await readVault(h.dir);
-    expect(vault.MULTILINE_KEY).toBe(hostile);
+    expect(vault.MULTILINE_KEY).toBeUndefined();
+    expect(h.calls()).toEqual([]);
   });
 
   test("a secret that looks like a Python expression is stored literally", async () => {

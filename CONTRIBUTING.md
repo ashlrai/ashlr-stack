@@ -2,12 +2,22 @@
 
 Thanks for poking around. Stack is early and the surface is intentionally curated — we want depth per provider, not breadth at any cost.
 
+## Finding something to work on
+
+New here? Start with the [good first issue](https://github.com/ashlrai/ashlr-stack/labels/good%20first%20issue) label. Issues also labeled [help wanted](https://github.com/ashlrai/ashlr-stack/labels/help%20wanted) are ones we would especially like a PR for.
+
+- Comment on the issue before you start so two people do not do the same work.
+- Keep the PR small and tied to one issue. Say in the description how you tested it.
+- If you are unsure whether something belongs here, open an issue first and ask.
+- Questions are welcome in issues. We read all of them.
+
 ## Dev loop
 
 ```bash
 bun install
-bun test                                    # 10 tests, all green
+bun test                                    # full suite (bun's test runner)
 bunx tsc --noEmit -p tsconfig.json          # typecheck
+bun run lint                                # biome check .
 bun run packages/cli/src/index.ts providers # smoke CLI
 ```
 
@@ -15,13 +25,16 @@ No build step for the CLI — Bun runs `.ts` directly.
 
 ## Adding a provider
 
+Step-by-step guide with every file to touch: [docs/adding-a-provider.md](./docs/adding-a-provider.md).
+
 Every curated provider implements `Provider` (`packages/core/src/providers/_base.ts`):
 
-- `login(ctx)` — get a token. Use `_api-key.ts`'s `makeApiKeyProvider` factory for paste-and-verify flows, or `oauth.ts`'s `runPkceFlow` for OAuth providers.
+- `login(ctx)` — obtain and verify the adapter's auth inputs. Use `_api-key.ts`'s `makeApiKeyProvider` factory for its supported supplied-input flows, or `oauth.ts`'s `runPkceFlow` for an implemented OAuth path. Auth0 currently checks a domain's discovery response rather than authenticating an account.
 - `provision(ctx, auth, opts)` — either create a new upstream resource or attach via `opts.existingResourceId`.
-- `materialize(ctx, resource, auth)` — return `{ secrets, mcp?, urls? }`. Secrets go straight into Phantom.
+- `materialize(ctx, resource, auth)` — return `{ secrets, mcp?, urls? }`. The pipeline handles values in memory and attempts persistence through Phantom; failures can leave partial state.
 - `healthcheck?(ctx, entry)` — optional ping; surfaced by `stack doctor`.
 - `dashboardUrl?(entry)` — optional; wired into `stack open`.
+- `deprovision?(ctx, auth, resourceId)` — optional; lets `stack add` attempt cleanup of a resource it created when a later step fails (implemented for Supabase, Neon, Turso, and Vercel). Attached resources do not acquire deletion authority; failed or unconfirmed cleanup must stay explicit.
 
 Then register in `packages/core/src/providers/index.ts` and add a row to `docs/provider-auth-matrix.md`.
 
@@ -29,8 +42,8 @@ Then register in `packages/core/src/providers/index.ts` and add a row to `docs/p
 
 - **Compose, don't duplicate.** Shell out to Phantom for every secret read/write. Never build a second vault.
 - **No hard dependencies on @clack in core.** The CLI is the only package allowed to touch the prompts library.
-- **Every provider ships with a healthcheck.** Otherwise `stack doctor` can't signal drift.
-- **Secrets never live in `.stack.toml`.** Only their *names*.
+- **Define meaningful checks.** `healthcheck` is optional; describe what it verifies and what remains unchecked. A passing limited probe is not full account or application acceptance.
+- **Use named credential slots.** Canonical service entries reference dedicated secret names. Freeform metadata, overrides and manually edited config are not a general secret-redaction boundary.
 
 ## Scope
 

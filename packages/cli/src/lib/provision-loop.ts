@@ -1,7 +1,8 @@
-import { readConfig, removeSecret, writeConfig } from "@ashlr/stack-core";
+import { readConfig, writeConfig } from "@ashlr/stack-core";
 import { removeMcpEntry } from "@ashlr/stack-core/mcp-writer";
-import { addCommand } from "../commands/add.ts";
+import { runAdd } from "../commands/add.ts";
 import { colors, prompts } from "../ui.ts";
+import { removeVaultSecrets } from "./phantom-preflight.ts";
 
 /**
  * Minimal description of a provider to provision.
@@ -20,17 +21,17 @@ export interface ProvisionLoopResult {
  * Shared provisioning loop used by both `stack apply` and `stack init
  * --template`. Iterates over `targets` in order (intentionally serial — some
  * providers depend on cwd state written by earlier steps), calling
- * `stack add <name>` for each one via `addCommand`.
+ * `stack add <name>` for each one via `runAdd`.
  *
  * On partial failure, offers to roll back the successful adds unless
  * `opts.rollback` is false. In non-TTY mode (CI), rolls back automatically.
  *
  * When `opts.dryRun` is true, only prints what would be provisioned — no
- * `addCommand` calls, no rollback.
+ * `runAdd` calls, no rollback.
  *
  * The helper lives in `packages/cli/src/lib/` (not in `@ashlr/stack-core`)
  * because it imports spinner/prompt helpers from `../ui.ts` and calls
- * `addCommand` directly — both of which are CLI-layer concerns.
+ * `runAdd` directly — both of which are CLI-layer concerns.
  */
 export async function provisionProviders(
   targets: ProvisionTarget[],
@@ -52,15 +53,14 @@ export async function provisionProviders(
   for (const { name } of targets) {
     try {
       console.log(colors.dim(`  › stack add ${name}`));
-      await addCommand.run?.({
-        args: { service: name, dryRun: false, _: [] },
-        cmd: addCommand,
-        rawArgs: [name],
-        data: undefined,
-      } as unknown as Parameters<NonNullable<typeof addCommand.run>>[0]);
+      // runAdd throws instead of exiting, so one failed provider does not
+      // end the loop before the rest run and the rollback below.
+      await runAdd({ service: name, dryRun: false });
       succeeded.push(name);
     } catch (err) {
-      failures.push({ name, message: (err as Error).message });
+      const message = (err as Error).message;
+      console.log(`  ${colors.red("✗")} ${name}: ${message}`);
+      failures.push({ name, message });
     }
   }
 
@@ -99,16 +99,16 @@ export async function rollbackProviders(names: string[]): Promise<void> {
   console.log(colors.dim(`  rolling back ${names.length} partial add(s)…`));
   try {
     const config = await readConfig();
+    // Rollback only forgets local state; it never deletes upstream resources.
+    // Name each one before its entry (the only local record of the id) is
+    // dropped, or a re-run silently creates a second resource.
+    const upstream: Array<{ name: string; id: string }> = [];
     for (const name of names) {
       const entry = config.services[name];
       if (!entry) continue;
-      for (const secret of entry.secrets) {
-        try {
-          await removeSecret(secret);
-        } catch {
-          /* secret may already be gone; keep going */
-        }
-      }
+      if (entry.resource_id) upstream.push({ name, id: entry.resource_id });
+      // Rollback runs under a spinner: never hand Phantom the terminal here.
+      await removeVaultSecrets(entry.secrets, { interactive: false });
       if (entry.mcp) {
         try {
           await removeMcpEntry(entry.mcp);
@@ -119,7 +119,16 @@ export async function rollbackProviders(names: string[]): Promise<void> {
       delete config.services[name];
     }
     await writeConfig(config);
-    console.log(colors.dim("  rollback complete — re-run to retry."));
+    for (const { name, id } of upstream) {
+      console.log(
+        `  ${colors.yellow("!")} ${name}: upstream resource ${colors.bold(id)} was not deleted. Delete it on the provider dashboard, or reuse it with ${colors.bold(`stack add ${name} --use ${id}`)}.`,
+      );
+    }
+    console.log(
+      colors.dim(
+        "  rollback complete — remove any secrets Phantom kept (listed above), then re-run.",
+      ),
+    );
   } catch (err) {
     console.log(colors.yellow(`  ⚠ rollback failed: ${(err as Error).message}`));
   }

@@ -10,7 +10,7 @@ import {
   writeRecipe,
 } from "@ashlr/stack-core";
 import { defineCommand } from "citty";
-import { colors, intro, outro } from "../ui.ts";
+import { colors, intro, outro, outroError } from "../ui.ts";
 
 /**
  * `stack recommend` — free-text → curated providers.
@@ -88,10 +88,10 @@ function buildGuidance(hits: RetrievalHit[], categories: string[]): string {
     );
   }
   parts.push(
-    `Apply a chosen set with: stack add ${hits
+    `Apply a chosen set with: ${hits
       .slice(0, 3)
-      .map((h) => h.provider.name)
-      .join(" ")} (or supply your own list).`,
+      .map((h) => `stack add ${h.provider.name}`)
+      .join(" && ")} (one command per service; choose other providers as needed).`,
   );
   return parts.join(" ");
 }
@@ -154,7 +154,7 @@ export const recommendCommand = defineCommand({
     },
     category: {
       type: "string",
-      description: "Restrict to a single category (e.g. Database, Auth).",
+      description: `Restrict to a single category, any case (${PROVIDER_CATEGORIES.join(", ")}).`,
       required: false,
     },
     json: {
@@ -175,9 +175,11 @@ export const recommendCommand = defineCommand({
       required: false,
     },
   },
-  async run({ args }) {
+  async run({ args, rawArgs }) {
     const query = typeof args.query === "string" ? args.query.trim() : "";
     if (!query) {
+      // No query is a usage error, not an empty result: exit 1 so an agent or
+      // script does not read "no hits" as "nothing in the catalog fits".
       if (args.json) {
         console.log(
           JSON.stringify(
@@ -191,19 +193,51 @@ export const recommendCommand = defineCommand({
             2,
           ),
         );
+        process.exitCode = 1;
         return;
       }
       intro("stack recommend");
       console.log(colors.dim('  Usage: stack recommend "B2B SaaS with auth, AI, and payments"\n'));
-      outro("No query — nothing to recommend.");
+      outroError("No query, nothing to recommend.");
       return;
     }
 
-    const k = Number.parseInt(String(args.k ?? "6"), 10);
-    const categories = args.category ? [String(args.category)] : undefined;
+    const k = args.k === undefined ? 6 : Number(String(args.k).trim());
+    if (!Number.isInteger(k) || k < 1) {
+      // citty reads the "-1" of `--k -1` as a short option, so k arrives
+      // empty; name the value that was typed instead of "no value".
+      const after = rawArgs[rawArgs.indexOf("--k") + 1];
+      const typed =
+        String(args.k) === "" && rawArgs.includes("--k") && after && /^-\d/.test(after)
+          ? after
+          : String(args.k);
+      const given = typed === "" ? "--k with no value" : `--k "${typed}"`;
+      const message = `Invalid ${given}. Use a whole number of results, 1 or more (default 6).`;
+      if (args.json) {
+        console.error(message);
+        process.exit(1);
+      }
+      outroError(message);
+      return;
+    }
+    let categories: RetrievalHit["provider"]["category"][] | undefined;
+    if (args.category) {
+      const wanted = String(args.category).trim().toLowerCase();
+      const match = PROVIDER_CATEGORIES.find((c) => c.toLowerCase() === wanted);
+      if (!match) {
+        const message = `Unknown category "${args.category}". Use one of: ${PROVIDER_CATEGORIES.join(", ")}`;
+        if (args.json) {
+          console.error(message);
+          process.exit(1);
+        }
+        outroError(message);
+        return;
+      }
+      categories = [match];
+    }
     const hits = retrieve(query, {
-      k: Number.isFinite(k) && k > 0 ? k : 6,
-      categories: categories as RetrievalHit["provider"]["category"][] | undefined,
+      k,
+      categories,
     });
 
     let synthOutcome: Awaited<ReturnType<typeof trySynth>> = null;

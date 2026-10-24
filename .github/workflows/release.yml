@@ -9,7 +9,7 @@ on:
         description: 'Version to release (no leading v, e.g. 0.1.0)'
         required: true
       npm_otp:
-        description: 'npm OTP (6-digit, optional — only needed when 2FA is required)'
+        description: 'Unsupported legacy input; any nonempty value refuses before release work'
         required: false
         default: ''
 
@@ -35,19 +35,81 @@ jobs:
           - target: bun-linux-arm64
             os: ubuntu-latest
             asset: stack-linux-arm64
-          # GitHub's macos-13 (Intel) runner image is being phased out and
-          # the queue regularly sits for 30+ minutes. Bun cross-compiles
-          # cleanly from arm64 → x64 via `--target=bun-darwin-x64`, so we
-          # run both darwin builds on macos-latest (M1/M2) and skip the
-          # Intel-runner dependency entirely.
+          # Bun cross-compiles to every target from any host and ad-hoc signs
+          # the Mach-O itself (LC_CODE_SIGNATURE is present when built on
+          # Linux), and this binary is never executed on its runner, so it is
+          # built on ubuntu. On macos-latest it queued behind the arm64 build
+          # for the shared macOS slots: 4h40m before a 20s compile on v0.2.1.
           - target: bun-darwin-x64
-            os: macos-latest
+            os: ubuntu-latest
             asset: stack-darwin-x64
+          # Cross-compiled here too, so npm never waits for a macOS slot (2h24m
+          # on v0.2.1). smoke-darwin-arm64 still runs it natively before the
+          # GitHub Release and Homebrew formula point at it.
           - target: bun-darwin-arm64
-            os: macos-latest
+            os: ubuntu-latest
             asset: stack-darwin-arm64
     steps:
       - uses: actions/checkout@v4
+
+      - name: Validate release source before producers
+        env:
+          RELEASE_INPUT_VERSION: ${{ github.event.inputs.version }}
+          RELEASE_INPUT_OTP: ${{ github.event.inputs.npm_otp }}
+        run: |
+          set -euo pipefail
+          die() { printf '%s\n' 'release input/source validation failed' >&2; exit 1; }
+          # OTP is unsupported: refuse before any subprocess, install or producer.
+          [[ -z "${RELEASE_INPUT_OTP:-}" ]] || die
+          unset RELEASE_INPUT_OTP
+          if [[ "${GITHUB_REF:-}" == refs/tags/* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/v}"
+            [[ -z "${RELEASE_INPUT_VERSION:-}" || "$RELEASE_INPUT_VERSION" == "$VERSION" ]] || die
+          else
+            VERSION="${RELEASE_INPUT_VERSION:-}"
+          fi
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] || die
+          command -v node >/dev/null 2>&1 || die
+          # Read source data only; these guards do not establish publisher or archive authority.
+          if ! node --input-type=module - "$VERSION" <<'STACK_RELEASE_SOURCE'
+          import { lstatSync, readFileSync } from 'node:fs';
+          try {
+            const version = process.argv[2];
+            const read = (path) => {
+              const stat = lstatSync(path);
+              if (!stat.isFile() || stat.isSymbolicLink()) throw new Error();
+              return readFileSync(path, 'utf8');
+            };
+            const manifests = ['core', 'mcp', 'cli'].map((name) =>
+              JSON.parse(read(`packages/${name}/package.json`)));
+            if (manifests.some((pkg) => pkg.version !== version)) throw new Error();
+            if (typeof manifests[1].name !== 'string' || !manifests[1].name) throw new Error();
+            const descriptor = JSON.parse(read('packages/mcp/server.json'));
+            const entries = Array.isArray(descriptor.packages)
+              ? descriptor.packages.filter((pkg) => pkg.registryType === 'npm'
+                && pkg.identifier === manifests[1].name) : [];
+            if (descriptor.version !== version || entries.length !== 1
+                || entries[0].version !== version) throw new Error();
+            const cli = read('packages/cli/src/index.ts');
+            const declarations = [...cli.matchAll(/^const[ \t]+VERSION[ \t]*=[ \t]*([^;\r\n]+);[ \t]*$/gm)];
+            if (declarations.length !== 1) throw new Error();
+            const literal = declarations[0][1].trim().match(/^(["'])([^"'\r\n]+)\1$/);
+            if (!literal || literal[2] !== version) throw new Error();
+          } catch {
+            process.exit(1);
+          }
+          STACK_RELEASE_SOURCE
+          then
+            die "source version validation failed"
+          fi
+          # Check an actually selected tag without inventing a branch-dispatch tag owner.
+          if [[ "${GITHUB_REF:-}" == refs/tags/* ]]; then
+            [[ "$GITHUB_REF" == "refs/tags/v$VERSION" ]] || die "selected tag validation failed"
+            TAG_COMMIT="$(git rev-parse --verify "refs/tags/v$VERSION^{commit}" 2>/dev/null)" || die "selected tag validation failed"
+            HEAD_COMMIT="$(git rev-parse --verify HEAD 2>/dev/null)" || die "selected tag validation failed"
+            [[ -n "$TAG_COMMIT" && "$TAG_COMMIT" == "$HEAD_COMMIT" ]] || die "selected tag validation failed"
+          fi
+          printf 'version=%s\n' "$VERSION" >> "$GITHUB_OUTPUT"
 
       - uses: oven-sh/setup-bun@v2
         with:
@@ -76,10 +138,10 @@ jobs:
           cat ${{ matrix.asset }}.sha256
 
       - name: Smoke test (native arch only)
-        # Only run the binary when it matches the runner arch — darwin-x64
-        # is cross-compiled on an arm64 runner, so we can't execute it here
-        # without Rosetta; the linux-arm64 case is similar.
-        if: matrix.target == 'bun-linux-x64' || matrix.target == 'bun-darwin-arm64'
+        # Only run the binary when it matches the runner arch: the others are
+        # cross-compiled on an x64 Linux runner, so they cannot execute there.
+        # darwin-arm64 is run natively by smoke-darwin-arm64.
+        if: matrix.target == 'bun-linux-x64'
         run: |
           ./dist/${{ matrix.asset }} --help | head -20
           ./dist/${{ matrix.asset }} providers | head -5
@@ -90,19 +152,37 @@ jobs:
           path: dist/${{ matrix.asset }}*
           retention-days: 7
 
+  smoke-darwin-arm64:
+    name: Smoke stack-darwin-arm64 natively
+    needs: build-binaries
+    if: ${{ !cancelled() && needs.build-binaries.result == 'success' }}
+    runs-on: macos-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: stack-darwin-arm64
+          path: dist
+
+      - name: Verify checksum and run the binary
+        working-directory: dist
+        run: |
+          set -euo pipefail
+          shasum -a 256 -c stack-darwin-arm64.sha256
+          chmod +x stack-darwin-arm64
+          ./stack-darwin-arm64 --help | head -20
+          ./stack-darwin-arm64 providers | head -5
+
   publish-npm:
     name: Publish to npm
     needs: build-binaries
     runs-on: ubuntu-latest
-    # Skip cleanly if NPM_TOKEN isn't configured yet — the release still
-    # produces binaries + a GitHub Release so install.sh works. Re-tag a
-    # patch release once the token is set and this job fires.
-    if: ${{ !cancelled() }}
+    # Producer success is necessary; npm success alone does not prove registry bytes.
+    if: ${{ !cancelled() && needs.build-binaries.result == 'success' }}
     steps:
       # npm trusted publishing (OIDC): with id-token: write and npm >= 11.5.1,
       # npm exchanges the workflow identity for a short-lived publish token.
       # No NPM_TOKEN or OTP needed once each package (@ashlr/stack-core,
-      # @ashlr/stack-mcp, @ashlr/stack) lists ashlrai/ashlr-stack release.yml
+      # @ashlr/stack, ashlr-stack-mcp) lists ashlrai/ashlr-stack release.yml
       # as a trusted publisher on npmjs.com. NPM_TOKEN remains a fallback.
       - name: Enable npm publish
         id: gate
@@ -125,6 +205,67 @@ jobs:
           registry-url: 'https://registry.npmjs.org/'
 
       - if: steps.gate.outputs.enabled == 'true'
+        name: Validate release source before installs
+        id: ver
+        env:
+          RELEASE_INPUT_VERSION: ${{ github.event.inputs.version }}
+          RELEASE_INPUT_OTP: ${{ github.event.inputs.npm_otp }}
+        run: |
+          set -euo pipefail
+          die() { printf '%s\n' 'release input/source validation failed' >&2; exit 1; }
+          # OTP is unsupported: refuse before any subprocess, install or producer.
+          [[ -z "${RELEASE_INPUT_OTP:-}" ]] || die
+          unset RELEASE_INPUT_OTP
+          if [[ "${GITHUB_REF:-}" == refs/tags/* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/v}"
+            [[ -z "${RELEASE_INPUT_VERSION:-}" || "$RELEASE_INPUT_VERSION" == "$VERSION" ]] || die
+          else
+            VERSION="${RELEASE_INPUT_VERSION:-}"
+          fi
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] || die
+          command -v node >/dev/null 2>&1 || die
+          # Read source data only; these guards do not establish publisher or archive authority.
+          if ! node --input-type=module - "$VERSION" <<'STACK_RELEASE_SOURCE'
+          import { lstatSync, readFileSync } from 'node:fs';
+          try {
+            const version = process.argv[2];
+            const read = (path) => {
+              const stat = lstatSync(path);
+              if (!stat.isFile() || stat.isSymbolicLink()) throw new Error();
+              return readFileSync(path, 'utf8');
+            };
+            const manifests = ['core', 'mcp', 'cli'].map((name) =>
+              JSON.parse(read(`packages/${name}/package.json`)));
+            if (manifests.some((pkg) => pkg.version !== version)) throw new Error();
+            if (typeof manifests[1].name !== 'string' || !manifests[1].name) throw new Error();
+            const descriptor = JSON.parse(read('packages/mcp/server.json'));
+            const entries = Array.isArray(descriptor.packages)
+              ? descriptor.packages.filter((pkg) => pkg.registryType === 'npm'
+                && pkg.identifier === manifests[1].name) : [];
+            if (descriptor.version !== version || entries.length !== 1
+                || entries[0].version !== version) throw new Error();
+            const cli = read('packages/cli/src/index.ts');
+            const declarations = [...cli.matchAll(/^const[ \t]+VERSION[ \t]*=[ \t]*([^;\r\n]+);[ \t]*$/gm)];
+            if (declarations.length !== 1) throw new Error();
+            const literal = declarations[0][1].trim().match(/^(["'])([^"'\r\n]+)\1$/);
+            if (!literal || literal[2] !== version) throw new Error();
+          } catch {
+            process.exit(1);
+          }
+          STACK_RELEASE_SOURCE
+          then
+            die "source version validation failed"
+          fi
+          # Check an actually selected tag without inventing a branch-dispatch tag owner.
+          if [[ "${GITHUB_REF:-}" == refs/tags/* ]]; then
+            [[ "$GITHUB_REF" == "refs/tags/v$VERSION" ]] || die "selected tag validation failed"
+            TAG_COMMIT="$(git rev-parse --verify "refs/tags/v$VERSION^{commit}" 2>/dev/null)" || die "selected tag validation failed"
+            HEAD_COMMIT="$(git rev-parse --verify HEAD 2>/dev/null)" || die "selected tag validation failed"
+            [[ -n "$TAG_COMMIT" && "$TAG_COMMIT" == "$HEAD_COMMIT" ]] || die "selected tag validation failed"
+          fi
+          printf 'version=%s\n' "$VERSION" >> "$GITHUB_OUTPUT"
+
+      - if: steps.gate.outputs.enabled == 'true'
         name: Use an npm CLI that supports trusted publishing
         run: npm install -g "npm@^11.5.1" && npm --version
 
@@ -133,42 +274,36 @@ jobs:
         run: bun install --frozen-lockfile
 
       - if: steps.gate.outputs.enabled == 'true'
-        name: Resolve version from tag
-        id: ver
-        run: |
-          if [ -n "${{ github.event.inputs.version }}" ]; then
-            echo "version=${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
-          else
-            # tag is like refs/tags/v0.1.0
-            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
-          fi
-
-      - if: steps.gate.outputs.enabled == 'true'
         name: Inject OAuth client IDs
         env:
           OAUTH_SUPABASE_CLIENT_ID: ${{ secrets.OAUTH_SUPABASE_CLIENT_ID }}
           OAUTH_GITHUB_CLIENT_ID:   ${{ secrets.OAUTH_GITHUB_CLIENT_ID }}
         run: node scripts/inject-client-ids.mjs
 
+      # Packs and installs the three tarballs and drives the installed bins
+      # before the first real publish, so a broken package cannot land half
+      # published (core is on npm before cli and mcp).
       - if: steps.gate.outputs.enabled == 'true'
-        name: Publish @ashlr/stack-core + @ashlr/stack-mcp + @ashlr/stack
+        name: Preflight packed packages
+        run: |
+          bun run --cwd packages/cli build
+          bun run --cwd packages/mcp build
+          node scripts/release-preflight.mjs
+
+      - if: steps.gate.outputs.enabled == 'true'
+        name: Publish @ashlr/stack-core + @ashlr/stack + ashlr-stack-mcp
         id: npm_publish
-        continue-on-error: true
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: 'true'
-          NPM_OTP: ${{ github.event.inputs.npm_otp }}
+          RELEASE_VERSION: ${{ steps.ver.outputs.version }}
         run: |
-          OTP_FLAG=''
-          if [ -n "$NPM_OTP" ]; then
-            OTP_FLAG="--otp=$NPM_OTP"
-          fi
-          bash scripts/publish.sh --version ${{ steps.ver.outputs.version }} --yes $OTP_FLAG
+          bash scripts/publish.sh --version "$RELEASE_VERSION" --yes
 
-      - if: steps.gate.outputs.enabled == 'true' && steps.npm_publish.outcome == 'failure'
-        name: Warn — npm publish failed (likely EOTP)
+      - if: failure() && steps.gate.outputs.enabled == 'true' && steps.npm_publish.outcome == 'failure'
+        name: Preserve failed npm publish evidence
         run: |
-          echo '::warning title=npm publish failed::npm publish step failed — this is often an OTP/EOTP error. Rotate to an Automation token (no 2FA required) at https://docs.npmjs.com/creating-and-viewing-access-tokens or re-run this workflow with a fresh OTP via the npm_otp input.'
+          echo '::warning title=npm publish failed::Preserve logs and artifacts; reconcile registry state before any further release action.'
 
       - if: always() && steps.gate.outputs.enabled == 'true'
         name: Restore env.ts (never commit injected client IDs)
@@ -176,10 +311,9 @@ jobs:
 
   create-release:
     name: Create GitHub Release
-    # publish-npm skips gracefully when NPM_TOKEN is absent; binaries alone
-    # are enough to cut a GitHub Release and make install.sh work.
-    needs: [build-binaries, publish-npm]
-    if: ${{ !cancelled() && needs.build-binaries.result == 'success' }}
+    # Producer, native macOS smoke and npm job success are required before this downstream effect.
+    needs: [build-binaries, smoke-darwin-arm64, publish-npm]
+    if: ${{ !cancelled() && needs.build-binaries.result == 'success' && needs.smoke-darwin-arm64.result == 'success' && needs.publish-npm.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -191,14 +325,18 @@ jobs:
 
       - name: Resolve version
         id: ver
+        env:
+          RELEASE_INPUT_VERSION: ${{ github.event.inputs.version }}
         run: |
-          if [ -n "${{ github.event.inputs.version }}" ]; then
-            echo "version=${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
-            echo "tag=v${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+          if [[ "${GITHUB_REF:-}" == refs/tags/* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/v}"
+            [[ -z "${RELEASE_INPUT_VERSION:-}" || "$RELEASE_INPUT_VERSION" == "$VERSION" ]] || exit 1
           else
-            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
-            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+            VERSION="${RELEASE_INPUT_VERSION:-}"
           fi
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] || { printf '%s\n' 'release version validation failed' >&2; exit 1; }
+          printf 'version=%s\ntag=v%s\n' "$VERSION" "$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Write release body
         id: body
@@ -254,10 +392,12 @@ jobs:
 
   update-homebrew-tap:
     name: Update Homebrew tap
-    needs: create-release
+    needs: [build-binaries, publish-npm, create-release]
     # Only run on v*.*.* tag pushes (not workflow_dispatch version bumps)
     if: |
       !cancelled() &&
+      needs.build-binaries.result == 'success' &&
+      needs.publish-npm.result == 'success' &&
       needs.create-release.result == 'success' &&
       startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest

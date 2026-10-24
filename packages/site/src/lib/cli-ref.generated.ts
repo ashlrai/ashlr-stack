@@ -97,7 +97,7 @@ export const CLI_COMMANDS: CliCommand[] = [
   {
     name: "stack import",
     description: "Import an existing .env into Phantom + .stack.toml.",
-    synopsis: "stack import [--from <path>] [--dryRun]",
+    synopsis: "stack import [--from <path>] [--dryRun] [--json]",
     flags: [
       {
         name: "from",
@@ -112,6 +112,14 @@ export const CLI_COMMANDS: CliCommand[] = [
         type: "boolean",
         default: false,
         description: "Print what would happen without writing anything.",
+      },
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        default: false,
+        description:
+          "Emit machine-readable JSON (schema ashlr.stack.import/v1, names only): what was stored, skipped and wired.",
       },
     ],
     examples: [{ command: "stack import" }, { command: "stack import --from .env.local --dryRun" }],
@@ -249,8 +257,9 @@ export const CLI_COMMANDS: CliCommand[] = [
   },
   {
     name: "stack remove",
-    description: "Remove a service from the stack (vault entries and MCP config).",
-    synopsis: "stack remove [service] [--all] [--allOrphans] [--keepRemote]",
+    description:
+      "Remove local service config and MCP wiring; attempt Phantom secret removal (headless runs may retain secrets).",
+    synopsis: "stack remove [service] [--all] [--allOrphans] [--keepRemote] [--json]",
     flags: [
       {
         name: "service",
@@ -264,7 +273,7 @@ export const CLI_COMMANDS: CliCommand[] = [
         synopsis: "--all",
         type: "boolean",
         default: false,
-        description: "Remove every service in this stack (with confirmation).",
+        description: "Remove every local service entry; prompt for confirmation in a terminal.",
       },
       {
         name: "allOrphans",
@@ -272,14 +281,22 @@ export const CLI_COMMANDS: CliCommand[] = [
         type: "boolean",
         default: false,
         description:
-          "Detect services configured in .stack.toml but no longer present in source, then remove them.",
+          "Detect services in .stack.toml no longer present in source, then remove their local entries.",
       },
       {
         name: "keepRemote",
         synopsis: "--keepRemote",
         type: "boolean",
         default: false,
-        description: "Leave the provider-side resource untouched (don't deprovision).",
+        description: "Compatibility flag; upstream resources are kept for every removal.",
+      },
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        default: false,
+        description:
+          "Emit machine-readable JSON (schema ashlr.stack.remove/v1) naming the secrets Phantom kept. Never prompts.",
       },
     ],
     examples: [
@@ -290,13 +307,24 @@ export const CLI_COMMANDS: CliCommand[] = [
   {
     name: "stack list",
     description: "List services configured in this stack.",
-    synopsis: "stack list",
-    examples: [{ command: "stack list" }],
+    synopsis: "stack list [--json]",
+    flags: [
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        description: "Emit machine-readable JSON (schema ashlr.stack.list/v1).",
+      },
+    ],
+    examples: [
+      { command: "stack list" },
+      { command: "stack list --json", comment: "# ashlr.stack.list/v1 for agents" },
+    ],
   },
   {
     name: "stack info",
     description: "Show everything Stack knows about a configured service.",
-    synopsis: "stack info <service>",
+    synopsis: "stack info <service> [--json]",
     flags: [
       {
         name: "service",
@@ -304,6 +332,13 @@ export const CLI_COMMANDS: CliCommand[] = [
         type: "positional",
         required: true,
         description: "Service name.",
+      },
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        default: false,
+        description: "Emit machine-readable JSON (schema ashlr.stack.info/v1, secret names only).",
       },
     ],
     examples: [{ command: "stack info supabase" }],
@@ -313,18 +348,42 @@ export const CLI_COMMANDS: CliCommand[] = [
   {
     name: "stack status",
     description: "Show stack health at a glance.",
-    synopsis: "stack status",
+    synopsis: "stack status [--json]",
+    flags: [
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        description: "Emit machine-readable JSON (services, config, phantom).",
+      },
+    ],
     examples: [{ command: "stack status" }],
   },
   {
     name: "stack env",
     description: "Inspect the effective env-var map for this stack.",
     synopsis: "stack env <show|export|diff>",
+    flags: [
+      {
+        name: "env",
+        synopsis: "--env <env>",
+        type: "string",
+        default: "dev",
+        description: "Environment overlay to preview.",
+      },
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        default: false,
+        description: "Emit machine-readable JSON (schema ashlr.stack.env/v1, secret names only).",
+      },
+    ],
     subcommands: [
       {
         name: "stack env show",
         description: "Show which secrets are present in Phantom.",
-        synopsis: "stack env show [--env <env>]",
+        synopsis: "stack env show [--env <env>] [--json]",
         flags: [
           {
             name: "env",
@@ -332,6 +391,14 @@ export const CLI_COMMANDS: CliCommand[] = [
             type: "string",
             default: "dev",
             description: "Environment overlay to preview.",
+          },
+          {
+            name: "json",
+            synopsis: "--json",
+            type: "boolean",
+            default: false,
+            description:
+              "Emit machine-readable JSON (schema ashlr.stack.env/v1, secret names only).",
           },
         ],
         examples: [{ command: "stack env show" }, { command: "stack env show --env prod" }],
@@ -371,7 +438,17 @@ export const CLI_COMMANDS: CliCommand[] = [
       {
         name: "stack env diff",
         description: "Which declared secrets are missing from the vault?",
-        synopsis: "stack env diff",
+        synopsis: "stack env diff [--json]",
+        flags: [
+          {
+            name: "json",
+            synopsis: "--json",
+            type: "boolean",
+            default: false,
+            description:
+              "Emit machine-readable JSON (schema ashlr.stack.env-diff/v1, secret names only). Exits 1 when any are missing.",
+          },
+        ],
         examples: [{ command: "stack env diff" }],
       },
     ],
@@ -379,8 +456,19 @@ export const CLI_COMMANDS: CliCommand[] = [
   {
     name: "stack deps",
     description: "Show the service dependency graph for this stack.",
-    synopsis: "stack deps",
-    examples: [{ command: "stack deps" }],
+    synopsis: "stack deps [--json]",
+    flags: [
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        description: "Emit machine-readable JSON (schema ashlr.stack.deps/v1).",
+      },
+    ],
+    examples: [
+      { command: "stack deps" },
+      { command: "stack deps --json", comment: "# ashlr.stack.deps/v1 for agents" },
+    ],
     notes:
       "Renders an ASCII tree grouped by category, with every secret slot annotated beneath its service.",
   },
@@ -434,6 +522,48 @@ export const CLI_COMMANDS: CliCommand[] = [
       "Thin wrapper over `phantom exec` so env vars with phm_ tokens get swapped for real secrets at the network layer.",
   },
   {
+    name: "stack swap",
+    description: "Migrate a project from one provider to an equivalent in the same category.",
+    synopsis: "stack swap <path> <to> [--dryRun] [--noRollback] [--keepFrom]",
+    flags: [
+      {
+        name: "from",
+        synopsis: "<path>",
+        type: "positional",
+        required: true,
+        description: "Provider to remove (e.g. clerk).",
+      },
+      {
+        name: "to",
+        synopsis: "<to>",
+        type: "positional",
+        required: true,
+        description: "Provider to provision (e.g. auth0).",
+      },
+      {
+        name: "dryRun",
+        synopsis: "--dryRun",
+        type: "boolean",
+        default: false,
+        description: "Print the plan without executing any steps.",
+      },
+      {
+        name: "noRollback",
+        synopsis: "--noRollback",
+        type: "boolean",
+        default: false,
+        description: "On failure, leave partial state in place instead of rolling back.",
+      },
+      {
+        name: "keepFrom",
+        synopsis: "--keepFrom",
+        type: "boolean",
+        default: false,
+        description: "Provision `to` without removing `from` (side-by-side migration).",
+      },
+    ],
+  },
+  {
     name: "stack sync",
     description: "Push secrets to a deployment platform (via phantom sync).",
     synopsis: "stack sync --platform <name>",
@@ -447,6 +577,56 @@ export const CLI_COMMANDS: CliCommand[] = [
       },
     ],
     examples: [{ command: "stack sync --platform vercel" }],
+  },
+  {
+    name: "stack onboard",
+    description:
+      "Detect Codex, Claude Code, Cursor and Gemini CLI and register the Phantom gateway in each (plan by default).",
+    synopsis:
+      "stack onboard [--apply] [--undo] [--client <client>] [--all] [--home <home>] [--json]",
+    flags: [
+      {
+        name: "apply",
+        synopsis: "--apply",
+        type: "boolean",
+        description: "Write the changes. Without this flag nothing is written.",
+      },
+      {
+        name: "undo",
+        synopsis: "--undo",
+        type: "boolean",
+        description: "Restore the files saved by the last --apply.",
+      },
+      {
+        name: "client",
+        synopsis: "--client <client>",
+        type: "string",
+        description: "Comma list: claude,codex,cursor,gemini. Default: all.",
+      },
+      {
+        name: "all",
+        synopsis: "--all",
+        type: "boolean",
+        description: "Also wire clients that are not detected.",
+      },
+      {
+        name: "home",
+        synopsis: "--home <home>",
+        type: "string",
+        description: "Home directory to use (default: your home).",
+      },
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        description: "Emit JSON.",
+      },
+    ],
+    examples: [
+      { command: "stack onboard", comment: "plan only, nothing is written" },
+      { command: "stack onboard --apply" },
+      { command: "stack onboard --undo" },
+    ],
   },
   {
     name: "stack open",
@@ -479,14 +659,54 @@ export const CLI_COMMANDS: CliCommand[] = [
     examples: [{ command: "stack login github" }, { command: "stack login supabase" }],
   },
   {
+    name: "stack telemetry",
+    description: "Opt into / out of anonymous usage telemetry. See docs/PRIVACY.md.",
+    synopsis: "stack telemetry <status|enable|disable>",
+    subcommands: [
+      {
+        name: "stack telemetry status",
+        description: "Show telemetry opt-in status.",
+        synopsis: "stack telemetry status",
+      },
+      {
+        name: "stack telemetry enable",
+        description: "Opt in to anonymous usage telemetry.",
+        synopsis: "stack telemetry enable",
+      },
+      {
+        name: "stack telemetry disable",
+        description: "Opt out of telemetry.",
+        synopsis: "stack telemetry disable",
+      },
+    ],
+  },
+  {
     name: "stack templates",
     description: "List or apply starter stack templates.",
     synopsis: "stack templates <list|apply>",
+    flags: [
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        default: false,
+        description: "Emit machine-readable JSON (schema ashlr.stack.templates/v1).",
+      },
+    ],
     subcommands: [
       {
         name: "stack templates list",
         description: "List available templates.",
-        synopsis: "stack templates list",
+        synopsis: "stack templates list [--json]",
+        flags: [
+          {
+            name: "json",
+            synopsis: "--json",
+            type: "boolean",
+            default: false,
+            description: "Emit machine-readable JSON (schema ashlr.stack.templates/v1).",
+          },
+        ],
         examples: [{ command: "stack templates list" }],
       },
       {
@@ -516,8 +736,27 @@ export const CLI_COMMANDS: CliCommand[] = [
   {
     name: "stack providers",
     description: "List every curated provider Stack can wire up.",
-    synopsis: "stack providers",
-    examples: [{ command: "stack providers" }],
+    synopsis: "stack providers [--category <category>] [--json]",
+    flags: [
+      {
+        name: "category",
+        synopsis: "--category <category>",
+        type: "string",
+        required: false,
+        description:
+          "Only this category, any case (database, deploy, cloud, ai, analytics, observability, errors, payments, code, tickets, email, auth, featureflags).",
+      },
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        description: "Emit machine-readable JSON (schema ashlr.stack.providers/v1).",
+      },
+    ],
+    examples: [
+      { command: "stack providers" },
+      { command: "stack providers --json", comment: "# ashlr.stack.providers/v1 for agents" },
+    ],
   },
   {
     name: "stack recommend",
@@ -544,7 +783,8 @@ export const CLI_COMMANDS: CliCommand[] = [
         synopsis: "--category <category>",
         type: "string",
         required: false,
-        description: "Restrict to a single category (e.g. Database, Auth).",
+        description:
+          "Restrict to a single category, any case (Database, Deploy, Cloud, AI, Analytics, Observability, Errors, Payments, Code, Tickets, Email, Auth, FeatureFlags).",
       },
       {
         name: "json",
@@ -577,7 +817,8 @@ export const CLI_COMMANDS: CliCommand[] = [
   },
   {
     name: "stack apply",
-    description: "Apply a saved recipe: provision each provider + pre-wire Phantom rotation.",
+    description:
+      "Apply a saved recipe: provision each provider, check its secrets in Phantom, and add webhook stubs.",
     synopsis: "stack apply [id] [--noWire] [--noRollback]",
     flags: [
       {
@@ -592,7 +833,7 @@ export const CLI_COMMANDS: CliCommand[] = [
         synopsis: "--noWire",
         type: "boolean",
         default: false,
-        description: "Skip Phantom envelope + webhook pre-wiring (opts out of the moat).",
+        description: "Skip the Phantom vault check and webhook stubs.",
       },
       {
         name: "noRollback",
@@ -611,11 +852,29 @@ export const CLI_COMMANDS: CliCommand[] = [
     name: "stack projects",
     description: "Manage the cross-project registry at ~/.stack/projects.json.",
     synopsis: "stack projects <list|register|remove|where>",
+    flags: [
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        default: false,
+        description: "Emit machine-readable JSON (schema ashlr.stack.projects/v1).",
+      },
+    ],
     subcommands: [
       {
         name: "stack projects list",
         description: "List every Stack-enabled project on this machine.",
-        synopsis: "stack projects list",
+        synopsis: "stack projects list [--json]",
+        flags: [
+          {
+            name: "json",
+            synopsis: "--json",
+            type: "boolean",
+            default: false,
+            description: "Emit machine-readable JSON (schema ashlr.stack.projects/v1).",
+          },
+        ],
         examples: [{ command: "stack projects list" }],
       },
       {
@@ -663,20 +922,38 @@ export const CLI_COMMANDS: CliCommand[] = [
   },
   {
     name: "stack ci",
-    description: "Scaffold CI integrations that run `stack doctor` on pushes + nightly.",
+    description: "CI workflow generation (unavailable; use `stack doctor` instead).",
     synopsis: "stack ci <init>",
+    flags: [
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        default: false,
+        description: "Emit the refusal as JSON ({ error }) on stdout.",
+      },
+    ],
     subcommands: [
       {
         name: "stack ci init",
-        description: "Write .github/workflows/stack-ci.yml for GitHub Actions.",
-        synopsis: "stack ci init [--force]",
+        description:
+          "Unavailable: refuses with what to run instead (stack doctor). Never writes a workflow.",
+        synopsis: "stack ci init [--force] [--json]",
         flags: [
           {
             name: "force",
             synopsis: "--force",
             type: "boolean",
             default: false,
-            description: "Overwrite an existing stack-ci.yml.",
+            description:
+              "Compatibility flag; generation is unavailable and no workflow is overwritten.",
+          },
+          {
+            name: "json",
+            synopsis: "--json",
+            type: "boolean",
+            default: false,
+            description: "Emit the refusal as JSON ({ error }) on stdout.",
           },
         ],
         examples: [{ command: "stack ci init" }],
@@ -705,7 +982,23 @@ export const CLI_COMMANDS: CliCommand[] = [
   {
     name: "stack upgrade",
     description: "Check npm for a newer @ashlr/stack release.",
-    synopsis: "stack upgrade",
+    synopsis: "stack upgrade [--dryRun] [--json]",
+    flags: [
+      {
+        name: "dryRun",
+        synopsis: "--dryRun",
+        type: "boolean",
+        description: "Print what would be installed without running the install command.",
+      },
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        default: false,
+        description:
+          "Emit machine-readable JSON (schema ashlr.stack.upgrade/v1): current, latest, status and the install command.",
+      },
+    ],
     examples: [{ command: "stack upgrade" }],
     notes:
       "Checks the npm registry for a newer version, prints an install hint — does not auto-install.",

@@ -1,6 +1,6 @@
 {
   "name": "ashlr-stack-mcp",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "mcpName": "io.github.ashlrai/ashlr-stack",
   "description": "MCP server for Ashlr Stack. Exposes 19 tools and 3 resources so Claude Code / Cursor / Windsurf / Codex can provision every third-party service in a project with one call.",
   "license": "MIT",
@@ -45,12 +45,13 @@
   },
   "scripts": {
     "build": "bun build src/server.ts --outdir dist --target node --format esm && node -e \"const fs=require('fs');const f='dist/server.js';let c=fs.readFileSync(f,'utf8');if(c.startsWith('#!'))c=c.slice(c.indexOf('\\n')+1);fs.writeFileSync(f,'#!/usr/bin/env node\\n'+c);fs.chmodSync(f,0o755)\"",
-    "prepublishOnly": "bun run build",
+    "prepack": "bun run build",
     "start": "bun run src/server.ts",
     "test": "bun test __tests__/",
     "typecheck": "bunx tsc --noEmit"
   },
   "dependencies": {
+    "@ashlr/stack": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.0.0"
   },
   "devDependencies": {

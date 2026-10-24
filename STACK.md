@@ -19,10 +19,29 @@ third-party service in a developer's project with one command.
 
 ## Quick orientation
 
-- 22 CLI commands live under `packages/cli/src/commands/*.ts`
-- 23 providers under `packages/core/src/providers/*.ts` (factory: `_api-key.ts`; pilot: `supabase.ts`)
-- 17 MCP tools listed in `packages/mcp/src/server.ts` — each shells out to the CLI
-- 69 tests across `packages/core/src/__tests__/` — run with `bun test` from the repo root
+- 27 CLI commands live under `packages/cli/src/commands/*.ts` (registered in `packages/cli/src/index.ts`)
+- 39 providers in 13 categories under `packages/core/src/providers/*.ts` (factory: `_api-key.ts`; pilot: `supabase.ts`)
+- 19 MCP tools in the `TOOLS` array of `packages/mcp/src/tools.ts` (served by `server.ts`). Each runs the CLI: `STACK_BIN` if set, else the `stack` bin of the `@ashlr/stack` dependency (`packages/cli/dist/index.js`, present after a build), else `stack` on PATH (`packages/mcp/src/stack-bin.ts`)
+- Tests live in `packages/*/src/__tests__/` — run with `bun test` from the repo root
+
+## Agent quickstart (from a clone)
+
+```bash
+bun install --frozen-lockfile
+bun test                                   # full suite, no network or accounts
+bunx tsc --noEmit -p tsconfig.json
+bunx biome check .
+bun run packages/cli/src/index.ts --help   # the CLI from source
+```
+
+Things that trip agents up:
+
+- **No TTY.** Agent shells have no TTY. `stack scan` without flags prints the human report; use `stack scan --json` to parse it. `stack scan --auto` without `--yes` exits 1, since it would ask before each add. `stack init` skips the template picker; pass `--template <name>` (see `stack templates list`).
+- **`stack init --dryRun` still writes.** It provisions nothing, but it writes `.stack.toml`, `.stack.local.toml` and `.gitignore` and registers the project in `~/.stack/projects.json`. Run it in a scratch directory, and set `STACK_REGISTRY_DIR` to a temp dir to keep `~/.stack` clean.
+- **MCP from source needs the CLI too.** Point the server at the source CLI with `STACK_BIN` (see `packages/mcp/README.md`), or build `packages/cli` so `dist/index.js` exists. Otherwise every tool call fails with "Could not run the 'stack' CLI".
+- **MCP tests run the built bundles.** `packages/mcp/__tests__/server.test.ts` drives `packages/mcp/dist/server.js` and `packages/cli/dist/index.js` and only builds them when they are missing. Run `bun run build` after changing CLI or MCP source before trusting an MCP test failure.
+- **`stack onboard` edits files in your home directory.** Without `--apply` it only prints a plan. Use `--home <dir>` to point it at a scratch directory.
+- **`bun run build` rewrites tracked site files** (`packages/site/public/install.ps1`, `packages/site/src/data/CHANGELOG.md`, the generated CLI reference). Don't commit that churn with an unrelated change; `git checkout -- packages/site` after a local build.
 - Site is Astro 5 + Tailwind v4 + Framer Motion
 
 ## Coding conventions (actually followed here)
@@ -52,13 +71,13 @@ third-party service in a developer's project with one command.
 1. `packages/cli/src/commands/<name>.ts`.
 2. Register in `packages/cli/src/index.ts` subCommands.
 3. Add to `packages/cli/src/commands/completion.ts` so shell completion stays current.
-4. Add to `packages/mcp/src/server.ts` if it should be exposed to MCP.
-5. Update `packages/site/src/lib/cli-ref.ts` to reflect on the docs site (`/docs/cli`).
+4. Add to the `TOOLS` array in `packages/mcp/src/tools.ts` if it should be exposed to MCP.
+5. Add the name to `COMMAND_ORDER` (and examples to `EXTRAS`) in `packages/site/scripts/gen-cli-ref.ts`, run `bun packages/site/scripts/gen-cli-ref.ts`, and commit `packages/site/src/lib/cli-ref.generated.ts`. CI fails if the committed copy drifts, and `packages/site/tests/cli-ref.test.ts` fails if it does not list exactly the commands in `stack --help`.
 6. Smoke test: `bun run packages/cli/src/index.ts <name> --help`.
 
 ### Add a new MCP tool
 
-1. Add to the `TOOLS` array in `packages/mcp/src/server.ts`.
+1. Add to the `TOOLS` array in `packages/mcp/src/tools.ts`.
 2. Update `packages/site/src/lib/mcp-ref.ts`.
 3. Update `packages/site/public/mcp.json` (regenerate via agent or hand edit).
 4. Update `packages/site/public/llms.txt` "When to recommend" if appropriate.
@@ -76,8 +95,9 @@ third-party service in a developer's project with one command.
 
 ```bash
 bun install
-bun test                         # 69 pass, 0 fail
+bun test                         # 0 fail
 bunx tsc --noEmit -p tsconfig.json
+bunx biome check .
 cd packages/site && bunx astro check  # 43 files / 0 errors
 cd packages/site && bun run build
 ```

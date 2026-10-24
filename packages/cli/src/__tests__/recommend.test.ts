@@ -53,6 +53,14 @@ describe("stack recommend --json", () => {
     expect(hitNames.some((n: string) => ["clerk", "supabase"].includes(n))).toBe(true);
     expect(typeof payload.guidance).toBe("string");
     expect(payload.byCategory).toBeDefined();
+    const commandSection: string | undefined = payload.guidance
+      .split("Apply a chosen set with: ")[1]
+      ?.split(" (")[0];
+    expect(commandSection).toBeDefined();
+    const commands = commandSection?.split(" && ").map((command) => command.trim().split(/\s+/));
+    expect(commands).toEqual(
+      payload.hits.slice(0, 3).map((hit: { name: string }) => ["stack", "add", hit.name]),
+    );
   });
 
   it("narrows to a category filter", () => {
@@ -68,6 +76,36 @@ describe("stack recommend --json", () => {
     for (const hit of payload.hits) {
       expect(hit.category).toBe("Deploy");
     }
+  });
+
+  it("matches --category case-insensitively", () => {
+    const { stdout, code } = runCli([
+      "recommend",
+      "serverless postgres",
+      "--category",
+      "database",
+      "--json",
+    ]);
+    expect(code).toBe(0);
+    const payload = JSON.parse(stdout);
+    expect(payload.hits.length).toBeGreaterThan(0);
+    for (const hit of payload.hits) {
+      expect(hit.category).toBe("Database");
+    }
+  });
+
+  it("rejects an unknown --category instead of returning nothing", () => {
+    const { stdout, stderr, code } = runCli([
+      "recommend",
+      "serverless postgres",
+      "--category",
+      "bogus",
+      "--json",
+    ]);
+    expect(code).toBe(1);
+    expect(stdout).toBe("");
+    expect(stderr).toContain('Unknown category "bogus"');
+    expect(stderr).toContain("Database");
   });
 
   it("with --save persists a recipe under .stack/recipes/", () => {
@@ -105,5 +143,42 @@ describe("stack recommend --json", () => {
     const payload = JSON.parse(stdout);
     expect(payload.hits).toEqual([]);
     expect(payload.guidance).toContain("No strong matches");
+  });
+
+  it("exits 1 when no query is given, in JSON and human mode", () => {
+    const json = runCli(["recommend", "--json"]);
+    expect(json.code).toBe(1);
+    expect(JSON.parse(json.stdout).guidance).toContain("Provide a query");
+    const blank = runCli(["recommend", "   ", "--json"]);
+    expect(blank.code).toBe(1);
+    const human = runCli(["recommend"]);
+    expect(human.code).toBe(1);
+    expect(human.stdout + human.stderr).toContain("No query");
+  });
+
+  it("rejects a --k that is not a whole number of 1 or more", () => {
+    for (const k of ["abc", "0", "2.5"]) {
+      const { stdout, stderr, code } = runCli(["recommend", "postgres", "--k", k, "--json"]);
+      expect(code).toBe(1);
+      expect(stdout).toBe("");
+      expect(stderr).toContain(`Invalid --k "${k}"`);
+    }
+  });
+
+  it("names a negative --k given as a separate token", () => {
+    // `--k -1` reached the command as an empty --k, reported as "no value".
+    for (const k of ["-1", "-3"]) {
+      const { stdout, stderr, code } = runCli(["recommend", "postgres", "--k", k, "--json"]);
+      expect(code).toBe(1);
+      expect(stdout).toBe("");
+      expect(stderr).toContain(`Invalid --k "${k}"`);
+      expect(stderr).not.toContain("no value");
+    }
+  });
+
+  it("honours a valid --k", () => {
+    const { stdout, code } = runCli(["recommend", "postgres database", "--k", "2", "--json"]);
+    expect(code).toBe(0);
+    expect(JSON.parse(stdout).hits.length).toBe(2);
   });
 });

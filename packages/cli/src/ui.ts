@@ -34,7 +34,40 @@ export function logEvent(event: LogEvent): void {
   p.log.message(`${prefix} ${event.msg}`);
 }
 
-export const prompts = p;
+/**
+ * True when stdout is a real terminal and we're not in CI. Animated output
+ * (the @clack spinner's cursor-move/erase escapes) is only safe here; piped
+ * output, CI logs, and MCP tool results must stay plain text.
+ */
+export function isInteractiveOutput(
+  stdout: { isTTY?: boolean } = process.stdout,
+  env: NodeJS.ProcessEnv = process.env,
+): boolean {
+  return stdout.isTTY === true && !env.CI;
+}
+
+type Spinner = ReturnType<typeof p.spinner>;
+
+/**
+ * Drop-in for `p.spinner()`. On a TTY it is the @clack spinner; otherwise it
+ * prints each `stop()` message as one plain line — no frames, no ANSI cursor
+ * codes, no stdin blocking.
+ */
+export function spinner(): Spinner {
+  if (isInteractiveOutput()) return p.spinner();
+  return {
+    start: () => {},
+    message: () => {},
+    stop: (msg = "", code = 0) => {
+      if (!msg) return;
+      if (code === 0) p.log.step(msg);
+      else p.log.error(msg);
+    },
+  };
+}
+
+/** @clack/prompts with a non-TTY-safe `spinner` — every command spins through this. */
+export const prompts: typeof p = { ...p, spinner };
 
 /**
  * Bridge a running @clack spinner to the core pipeline's `log` + `prompt`
@@ -44,7 +77,7 @@ export const prompts = p;
  * hung. Pass the same `label` used in `spinner.start()` so it resumes cleanly.
  */
 export function spinnerBridge(
-  spinner: ReturnType<typeof p.spinner>,
+  spinner: Spinner,
   label: string,
 ): {
   log: (event: LogEvent) => void;

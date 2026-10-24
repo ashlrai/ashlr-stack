@@ -205,7 +205,10 @@ const EXTRAS: Record<string, CommandExtra> = {
     ],
   },
   list: {
-    examples: [{ command: "stack list" }],
+    examples: [
+      { command: "stack list" },
+      { command: "stack list --json", comment: "# ashlr.stack.list/v1 for agents" },
+    ],
   },
   info: {
     examples: [{ command: "stack info supabase" }],
@@ -228,7 +231,10 @@ const EXTRAS: Record<string, CommandExtra> = {
     },
   },
   deps: {
-    examples: [{ command: "stack deps" }],
+    examples: [
+      { command: "stack deps" },
+      { command: "stack deps --json", comment: "# ashlr.stack.deps/v1 for agents" },
+    ],
     notes: "Renders an ASCII tree grouped by category, with every secret slot annotated beneath its service.",
   },
   doctor: {
@@ -248,6 +254,13 @@ const EXTRAS: Record<string, CommandExtra> = {
   },
   sync: {
     examples: [{ command: "stack sync --platform vercel" }],
+  },
+  onboard: {
+    examples: [
+      { command: "stack onboard", comment: "plan only, nothing is written" },
+      { command: "stack onboard --apply" },
+      { command: "stack onboard --undo" },
+    ],
   },
   open: {
     examples: [
@@ -272,7 +285,10 @@ const EXTRAS: Record<string, CommandExtra> = {
     },
   },
   providers: {
-    examples: [{ command: "stack providers" }],
+    examples: [
+      { command: "stack providers" },
+      { command: "stack providers --json", comment: "# ashlr.stack.providers/v1 for agents" },
+    ],
   },
   recommend: {
     examples: [
@@ -453,9 +469,12 @@ const COMMAND_ORDER = [
   "deps",
   "doctor",
   "exec",
+  "swap",
   "sync",
+  "onboard",
   "open",
   "login",
+  "telemetry",
   "templates",
   "providers",
   "recommend",

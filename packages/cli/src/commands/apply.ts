@@ -13,17 +13,18 @@ import { doctorCommand } from "./doctor.ts";
 import { initCommand } from "./init.ts";
 
 /**
- * `stack apply [recipe-id]` — replay a frozen Recipe through the add pipeline
- * and pre-wire Phantom envelopes + webhook stubs so the provider-specific
- * flows land real credentials into already-rotating slots.
+ * `stack apply [recipe-id]` — replay a frozen Recipe through the add pipeline,
+ * then report which declared secrets are in the Phantom vault (and which are
+ * missing) and drop webhook stubs. The real values come from `stack add`;
+ * apply never writes placeholders to the vault.
  *
- * This is the moat: recommendation → TOML → `apply` → provisioned stack,
- * with secret rotation wired from the first call.
+ * recommendation → TOML → `apply` → provisioned stack.
  */
 export const applyCommand = defineCommand({
   meta: {
     name: "apply",
-    description: "Apply a saved recipe: provision each provider + pre-wire Phantom rotation.",
+    description:
+      "Apply a saved recipe: provision each provider, check its secrets in Phantom, and add webhook stubs.",
   },
   args: {
     recipeId: {
@@ -34,7 +35,7 @@ export const applyCommand = defineCommand({
     noWire: {
       type: "boolean",
       default: false,
-      description: "Skip Phantom envelope + webhook pre-wiring (opts out of the moat).",
+      description: "Skip the Phantom vault check and webhook stubs.",
     },
     noRollback: {
       type: "boolean",
@@ -45,6 +46,11 @@ export const applyCommand = defineCommand({
   },
   async run({ args }) {
     intro(`stack apply${args.noWire ? colors.dim(" (no-wire)") : ""}`);
+
+    // Resolve the recipe first: a mistyped id must not leave a .stack.toml
+    // and a registry entry behind.
+    const recipe = await pickRecipe(args.recipeId ? String(args.recipeId) : undefined);
+    if (!recipe) return; // pickRecipe already surfaced the error.
 
     // The marketed golden path is `stack recommend --save && stack apply <id>`,
     // which must work from a blank directory. Auto-init if no .stack.toml so
@@ -75,9 +81,6 @@ export const applyCommand = defineCommand({
       }
     }
 
-    const recipe = await pickRecipe(args.recipeId ? String(args.recipeId) : undefined);
-    if (!recipe) return; // pickRecipe already surfaced the error.
-
     await requirePhantom();
 
     console.log();
@@ -95,17 +98,24 @@ export const applyCommand = defineCommand({
     });
 
     // Phantom-wire only runs when at least one provider made it through — no
-    // point creating rotation envelopes for services that aren't in the config.
+    // point checking secrets for services that aren't in the config.
     if (succeeded.length > 0) {
       try {
         const wire = await wirePhantomForRecipe(recipe, { noWire: Boolean(args.noWire) });
         if (!args.noWire) {
           console.log();
           console.log(
-            `  ${colors.dim("envelopes")} ${wire.envelopes.length} · ${colors.dim("webhooks")} ${wire.webhooks.length}${
+            `  ${colors.dim("secrets in vault")} ${wire.present.length} · ${colors.dim("missing")} ${wire.missing.length} · ${colors.dim("webhooks")} ${wire.webhooks.length}${
               wire.skipped.length > 0 ? ` · ${colors.yellow(`skipped ${wire.skipped.length}`)}` : ""
             }`,
           );
+          if (wire.missing.length > 0) {
+            console.log(
+              colors.yellow(
+                `  (not in Phantom: ${wire.missing.map((m) => m.split(":")[1]).join(", ")} — store with \`phantom add <NAME>\`)`,
+              ),
+            );
+          }
           if (wire.skipped.length > 0) {
             console.log(colors.dim(`  (phantom-wire skipped: ${wire.skipped.join(", ")})`));
           }
@@ -144,7 +154,12 @@ async function pickRecipe(id?: string): Promise<Recipe | null> {
     try {
       return await readRecipe(id);
     } catch (err) {
-      outroError((err as Error).message);
+      const ids = (await listRecipes()).map((r) => r.id);
+      const next =
+        ids.length > 0
+          ? `Available: ${ids.join(", ")}.`
+          : 'Save one first with `stack recommend "<what you are building>" --save`.';
+      outroError(`${(err as Error).message.replace(/\.$/, "")}. ${next}`);
       return null;
     }
   }

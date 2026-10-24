@@ -1,7 +1,6 @@
 import type { ServiceEntry } from "../config.ts";
 import { StackError } from "../errors.ts";
 import { fetchWithRetry } from "../http.ts";
-import { addSecret } from "../phantom.ts";
 import type {
   AuthHandle,
   HealthStatus,
@@ -11,6 +10,7 @@ import type {
   ProvisionOpts,
   Resource,
 } from "./_base.ts";
+import { acceptVerifiedExisting, storeProviderSecret } from "./_credential-stage.ts";
 import { promptSecret, tryRevealSecret } from "./_helpers.ts";
 
 /**
@@ -33,10 +33,13 @@ const vercel: Provider = {
   docs: "https://vercel.com/docs/rest-api",
 
   async login(ctx: ProviderContext): Promise<AuthHandle> {
-    const cached = await tryRevealSecret(TOKEN_SECRET);
+    const cached = await tryRevealSecret(TOKEN_SECRET, ctx);
     if (cached) {
       const identity = await fetchUser(cached);
-      if (identity) return { token: cached, identity };
+      if (identity) {
+        acceptVerifiedExisting(ctx, TOKEN_SECRET, cached);
+        return { token: cached, identity };
+      }
       ctx.log({ level: "warn", msg: "Cached Vercel token invalid; re-entering." });
     }
     if (!ctx.interactive)
@@ -47,7 +50,7 @@ const vercel: Provider = {
     });
     const identity = await fetchUser(token);
     if (!identity) throw new StackError("VERCEL_AUTH_INVALID", "Vercel rejected that token.");
-    await addSecret(TOKEN_SECRET, token);
+    await storeProviderSecret(ctx, TOKEN_SECRET, token);
     return { token, identity };
   },
 
@@ -78,7 +81,7 @@ const vercel: Provider = {
     return { id: project.id, displayName: project.name };
   },
 
-  async materialize(_ctx, resource, auth): Promise<Materialized> {
+  async materialize(ctx, resource, auth): Promise<Materialized> {
     return {
       secrets: { [TOKEN_SECRET]: auth.token },
       urls: {
@@ -87,8 +90,8 @@ const vercel: Provider = {
     };
   },
 
-  async healthcheck(_ctx, entry: ServiceEntry): Promise<HealthStatus> {
-    const token = await tryRevealSecret(TOKEN_SECRET);
+  async healthcheck(ctx, entry: ServiceEntry): Promise<HealthStatus> {
+    const token = await tryRevealSecret(TOKEN_SECRET, ctx);
     if (!token) return { kind: "error", detail: `${TOKEN_SECRET} missing from vault` };
     if (!entry.resource_id) return { kind: "warn", detail: "no resource_id" };
     const start = Date.now();
@@ -103,31 +106,32 @@ const vercel: Provider = {
       : "https://vercel.com/dashboard";
   },
 
-  async deprovision(ctx: ProviderContext, auth: AuthHandle, resourceId: string): Promise<void> {
+  async deprovision(_ctx: ProviderContext, auth: AuthHandle, resourceId: string): Promise<void> {
+    let res: Response;
     try {
-      const res = await fetch(`${API}/v9/projects/${resourceId}`, {
+      res = await fetch(`${API}/v9/projects/${resourceId}`, {
         method: "DELETE",
         headers: authHeaders(auth.token),
       });
-      if (res.status === 404) return; // already gone
-      if (!res.ok) {
-        ctx.log({
-          level: "warn",
-          msg: `Vercel deprovision returned ${res.status} for project ${resourceId}; resource may need manual cleanup.`,
-        });
-      }
-    } catch (err) {
-      ctx.log({
-        level: "warn",
-        msg: `Vercel deprovision failed for ${resourceId}: ${(err as Error).message}. Resource may need manual cleanup.`,
-      });
+    } catch {
+      throw new StackError(
+        "VERCEL_DELETE_UNCONFIRMED",
+        "Vercel resource deletion could not be confirmed.",
+      );
     }
+    // Admit only documented completion statuses; other 2xx/404 are unconfirmed.
+    // https://vercel.com/docs/rest-api/projects/delete-a-project
+    if (res.status === 204) return;
+    throw new StackError(
+      "VERCEL_DELETE_FAILED",
+      `Vercel resource deletion failed (HTTP ${res.status}).`,
+    );
   },
 };
 
 export default vercel;
 
-function authHeaders(token: string): HeadersInit {
+function authHeaders(token: string): NonNullable<RequestInit["headers"]> {
   return { Authorization: `Bearer ${token}`, "content-type": "application/json" };
 }
 

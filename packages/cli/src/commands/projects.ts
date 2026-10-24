@@ -1,10 +1,11 @@
+import { resolve } from "node:path";
 import {
   findProjectByName,
   listProjects,
   registerProject,
   unregisterProject,
 } from "@ashlr/stack-core";
-import { defineCommand } from "citty";
+import { defineCommand, runCommand } from "citty";
 import { colors, intro, outro, outroError } from "../ui.ts";
 
 /**
@@ -15,35 +16,79 @@ import { colors, intro, outro, outroError } from "../ui.ts";
  *   stack projects remove <name|path>
  *   stack projects where <name>
  */
+/**
+ * Stable machine shape for `stack projects list --json`. Fields may be added
+ * but existing ones must not change meaning.
+ */
+export interface ProjectsReport {
+  schema: "ashlr.stack.projects/v1";
+  total: number;
+  projects: Array<{
+    name: string;
+    path: string;
+    project_id: string;
+    template: string | null;
+    services: string[];
+    last_seen: string;
+  }>;
+}
+
+export async function buildProjectsReport(): Promise<ProjectsReport> {
+  const projects = (await listProjects()).map((p) => ({
+    name: p.name,
+    path: p.path,
+    project_id: p.project_id,
+    template: p.template ?? null,
+    services: [...p.services],
+    last_seen: p.last_seen,
+  }));
+  return { schema: "ashlr.stack.projects/v1", total: projects.length, projects };
+}
+
+const projectsListCommand = defineCommand({
+  meta: { name: "list", description: "List every Stack-enabled project on this machine." },
+  args: {
+    json: {
+      type: "boolean",
+      default: false,
+      description: "Emit machine-readable JSON (schema ashlr.stack.projects/v1).",
+    },
+  },
+  async run({ args }) {
+    if (args.json) {
+      process.stdout.write(`${JSON.stringify(await buildProjectsReport(), null, 2)}\n`);
+      return;
+    }
+    intro("stack projects");
+    const projects = await listProjects();
+    if (projects.length === 0) {
+      outro(colors.dim("No projects registered yet. Run `stack init` in one to start."));
+      return;
+    }
+    console.log();
+    for (const p of projects) {
+      const template = p.template ? colors.dim(` [${p.template}]`) : "";
+      const services = p.services.length
+        ? colors.dim(` · ${p.services.join(", ")}`)
+        : colors.dim(" · no services");
+      console.log(
+        `  ${colors.green("●")} ${colors.bold(p.name)}${template}  ${colors.dim(p.project_id)}`,
+      );
+      console.log(`    ${colors.dim(p.path)}${services}`);
+    }
+    console.log();
+  },
+});
+
 export const projectsCommand = defineCommand({
   meta: {
     name: "projects",
     description: "Manage the cross-project registry at ~/.stack/projects.json.",
   },
+  // Bare `stack projects` runs `list`, so it takes the same options.
+  args: projectsListCommand.args,
   subCommands: {
-    list: defineCommand({
-      meta: { name: "list", description: "List every Stack-enabled project on this machine." },
-      async run() {
-        intro("stack projects");
-        const projects = await listProjects();
-        if (projects.length === 0) {
-          outro(colors.dim("No projects registered yet. Run `stack init` in one to start."));
-          return;
-        }
-        console.log();
-        for (const p of projects) {
-          const template = p.template ? colors.dim(` [${p.template}]`) : "";
-          const services = p.services.length
-            ? colors.dim(` · ${p.services.join(", ")}`)
-            : colors.dim(" · no services");
-          console.log(
-            `  ${colors.green("●")} ${colors.bold(p.name)}${template}  ${colors.dim(p.project_id)}`,
-          );
-          console.log(`    ${colors.dim(p.path)}${services}`);
-        }
-        console.log();
-      },
-    }),
+    list: projectsListCommand,
     register: defineCommand({
       meta: { name: "register", description: "Register the current directory in the registry." },
       async run() {
@@ -71,12 +116,16 @@ export const projectsCommand = defineCommand({
       async run({ args }) {
         intro("stack projects remove");
         const target = String(args.target);
-        const match = target.startsWith("/") ? target : (await findProjectByName(target))?.path;
-        if (!match) {
-          outroError(`No registered project matches "${target}".`);
+        // A registered name first, then the argument as a path (absolute or
+        // relative to cwd). Only claim success when an entry was dropped.
+        const byName = await findProjectByName(target);
+        const removed = await unregisterProject(byName?.path ?? resolve(target));
+        if (!removed) {
+          outroError(
+            `No registered project matches "${target}". Run \`stack projects list\` for names and paths.`,
+          );
           return;
         }
-        await unregisterProject(match);
         outro(colors.green(`Removed ${target} from registry.`));
       },
     }),
@@ -95,5 +144,10 @@ export const projectsCommand = defineCommand({
         console.log(project.path);
       },
     }),
+  },
+  // Bare `stack projects` means `stack projects list` (see env.ts).
+  async run({ rawArgs }) {
+    if (rawArgs.some((a) => !a.startsWith("-"))) return;
+    await runCommand(projectsListCommand, { rawArgs });
   },
 });

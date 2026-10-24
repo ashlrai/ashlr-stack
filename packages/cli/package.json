@@ -1,7 +1,7 @@
 {
   "name": "@ashlr/stack",
-  "version": "0.2.1",
-  "description": "Ashlr Stack CLI — the control plane for your entire dev stack. One command to provision, wire, and operate every third-party service in your project. 29 providers, MCP-native.",
+  "version": "0.2.2",
+  "description": "Ashlr Stack CLI — the control plane for your entire dev stack. One command to provision, wire, and operate every third-party service in your project. 39 providers, MCP-native.",
   "license": "MIT",
   "author": {
     "name": "Mason Wyatt",
@@ -49,7 +49,7 @@
   },
   "scripts": {
     "build": "bun build src/index.ts --outdir dist --target node --format esm && node -e \"const fs=require('fs');const f='dist/index.js';let c=fs.readFileSync(f,'utf8');if(c.startsWith('#!'))c=c.slice(c.indexOf('\\n')+1);fs.writeFileSync(f,'#!/usr/bin/env node\\n'+c);fs.chmodSync(f,0o755)\"",
-    "prepublishOnly": "bun run build",
+    "prepack": "bun run build",
     "dev": "bun run src/index.ts",
     "typecheck": "bunx tsc --noEmit"
   },

@@ -51,9 +51,10 @@ import { Code } from "astro:components";
 
   <h2 id="remove-orphans"><code>stack remove --all-orphans</code></h2>
   <p>
-    Removes every service that <code>doctor --reconcile</code> classified as
-    orphaned: deprovisions the upstream resource (if supported), deletes its
-    Phantom secrets, and removes the entry from <code>.stack.toml</code>.
+    Rescans the source and removes orphaned services from local
+    <code>.stack.toml</code> and MCP configuration, while attempting Phantom
+    secret cleanup. It keeps upstream resources; it does not reuse a saved
+    <code>doctor --reconcile</code> result.
   </p>
 
   <Code
@@ -67,11 +68,11 @@ stack remove --all-orphans`}
   />
 
   <div class="callout callout-warn">
-    <code>stack remove --all-orphans</code> calls <code>deprovision</code> for
-    each orphan. For providers that implement it (Supabase, Neon, Turso, Vercel),
-    this <strong>deletes the upstream project</strong>. Run{" "}
-    <code>doctor --reconcile</code> first and confirm the orphan list before
-    proceeding.
+    <code>stack remove --all-orphans</code> does not delete upstream projects.
+    Inspect the orphan list before removing local configuration. Phantom secret
+    removal requires its terminal confirmation; headless cleanup or refused
+    confirmation can leave secrets stored. Inspect any reported leftovers.
+    <code>--keepRemote</code> is a compatibility flag, not a switch for remote deletion.
   </div>
 
   <h2>Using both in CI</h2>

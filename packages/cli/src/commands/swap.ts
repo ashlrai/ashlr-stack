@@ -5,14 +5,13 @@ import {
   findSwap,
   hasConfig,
   readConfig,
-  removeSecret,
   revealSecret,
   suggestSwaps,
   writeConfig,
 } from "@ashlr/stack-core";
 import { removeMcpEntry } from "@ashlr/stack-core/mcp-writer";
 import { defineCommand } from "citty";
-import { requirePhantom } from "../lib/phantom-preflight.ts";
+import { removeVaultSecrets, requirePhantom } from "../lib/phantom-preflight.ts";
 import { colors, intro, outro, outroError, prompts, spinnerBridge } from "../ui.ts";
 
 export const swapCommand = defineCommand({
@@ -52,8 +51,6 @@ export const swapCommand = defineCommand({
     const to = String(args.to);
 
     intro(`stack swap ${from} → ${to}${args.dryRun ? colors.dim(" (dry-run)") : ""}`);
-
-    if (!args.dryRun) await requirePhantom();
 
     // ── 0. No-op guard ────────────────────────────────────────────────────
     if (from === to) {
@@ -98,6 +95,10 @@ export const swapCommand = defineCommand({
       );
       return;
     }
+
+    // Validate names and config before the Phantom preflight so a typo reports
+    // "Unknown provider" instead of the install hint (same order as `stack add`).
+    if (!args.dryRun) await requirePhantom();
 
     // ── 4. Look up the swap pair ──────────────────────────────────────────
     const pair = findSwap(from, to);
@@ -202,8 +203,14 @@ export const swapCommand = defineCommand({
             console.log(colors.yellow(`  ⚠ ${newKey} has no value — alias ${oldKey} not written.`));
           }
         } catch (err) {
+          const unreadable =
+            (err as { code?: string }).code === "PHANTOM_TRUSTED_TERMINAL_REQUIRED";
           console.log(
-            colors.yellow(`  ⚠ Could not mirror ${newKey} → ${oldKey}: ${(err as Error).message}`),
+            colors.yellow(
+              unreadable
+                ? `  ⚠ Phantom does not hand stored values to Stack, so alias ${oldKey} was not written. Add it yourself: \`phantom add ${oldKey}\` and paste the ${newKey} value.`
+                : `  ⚠ Could not mirror ${newKey} → ${oldKey}: ${(err as Error).message}`,
+            ),
           );
         }
       }
@@ -217,13 +224,7 @@ export const swapCommand = defineCommand({
         const freshConfig = await readConfig();
         const entry = freshConfig.services[from];
         if (entry) {
-          for (const secret of entry.secrets) {
-            try {
-              await removeSecret(secret);
-            } catch {
-              /* best-effort */
-            }
-          }
+          await removeVaultSecrets(entry.secrets);
           if (entry.mcp) {
             try {
               await removeMcpEntry(entry.mcp);

@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 import { emitTelemetry } from "@ashlr/stack-core";
-import { defineCommand, runMain } from "citty";
+import { defineCommand } from "citty";
 import { addCommand } from "./commands/add.ts";
 import { applyCommand } from "./commands/apply.ts";
 import { ciCommand } from "./commands/ci.ts";
@@ -15,6 +15,7 @@ import { infoCommand } from "./commands/info.ts";
 import { initCommand } from "./commands/init.ts";
 import { listCommand } from "./commands/list.ts";
 import { loginCommand } from "./commands/login.ts";
+import { onboardCommand } from "./commands/onboard.ts";
 import { openCommand } from "./commands/open.ts";
 import { projectsCommand } from "./commands/projects.ts";
 import { providersCommand } from "./commands/providers.ts";
@@ -28,12 +29,14 @@ import { telemetryCommand } from "./commands/telemetry.ts";
 import { templatesCommand } from "./commands/templates.ts";
 import { upgradeCommand } from "./commands/upgrade.ts";
 import { normalizeKebabFlags } from "./lib/normalize-args.ts";
+import { runCli } from "./lib/run-cli.ts";
+import { installSynchronousStdio } from "./lib/sync-stdout.ts";
 import { checkForUpdate } from "./lib/update-check.ts";
 
 // Single source of truth for the CLI version. citty wires this into `--help`
 // and we also use it for `stack --version` (citty ships a standalone flag when
 // `version` is on the meta object — but older citty needs a fallback, below).
-const VERSION = "0.2.1";
+const VERSION = "0.2.2";
 
 const main = defineCommand({
   meta: {
@@ -102,6 +105,7 @@ const main = defineCommand({
     exec: execCommand,
     swap: swapCommand,
     sync: syncCommand,
+    onboard: onboardCommand,
     open: openCommand,
     login: loginCommand,
     telemetry: telemetryCommand,
@@ -116,11 +120,14 @@ const main = defineCommand({
   },
 });
 
+// Before any output: outroError exits the process, and Bun 1.2 drops queued
+// stdout writes on exit unless they were written synchronously.
+installSynchronousStdio();
 const _startMs = Date.now();
 void checkForUpdate(VERSION);
 // Normalize kebab-case flags (`--dry-run`) to the camelCase keys our commands
 // declare (`dryRun`) before citty parses them — see lib/normalize-args.ts.
-runMain(main, { rawArgs: normalizeKebabFlags(process.argv.slice(2)) }).finally(() => {
+runCli(main, normalizeKebabFlags(process.argv.slice(2))).finally(() => {
   void emitTelemetry({
     type: "command",
     command: process.argv[2] ?? "unknown",

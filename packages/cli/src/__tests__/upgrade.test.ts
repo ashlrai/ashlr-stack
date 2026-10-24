@@ -111,3 +111,64 @@ describe("upgrade --dryRun flag", () => {
     expect(errorCaught).toBe(true);
   });
 });
+
+describe("stack upgrade --json", () => {
+  test("buildUpgradeReport names the status and the install command", async () => {
+    const { buildUpgradeReport } = await import("../commands/upgrade.ts");
+    expect(buildUpgradeReport("0.2.0", "0.3.0")).toEqual({
+      schema: "ashlr.stack.upgrade/v1",
+      package: "@ashlr/stack",
+      current: "0.2.0",
+      latest: "0.3.0",
+      status: "update_available",
+      install: "bun add -g @ashlr/stack@0.3.0",
+    });
+    expect(buildUpgradeReport("0.3.0", "0.3.0").status).toBe("up_to_date");
+    expect(buildUpgradeReport("0.3.0", "0.3.0").install).toBeNull();
+    expect(buildUpgradeReport("0.4.0", "0.3.0").status).toBe("ahead");
+  });
+
+  async function capture(run: () => Promise<void>): Promise<string> {
+    let out = "";
+    const orig = process.stdout.write.bind(process.stdout);
+    process.stdout.write = ((chunk: string | Uint8Array) => {
+      out += String(chunk);
+      return true;
+    }) as typeof process.stdout.write;
+    try {
+      await run();
+    } finally {
+      process.stdout.write = orig;
+    }
+    return out;
+  }
+
+  test("prints one JSON report from the registry answer", async () => {
+    const { runUpgradeJson } = await import("../commands/upgrade.ts");
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = (async () =>
+      new Response(JSON.stringify({ version: "9.9.9" }))) as unknown as typeof fetch;
+    try {
+      const report = JSON.parse(await capture(() => runUpgradeJson("0.2.0")));
+      expect(report.status).toBe("update_available");
+      expect(report.latest).toBe("9.9.9");
+    } finally {
+      globalThis.fetch = origFetch;
+    }
+  });
+
+  test("a registry failure is a JSON error with exit 1", async () => {
+    const { runUpgradeJson } = await import("../commands/upgrade.ts");
+    const origFetch = globalThis.fetch;
+    const origExit = process.exitCode;
+    globalThis.fetch = (async () => new Response("", { status: 503 })) as unknown as typeof fetch;
+    try {
+      const body = JSON.parse(await capture(() => runUpgradeJson("0.2.0")));
+      expect(body).toEqual({ error: "npm registry returned 503.", current: "0.2.0" });
+      expect(process.exitCode).toBe(1);
+    } finally {
+      globalThis.fetch = origFetch;
+      process.exitCode = origExit ?? 0;
+    }
+  });
+});

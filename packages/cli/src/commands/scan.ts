@@ -1,3 +1,4 @@
+import { statSync } from "node:fs";
 import {
   addService,
   emptyConfig,
@@ -24,7 +25,8 @@ import { colors, intro, outro, outroError, prompts, spinnerBridge } from "../ui.
  *                  Default: "high" when --yes is set, "medium" otherwise.
  *   --json         Emit detection results as JSON and exit 0. No prompts, no add.
  *
- * Non-TTY + no flags: prints a one-line CI usage hint and exits 0.
+ * Non-TTY + no flags: prints the same read-only report and exits 0.
+ * Non-TTY + --auto without --yes: exits 1 (it would prompt before each add).
  */
 export const scanCommand = defineCommand({
   meta: {
@@ -64,15 +66,33 @@ export const scanCommand = defineCommand({
 
     // Resolve confidence threshold:
     //   explicit flag > default-for-mode (high when --yes, medium otherwise)
-    const rawConfidence = String(args.confidence).toLowerCase();
+    const rawConfidence = String(args.confidence).trim().toLowerCase();
     const validTiers = ["low", "medium", "high"];
-    const minimum: "low" | "medium" | "high" = validTiers.includes(rawConfidence)
+    const cwd = String(args.path);
+
+    // Reject bad input up front rather than scanning nothing and reporting
+    // "no providers" (an agent can't tell that from a clean repo).
+    let problem: string | undefined;
+    if (rawConfidence && !validTiers.includes(rawConfidence)) {
+      problem = `Unknown confidence "${args.confidence}". Use one of: ${validTiers.join(", ")}`;
+    } else if (!isDirectory(cwd)) {
+      problem = `Path "${cwd}" does not exist or is not a directory.`;
+    }
+    if (problem) {
+      if (isJson) {
+        console.error(problem);
+        process.exit(1);
+      }
+      outroError(problem);
+      return;
+    }
+
+    const minimum: "low" | "medium" | "high" = rawConfidence
       ? (rawConfidence as "low" | "medium" | "high")
       : isYes
         ? "high"
         : "medium";
 
-    const cwd = String(args.path);
     const hits = await scanSource(cwd);
     const order: Record<string, number> = { low: 0, medium: 1, high: 2 };
     const filtered = hits.filter((h) => order[h.confidence] >= order[minimum]);
@@ -90,15 +110,17 @@ export const scanCommand = defineCommand({
       return;
     }
 
-    // ── Non-TTY without CI flags: hint and exit ─────────────────────────────
-    if (!isTTY && !isYes) {
-      console.log(
-        "stack scan: no TTY detected. Run with --json for machine-readable output, or --yes to accept high-confidence hits headlessly.",
+    // ── Non-TTY --auto: it would prompt for each add, so refuse ──────────────
+    // Bare `stack scan` without a terminal prints the read-only report below;
+    // it used to print only a hint and exit 0, so an agent got no results.
+    if (!isTTY && isAuto && !isYes) {
+      outroError(
+        "stack scan --auto asks before each add and there is no terminal. Use --yes to add high-confidence hits headlessly, or --json for the report.",
       );
       return;
     }
 
-    // ── Human-readable header (interactive or --yes headless) ─────────────
+    // ── Human-readable report (TTY, headless report, or --yes) ──────────────
     intro("stack scan");
 
     if (filtered.length === 0) {
@@ -198,3 +220,11 @@ export const scanCommand = defineCommand({
     outro(colors.green("scan complete."));
   },
 });
+
+function isDirectory(path: string): boolean {
+  try {
+    return statSync(path).isDirectory();
+  } catch {
+    return false;
+  }
+}

@@ -1,5 +1,5 @@
 import { disableTelemetry, enableTelemetry, isTelemetryEnabled } from "@ashlr/stack-core";
-import { defineCommand } from "citty";
+import { defineCommand, runCommand } from "citty";
 import { colors, intro, outro } from "../ui.ts";
 
 const statusSub = defineCommand({
@@ -47,5 +47,10 @@ export const telemetryCommand = defineCommand({
     status: statusSub,
     enable: enableSub,
     disable: disableSub,
+  },
+  // Bare `stack telemetry` means `stack telemetry status` (see env.ts).
+  async run({ rawArgs }) {
+    if (rawArgs.some((a) => !a.startsWith("-"))) return;
+    await runCommand(statusSub, { rawArgs });
   },
 });

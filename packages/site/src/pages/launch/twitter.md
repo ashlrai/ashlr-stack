@@ -1,7 +1,7 @@
 ---
 layout: ~/layouts/LaunchNote.astro
 title: "Launch thread — Ashlr Stack v0.2"
-description: "The Twitter/X thread for the Ashlr Stack v0.2 launch."
+description: "Historical, unposted Twitter/X draft revised against the reviewed source interfaces."
 noindex: true
 ---
 
@@ -9,79 +9,79 @@ noindex: true
 
 **Tweet 1 — hook**
 
-you know the hour after `create-next-app`?
+Historical, unposted thread draft revised against source 0.2.1. Public npm 0.1.1 and historical native 0.2.0 are separate artifacts.
 
-tab-hop between Supabase, Vercel, Sentry, PostHog. copy 20 keys into .env.
-wire 4 MCP servers by hand.
+Provider setup, credential storage and client configuration have distinct prerequisites. A source example does not prove an app boots.
 
-Stack v0.2 collapses it:
+Review the source-defined template setup:
 
-`stack init --template nextjs-supabase-posthog`
+`stack init --template nextjs-supabase-posthog --noProvision`
 
-one command. everything provisioned. SDKs installed. app boots.
+Writes template configuration without provisioning. Omit --noProvision only when you intend the selected service setup.
 
 **Tweet 2 — what just happened**
 
-`stack init --template nextjs-supabase-posthog` does:
+`stack init --template nextjs-supabase-posthog --noProvision` writes split configuration only. It skips provider setup, Phantom credential persistence, MCP descriptor writes and SDK installation.
 
-- opens Supabase OAuth — picks your org, creates the project
-- writes URL + anon key + service role key into Phantom (encrypted vault)
-- patches .env.local, .mcp.json, .stack.toml
-- installs @supabase/supabase-js and posthog-js inline
-- no copy-paste, no tab-hopping
+Omitting --noProvision enables the service setup loop:
 
-**Tweet 3 — swap + rollback (new in v0.2)**
+- attempts adapter-specific login and setup
+- uses Phantom for managed credential slots
+- writes conditional MCP descriptors
+- SDK installation depends on the install mode and terminal
+- does not generate a filled .env.local or prove application readiness
 
-`stack swap supabase --to neon`
+**Tweet 3 — inspect a provider switch**
 
-migrates your project from one provider to another. secrets in Phantom get
-rotated. env references update in place.
+`stack swap supabase neon --dryRun`
 
-`stack rollback supabase` if it goes wrong.
+Shows the planned switch. Actual swap sets up the target and attempts old-service cleanup; upstream resources remain.
 
-this is the thing v0.1 didn't have.
+No registered `stack rollback` command. Inspect partial state and use supported recovery steps.
+
+No automatic data migration, complete credential rotation or atomic rollback guarantee.
 
 **Tweet 4 — scope**
 
-39 providers across the full stack:
+39 source catalog entries, with adapter-specific behavior:
 
 db · Supabase, Neon, Turso, Convex, Firebase
-deploy · Vercel, Railway, Fly, Render, Cloudflare Workers
-cloud · AWS
+deploy · Vercel, Railway, Fly, Render, Cloudflare
+cloud · AWS, GCP
 ai · OpenAI, Anthropic, xAI, DeepSeek
 obs · Sentry, PostHog
 auth · Clerk
 payments · Stripe
-+ GitHub, Linear, Resend, Upstash, more
++ GitHub, Linear, Resend, Upstash and others
 
 **Tweet 5 — secrets story**
 
-Stack refuses to write raw secrets to disk. every value goes into Phantom;
-files get a `phm_…` placeholder.
+Managed credential values use Phantom’s create-only stdin interface. Sequential setup and configuration writes can leave partial state.
 
-`stack exec -- bun dev` resolves them at spawn time.
+`stack exec -- bun dev` forwards to the installed Phantom interface; Stack does not itself resolve environment placeholders.
 
-if .env.local leaks, the attacker gets meaningless tokens. that's the point.
+Project files and literal placeholders are not automatically safe to commit or share.
 
 **Tweet 6 — honest**
 
 pre-alpha. what's NOT working yet:
 
-- npm publish requires 2FA OTP entry — install via brew tap for now
-- Supabase OAuth app creation is dashboard-only; can't fully automate new org setup
-- 5 of 39 providers are full OAuth; rest use PAT paste while apps register
+- source 0.2.1 is not proof of a published or installed version
+- 31 API-key factory adapters and eight custom adapters; four have create-resource paths
+- configured OAuth and credential verification vary by adapter
+- telemetry and update-check controls exist; no blanket no-network claim
 
-Phantom is required. free. MIT.
+Managed credentials require a qualified Phantom project. Stack source is MIT; no future pricing guarantee.
 
 **Tweet 7 — CTA**
 
-`brew install ashlrai/ashlr/stack`
+`npm i -g @ashlr/stack@0.1.1`
 
-or: `npm i -g @ashlr/stack` (requires 2FA on npm — brew is smoother)
+Illustrative recorded public package setup requires Bun 1.2+. Check the actual installed help; source candidate features may differ.
 
 docs: stack.ashlr.ai/docs
 repo: github.com/ashlrai/ashlr-stack
 
-reply with the worst tab-hop from your last project. we'll probably add it.
+Inspect supported interfaces and results before adopting a workflow. No provider or customer acceptance is established by this draft.
 
 → stack.ashlr.ai

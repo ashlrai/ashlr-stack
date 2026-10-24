@@ -1,7 +1,6 @@
 import { createHash, createHmac } from "node:crypto";
 import type { ServiceEntry } from "../config.ts";
 import { StackError } from "../errors.ts";
-import { addSecret } from "../phantom.ts";
 import type {
   AuthHandle,
   HealthStatus,
@@ -10,6 +9,7 @@ import type {
   ProviderContext,
   Resource,
 } from "./_base.ts";
+import { acceptVerifiedExisting, storeProviderSecret } from "./_credential-stage.ts";
 import { promptSecret, tryRevealSecret } from "./_helpers.ts";
 
 /**
@@ -32,11 +32,15 @@ const aws: Provider = {
   docs: "https://docs.aws.amazon.com/iam/",
 
   async login(ctx: ProviderContext): Promise<AuthHandle> {
-    const cachedId = await tryRevealSecret(SECRET_ID_KEY);
-    const cachedSecret = await tryRevealSecret(SECRET_SECRET_KEY);
+    const cachedId = await tryRevealSecret(SECRET_ID_KEY, ctx);
+    const cachedSecret = await tryRevealSecret(SECRET_SECRET_KEY, ctx);
     if (cachedId && cachedSecret) {
       const identity = await callStsIdentity(cachedId, cachedSecret, "us-east-1");
-      if (identity) return { token: `${cachedId}:${cachedSecret}`, identity };
+      if (identity) {
+        acceptVerifiedExisting(ctx, SECRET_ID_KEY, cachedId);
+        acceptVerifiedExisting(ctx, SECRET_SECRET_KEY, cachedSecret);
+        return { token: `${cachedId}:${cachedSecret}`, identity };
+      }
       ctx.log({ level: "warn", msg: "Cached AWS credentials invalid." });
     }
     if (!ctx.interactive)
@@ -49,8 +53,8 @@ const aws: Provider = {
     const secretAccessKey = await promptSecret(ctx, { message: "AWS_SECRET_ACCESS_KEY" });
     const identity = await callStsIdentity(accessKeyId, secretAccessKey, "us-east-1");
     if (!identity) throw new StackError("AWS_AUTH_INVALID", "AWS rejected those credentials.");
-    await addSecret(SECRET_ID_KEY, accessKeyId);
-    await addSecret(SECRET_SECRET_KEY, secretAccessKey);
+    await storeProviderSecret(ctx, SECRET_ID_KEY, accessKeyId);
+    await storeProviderSecret(ctx, SECRET_SECRET_KEY, secretAccessKey);
     return { token: `${accessKeyId}:${secretAccessKey}`, identity };
   },
 
@@ -64,7 +68,7 @@ const aws: Provider = {
     };
   },
 
-  async materialize(_ctx, resource, auth): Promise<Materialized> {
+  async materialize(ctx, resource, auth): Promise<Materialized> {
     const sep = auth.token.indexOf(":");
     if (sep <= 0 || sep === auth.token.length - 1) {
       throw new StackError(
@@ -80,7 +84,7 @@ const aws: Provider = {
         "AWS auth handle missing access key id or secret access key.",
       );
     }
-    await addSecret(SECRET_REGION, resource.region ?? "us-east-1");
+    await storeProviderSecret(ctx, SECRET_REGION, resource.region ?? "us-east-1");
     return {
       secrets: {
         AWS_ACCESS_KEY_ID: accessKeyId,
@@ -90,10 +94,10 @@ const aws: Provider = {
     };
   },
 
-  async healthcheck(_ctx, _entry: ServiceEntry): Promise<HealthStatus> {
-    const id = await tryRevealSecret(SECRET_ID_KEY);
-    const secret = await tryRevealSecret(SECRET_SECRET_KEY);
-    const region = (await tryRevealSecret(SECRET_REGION)) ?? "us-east-1";
+  async healthcheck(ctx, _entry: ServiceEntry): Promise<HealthStatus> {
+    const id = await tryRevealSecret(SECRET_ID_KEY, ctx);
+    const secret = await tryRevealSecret(SECRET_SECRET_KEY, ctx);
+    const region = (await tryRevealSecret(SECRET_REGION, ctx)) ?? "us-east-1";
     if (!id || !secret) return { kind: "error", detail: "AWS credentials missing from vault" };
     const start = Date.now();
     const identity = await callStsIdentity(id, secret, region);

@@ -6,9 +6,11 @@ on:
   pull_request:
   workflow_dispatch:
 
+# Cancel superseded PR runs only. Pushes to main keep one group per commit so
+# no main run is ever cancelled.
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   test:
@@ -20,27 +22,63 @@ jobs:
         bun: ["1.2.0", "latest"]
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Docs-only PRs skip the steps below, but the job still runs and reports,
+      # so the required check never strands. docs/provider-auth-matrix.md (read
+      # by provider-parity.test.ts) and README.md (read by release-preflight)
+      # count as code. Pushes, dispatches, other PRs and an unreadable diff run
+      # everything.
+      - name: Classify changes
+        id: scope
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          code=true
+          if [ "$EVENT" = "pull_request" ] && files="$(git diff --name-only "$BASE...HEAD")" && [ -n "$files" ]; then
+            if ! printf '%s\n' "$files" | grep -Ev '^(docs/provider-auth-matrix\.md|README\.md)$' | grep -Evq '^(docs/[^/]+\.md|[A-Za-z_-]+\.md|LICENSE)$' && ! printf '%s\n' "$files" | grep -Eq '^(docs/provider-auth-matrix\.md|README\.md)$'; then
+              code=false
+            fi
+          fi
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          echo "full suite: $code"
 
       - uses: oven-sh/setup-bun@v2
+        if: steps.scope.outputs.code == 'true'
         with:
           bun-version: ${{ matrix.bun }}
 
+      - name: Cache Bun install
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ matrix.bun }}-${{ hashFiles('**/bun.lock', '**/bun.lockb') }}
+          restore-keys: bun-${{ runner.os }}-${{ matrix.bun }}-
+
       - name: Install
+        if: steps.scope.outputs.code == 'true'
         run: bun install --frozen-lockfile
 
       - name: Typecheck (root workspace)
+        if: steps.scope.outputs.code == 'true'
         run: bunx tsc --noEmit -p tsconfig.json
 
       - name: Test (bun test)
+        if: steps.scope.outputs.code == 'true'
         run: bun test
 
       - name: Smoke test CLI help
+        if: steps.scope.outputs.code == 'true'
         run: bun run packages/cli/src/index.ts --help
 
       - name: Smoke test providers list
+        if: steps.scope.outputs.code == 'true'
         run: bun run packages/cli/src/index.ts providers
 
       - name: Smoke test stack recommend --json
+        if: steps.scope.outputs.code == 'true'
         run: |
           set -e
           OUT=$(bun run packages/cli/src/index.ts recommend "B2B SaaS with auth and payments" --json)
@@ -52,6 +90,28 @@ jobs:
             console.log('stack recommend smoke ok: ' + names.join(', '));
           "
 
+      # The npm packages ship Bun-built bundles that run under Node >= 20.
+      # Build them and drive both under Node 20 so Node compat can't regress.
+      - uses: actions/setup-node@v4
+        if: steps.scope.outputs.code == 'true'
+        with:
+          node-version: "20"
+
+      - name: Smoke test dist bundles under Node 20
+        if: steps.scope.outputs.code == 'true'
+        run: |
+          bun run --cwd packages/cli build
+          bun run --cwd packages/mcp build
+          node packages/cli/dist/index.js --help > /dev/null
+          node scripts/node-smoke.mjs
+
+      # Packs the three npm packages as scripts/publish.sh ships them, installs
+      # the tarballs together and drives the installed bins through the
+      # surface Phantom uses (status --json, MCP stack_status/stack_list).
+      - name: Release preflight (pack, install, Phantom contract)
+        if: steps.scope.outputs.code == 'true' && (matrix.bun == 'latest')
+        run: node scripts/release-preflight.mjs
+
   site:
     name: Site build (astro check + build)
     runs-on: ubuntu-latest
@@ -61,6 +121,13 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
+
+      - name: Cache Bun install
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-latest-${{ hashFiles('**/bun.lock', '**/bun.lockb') }}
+          restore-keys: bun-${{ runner.os }}-latest-
 
       - name: Install root
         run: bun install --frozen-lockfile
@@ -76,6 +143,12 @@ jobs:
       - name: astro build
         working-directory: packages/site
         run: bun run build
+
+      # The build regenerates the CLI reference from the command modules, so
+      # the deployed site is always current; this keeps the committed copy
+      # (what reviewers and source readers see) from drifting behind it.
+      - name: CLI reference is committed up to date
+        run: git diff --exit-code -- packages/site/src/lib/cli-ref.generated.ts || { echo "::error::Run 'bun packages/site/scripts/gen-cli-ref.ts' and commit packages/site/src/lib/cli-ref.generated.ts"; exit 1; }
 
       - name: Smoke — key public routes exist in dist/
         working-directory: packages/site
@@ -104,13 +177,45 @@ jobs:
     if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Docs-only PRs skip the steps below, but the job still runs and reports,
+      # so the required check never strands. docs/provider-auth-matrix.md (read
+      # by provider-parity.test.ts) and README.md (read by release-preflight)
+      # count as code. Pushes, dispatches, other PRs and an unreadable diff run
+      # everything.
+      - name: Classify changes
+        id: scope
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          code=true
+          if [ "$EVENT" = "pull_request" ] && files="$(git diff --name-only "$BASE...HEAD")" && [ -n "$files" ]; then
+            if ! printf '%s\n' "$files" | grep -Ev '^(docs/provider-auth-matrix\.md|README\.md)$' | grep -Evq '^(docs/[^/]+\.md|[A-Za-z_-]+\.md|LICENSE)$' && ! printf '%s\n' "$files" | grep -Eq '^(docs/provider-auth-matrix\.md|README\.md)$'; then
+              code=false
+            fi
+          fi
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          echo "full suite: $code"
 
       - uses: oven-sh/setup-bun@v2
+        if: steps.scope.outputs.code == 'true'
         with:
           bun-version: latest
 
+      - name: Cache Bun install
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-latest-${{ hashFiles('**/bun.lock', '**/bun.lockb') }}
+          restore-keys: bun-${{ runner.os }}-latest-
+
       - name: Install
+        if: steps.scope.outputs.code == 'true'
         run: bun install --frozen-lockfile
 
       - name: Biome check
+        if: steps.scope.outputs.code == 'true'
         run: bunx biome check . --reporter=github

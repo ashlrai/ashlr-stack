@@ -1,14 +1,14 @@
 /**
- * MCP tool reference — mirrors `packages/mcp/src/server.ts` `TOOLS`.
+ * MCP tool reference — mirrors `packages/mcp/src/tools.ts` `TOOLS`.
  *
  * Stack ships an MCP server that exposes the CLI as a set of tools any
- * MCP-capable LLM client (Claude Code, Cursor, Windsurf, Zed) can call.
+ * configured MCP-capable client may request; CLI/runtime/cwd setup is separate.
  * Each entry below is one tool.
  */
 
 export interface McpToolInput {
   name: string;
-  type: "string" | "boolean";
+  type: "string" | "boolean" | "number";
   required?: boolean;
   description: string;
 }
@@ -24,7 +24,8 @@ export interface McpTool {
 export const MCP_TOOLS: McpTool[] = [
   {
     name: "stack_init",
-    description: "Scaffold a new .stack.toml in the current directory.",
+    description:
+      "Scaffold .stack.toml in the current directory; a selected template may also run provider setup.",
     inputs: [
       {
         name: "template",
@@ -36,17 +37,30 @@ export const MCP_TOOLS: McpTool[] = [
         type: "boolean",
         description: "Overwrite an existing .stack.toml.",
       },
+      {
+        name: "cwd",
+        type: "string",
+        description:
+          "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory.",
+      },
     ],
     cli: "stack init --noInteractive [--template <name>] [--force]",
   },
   {
     name: "stack_import",
-    description: "Import an existing .env file into Phantom + .stack.toml.",
+    description:
+      "Import nonempty new variables from an .env file into Phantom and record detected services; existing vault names are left unchanged. Returns ashlr.stack.import/v1 JSON naming what was stored, skipped and wired (names only, never values).",
     inputs: [
       { name: "from", type: "string", description: "Path to the .env file (default: .env)." },
       { name: "dryRun", type: "boolean", description: "Preview without writing." },
+      {
+        name: "cwd",
+        type: "string",
+        description:
+          "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory.",
+      },
     ],
-    cli: "stack import [--from <path>] [--dryRun]",
+    cli: "stack import --json [--from <path>] [--dryRun]",
   },
   {
     name: "stack_scan",
@@ -59,12 +73,19 @@ export const MCP_TOOLS: McpTool[] = [
         type: "string",
         description: "Minimum confidence: low, medium, or high (default: medium).",
       },
+      {
+        name: "cwd",
+        type: "string",
+        description:
+          "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory.",
+      },
     ],
     cli: "stack scan [--path <dir>] [--confidence low|medium|high]",
   },
   {
     name: "stack_add",
-    description: "Provision a service and wire its secrets + MCP entry.",
+    description:
+      "Run provider-specific service setup or attach an existing resource, then record returned secret slots and optional MCP configuration. Credentials and client/provider acceptance must be checked separately.",
     inputs: [
       {
         name: "service",
@@ -73,66 +94,150 @@ export const MCP_TOOLS: McpTool[] = [
         description: "Service name (e.g. supabase, neon, vercel).",
       },
       { name: "use", type: "string", description: "Existing resource id to attach to." },
+      {
+        name: "cwd",
+        type: "string",
+        description:
+          "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory.",
+      },
     ],
     cli: "stack add <service> [--use <id>]",
   },
   {
     name: "stack_remove",
-    description: "Remove a service from the stack (vault entries and MCP config).",
+    description:
+      "Remove local service configuration and its MCP entry, and attempt Phantom secret cleanup. Returns JSON (ashlr.stack.remove/v1); `secrets_kept` lists names Phantom left stored, which headless runs always do, for the user to remove with `phantom remove` in a terminal. Upstream resources are kept.",
     inputs: [
       { name: "service", type: "string", required: true, description: "Service name." },
       {
         name: "keepRemote",
         type: "boolean",
-        description: "Leave the provider-side resource untouched.",
+        description:
+          "Accepted and forwarded flag; this CLI performs local removal without upstream deletion either way.",
+      },
+      {
+        name: "cwd",
+        type: "string",
+        description:
+          "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory.",
       },
     ],
-    cli: "stack remove <service> [--keepRemote]",
+    cli: "stack remove <service> --json [--keepRemote]",
   },
   {
     name: "stack_list",
     description: "List services configured in this stack.",
-    inputs: [],
-    cli: "stack list",
+    inputs: [
+      {
+        name: "json",
+        type: "boolean",
+        description: "Machine-readable JSON (schema ashlr.stack.list/v1).",
+      },
+      {
+        name: "cwd",
+        type: "string",
+        description:
+          "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory.",
+      },
+    ],
+    cli: "stack list [--json]",
   },
   {
     name: "stack_info",
     description:
-      "Deep-dive on a single service: resource, region, auth, secrets, MCP wiring, health.",
-    inputs: [{ name: "service", type: "string", required: true, description: "Service name." }],
-    cli: "stack info <service>",
+      "Inspect configured resource, auth kind, secret-name inventory and MCP metadata; attempt a healthcheck when the provider supports one.",
+    inputs: [
+      { name: "service", type: "string", required: true, description: "Service name." },
+      {
+        name: "json",
+        type: "boolean",
+        description: "Machine-readable JSON (schema ashlr.stack.info/v1).",
+      },
+      {
+        name: "cwd",
+        type: "string",
+        description:
+          "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory.",
+      },
+    ],
+    cli: "stack info <service> [--json]",
   },
   {
     name: "stack_status",
     description: "Show Phantom + services + config at a glance.",
-    inputs: [],
-    cli: "stack status",
+    inputs: [
+      {
+        name: "json",
+        type: "boolean",
+        description: "Machine-readable JSON (schema ashlr.stack.status/v1).",
+      },
+      {
+        name: "cwd",
+        type: "string",
+        description:
+          "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory.",
+      },
+    ],
+    cli: "stack status [--json]",
   },
   {
     name: "stack_env_show",
     description: "Show which declared secrets are present in the Phantom vault (masked).",
-    inputs: [],
-    cli: "stack env show",
+    inputs: [
+      {
+        name: "json",
+        type: "boolean",
+        description: "Machine-readable JSON (schema ashlr.stack.env/v1, names only).",
+      },
+      {
+        name: "cwd",
+        type: "string",
+        description:
+          "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory.",
+      },
+    ],
+    cli: "stack env show [--json]",
   },
   {
     name: "stack_env_diff",
     description: "Report which declared secrets are missing from the Phantom vault.",
-    inputs: [],
-    cli: "stack env diff",
+    inputs: [
+      {
+        name: "json",
+        type: "boolean",
+        description:
+          "Machine-readable JSON (schema ashlr.stack.env-diff/v1, names and declaring service only); still an error result when any are missing.",
+      },
+      {
+        name: "cwd",
+        type: "string",
+        description:
+          "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory.",
+      },
+    ],
+    cli: "stack env diff [--json]",
   },
   {
     name: "stack_doctor",
-    description: "Verify every service is reachable and credentials are valid.",
+    description:
+      "Inspect the configured-service health report. --fix attempts supported remediation; stored vault names can cause repairs to be skipped, and name presence is not credential validity.",
     inputs: [
       { name: "fix", type: "boolean", description: "Attempt auto-remediation." },
       { name: "all", type: "boolean", description: "Run across every registered project." },
       { name: "json", type: "boolean", description: "Machine-readable JSON output." },
+      {
+        name: "cwd",
+        type: "string",
+        description:
+          "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory.",
+      },
     ],
     cli: "stack doctor [--fix] [--all] [--json]",
   },
   {
     name: "stack_sync",
-    description: "Push secrets to a deployment platform (via phantom sync).",
+    description:
+      "Forward a deployment-platform sync request to phantom sync; inspect the installed Phantom command support and result separately.",
     inputs: [
       {
         name: "platform",
@@ -140,43 +245,88 @@ export const MCP_TOOLS: McpTool[] = [
         required: true,
         description: "One of: vercel, railway, fly.",
       },
+      {
+        name: "cwd",
+        type: "string",
+        description:
+          "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory.",
+      },
     ],
     cli: "stack sync --platform <name>",
   },
   {
     name: "stack_providers",
-    description: "List every curated provider Stack can wire up (grouped by category).",
-    inputs: [],
-    cli: "stack providers",
+    description:
+      "List the curated source provider catalog by category; inclusion does not attest complete provisioning or active credentials.",
+    inputs: [
+      {
+        name: "category",
+        type: "string",
+        description: "Only this category, any case (e.g. ai, database, payments).",
+      },
+      {
+        name: "json",
+        type: "boolean",
+        description: "Machine-readable JSON (schema ashlr.stack.providers/v1).",
+      },
+    ],
+    cli: "stack providers [--category <category>] [--json]",
   },
   {
     name: "stack_projects_list",
-    description: "List every Stack-enabled project on this machine.",
-    inputs: [],
-    cli: "stack projects list",
+    description:
+      "List projects recorded in the local Stack registry; this is not a filesystem-wide discovery scan.",
+    inputs: [
+      {
+        name: "json",
+        type: "boolean",
+        description: "Machine-readable JSON (schema ashlr.stack.projects/v1).",
+      },
+    ],
+    cli: "stack projects list [--json]",
   },
   {
     name: "stack_deps",
     description: "Show the service dependency graph for the current stack.",
-    inputs: [],
-    cli: "stack deps",
+    inputs: [
+      {
+        name: "json",
+        type: "boolean",
+        description: "Machine-readable JSON (schema ashlr.stack.deps/v1).",
+      },
+      {
+        name: "cwd",
+        type: "string",
+        description:
+          "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory.",
+      },
+    ],
+    cli: "stack deps [--json]",
   },
   {
     name: "stack_templates_list",
-    description: "List available starter stack templates.",
-    inputs: [],
-    cli: "stack templates list",
+    description: "List available starter stack templates and the services each one adds.",
+    inputs: [
+      {
+        name: "json",
+        type: "boolean",
+        description:
+          "Machine-readable JSON (schema ashlr.stack.templates/v1): each template with its services, providers and secret names.",
+      },
+    ],
+    cli: "stack templates list [--json]",
   },
   {
     name: "stack_upgrade",
-    description: "Check npm for a newer @ashlr/stack release.",
+    description:
+      "Check npm for a newer @ashlr/stack release. Returns ashlr.stack.upgrade/v1 JSON (current, latest, status, install command); installs nothing.",
     inputs: [],
-    cli: "stack upgrade",
+    cli: "stack upgrade --json",
   },
   {
     name: "stack_recommend",
     description:
-      "Free-text → curated providers. Given a natural-language brief (e.g. 'B2B SaaS with auth, AI, and payments'), returns scored hits + a per-category ranking. Pass save:true to freeze as a Recipe and follow up with stack_apply.",
+      "Retrieve scored curated-provider matches and per-category ranking for a query. save:true writes a Recipe for a later stack_apply request. The CLI JSON payload is forwarded as text; this tool does not request LLM inference.",
     inputs: [
       {
         name: "query",
@@ -186,19 +336,25 @@ export const MCP_TOOLS: McpTool[] = [
       },
       {
         name: "k",
-        type: "string",
+        type: "number",
         description: "Max top-level hits to return (default 6).",
       },
       {
         name: "category",
         type: "string",
         description:
-          "Optional filter to a single category (Database, Deploy, Cloud, AI, Analytics, Errors, Payments, Code, Tickets, Email, Auth).",
+          "Optional filter to a source catalog category: Database, Deploy, Cloud, AI, Analytics, Observability, Errors, Payments, Code, Tickets, Email, Auth, FeatureFlags. The server input is a string, not an enforced enum.",
       },
       {
         name: "save",
         type: "boolean",
         description: "Freeze the result to .stack/recipes/<id>.toml so you can run stack_apply.",
+      },
+      {
+        name: "cwd",
+        type: "string",
+        description:
+          "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory.",
       },
     ],
     cli: 'stack recommend "<query>" --json [--k <n>] [--category <name>] [--save]',
@@ -206,7 +362,7 @@ export const MCP_TOOLS: McpTool[] = [
   {
     name: "stack_apply",
     description:
-      "Replay a saved Recipe: run stack_add per provider, then pre-wire Phantom rotation envelopes + webhook stubs. Opt out of the wire step with no_wire:true.",
+      "Apply a saved Recipe through provider setup, then report which declared secrets are in the Phantom vault and which are missing (names only; it never writes to the vault) and write webhook stubs. Inspect failures and skips. no_wire:true skips the vault check and stubs, not provider credential writes.",
     inputs: [
       {
         name: "recipe_id",
@@ -217,7 +373,13 @@ export const MCP_TOOLS: McpTool[] = [
       {
         name: "no_wire",
         type: "boolean",
-        description: "Skip Phantom envelope + webhook pre-wiring.",
+        description: "Skip optional Phantom wiring and webhook stubs.",
+      },
+      {
+        name: "cwd",
+        type: "string",
+        description:
+          "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory.",
       },
     ],
     cli: "stack apply <recipe_id> [--noWire]",
@@ -231,24 +393,27 @@ export interface McpResource {
   mimeType: string;
 }
 
-/** The MCP server also exposes three read-only resources (no tool call needed). */
+/** Up to three read-only resources are advertised when their files exist in server cwd. */
 export const MCP_RESOURCES: McpResource[] = [
   {
     uri: "stack://current/.stack.toml",
     name: ".stack.toml (this project)",
-    description: "Committed shape of the current project's stack.",
+    description:
+      "Project configuration text when the file exists in server cwd; Git commit state is not verified and reads are not redacted.",
     mimeType: "application/toml",
   },
   {
     uri: "stack://current/.stack.local.toml",
     name: ".stack.local.toml (local instance)",
-    description: "Local instance data (resource ids, project_id). Gitignored.",
+    description:
+      "Local instance data when the file exists in server cwd; inspect contents and project ignore rules before exposing raw text.",
     mimeType: "application/toml",
   },
   {
     uri: "stack://current/.mcp.json",
     name: ".mcp.json (MCP wiring)",
-    description: "Currently-wired MCP servers.",
+    description:
+      "MCP configuration text when the file exists in server cwd; client loading and usable credentials are not verified.",
     mimeType: "application/json",
   },
 ];

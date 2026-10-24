@@ -1,6 +1,8 @@
+import { StackError } from "../errors.ts";
 import { type RetryOptions, fetchWithRetry } from "../http.ts";
 import { revealSecret } from "../phantom.ts";
 import type { ProviderContext } from "./_base.ts";
+import { readProviderSecret } from "./_credential-stage.ts";
 
 /**
  * Shared helpers for every hand-written provider. Before this existed, each
@@ -8,11 +10,32 @@ import type { ProviderContext } from "./_base.ts";
  * one source of truth keeps behaviour consistent.
  */
 
-export async function tryRevealSecret(key: string): Promise<string | undefined> {
+/**
+ * Names whose stored value Phantom refused to reveal to this process (it only
+ * reveals into an attached terminal). Lets `stack doctor` tell "stored but
+ * unreadable here" apart from "missing", since `tryRevealSecret` returns
+ * `undefined` for both. Names only, never values.
+ */
+const revealRefusals = new Set<string>();
+
+/** Return and clear the names Phantom refused to reveal since the last call. */
+export function takeRevealRefusals(): string[] {
+  const names = [...revealRefusals];
+  revealRefusals.clear();
+  return names;
+}
+
+export async function tryRevealSecret(
+  key: string,
+  ctx?: ProviderContext,
+): Promise<string | undefined> {
   try {
-    const value = await revealSecret(key);
+    const value = ctx ? await readProviderSecret(ctx, key) : await revealSecret(key);
     return value.length > 0 ? value : undefined;
-  } catch {
+  } catch (err) {
+    if (err instanceof StackError && err.code === "PHANTOM_TRUSTED_TERMINAL_REQUIRED") {
+      revealRefusals.add(key);
+    }
     return undefined;
   }
 }
@@ -65,7 +88,7 @@ export async function readLine(): Promise<string> {
  * Bearer-token providers. Providers with custom auth header shapes (Anthropic,
  * Upstash, Linear, Supabase PKCE) inline their own.
  */
-export function bearerJsonHeaders(token: string): HeadersInit {
+export function bearerJsonHeaders(token: string): NonNullable<RequestInit["headers"]> {
   return {
     Authorization: `Bearer ${token}`,
     "content-type": "application/json",
@@ -81,7 +104,7 @@ export function bearerJsonHeaders(token: string): HeadersInit {
  * 429/5xx is always safe. Keeps each provider's `verify` free of retry glue.
  */
 export function verifyFetch(
-  input: RequestInfo | URL,
+  input: string | URL | Request,
   init?: RequestInit,
   opts?: RetryOptions,
 ): Promise<Response> {

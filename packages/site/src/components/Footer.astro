@@ -17,19 +17,19 @@ import { PROVIDERS } from "~/lib/providers";
             Stop tab-hopping. Start shipping.
           </h3>
           <p class="mt-1.5 text-sm text-ink-300">
-            One command. {PROVIDERS.length} providers. Secrets vaulted by Phantom, wired into <code class="mono text-ink-200">.env</code> and <code class="mono text-ink-200">.mcp.json</code>.
+            {PROVIDERS.length} catalog entries. Connect services, store credentials with Phantom, and configure supported MCP servers.
           </p>
           <p class="mt-1 text-xs text-[color:var(--color-ink-400)]">
             Free · MIT-licensed · no account required. Phantom Cloud (team sync) is optional + paid.
           </p>
         </div>
         <div class="flex flex-col sm:flex-row gap-3">
-          <div class="flex items-center gap-2 pl-3 pr-1.5 py-1.5 rounded-xl hairline bg-ink-900 mono text-[13px]">
+          <div class="flex min-w-0 items-center gap-2 pl-3 pr-1.5 py-1.5 rounded-xl hairline bg-ink-900 mono text-[13px]">
             <span class="ansi-magenta select-none">$</span>
-            <code class="text-ink-100 pr-2 whitespace-nowrap">curl -fsSL stack.ashlr.ai/install.sh | bash</code>
+            <code class="text-ink-100 pr-2 min-w-0 flex-1 whitespace-normal break-all">curl -fsSL stack.ashlr.ai/install.sh | bash</code>
             <button
               type="button"
-              class="copy-btn inline-flex items-center gap-1 h-7 px-2 text-[11px] rounded-md bg-white/5 hover:bg-white/10 text-ink-200 transition-colors"
+              class="copy-btn inline-flex shrink-0 items-center gap-1 h-7 px-2 text-[11px] rounded-md bg-white/5 hover:bg-white/10 text-ink-200 transition-colors"
               data-copy="curl -fsSL stack.ashlr.ai/install.sh | bash"
               aria-label="Copy install command"
             >
@@ -69,17 +69,17 @@ import { PROVIDERS } from "~/lib/providers";
       <div>
         <div class="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-500 mb-3">Stack</div>
         <ul class="space-y-2 text-sm">
-          <li><a href="#providers" class="text-ink-300 hover:text-white transition-colors">Providers</a></li>
-          <li><a href="#how-it-works" class="text-ink-300 hover:text-white transition-colors">How it works</a></li>
-          <li><a href="#templates" class="text-ink-300 hover:text-white transition-colors">Templates</a></li>
-          <li><a href="#claude-code" class="text-ink-300 hover:text-white transition-colors">Claude Code</a></li>
+          <li><a href="/#providers" class="text-ink-300 hover:text-white transition-colors">Providers</a></li>
+          <li><a href="/#how-it-works" class="text-ink-300 hover:text-white transition-colors">How it works</a></li>
+          <li><a href="/#templates" class="text-ink-300 hover:text-white transition-colors">Templates</a></li>
+          <li><a href="/#claude-code" class="text-ink-300 hover:text-white transition-colors">Claude Code</a></li>
         </ul>
       </div>
 
       <div>
         <div class="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-500 mb-3">Siblings</div>
         <ul class="space-y-2 text-sm">
-          <li><a href="https://phantom.ashlr.ai" rel="noopener noreferrer" target="_blank" class="text-ink-300 hover:text-white transition-colors">Phantom Secrets</a></li>
+          <li><a href="https://phm.dev/secrets" rel="noopener noreferrer" target="_blank" class="text-ink-300 hover:text-white transition-colors">Phantom Secrets</a></li>
           <li><a href="https://plugin.ashlr.ai" rel="noopener noreferrer" target="_blank" class="text-ink-300 hover:text-white transition-colors">ashlr-plugin</a></li>
           <li><a href="https://code.ashlr.ai" rel="noopener noreferrer" target="_blank" class="text-ink-300 hover:text-white transition-colors">ashlrcode</a></li>
           <li><a href="https://workbench.ashlr.ai" rel="noopener noreferrer" target="_blank" class="text-ink-300 hover:text-white transition-colors">ashlr-workbench</a></li>

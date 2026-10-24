@@ -2,6 +2,136 @@
 
 ## Unreleased
 
+### Round 9: usage errors an agent can act on
+
+- **An option before the subcommand is refused.** `stack --json list` passed the unknown-option guard, because the root declares `--json` for `stack --version`, and citty never hands a subcommand the options typed before its name: `list` printed the human error and `stack env --json show` the human report. An option before a subcommand name now exits 1. When the subcommand takes it, the message says where it goes (`Option --json goes after the subcommand: run \`stack list --json\``); otherwise it is an unknown option for that subcommand (`stack -v list`). With `--json` on the line the message is also `{"error": ...}` on stdout.
+- **A missing argument under `--json` is a JSON error.** `stack info --json` with no service printed the usage text on stdout, so an agent parsing it got no JSON. A usage error that citty raises (a missing required positional) now prints `{"error": "Missing required positional argument: SERVICE. Run \`stack info --help\` for usage."}` on stdout and the same line on stderr when `--json` is on the line (exit 1). Without `--json` the usage text is unchanged.
+- **`stack add <typo>` outside a project says the provider is unknown.** It checked for `.stack.toml` first, so `stack add supabse` answered "Run `stack init` first." and only after init said the provider did not exist. The provider name (and a missing name without a terminal) is now checked before the project, and a name within two edits of a real provider ends with `Did you mean supabase? Run \`stack add supabase\`.`
+- **`stack recommend db --k -1` names the value.** citty reads `-1` after `--k` as a short option, so the message said `Invalid --k with no value`. It now says `Invalid --k "-1"`, as `--k=-1` already did.
+- **`stack onboard --client <unknown>` exits 1.** It exited 2, unlike every other usage error, and printed nothing on stdout with `--json`. It now exits 1 and, with `--json`, prints `{"error": "Unknown client: ..."}`. `stack onboard --undo --json` with nothing to undo prints the same kind of error object.
+- **MCP: `stack_status` takes `cwd`.** It reads `.stack.toml` in its working directory like the other project-scoped tools, but refused `cwd`, so a server started outside the project could only report `.stack.toml missing`. It now accepts the same optional absolute `cwd` (`packages/mcp/README.md`).
+
+### Silent acceptance
+
+- **Unknown CLI options exit 1 instead of being ignored.** citty parses options a command does not declare and never complains, so `stack list --jsn` printed the human list with exit 0, `stack upgrade --json` printed its banner, and `stack --bogus` printed the welcome banner. Every command now refuses an option it does not declare, names the closest real one (`Did you mean --json?`) and points at its `--help`; with `--json` on the line the message is also `{"error": ...}` on stdout. Everything after `--`, `stack exec`'s forwarded command, `--no-<flag>` negation and negative numbers are left alone. Bare `stack env`, `stack templates` and `stack projects` now declare the options of the subcommand they run (`show`, `list`, `list`). A test checks that every argv the MCP server builds passes the guard. (`packages/cli/src/lib/unknown-flags.ts`)
+- **`stack scan` without a terminal prints its report.** It printed only a "no TTY detected" hint and exited 0, so an agent got neither results nor an error. Plain `stack scan` now prints the same read-only report (detections and `stack add` next steps, nothing written); `stack scan --auto` without `--yes` exits 1, since it would ask before each add.
+- **MCP: `stack_recommend {"k": 0}` is no longer the default of 6.** A zero `k` was dropped as falsy and a negative one reached the CLI as a flag (`Invalid --k with no value`). Every `k` is now passed as `--k=<n>`, so the CLI rejects 0, negatives and fractions by value.
+- **MCP: blank strings are rejected.** `stack_info {"service":"  "}` ran `stack info "  "` and `stack_sync {"platform":" "}` ran the sync check with a blank platform. A whitespace-only value now counts as missing for a required argument and is an error for an optional one.
+
+### Output and usage order
+
+- **`stack env export --stdout` prints only the skeleton.** The `stack env export` banner and a `printed to stdout.` outro went to stdout too, so `stack env export --stdout > .env.example` wrote them into the file.
+- **Bare `stack exec` says a command is missing.** It checked for `.stack.toml` and Phantom first, so with no command it answered "Run `stack init` first." or the Phantom install hint. It now says `Nothing to run. Usage: stack exec -- <command>` before anything else (exit 1).
+
+### MCP project targeting
+
+- **Project-scoped MCP tools take an optional `cwd`.** The server always ran `stack` in its own working directory and no tool took a project argument, so a host that starts the server outside the project (Claude Desktop, a global Cursor config) could not reach it: `stack_list` answered "No .stack.toml at <server dir>". `stack_init`, `stack_import`, `stack_scan`, `stack_add`, `stack_remove`, `stack_list`, `stack_info`, `stack_env_show`, `stack_env_diff`, `stack_doctor`, `stack_sync`, `stack_deps`, `stack_recommend` and `stack_apply` now accept `cwd`, an absolute path to an existing directory, and run `stack` there. It is resolved with realpath; a relative path, a missing path or a file is refused with an `isError` result before anything runs. Global tools (`stack_providers`, `stack_projects_list`, `stack_templates_list`, `stack_upgrade`) and `stack_status` refuse `cwd` rather than silently ignoring it. Resources still read the server's working directory.
+
+### Agent dead ends
+
+- **`stack ci` refuses with one actionable line instead of printing help.** Bare `stack ci` printed usage and `No command specified` with exit 1, and its only subcommand `init` is intentionally unavailable (the old workflow needed unattended Phantom Cloud pull, which requires trusted-terminal approval). `stack ci` and `stack ci init` now say what to run instead (`stack doctor` from a trusted terminal, or `stack doctor --reconcile --json` in CI) and exit 1. With `--json` they print `{"error": ...}` on stdout. No workflow is ever written.
+- **`stack swap` reports an unknown provider before the Phantom check.** A typo such as `stack swap clerkk auth0` on a machine without Phantom printed the Phantom install hint. Provider names, the category match and the `.stack.toml` entry are now validated first, as in `stack add`.
+
+### Agent-facing output
+
+- **`stack login <provider>` without a terminal says what a person must do.** It stopped at "no valid key in vault and session is non-interactive"; it now gives the same hint as `stack add`, naming `stack login <provider>` as the command to run in the user's own terminal (exit 1).
+- **`stack templates list --json` and `stack projects list --json`.** Both ignored `--json` and printed the human banner. They now print one JSON object with no banner: `ashlr.stack.templates/v1` (each template's name and the services it adds) and `ashlr.stack.projects/v1` (each registered project's name, path, project id, template, services and last-seen time). Bare `stack templates --json` and `stack projects --json` print the same reports. The `stack_templates_list` and `stack_projects_list` MCP tools take `json: true`.
+- **MCP tools reject argument names they do not declare.** A misspelled key was dropped and the tool ran without it, so `stack_recommend {"query":"db","catgory":"Database"}` returned an unfiltered result as a success. Unknown keys are now an `isError` result that lists the accepted arguments.
+- **An unknown template names where to find the real ones.** `stack templates apply <name>` and `stack init --template <name>` now say to run `stack templates list`.
+- **`llms-full.txt` lists the `json` input on `stack_info` and `stack_env_show`.** The agent reference still showed `{ service: string }` and `{}` after those tools gained `json: true`.
+- **The last lines of a failing command reach a pipe on Bun 1.2.** `outroError` exits the process, and Bun 1.2 dropped stdout still queued at exit, so a piped `stack apply` lost its final `Some providers failed: ...` line, `stack doctor` with many services lost most of its report, and an MCP `stack_add` returned only "Failed." The CLI now writes stdout and stderr synchronously under Bun, as Node already does for pipes, so nothing is pending when it exits.
+- **`stack doctor` with no services says so.** A `.stack.toml` with no services printed "All services healthy."; it now prints "No services to check" and how to add one (exit 0).
+- **`stack_add` without a terminal says what a person must do.** A provider that needs a pasted key or a browser sign-in failed over MCP with "no valid key in vault and session is non-interactive" (or "No valid Neon API key in vault."). The error now says the session has no terminal and to ask the user to run `stack add <provider>` in their own terminal.
+- **`stack info <service> --json` and `stack env show --json`.** One JSON object on stdout with no banner: `ashlr.stack.info/v1` (provider, resource, secret names with `in_vault`, MCP entry, healthcheck result) and `ashlr.stack.env/v1` (secret names per service with `in_vault`, plus `missing` and `orphans`). Values are never printed. A missing project or service prints `{"error": ...}` and exits 1. The `stack_info` and `stack_env_show` MCP tools take `json: true`.
+
+### Vendor-neutral MCP wiring
+
+- **Stack mirrors MCP entries into Cursor and Gemini CLI project configs.** When `.cursor/` or `.gemini/` already exists in the project, `stack add` also writes the server into `.cursor/mcp.json` and `.gemini/settings.json` (Gemini's `httpUrl`/`url` naming, no `type`), and `stack remove` takes it out again. Absent client dirs are never created, other keys and servers are preserved, and an unparseable client file is left untouched without failing the add. A same-name entry the user wrote by hand in one of those files is never replaced, and `stack remove` (or a rolled-back `stack add`) deletes a client entry only when it still matches what Stack mirrored from `.mcp.json`.
+
+### Agent onboarding
+
+- **`stack onboard` detects Codex, Claude Code, Cursor and Gemini CLI and registers the Phantom gateway (`ashlr-hub`, `ashlr mcp`) in each.** It prints a plan by default and writes nothing. `--apply` saves a timestamped backup of each existing config, adds only the `ashlr-hub` entry, keeps every other key, and re-checks each client afterwards. An existing `ashlr-hub` entry that differs is never overwritten. `--undo` restores the saved files byte for byte and refuses any file that changed since it was written. `--client`, `--all` (include clients that are not detected), `--home` and `--json` are supported. It never touches the network or a vendor CLI and writes no secret values.
+
+### Machine-readable output
+
+- **`stack list --json`, `stack providers --json` and `stack deps --json`.** These commands accepted `--json` but ignored it and printed human text with exit 0, so agents could not parse them. Each now prints one JSON object on stdout with no banner or ANSI: `ashlr.stack.list/v1` (project id, template, and each service with provider, resource id, region, secret names and MCP entry), `ashlr.stack.providers/v1` (every registered provider with category, auth kind and docs URL, plus any that failed to load), and `ashlr.stack.deps/v1` (services grouped by category, services whose provider is not registered, and totals). Without a `.stack.toml`, `list --json` and `deps --json` print `{"error": ...}` and exit 1. Human output is unchanged. The `stack_list`, `stack_providers` and `stack_deps` MCP tools take `json: true` for the same output.
+- **`stack projects list --json` and `stack templates list --json`.** Both ignored `--json` and printed the decorated human list, so the `stack_projects_list` and `stack_templates_list` MCP tools returned banner text an agent had to scrape. They now print one JSON object: `ashlr.stack.projects/v1` (each registered project with name, path, project id, template, service names and last-seen time) and `ashlr.stack.templates/v1` (each template with its services, providers, secret names and MCP entry). Bare `stack projects --json` and `stack templates --json` do the same. Both MCP tools take `json: true`.
+
+### Usage errors exit non-zero
+
+- **`stack recommend` with no query, or a bad `--k`, exits 1.** No query (or a blank one, as `stack_recommend {"query":"   "}` sends) printed "nothing to recommend" with exit 0, and `--k abc`, `--k 0` or `--k 2.5` were silently replaced by the default of 6. Both now exit 1; `--json` still prints the "Provide a query" payload on stdout, and a bad `--k` names the value on stderr.
+- **`stack remove <name>` and `stack open <name>` name the configured services.** An unknown name only said "<name> is not in this stack."; it now lists what is configured, suggests a case-only match ("Did you mean openai?"), or says the stack has no services and to run `stack add <provider>`.
+- **`stack projects remove` only reports what it removed.** Any argument starting with `/` printed "Removed ... from registry." with exit 0, even when no project was registered there, and a relative path such as `.` was never matched. It now matches a registered name first, then the argument as a path from the current directory, and exits 1 with a pointer to `stack projects list` when nothing matched. `unregisterProject()` in `@ashlr/stack-core` now returns whether it removed an entry.
+
+### Install fixes
+
+- **Packed npm tarballs include their bins.** `@ashlr/stack` and `ashlr-stack-mcp` built `dist/` only in `prepublishOnly`, which `npm pack` skips, so a packed tarball had no `dist/` and installing it gave no `stack` or `ashlr-stack-mcp` command. The build now runs in `prepack`, which both `npm pack` and `npm publish` run.
+- **Installers state the real provider count (39, not 23)**, and `release-artifacts.test.ts` checks it against the registry and that the site serves the same `install.sh`/`install.ps1` as `scripts/`.
+- **`install.sh` says how to get the MCP server after a binary install.** The prebuilt release binary is only `stack`; the installer now prints `npm i -g ashlr-stack-mcp` / `npx -y ashlr-stack-mcp`, and the MCP README no longer says the one-liner always installs both.
+
+### Bug fixes
+
+- **`stack exec` no longer reports a killed command as success.** A wrapped command terminated by a signal (OOM kill, `kill -9`) left the exit code null and `stack exec` exited 0. It now exits 128 + the signal number (137 for SIGKILL) and says which signal. SIGINT, SIGTERM and SIGHUP sent to `stack exec` itself (an agent timeout, a supervisor) are forwarded to the wrapped command instead of killing only the wrapper and leaving the command running.
+- **One Ctrl-C reaches a command run by `stack exec` once.** On a terminal, Ctrl-C and hangup already go to the wrapped command (it shares the terminal's process group), and `stack exec` relayed them a second time, so tools that treat a second interrupt as "exit immediately" (terraform's "Two interrupts received") skipped their graceful shutdown. On a terminal `stack exec` now relays only SIGTERM and waits for the command; off a terminal (an agent or supervisor) it still relays SIGINT, SIGTERM and SIGHUP.
+- **MCP tools check their input before running the CLI.** A missing required argument reached the CLI as the literal string `undefined` (`stack_add {}` ran `stack add undefined`), and a value starting with `-` was parsed as a flag: `stack_remove {"service":"--all"}` ran `stack remove --all` and targeted every service instead of one. The server now returns an error naming the argument for a missing required field, a wrong type, or a leading `-`, and runs nothing.
+- **`stack apply` with a missing recipe writes nothing.** In a directory without `.stack.toml`, `stack apply <id>` for an id that does not exist (or bare `stack apply` with no recipes) auto-ran `stack init` first, leaving `.stack.toml`, `.stack.local.toml`, `.gitignore` and a `~/.stack/projects.json` entry behind before failing. The recipe is now resolved first.
+- **`stack apply` and `stack init --template` keep going after a provider fails.** A failed `stack add` exited the process, so later providers never ran, the partial-failure rollback never happened and no summary was printed. Every provider is now tried, each failure is printed, and the run ends with `Some providers failed: <name>: <reason>; ...` and exit 1. A wrong recipe id now also lists the saved ids or says to run `stack recommend "..." --save`.
+
+## 0.2.1 (2026-10-16)
+
+0.2.1 was never published, so everything below ships in it, along with the 2026-10-12 notes further down. Source versions (core, cli, mcp, `server.json`, `VERSION` in `packages/cli/src/index.ts`) are already 0.2.1, which `scripts/publish.sh` checks before it publishes core, then cli, then mcp.
+
+### Setup and release safety
+
+- **Credentials are staged during setup.** New login credentials are written only after materialization succeeds, ordinary inputs are validated before commit, and create-only Phantom refusals no longer strand Stack state. (#26, #28)
+- **Release inputs and downstream jobs are guarded.** The release workflow refuses the legacy `npm_otp` input and checks that a tag run publishes the tagged commit. (#38)
+- **CLI fixtures run on the Bun 1.2 floor.** (#27)
+
+### Site
+
+- Homepage wrapping, FAQ clipping, ecosystem examples and the Mechanics tab were corrected, and agent-facing claims now match real CLI behavior. (#32, #34, #35, #36, #37)
+
+### Docs
+
+- **Adding a provider** — [docs/adding-a-provider.md](docs/adding-a-provider.md) lists every file a new provider touches, and `provider-parity.test.ts` fails when the loader registry, the catalog and `docs/provider-auth-matrix.md` disagree (#18).
+
+### Bug fixes
+
+- **`stack apply` stops writing placeholder secrets.** Its wiring step ran `phantom add <KEY> TODO_STACK_APPLY --rotate` (then without `--rotate`) for every declared secret. Phantom Secrets refuses values in argv and has no `--rotate`, so every call failed and the printed `envelopes` count was always 0; on an older Phantom it could store `TODO_STACK_APPLY` and block the real value later. Apply now reads names from `phantom list --json` and prints `secrets in vault N · missing M · webhooks K`, plus a `not in Phantom:` line pointing at `phantom add <NAME>`. It never writes to the vault. `WireResult.envelopes` is replaced by `present` and `missing`. (Successor to #33.)
+
+- **Command errors are one line.** A command that fails outside a Stack project (`stack list`, `deps`, `info`, `remove`, ...) now prints `✗ No .stack.toml at <path>. Run \`stack init\` first.` on stderr and exits 1, instead of a stack trace followed by the same message again. `STACK_DEBUG=1` adds the stack. Usage errors still print usage. (`packages/cli/src/lib/run-cli.ts`, #19)
+
+- **CI workflow generation fails closed.** `stack ci init` now exits nonzero without creating or overwriting a workflow because the reviewed Phantom Secrets 0.7.9 source requires trusted-terminal approval for Cloud pull. Existing configuration and file guards remain; `--force` stays available as a compatibility flag and does not enable generation.
+
+- **Stack works with Phantom Secrets 0.7.9.** Phantom 0.7.3+ rejects `phantom add KEY VALUE` (argv is visible to other processes), never replaces a stored name, and only reveals or removes a secret in an attached terminal. Stack still passed values on argv, so every `stack add` failed against the released CLI, and `phantom list`'s table was parsed as secret names. Stack now pipes values to `phantom add KEY --stdin`, treats a repeat of its own identical write as done, reports any other existing name as `PHANTOM_SECRET_EXISTS`, reads names from `phantom list --json`, and has `stack remove` hand Phantom the terminal (or list the secrets Phantom kept). Reading a stored token back is no longer possible, so cached-token reuse falls back to prompting, and token-based healthchecks could not read the token (see the `stack doctor` fix below). `packages/core/src/__tests__/phantom-contract.test.ts` runs the wrapper against a real binary (`STACK_PHANTOM_CONTRACT_BIN=/path/to/phantom bun test phantom-contract`).
+
+- **`stack doctor` no longer calls a stored token missing.** Phantom Secrets 0.7.9 only reveals values in an attached terminal, so every token-based healthcheck reported `<TOKEN> missing from vault` and failed even when the token was stored. Doctor now checks names against `phantom list --json`: a token Phantom holds but would not reveal reports `unchecked` with a pointer to `phantom validate --check-all`, and only a name absent from the vault still fails as missing.
+
+### Agent-facing fixes
+
+- **`npx -y ashlr-stack-mcp` can run tools.** The MCP server spawned `stack` from PATH (absent under npx, and Haskell's `stack` when present). `ashlr-stack-mcp` now depends on `@ashlr/stack` and runs that package's bin with the current runtime; `STACK_BIN` still overrides, PATH is the last resort. Publish order is now core, cli, mcp. (`packages/mcp/src/stack-bin.ts`)
+- **`stack status --json` for agents and Phantom.** It prints one `ashlr.stack.status/v1` object: whether a `.stack.toml` exists, whether Phantom is installed and how many secrets it holds, and each service with its provider and secret names. A missing `.stack.toml` or Phantom is reported in the object with exit 0; an unreadable `.stack.toml` prints `{"error": ...}` and exits 1. Before, Phantom parsed the human table and listed zero services. The `stack_status` MCP tool takes `json: true` for the same output. The secret count is `null` when the vault cannot be read, and `stack info` shows `? unknown` instead of calling every secret missing.
+- **`stack_scan` over MCP returns results.** It now always passes `--json`; before, every call answered "no TTY detected".
+- **`stack recommend --category` matches any case.** `--category database` used to return no hits, because the filter compared against `Database` exactly. An unknown category now exits 1 and lists the valid ones, instead of returning an empty result.
+- **`stack sync` rejects an unknown platform first.** `stack sync --platform heroku` said "Unsupported platform" only after checking for Phantom. The `stack_sync` MCP schema now names the supported platforms, and the docs quote the error the MCP server actually sends when it can't run the CLI.
+- **No spinner escape codes in piped output.** `prompts.spinner()` prints plain lines when stdout is not a TTY or `CI` is set, so MCP results and CI logs stay clean. (`packages/cli/src/ui.ts`)
+- **`stack exec` stdout belongs to the command.** The intro banner is gone and errors go to stderr, so `stack exec -- cmd > out.json` captures only `cmd`.
+- **MCP `serverInfo.version` reads package.json** instead of a hard-coded `0.2.0`.
+- **Bare `stack env` / `stack templates` / `stack projects` / `stack telemetry`** run `show` / `list` / `list` / `status` instead of exiting 1 with "No command specified".
+- **`stack add <typo>` names the unknown provider first.** It used to demand Phantom before checking the name, so a misspelled provider on a machine without Phantom only said "Phantom Secrets isn't installed".
+- **Release + docs name the MCP package correctly** (`ashlr-stack-mcp`, not `@ashlr/stack-mcp`), including the site's MCP setup snippet.
+- **CI smoke-tests the npm bundles under Node 20** (`stack --help`, MCP initialize, tools/list, `stack_scan`) via `scripts/node-smoke.mjs`.
+
+### Earlier 0.2.1 notes (2026-10-12)
+
+- **Release workflow repaired.** A multi-line `git commit -m` in the Homebrew job ended the YAML block early and left a stray top-level key, so GitHub rejected `release.yml` on every push and the v0.2.0 npm publish never ran.
+- **Docs: Phantom Secrets + Locus.** New `docs/phantom-locus.md` explains how Stack stores keys through Phantom and runs provider CLIs inside a Locus-pinned account (personal / company / client).
+
+### Bug fixes
+
+- **Kebab-case flags now parse (`--dry-run`, `--keep-from`, `--all-orphans`, …)** — citty 0.1.6 silently dropped the documented kebab spelling of multi-word flags: a boolean arg with `default: false` shadowed the kebab-parsed value, so `--dry-run` was ignored while only `--dryRun` worked. For `stack add` this was high-severity — the documented "safe preview" form fell through to the **real** provisioning flow (live OAuth/network/vault writes). Raw argv is now normalized (`--dry-run` → `--dryRun`) before parsing, fixing every command at once while preserving camelCase, `--no-*` negation, and `--` passthrough. (`packages/cli/src/lib/normalize-args.ts`)
+- **`stack add` no longer hangs on interactive credential entry** — the CLI started a @clack spinner, then a provider's PAT/key-paste path wrote its prompt to stderr and blocked on stdin while the spinner repainted over the (now invisible) prompt. With no cached credential — e.g. a fresh repo — `stack add` appeared to hang forever. The host now owns prompting: a new `ProviderContext.prompt` plus a `spinnerBridge` helper pause the spinner around a masked @clack prompt, and all nine interactive providers route credential entry through a shared `promptSecret`. GitHub's device-code message goes through `ctx.log` for the same reason. (`packages/core/src/providers/_helpers.ts`, `packages/cli/src/ui.ts`)
+
 ### SEO + GEO content surface (major)
 
 - **29 programmatic provider pages** — new dynamic route at `/providers/[slug]` driven by `packages/core/src/catalog.ts`. Adding a provider to catalog auto-mints a page at build time. Each page: hero with brand logo, auth-flow explainer, secret-slot breakdown, MCP wiring status, `stack add` snippet, `stack recommend` trigger, related providers, templates that include it, FAQ, outbound dashboard + docs links. JSON-LD: TechArticle + BreadcrumbList + FAQPage.

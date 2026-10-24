@@ -20,7 +20,7 @@ describe("cross-project registry", () => {
   });
 
   afterEach(() => {
-    if (previousDir === undefined) process.env.STACK_REGISTRY_DIR = undefined;
+    if (previousDir === undefined) Reflect.deleteProperty(process.env, "STACK_REGISTRY_DIR");
     else process.env.STACK_REGISTRY_DIR = previousDir;
   });
 
@@ -64,6 +64,15 @@ describe("cross-project registry", () => {
     expect((await listProjects()).length).toBe(1);
     await unregisterProject(cwd);
     expect((await listProjects()).length).toBe(0);
+  });
+
+  test("unregisterProject reports whether anything was removed", async () => {
+    const cwd = mkdtempSync(join(tmpdir(), "stack-unreg-bool-"));
+    await writeConfig(emptyConfig(), cwd);
+    expect(await unregisterProject(join(cwd, "not-registered"))).toBe(false);
+    expect((await listProjects()).length).toBe(1);
+    expect(await unregisterProject(cwd)).toBe(true);
+    expect(await unregisterProject(cwd)).toBe(false);
   });
 
   test("listProjects prunes entries whose .stack.toml was deleted", async () => {
