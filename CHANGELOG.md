@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Templates
+
+- **`litellm-gateway` template.** Provider key slots (OpenAI, Anthropic, xAI, DeepSeek) for a LiteLLM gateway that holds Phantom placeholders instead of real keys, with a README carrying the pin, isolation and Cursor guidance. Experimental: the placeholder flow is not yet verified against a mock upstream.
+
 ## 0.2.2 (2026-10-17)
 
 0.2.1 was tagged but its npm publish failed, so nothing from 0.2.1 reached npm. 0.2.2 supersedes it: it ships everything listed here and under 0.2.1 below. Source versions (core, cli, mcp, `server.json`, `VERSION` in `packages/cli/src/index.ts`) are 0.2.2, which `scripts/publish.sh` checks before it publishes core, then cli, then mcp.
