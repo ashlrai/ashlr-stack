@@ -50,14 +50,14 @@ afterAll(async () => {
 beforeEach(async () => {
   await deleteCfg();
   globalThis.fetch = realFetch;
-  process.env.STACK_TELEMETRY = undefined;
-  process.env.STACK_TELEMETRY_ENDPOINT = undefined;
+  Reflect.deleteProperty(process.env, "STACK_TELEMETRY");
+  Reflect.deleteProperty(process.env, "STACK_TELEMETRY_ENDPOINT");
 });
 
 afterEach(() => {
   globalThis.fetch = realFetch;
-  process.env.STACK_TELEMETRY = undefined;
-  process.env.STACK_TELEMETRY_ENDPOINT = undefined;
+  Reflect.deleteProperty(process.env, "STACK_TELEMETRY");
+  Reflect.deleteProperty(process.env, "STACK_TELEMETRY_ENDPOINT");
 });
 
 // ---------------------------------------------------------------------------
