@@ -110,13 +110,13 @@ export function readPinnedAlias(
   } catch {
     return { kind: "unreadable" };
   }
-  if (r.error) {
-    return (r.error as { code?: string }).code === "ENOENT"
-      ? { kind: "not_installed" }
-      : { kind: "unreadable" };
-  }
+  const code = (r.error as { code?: string } | undefined)?.code;
+  if (code === "ENOENT") return { kind: "not_installed" };
   // whoami exits non-zero when nothing is pinned (or the pin cannot be read).
-  if (r.status !== 0) return { kind: "no_pin" };
+  // Checked by status, not by `error`: some Bun versions also set `error` for a
+  // plain non-zero exit. A timeout or a kill leaves status null (unreadable).
+  if (typeof r.status === "number" && r.status !== 0) return { kind: "no_pin" };
+  if (r.error || r.status !== 0) return { kind: "unreadable" };
   if (r.stdout.length > LOCUS_PROBE_MAX_STDOUT) return { kind: "unreadable" };
   return parseWhoami(r.stdout);
 }

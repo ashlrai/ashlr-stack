@@ -524,7 +524,16 @@ export const CLI_COMMANDS: CliCommand[] = [
   {
     name: "stack exec",
     description: "Run a command with Phantom's secret proxy active.",
-    synopsis: "stack exec",
+    synopsis: "stack exec [--as <as>]",
+    flags: [
+      {
+        name: "as",
+        synopsis: "--as <as>",
+        type: "string",
+        description:
+          "Refuse (exit 1, nothing starts) unless this Locus binding alias is pinned (needs `--`)",
+      },
+    ],
     examples: [{ command: "stack exec -- bun dev" }, { command: "stack exec -- npm test" }],
     notes:
       "Thin wrapper over `phantom exec` so env vars with phm_ tokens get swapped for real secrets at the network layer.",
