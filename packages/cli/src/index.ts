@@ -28,6 +28,7 @@ import { syncCommand } from "./commands/sync.ts";
 import { telemetryCommand } from "./commands/telemetry.ts";
 import { templatesCommand } from "./commands/templates.ts";
 import { upgradeCommand } from "./commands/upgrade.ts";
+import { buildHandshake } from "./lib/handshake.ts";
 import { normalizeKebabFlags } from "./lib/normalize-args.ts";
 import { runCli } from "./lib/run-cli.ts";
 import { installSynchronousStdio } from "./lib/sync-stdout.ts";
@@ -54,6 +55,10 @@ const main = defineCommand({
     json: {
       type: "boolean",
       description: "Emit machine-readable JSON (used with --version).",
+    },
+    ashlrHandshake: {
+      type: "boolean",
+      description: "Print the Ashlr companion handshake (JSON) and exit.",
     },
   },
   run({ args }) {
@@ -119,6 +124,13 @@ const main = defineCommand({
     upgrade: upgradeCommand,
   },
 });
+
+// The companion handshake answers before the update check and telemetry:
+// it must stay local and fast (docs/ashlr-handshake.md).
+if (process.argv.slice(2).includes("--ashlr-handshake")) {
+  process.stdout.write(`${JSON.stringify(buildHandshake(VERSION))}\n`);
+  process.exit(0);
+}
 
 // Before any output: outroError exits the process, and Bun 1.2 drops queued
 // stdout writes on exit unless they were written synchronously.
