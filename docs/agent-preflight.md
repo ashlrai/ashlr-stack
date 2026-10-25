@@ -1,4 +1,4 @@
-# Phantom agent preflight for `stack exec`
+# Phantom agent preflight for `stack exec` and `stack doctor`
 
 `stack exec -- <cmd>` runs `<cmd>` under `phantom exec`, so env vars holding
 `phm_` placeholders reach providers as real keys only through Phantom's local
@@ -31,3 +31,10 @@ critical check ids. It never prints secret names or values.
 If `phantom` is missing, or is a version without `agent doctor --json`, the
 preflight prints a one-line warning and `stack exec` continues. Run
 `phantom agent doctor` for the full report with fix commands.
+
+## In `stack doctor`
+
+With the same variable set, `stack doctor` (this project only, not `--all`)
+adds the preflight: a line in the human output, and a `phantom_preflight`
+object in `--json` with `verdict`, `blocked_by` (check ids) and `refuse`. A
+refusal under the table above makes doctor exit 1; a warning does not.
