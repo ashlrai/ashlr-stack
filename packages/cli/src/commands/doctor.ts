@@ -14,6 +14,7 @@ import {
   takeRevealRefusals,
 } from "@ashlr/stack-core";
 import { defineCommand } from "citty";
+import { runAgentPreflight } from "../lib/agent-preflight.ts";
 import { requirePhantom } from "../lib/phantom-preflight.ts";
 import { colors, intro, logEvent, outro, outroError, prompts, spinnerBridge } from "../ui.ts";
 
@@ -137,10 +138,28 @@ export const doctorCommand = defineCommand({
       if (report.services.some((s) => s.status === "error")) anyFailed = true;
     }
 
+    // Opt-in (STACK_PHANTOM_PREFLIGHT=1 or strict), this project only: Phantom's
+    // value-free agent preflight. Verdict and check ids only; off by default.
+    const preflight = args.all ? null : runAgentPreflight();
+    if (preflight?.refuse) anyFailed = true;
+    const preflightJson =
+      preflight && (preflight.verdict || preflight.message)
+        ? { verdict: preflight.verdict, blocked_by: preflight.blockedBy, refuse: preflight.refuse }
+        : undefined;
+
     if (json) {
-      process.stdout.write(`${JSON.stringify({ reports }, null, 2)}\n`);
+      process.stdout.write(
+        `${JSON.stringify(preflightJson ? { reports, phantom_preflight: preflightJson } : { reports }, null, 2)}\n`,
+      );
       process.exitCode = anyFailed ? 1 : 0;
       return;
+    }
+    if (preflight?.message) {
+      console.log(
+        `  ${preflight.refuse ? colors.red("✗") : colors.yellow("!")} ${preflight.message}`,
+      );
+    } else if (preflight?.verdict === "ready") {
+      console.log(`  ${colors.green("✓")} phantom preflight: ready`);
     }
 
     if (anyFailed)
