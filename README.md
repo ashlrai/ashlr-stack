@@ -149,7 +149,8 @@ stack providers               # full provider catalog
 stack doctor --fix            # inspect the report and attempt supported remediation
 stack doctor --ecosystem      # which Ashlr tools are installed (via --ashlr-handshake); informational, never fails
 stack doctor --ecosystem --fix                 # preview companions' own doctor --fix (changes nothing)
-stack doctor --ecosystem --fix --apply locus   # run `locus doctor --fix --apply`, opted in per tool
+stack doctor --ecosystem --fix --apply lexicon # run `lexicon doctor --fix --apply`, opted in per tool
+locus doctor --fix --apply                     # locus: run it yourself (needs its own control capability, which Stack never forwards)
 stack exec -- bun dev         # run with Phantom's secret proxy active
 stack exec --as acme -- bun dev  # same, but refuse (exit 1, nothing starts) unless Locus has `acme` pinned
 ```

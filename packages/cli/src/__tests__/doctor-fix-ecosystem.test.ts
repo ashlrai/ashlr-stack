@@ -9,6 +9,7 @@ import {
   FIX_TOOLS,
   type FixTool,
   FixUsageError,
+  LOCUS_MANUAL_APPLY_REASON,
   fixEnv,
   parseApplyArg,
   runDoctorFix,
@@ -257,7 +258,7 @@ describe.skipIf(process.platform === "win32")("doctor --fix with fake companions
     const bare = cli(["--ecosystem", "--fix", "--apply"]);
     expect(bare.status).toBe(1);
     expect(bare.stderr).toContain(
-      "--apply needs the tools to fix; eligible: locus, lexicon, ashlr-md",
+      "--apply needs the tools to fix; eligible: lexicon, ashlr-md (e.g. --apply lexicon,ashlr-md); apply by hand: `locus doctor --fix --apply`",
     );
     expect(w.read("locus")).toBe("");
 
@@ -276,22 +277,87 @@ describe.skipIf(process.platform === "win32")("doctor --fix with fake companions
         command: `${command} doctor --fix --json`,
         preview: "2 fix(es) would be applied, 1 finding(s) to handle by hand",
         outcome: "previewed",
+        ...(tool === "locus"
+          ? { manual_apply: "locus doctor --fix --apply", manual_reason: LOCUS_MANUAL_APPLY_REASON }
+          : {}),
       })),
       stopped_at: null,
     });
     for (const n of ["locus", "lexicon", "mdopener-mcp"])
       expect(w.read(n)).not.toContain("--apply");
 
-    const applied = cli(["--ecosystem", "--fix", "--apply", "locus", "--json"]);
+    const prevText = cli(["--ecosystem", "--fix"]);
+    expect(prevText.stdout).toContain(
+      "To apply: stack doctor --ecosystem --fix --apply lexicon,ashlr-md",
+    );
+    const lines = prevText.stdout.split("\n");
+    expect(lines).toContain(
+      "  Nothing was changed. To apply: stack doctor --ecosystem --fix --apply lexicon,ashlr-md",
+    );
+    expect(lines).toContain(
+      `  Run Locus repairs directly, not through Stack: locus doctor --fix --apply  (${LOCUS_MANUAL_APPLY_REASON})`,
+    );
+    expect(prevText.stdout).not.toContain("--apply locus");
+
+    const applied = cli(["--ecosystem", "--fix", "--apply", "locus,lexicon", "--json"]);
     expect(applied.status).toBe(0);
-    expect(JSON.parse(applied.stdout).tools[0].outcome).toBe("applied");
-    expect(w.read("locus")).toContain("ARGV doctor --fix --apply");
+    const out = JSON.parse(applied.stdout);
+    expect(out.tools[0]).toMatchObject({
+      tool: "locus",
+      outcome: "manual",
+      manual_apply: "locus doctor --fix --apply",
+    });
+    expect(out.tools[0].detail).toBe(`refused, not run: ${LOCUS_MANUAL_APPLY_REASON}`);
+    expect(out.tools[1].outcome).toBe("applied");
+    expect(out.stopped_at).toBeNull();
+    expect(w.read("locus")).not.toContain("--apply");
+    expect(w.read("lexicon")).toContain("ARGV doctor --fix --apply");
     expect(`${applied.stdout}${applied.stderr}`).not.toContain("SECRET_VALUE");
+
+    const human = cli(["--ecosystem", "--fix", "--apply", "locus"]);
+    expect(human.status).toBe(0);
+    expect(human.stdout.split("\n")).toContain(
+      `  Run Locus repairs directly, not through Stack: locus doctor --fix --apply  (refused, not run: ${LOCUS_MANUAL_APPLY_REASON})`,
+    );
+    expect(w.read("locus")).not.toContain("--apply");
 
     const stray = cli(["--apply", "locus"]);
     expect(stray.status).toBe(1);
     expect(stray.stderr).toContain("--apply only works with --ecosystem --fix");
   });
+});
+
+test("locus apply is manual even with LOCUS_CONTROL_CAPABILITY in Stack's env, and it is never forwarded", async () => {
+  const entries: EcosystemEntry[] = [
+    { name: "locus", command: "locus", status: "ok", capabilities: ["doctor-fix"] },
+  ];
+  const calls: Array<[string, string[], Record<string, string>]> = [];
+  const runner = async (command: string, argv: string[], env: Record<string, string>) => {
+    calls.push([command, argv, env]);
+    return { kind: "exited" as const, code: 0, stdout: "" };
+  };
+  const env = { PATH: "/b", LOCUS_HOME: "/l", LOCUS_CONTROL_CAPABILITY: "cap-should-not-pass" };
+  const r = await runDoctorFix(["locus"], { entries, runner, env });
+  expect(calls).toEqual([]);
+  expect(r).toEqual({
+    mode: "apply",
+    stopped_at: null,
+    tools: [
+      {
+        tool: "locus",
+        capability: "doctor-fix",
+        command: "locus doctor --fix --apply",
+        preview: null,
+        outcome: "manual",
+        detail: `refused, not run: ${LOCUS_MANUAL_APPLY_REASON}`,
+        manual_apply: "locus doctor --fix --apply",
+      },
+    ],
+  });
+  await runDoctorFix(undefined, { entries, runner, env });
+  expect(calls.map((c) => c[1])).toEqual([["doctor", "--fix", "--json"]]);
+  expect(calls[0]?.[2]).not.toHaveProperty("LOCUS_CONTROL_CAPABILITY");
+  expect(JSON.stringify(calls)).not.toContain("cap-should-not-pass");
 });
 
 test("FixUsageError is an Error", () => {
@@ -364,9 +430,10 @@ describe("companion table", () => {
           return { kind: "exited", code: command === "mdopener-mcp" ? code : 0, stdout: "" };
         },
       });
-      expect(ran).toEqual(["locus", "mdopener-mcp"]);
+      // locus is never run for apply (manual); mdopener-mcp's failure stops lexicon.
+      expect(ran).toEqual(["mdopener-mcp"]);
       expect(r.stopped_at).toBe("ashlr-md");
-      expect(r.tools.map((t) => t.outcome)).toEqual(["applied", "refused", "not_run"]);
+      expect(r.tools.map((t) => t.outcome)).toEqual(["manual", "refused", "not_run"]);
       if (code === 2) expect(r.tools[1]?.detail).toContain("usage error");
     }
   });

@@ -23,7 +23,20 @@ export interface FixTool {
   envPassthrough: string[];
   /** Summarize preview stdout, or null when the shape is not confirmed. */
   summarizePreview?: (stdout: string) => string | null;
+  /**
+   * When set, Stack never runs the apply command: it reports outcome
+   * `manual` with this reason and the command for the user to run directly.
+   */
+  manualApplyReason?: string;
 }
+
+/**
+ * locus refuses `doctor --fix --apply` without its LOCUS_CONTROL_CAPABILITY.
+ * Stack deliberately never forwards that capability (or any token), so the
+ * user runs the apply step directly.
+ */
+export const LOCUS_MANUAL_APPLY_REASON =
+  'Stack does not pass Locus\'s control capability to the child, so it never runs this; run it in your own shell (after `eval "$(locus hook bash)"`)';
 
 /**
  * Each row's docs/doctor-fix.md says the plain `doctor --fix` previews and
@@ -42,6 +55,7 @@ export const FIX_TOOLS: FixTool[] = [
     applyArgv: ["doctor", "--fix", "--apply"],
     envPassthrough: ["LOCUS_HOME"],
     summarizePreview: summarizeDoctorFixPreview,
+    manualApplyReason: LOCUS_MANUAL_APPLY_REASON,
   },
   {
     tool: "lexicon",
@@ -175,7 +189,8 @@ export type ToolOutcome =
   | "failed"
   | "not_run"
   | "no_capability"
-  | "missing";
+  | "missing"
+  | "manual";
 
 export interface ToolReport {
   tool: string;
@@ -185,6 +200,10 @@ export interface ToolReport {
   preview: string | null;
   outcome: ToolOutcome;
   detail?: string;
+  /** Set when Stack will not run the apply step: the command to run directly. */
+  manual_apply?: string;
+  /** Why Stack will not run `manual_apply` (preview mode; apply mode puts it in `detail`). */
+  manual_reason?: string;
 }
 
 export interface FixReport {
@@ -253,7 +272,9 @@ export async function runDoctorFix(
       ),
     ));
   const entryFor = (t: FixTool) => entries.find((e) => e.name === t.tool);
-  const eligible = table.filter((t) => capabilityOf(entryFor(t), t)).map((t) => t.tool);
+  const capable = table.filter((t) => capabilityOf(entryFor(t), t));
+  const eligible = capable.filter((t) => !t.manualApplyReason).map((t) => t.tool);
+  const manualOnly = capable.filter((t) => t.manualApplyReason).map((t) => t.tool);
 
   if (apply === undefined) {
     const tools: ToolReport[] = [];
@@ -283,6 +304,9 @@ export async function runDoctorFix(
         });
         continue;
       }
+      const manual = t.manualApplyReason
+        ? { manual_apply: cmdline(t.command, t.applyArgv), manual_reason: t.manualApplyReason }
+        : {};
       const r = await runner(t.command, t.previewArgv, fixEnv(t, deps.env), PREVIEW_TIMEOUT_MS);
       const summary =
         r.kind === "exited" && r.code === 0 ? (t.summarizePreview?.(r.stdout) ?? null) : null;
@@ -300,14 +324,23 @@ export async function runDoctorFix(
               )}\` to see the preview`,
             }
           : {}),
+        ...manual,
       });
     }
     return { mode: "preview", tools, stopped_at: null };
   }
 
+  const manualHint = manualOnly.length
+    ? `; apply by hand: ${capable
+        .filter((t) => t.manualApplyReason)
+        .map((t) => `\`${cmdline(t.command, t.applyArgv)}\``)
+        .join(", ")}`
+    : "";
   const hint = eligible.length
-    ? `eligible: ${eligible.join(", ")} (e.g. --apply ${eligible.join(",")})`
-    : "no installed tool advertises doctor-fix";
+    ? `eligible: ${eligible.join(", ")} (e.g. --apply ${eligible.join(",")})${manualHint}`
+    : manualOnly.length
+      ? `no tool Stack can apply for you${manualHint}`
+      : "no installed tool advertises doctor-fix";
   if (apply.length === 0) throw new FixUsageError(`--apply needs the tools to fix; ${hint}`);
   for (const name of apply) {
     const t = table.find((x) => x.tool === name);
@@ -334,6 +367,15 @@ export async function runDoctorFix(
       command: cmdline(t.command, t.applyArgv),
       preview: null,
     };
+    if (t.manualApplyReason) {
+      tools.push({
+        ...base,
+        outcome: "manual",
+        detail: `refused, not run: ${t.manualApplyReason}`,
+        manual_apply: base.command,
+      });
+      continue;
+    }
     if (stopped) {
       tools.push({ ...base, outcome: "not_run", detail: `stopped at ${stopped}` });
       continue;
@@ -363,14 +405,23 @@ export function formatFixReport(report: FixReport): string[] {
     const extra = t.preview ? `: ${t.preview}` : t.detail ? `: ${t.detail}` : "";
     lines.push(`  ${t.tool}  ${t.command}  ${t.outcome}${extra}`);
   }
+  const manual = report.tools.filter((t) => t.manual_apply);
   if (report.mode === "preview") {
-    const ready = report.tools.filter((t) => t.capability !== null).map((t) => t.tool);
+    const ready = report.tools
+      .filter((t) => t.capability !== null && !t.manual_apply)
+      .map((t) => t.tool);
     lines.push(
       "",
       ready.length
         ? `  Nothing was changed. To apply: stack doctor --ecosystem --fix --apply ${ready.join(",")}`
-        : "  Nothing was changed. No installed tool advertises doctor-fix.",
+        : manual.length
+          ? "  Nothing was changed."
+          : "  Nothing was changed. No installed tool advertises doctor-fix.",
     );
   }
+  for (const t of manual)
+    lines.push(
+      `  Run ${t.tool.charAt(0).toUpperCase()}${t.tool.slice(1)} repairs directly, not through Stack: ${t.manual_apply}  (${t.manual_reason ?? t.detail ?? ""})`,
+    );
   return lines;
 }
