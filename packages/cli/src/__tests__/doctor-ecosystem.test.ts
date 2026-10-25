@@ -3,18 +3,24 @@ import {
   type ProbeRunner,
   checkEcosystem,
   defaultProbeRunner,
+  ecosystemNextSteps,
   formatEcosystem,
   probeEnv,
 } from "../lib/ecosystem.ts";
 
-const hs = (version: string, caps: string[]) =>
+const hs = (version: string, caps: string[], health = "ok") =>
   JSON.stringify({
     kind: "ashlr.handshake",
     schema_version: 1,
     version,
     capabilities: caps,
-    health: { status: "ok", checks: [] },
+    health: { status: health, checks: [] },
   });
+
+const onlyLocus =
+  (stdout: string): ProbeRunner =>
+  async (cmd) =>
+    cmd === "locus" ? { kind: "ran", code: 0, stdout } : { kind: "missing" };
 
 describe("stack doctor --ecosystem", () => {
   test("reports name, version, capabilities; missing and old tools are not failures", async () => {
@@ -59,5 +65,33 @@ describe("stack doctor --ecosystem", () => {
     expect(await defaultProbeRunner("ashlr-definitely-not-installed-xyz", 500)).toEqual({
       kind: "missing",
     });
+  });
+
+  test("degraded locus that advertises doctor-fix gets the --fix next step", async () => {
+    const out = await checkEcosystem(onlyLocus(hs("0.5.2", ["doctor-fix"], "degraded")));
+    expect(ecosystemNextSteps(out)).toEqual([
+      "locus doctor --fix   # preview safe repairs (writes nothing); add --apply to make them",
+    ]);
+    const text = formatEcosystem(out).join("\n");
+    expect(text).toContain("Next steps:");
+    expect(text).toContain("locus doctor --fix");
+  });
+
+  test("healthy locus with doctor-fix: nothing extra", async () => {
+    const out = await checkEcosystem(onlyLocus(hs("0.5.2", ["doctor-fix"], "ok")));
+    expect(ecosystemNextSteps(out)).toEqual([]);
+    expect(formatEcosystem(out).join("\n")).not.toContain("Next steps");
+  });
+
+  test("degraded locus without the doctor-fix capability: no guess from version", async () => {
+    for (const v of ["0.5.1", "0.6.0", "9.9.9"]) {
+      const out = await checkEcosystem(onlyLocus(hs(v, ["doctor-json"], "degraded")));
+      expect(ecosystemNextSteps(out)).toEqual([]);
+    }
+  });
+
+  test("missing or old locus: no suggestion", async () => {
+    expect(ecosystemNextSteps(await checkEcosystem(async () => ({ kind: "missing" })))).toEqual([]);
+    expect(ecosystemNextSteps(await checkEcosystem(onlyLocus("not json")))).toEqual([]);
   });
 });

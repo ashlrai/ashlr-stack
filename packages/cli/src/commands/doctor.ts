@@ -15,7 +15,7 @@ import {
 } from "@ashlr/stack-core";
 import { defineCommand } from "citty";
 import { runAgentPreflight } from "../lib/agent-preflight.ts";
-import { checkEcosystem, formatEcosystem } from "../lib/ecosystem.ts";
+import { checkEcosystem, ecosystemNextSteps, formatEcosystem } from "../lib/ecosystem.ts";
 import { requirePhantom } from "../lib/phantom-preflight.ts";
 import { colors, intro, logEvent, outro, outroError, prompts, spinnerBridge } from "../ui.ts";
 
@@ -88,7 +88,10 @@ export const doctorCommand = defineCommand({
     // never fails the run: a missing or older tool is just reported.
     if (args.ecosystem) {
       const tools = await checkEcosystem();
-      if (json) process.stdout.write(`${JSON.stringify({ ecosystem: tools }, null, 2)}\n`);
+      if (json)
+        process.stdout.write(
+          `${JSON.stringify({ ecosystem: tools, next_steps: ecosystemNextSteps(tools) }, null, 2)}\n`,
+        );
       else {
         console.log(colors.bold("Ashlr ecosystem"));
         for (const line of formatEcosystem(tools)) console.log(line);

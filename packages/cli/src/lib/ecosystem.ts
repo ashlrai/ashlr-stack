@@ -125,7 +125,42 @@ export async function checkEcosystem(
   );
 }
 
+/** Handshake capability a locus build advertises when `locus doctor --fix` exists. */
+export const LOCUS_DOCTOR_FIX_CAPABILITY = "doctor-fix";
+
+/**
+ * Suggested next steps for installed tools. Today: `locus doctor --fix` when
+ * locus answered the handshake, reports health other than `ok`, and itself
+ * advertises the `doctor-fix` capability. No version guessing: a locus that
+ * does not advertise the capability gets no suggestion. Healthy: nothing.
+ */
+export function ecosystemNextSteps(entries: EcosystemEntry[]): string[] {
+  const steps: string[] = [];
+  const locus = entries.find((e) => e.name === "locus");
+  if (
+    locus?.status === "ok" &&
+    locus.health !== undefined &&
+    locus.health !== "ok" &&
+    locus.capabilities?.includes(LOCUS_DOCTOR_FIX_CAPABILITY)
+  ) {
+    steps.push(
+      "locus doctor --fix   # preview safe repairs (writes nothing); add --apply to make them",
+    );
+  }
+  return steps;
+}
+
 export function formatEcosystem(entries: EcosystemEntry[]): string[] {
+  const lines = formatEcosystemEntries(entries);
+  const steps = ecosystemNextSteps(entries);
+  if (steps.length) {
+    lines.push("", "  Next steps:");
+    for (const s of steps) lines.push(`    ${s}`);
+  }
+  return lines;
+}
+
+function formatEcosystemEntries(entries: EcosystemEntry[]): string[] {
   return entries.map((e) => {
     if (e.status === "ok") {
       const caps = e.capabilities?.length ? ` [${e.capabilities.join(", ")}]` : "";
