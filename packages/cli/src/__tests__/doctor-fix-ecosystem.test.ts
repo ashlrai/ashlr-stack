@@ -50,9 +50,13 @@ function fakeTool(
     kind: "ashlr.handshake",
     schema_version: 1,
     name,
+    command: name,
     version: "9.9.9",
+    protocols: { "ashlr.handshake": 1 },
     capabilities: opts.cap === false ? ["other"] : ["doctor-fix"],
-    health: { status: "ok" },
+    health: { status: "ok", checks: [] },
+    edits: [],
+    receipts: [],
   });
   writeFileSync(
     join(bin, name),
@@ -143,6 +147,24 @@ describe("pure helpers", () => {
     ).rejects.toThrow("<invalid name>");
     expect(calls).toEqual([]);
   });
+  test("a tool whose handshake drifts from the v1 contract is never run, even with doctor-fix", async () => {
+    const calls: string[][] = [];
+    const runner = async (_c: string, argv: string[]) => {
+      calls.push(argv);
+      return { kind: "exited" as const, code: 0, stdout: PREVIEW_JSON };
+    };
+    const entries: EcosystemEntry[] = [
+      { name: "a", command: "a", status: "ok", capabilities: ["doctor-fix"], contract: "drift" },
+    ];
+    const prev = await runDoctorFix(undefined, { table: tableFor(["a"]), entries, runner });
+    expect(prev.tools[0]).toMatchObject({ outcome: "no_capability" });
+    expect(prev.tools[0]!.detail).toContain("does not match the v1 contract");
+    await expect(runDoctorFix(["a"], { table: tableFor(["a"]), entries, runner })).rejects.toThrow(
+      "handshake does not match the v1 contract",
+    );
+    expect(calls).toEqual([]);
+  });
+
   test("a preview not documented read-only is listed, not run", async () => {
     const t = { ...(tableFor(["a"])[0] as FixTool), previewReadOnly: false };
     let ran = false;

@@ -71,7 +71,17 @@ checker that TypeScript repos can vendor as is. Stack's own test also checks
 that `stack doctor --ecosystem --fix` runs exactly the contract's `doctor-fix`
 argv, so the consumer cannot drift from the contract either.
 
-Changing the contract: edit the JSON (new optional fields and new gated
+`stack doctor --ecosystem` applies the same check at run time. A tool that
+answers v1 but drifts from the contract is shown as `!!   <name> <version> ...
+(contract drift: N problems)`, with up to three short problems in `--json`
+(`contract: "drift"`, `contract_problems`) and a Next steps line to upgrade it.
+A conforming tool gets `contract: "ok"`. A drifting tool is never run by
+`stack doctor --ecosystem --fix`, even if it lists `doctor-fix`, because Stack
+cannot trust it to honor the contract's argv. Drift is informational and never
+fails the run. The CLI bundles a byte-identical copy of the contract
+(`packages/cli/src/lib/handshake-contract.v1.json`), checked by a test.
+
+Changing the contract: edit the JSON (and its bundled copy) (new optional fields and new gated
 capabilities stay v1; renames or removals bump `schema_version`), update the
 `.sha256` file and the pin in `handshake-conformance.test.ts`, then re-vendor
 the file and pin in each tool.

@@ -1,4 +1,13 @@
 import { spawn } from "node:child_process";
+import { type Contract, checkHandshake } from "./handshake-conformance.ts";
+import contractJson from "./handshake-contract.v1.json";
+
+/** The v1 contract, bundled (byte-identical to contract/ashlr-handshake.v1.json; a test enforces it). */
+export const HANDSHAKE_CONTRACT = contractJson as unknown as Contract;
+
+/** At most this many contract problems are shown per tool, each cut to this length. */
+const MAX_PROBLEMS = 3;
+const MAX_PROBLEM_LEN = 100;
 
 /** One Ashlr tool `stack doctor --ecosystem` probes. */
 export interface EcosystemTool {
@@ -34,6 +43,10 @@ export interface EcosystemEntry {
   capabilities?: string[];
   health?: string;
   detail?: string;
+  /** Only for `ok`: whether the handshake matches the v1 contract. */
+  contract?: "ok" | "drift";
+  /** Short contract problems when `contract` is `drift` (at most 3). */
+  contract_problems?: string[];
 }
 
 /**
@@ -91,9 +104,20 @@ export function parseHandshake(tool: EcosystemTool, run: ProbeRun): EcosystemEnt
   try {
     const v = JSON.parse(run.stdout.trim());
     if (v?.kind !== "ashlr.handshake" || v.schema_version !== 1) throw new Error("shape");
+    const problems = checkHandshake(v, HANDSHAKE_CONTRACT);
     return {
       ...base,
       status: "ok",
+      contract: problems.length ? "drift" : "ok",
+      ...(problems.length
+        ? {
+            contract_problems: problems
+              .slice(0, MAX_PROBLEMS)
+              .map((p) =>
+                p.length > MAX_PROBLEM_LEN ? `${p.slice(0, MAX_PROBLEM_LEN - 3)}...` : p,
+              ),
+          }
+        : {}),
       version: typeof v.version === "string" ? v.version : undefined,
       capabilities: Array.isArray(v.capabilities)
         ? v.capabilities.filter((c: unknown) => typeof c === "string")
@@ -136,6 +160,13 @@ export const LOCUS_DOCTOR_FIX_CAPABILITY = "doctor-fix";
  */
 export function ecosystemNextSteps(entries: EcosystemEntry[]): string[] {
   const steps: string[] = [];
+  for (const e of entries) {
+    if (e.status === "ok" && e.contract === "drift") {
+      steps.push(
+        `upgrade ${e.name}: its \`${e.command} --ashlr-handshake\` does not match the v1 contract (${e.contract_problems?.[0] ?? "see --json"}); see docs/ashlr-handshake.md`,
+      );
+    }
+  }
   const locus = entries.find((e) => e.name === "locus");
   if (
     locus?.status === "ok" &&
@@ -165,6 +196,10 @@ function formatEcosystemEntries(entries: EcosystemEntry[]): string[] {
     if (e.status === "ok") {
       const caps = e.capabilities?.length ? ` [${e.capabilities.join(", ")}]` : "";
       const health = e.health && e.health !== "ok" ? ` (health: ${e.health})` : "";
+      if (e.contract === "drift") {
+        const n = e.contract_problems?.length ?? 0;
+        return `  !!   ${e.name} ${e.version ?? "?"}${caps}${health} (contract drift: ${n} problem${n === 1 ? "" : "s"})`;
+      }
       return `  ok   ${e.name} ${e.version ?? "?"}${caps}${health}`;
     }
     return `  --   ${e.name} (${e.command}): ${e.detail}`;

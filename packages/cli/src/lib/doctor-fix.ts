@@ -243,7 +243,13 @@ function cmdline(command: string, argv: string[]): string {
 }
 
 function capabilityOf(entry: EcosystemEntry | undefined, tool: FixTool): boolean {
-  return entry?.status === "ok" && (entry.capabilities ?? []).includes(tool.capability);
+  // A handshake that drifts from the v1 contract is not trusted to honor the
+  // contract's doctor-fix argv, so Stack runs nothing for it.
+  return (
+    entry?.status === "ok" &&
+    entry.contract !== "drift" &&
+    (entry.capabilities ?? []).includes(tool.capability)
+  );
 }
 
 export interface FixDeps {
@@ -290,7 +296,9 @@ export async function runDoctorFix(
           detail:
             entry?.status === "missing"
               ? "not installed"
-              : `does not advertise the ${t.capability} capability`,
+              : entry?.contract === "drift"
+                ? "handshake does not match the v1 contract; nothing is run (see stack doctor --ecosystem)"
+                : `does not advertise the ${t.capability} capability`,
         });
         continue;
       }
@@ -348,6 +356,11 @@ export async function runDoctorFix(
       const label = NAME_RE.test(name) ? `'${name}'` : "<invalid name>";
       throw new FixUsageError(
         `${label} has no doctor --fix Stack can run; nothing was run. ${hint}`,
+      );
+    }
+    if (entryFor(t)?.contract === "drift") {
+      throw new FixUsageError(
+        `${t.tool}'s handshake does not match the v1 contract, so Stack runs nothing for it. ${hint}`,
       );
     }
     if (!capabilityOf(entryFor(t), t)) {
