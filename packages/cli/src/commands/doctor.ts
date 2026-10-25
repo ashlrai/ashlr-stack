@@ -15,6 +15,13 @@ import {
 } from "@ashlr/stack-core";
 import { defineCommand } from "citty";
 import { runAgentPreflight } from "../lib/agent-preflight.ts";
+import {
+  ecosystemEnvelope,
+  errorEnvelope,
+  fixEnvelope,
+  reconcileEnvelope,
+  reportsEnvelope,
+} from "../lib/doctor-envelope.ts";
 import { FixUsageError, formatFixReport, parseApplyArg, runDoctorFix } from "../lib/doctor-fix.ts";
 import { checkEcosystem, ecosystemNextSteps, formatEcosystem } from "../lib/ecosystem.ts";
 import { requirePhantom } from "../lib/phantom-preflight.ts";
@@ -97,7 +104,7 @@ export const doctorCommand = defineCommand({
     if (args.ecosystem && args.fix) {
       try {
         const report = await runDoctorFix(apply);
-        if (json) process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
+        if (json) process.stdout.write(`${JSON.stringify(fixEnvelope(report), null, 2)}\n`);
         else {
           console.log(colors.bold(`Ashlr ecosystem doctor --fix (${report.mode})`));
           for (const line of formatFixReport(report)) console.log(line);
@@ -105,7 +112,7 @@ export const doctorCommand = defineCommand({
         if (report.stopped_at) process.exitCode = 1;
       } catch (err) {
         if (!(err instanceof FixUsageError)) throw err;
-        if (json) process.stdout.write(`${JSON.stringify({ error: err.message })}\n`);
+        if (json) process.stdout.write(`${JSON.stringify(errorEnvelope(err.message))}\n`);
         else process.stderr.write(`${colors.red(`[stack doctor] ${err.message}`)}\n`);
         process.exitCode = 1;
       }
@@ -114,7 +121,7 @@ export const doctorCommand = defineCommand({
     if (apply !== undefined) {
       const message =
         "--apply only works with --ecosystem --fix (e.g. stack doctor --ecosystem --fix --apply locus)";
-      if (json) process.stdout.write(`${JSON.stringify({ error: message })}\n`);
+      if (json) process.stdout.write(`${JSON.stringify(errorEnvelope(message))}\n`);
       else process.stderr.write(`${colors.red(`[stack doctor] ${message}`)}\n`);
       process.exitCode = 1;
       return;
@@ -126,7 +133,7 @@ export const doctorCommand = defineCommand({
       const tools = await checkEcosystem();
       if (json)
         process.stdout.write(
-          `${JSON.stringify({ ecosystem: tools, next_steps: ecosystemNextSteps(tools) }, null, 2)}\n`,
+          `${JSON.stringify(ecosystemEnvelope({ ecosystem: tools, next_steps: ecosystemNextSteps(tools) }), null, 2)}\n`,
         );
       else {
         console.log(colors.bold("Ashlr ecosystem"));
@@ -153,7 +160,7 @@ export const doctorCommand = defineCommand({
     if (!args.all && !hasConfig(process.cwd())) {
       const message = new ConfigNotFoundError(resolveConfigPath(process.cwd())).message;
       if (json) {
-        process.stdout.write(`${JSON.stringify({ error: message })}\n`);
+        process.stdout.write(`${JSON.stringify(errorEnvelope(message))}\n`);
         process.exitCode = 1;
         return;
       }
@@ -164,7 +171,7 @@ export const doctorCommand = defineCommand({
     if (!(await isPhantomInstalled())) {
       if (json) {
         process.stdout.write(
-          `${JSON.stringify({ error: "Phantom is not installed. Stack cannot verify secrets without it." })}\n`,
+          `${JSON.stringify(errorEnvelope("Phantom is not installed. Stack cannot verify secrets without it."))}\n`,
         );
         process.exitCode = 1;
         return;
@@ -178,7 +185,7 @@ export const doctorCommand = defineCommand({
 
     if (scope.length === 0) {
       if (json) {
-        process.stdout.write(`${JSON.stringify({ reports: [] })}\n`);
+        process.stdout.write(`${JSON.stringify(reportsEnvelope({ reports: [] }, false))}\n`);
         return;
       }
       outro(colors.dim("No registered projects yet."));
@@ -207,7 +214,7 @@ export const doctorCommand = defineCommand({
 
     if (json) {
       process.stdout.write(
-        `${JSON.stringify(preflightJson ? { reports, phantom_preflight: preflightJson } : { reports }, null, 2)}\n`,
+        `${JSON.stringify(reportsEnvelope(preflightJson ? { reports, phantom_preflight: preflightJson } : { reports }, Boolean(preflight?.refuse)), null, 2)}\n`,
       );
       process.exitCode = anyFailed ? 1 : 0;
       return;
@@ -249,7 +256,7 @@ export async function runReconcile(cwd: string, json: boolean): Promise<void> {
   const report: ReconcileReport = { configured, detected, orphans, untracked };
 
   if (json) {
-    process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
+    process.stdout.write(`${JSON.stringify(reconcileEnvelope(report), null, 2)}\n`);
     // --json: exit 0 always, let tooling handle structured output
     return;
   }

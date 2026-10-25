@@ -22,7 +22,7 @@ const root = join(import.meta.dir, "..", "..", "..", "..");
 const contractPath = join(root, "contract", "ashlr-handshake.v1.json");
 const raw = readFileSync(contractPath);
 const contract = JSON.parse(raw.toString("utf8")) as Contract;
-const PINNED_SHA256 = "e4fa6e79ae7523fb11c44fc16843f0edf385f6c8e4c164409a62d05a76e0ac95";
+const PINNED_SHA256 = "1f6679138a048f6882eb33f84ab2894b54e51898f887a5cb9c19cc9731c5c171";
 
 describe("handshake contract v1", () => {
   test("the contract file matches its pinned sha256 and the .sha256 file", () => {

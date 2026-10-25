@@ -85,3 +85,45 @@ Changing the contract: edit the JSON (and its bundled copy) (new optional fields
 capabilities stay v1; renames or removals bump `schema_version`), update the
 `.sha256` file and the pin in `handshake-conformance.test.ts`, then re-vendor
 the file and pin in each tool.
+
+## Doctor JSON: the `ashlr.doctor` v1 wrapper
+
+Every tool's machine-readable doctor output carries one shared wrapper, so a
+cross-tool doctor reads the same five fields everywhere. The rules are the
+`doctor` section of `contract/ashlr-handshake.v1.json`.
+
+```json
+{
+  "kind": "ashlr.doctor",
+  "schema_version": 1,
+  "tool": "ashlr-stack",
+  "status": "warn",
+  "native_status": "passed",
+  "checks": [{ "id": "cwd-neon", "status": "warn", "summary": "neon: unchecked (...)" }]
+}
+```
+
+- **Additive.** The wrapper fields are added to the object each tool already
+  printed; no existing field is renamed or removed, and exit codes do not change.
+  Where a tool already printed `checks`, each item gains `status` and `summary`
+  and keeps its own fields.
+- `status` is `ok`, `warn` or `fail`. `native_status` is the tool's own label.
+- Each check needs `status` (`ok`, `warn`, `fail` or `info`) and `summary`; `id`
+  is optional and kebab-case when present. A `fail` check means `status` is `fail`.
+- **Mapping rule:** anything unsafe or refusing is `fail`; a warning is `warn`;
+  informational items never raise the status.
+
+| Tool | Command | `native_status` | Mapping to `status` |
+|---|---|---|---|
+| ashlr-stack | `stack doctor --json` | `passed` / `failed` | a service `error` or a refused Phantom preflight is fail; a service `warn` or `unchecked`, or no services at all, is warn |
+| ashlr-stack | `stack doctor --json` with an `error` (no `.stack.toml`, no Phantom, usage) | `error` | fail |
+| ashlr-stack | `stack doctor --ecosystem --json` | `informational` | ok; a companion with contract drift is warn; missing tools are info |
+| ashlr-stack | `stack doctor --ecosystem --fix --json` | `preview` / `apply` | a run that stopped at a tool is fail; a failed preview is warn |
+| ashlr-stack | `stack doctor --reconcile --json` | `in-sync` / `drift` | orphaned or untracked services are warn |
+| locus | `locus doctor --json` | `SAFE` / `WARN` / `UNSAFE` (`verdict`) | SAFE ok, WARN warn, UNSAFE fail; findings map info, warn, unsafe to info, warn, fail |
+| lexicon | `lexicon doctor --json` | `ok` / `failed` | any `fail` check is fail, else any `warn` is warn |
+| ashlr-md | `mdopener-mcp doctor --fix --json` (its only JSON doctor) | `dry_run` / `apply` (`mode`) | a skipped or refused fix on apply is fail; planned fixes or report-only findings are warn |
+| ashlr-plugin | `ashlr-plugin doctor --json` (`scripts/doctor.ts --json`) | `ok` / `warnings` / `failures` | `failures > 0` is fail, else `warnings > 0` is warn |
+
+Each repo's conformance test runs its own doctor JSON in a temp HOME and
+validates it against this section.
