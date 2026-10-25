@@ -3,6 +3,7 @@ import { constants } from "node:os";
 import { assertPhantomInstalled, hasConfig } from "@ashlr/stack-core";
 import { defineCommand } from "citty";
 import { runAgentPreflight } from "../lib/agent-preflight.ts";
+import { expectRefusal, parseExecArgv, readPinnedAlias } from "../lib/locus-identity.ts";
 import { colors } from "../ui.ts";
 
 /**
@@ -57,14 +58,24 @@ export const execCommand = defineCommand({
     description: "Run a command with Phantom's secret proxy active.",
   },
   args: {
+    as: {
+      type: "string",
+      description:
+        "Refuse (exit 1, nothing starts) unless this Locus binding alias is pinned (needs `--`)",
+      valueHint: "alias",
+    },
     _: { type: "positional", required: false, description: "Command to run after --" },
   },
   async run({ rawArgs }) {
     // Usage first: bare `stack exec` used to answer with the Phantom install
     // hint (or "run stack init") instead of saying a command was missing.
     // Forward everything after `--` (or everything after `exec`) to `phantom exec`.
-    const sep = rawArgs.indexOf("--");
-    const forwarded = sep >= 0 ? rawArgs.slice(sep + 1) : rawArgs;
+    const parsed = parseExecArgv(rawArgs);
+    if (!parsed.ok) {
+      fail(parsed.message);
+      return;
+    }
+    const forwarded = parsed.forwarded;
     if (forwarded.length === 0) {
       fail("Nothing to run. Usage: stack exec -- <command>");
       return;
@@ -73,6 +84,15 @@ export const execCommand = defineCommand({
     if (!hasConfig()) {
       fail("No .stack.toml found. Run `stack init` first.");
       return;
+    }
+
+    // `--as`: the identity check runs before Phantom or the command starts.
+    if (parsed.as !== undefined) {
+      const refusal = expectRefusal(parsed.as, readPinnedAlias());
+      if (refusal) {
+        fail(refusal);
+        return;
+      }
     }
 
     try {

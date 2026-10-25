@@ -4,6 +4,7 @@
 
 ### Added
 
+- `stack exec --as <alias> -- <cmd>` checks which Locus binding is pinned (`locus whoami --json`) and refuses with exit 1 before Phantom or the command starts unless it is `<alias>`, sealed and not frozen. A mismatch, no pin, a frozen pin, Locus missing, or output Stack cannot confirm all refuse with a `locus enter <alias>` hint. The probe runs without a shell, with a 5 s timeout, a minimal environment (no secrets or tokens), no stdin and capped stdout, and reads only the alias. Messages never echo junk input or print credential references. Without `--as`, nothing changes.
 - `stack doctor --ecosystem` suggests `locus doctor --fix` under "Next steps" (and in `--json` as `next_steps`) when locus reports health other than `ok` and advertises the `doctor-fix` handshake capability. Healthy locus, or a locus without that capability, gets no suggestion.
 - `stack doctor --ecosystem` lists the installed Ashlr tools (phantom, phantom-secrets, locus, lexicon, ashlr-md, ashlr-plugin) by asking each for `--ashlr-handshake --json`: name, version and capabilities, in text and `--json`. Each probe has a 2 second timeout and gets only PATH/HOME/locale from the environment, never secrets. A missing tool, or one too old to answer, is reported and never fails the run.
 - `stack --ashlr-handshake` prints the Ashlr companion handshake v1: name, version, protocols, capabilities, local health (phantom on PATH, `.stack.toml` present) and the files Stack may edit, as one JSON object. No network, no secrets. Contract: docs/ashlr-handshake.md.
