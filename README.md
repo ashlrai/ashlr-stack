@@ -146,6 +146,7 @@ stack add supabase            # provider authentication → setup → vault/conf
 stack providers               # full provider catalog
 stack doctor --fix            # inspect the report and attempt supported remediation
 stack exec -- bun dev         # run with Phantom's secret proxy active
+stack exec --as acme -- bun dev  # same, but refuse (exit 1, nothing starts) unless Locus has `acme` pinned
 ```
 
 ### AI recommendation layer
