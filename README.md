@@ -145,6 +145,8 @@ stack init                    # interactive template picker
 stack add supabase            # provider authentication → setup → vault/config/MCP
 stack providers               # full provider catalog
 stack doctor --fix            # inspect the report and attempt supported remediation
+stack doctor --ecosystem --fix                 # preview companions' own doctor --fix (changes nothing)
+stack doctor --ecosystem --fix --apply locus   # run `locus doctor --fix --apply`, opted in per tool
 stack exec -- bun dev         # run with Phantom's secret proxy active
 stack exec --as acme -- bun dev  # same, but refuse (exit 1, nothing starts) unless Locus has `acme` pinned
 ```

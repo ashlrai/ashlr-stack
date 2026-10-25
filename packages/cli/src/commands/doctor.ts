@@ -15,6 +15,7 @@ import {
 } from "@ashlr/stack-core";
 import { defineCommand } from "citty";
 import { runAgentPreflight } from "../lib/agent-preflight.ts";
+import { FixUsageError, formatFixReport, parseApplyArg, runDoctorFix } from "../lib/doctor-fix.ts";
 import { checkEcosystem, ecosystemNextSteps, formatEcosystem } from "../lib/ecosystem.ts";
 import { requirePhantom } from "../lib/phantom-preflight.ts";
 import { colors, intro, logEvent, outro, outroError, prompts, spinnerBridge } from "../ui.ts";
@@ -74,15 +75,50 @@ export const doctorCommand = defineCommand({
       description:
         "List installed Ashlr tools (phantom, locus, lexicon, ...) via --ashlr-handshake. Informational; never fails.",
     },
+    apply: {
+      type: "string",
+      description:
+        "With --ecosystem --fix: run these tools' own doctor --fix --apply (comma list, e.g. locus). Required per tool.",
+      valueHint: "tools",
+    },
     reconcile: {
       type: "boolean",
       default: false,
       description: "Check whether .stack.toml services are still present in source code.",
     },
   },
-  async run({ args }) {
+  async run({ args, rawArgs }) {
     const json = Boolean(args.json);
     const reconcile = Boolean(args.reconcile);
+    const apply = parseApplyArg(rawArgs);
+
+    // --ecosystem --fix: companions' own `doctor --fix`, gated on their
+    // handshake capability. Preview by default; --apply needs named tools.
+    if (args.ecosystem && args.fix) {
+      try {
+        const report = await runDoctorFix(apply);
+        if (json) process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
+        else {
+          console.log(colors.bold(`Ashlr ecosystem doctor --fix (${report.mode})`));
+          for (const line of formatFixReport(report)) console.log(line);
+        }
+        if (report.stopped_at) process.exitCode = 1;
+      } catch (err) {
+        if (!(err instanceof FixUsageError)) throw err;
+        if (json) process.stdout.write(`${JSON.stringify({ error: err.message })}\n`);
+        else process.stderr.write(`${colors.red(`[stack doctor] ${err.message}`)}\n`);
+        process.exitCode = 1;
+      }
+      return;
+    }
+    if (apply !== undefined) {
+      const message =
+        "--apply only works with --ecosystem --fix (e.g. stack doctor --ecosystem --fix --apply locus)";
+      if (json) process.stdout.write(`${JSON.stringify({ error: message })}\n`);
+      else process.stderr.write(`${colors.red(`[stack doctor] ${message}`)}\n`);
+      process.exitCode = 1;
+      return;
+    }
 
     // --ecosystem: which Ashlr tools are installed. Needs no .stack.toml and
     // never fails the run: a missing or older tool is just reported.
