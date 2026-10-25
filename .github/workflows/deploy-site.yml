@@ -16,6 +16,12 @@ on:
       - ".github/workflows/deploy-site.yml"
   workflow_dispatch:
 
+# Deploys to main queue and always finish; only superseded PR runs would be
+# cancelled (this workflow has no PR trigger today, so none are).
+concurrency:
+  group: deploy-site-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 env:
   USE_VERCEL: "true" # flip to "false" and set the Cloudflare job below if you move hosts
 
@@ -48,6 +54,14 @@ jobs:
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
+
+      - if: steps.preflight.outputs.skip != 'true'
+        name: Cache Bun install
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-site-${{ runner.os }}-${{ hashFiles('bun.lock', 'packages/site/bun.lock') }}
+          restore-keys: bun-site-${{ runner.os }}-
 
       - if: steps.preflight.outputs.skip != 'true'
         name: Install deps (root + site)
