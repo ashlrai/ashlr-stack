@@ -1,3 +1,4 @@
+import { anthropicBaseUrl } from "../base-urls.ts";
 import { makeApiKeyProvider } from "./_api-key.ts";
 import { verifyFetch } from "./_helpers.ts";
 
@@ -11,7 +12,7 @@ export default makeApiKeyProvider({
   dashboard: "https://console.anthropic.com",
   async verify(key) {
     try {
-      const res = await verifyFetch("https://api.anthropic.com/v1/models", {
+      const res = await verifyFetch(`${anthropicBaseUrl()}/v1/models`, {
         headers: {
           "x-api-key": key,
           "anthropic-version": "2023-06-01",

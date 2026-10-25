@@ -1,3 +1,4 @@
+import { openaiBaseUrl } from "../base-urls.ts";
 import { makeApiKeyProvider } from "./_api-key.ts";
 import { verifyFetch } from "./_helpers.ts";
 
@@ -11,7 +12,7 @@ export default makeApiKeyProvider({
   dashboard: "https://platform.openai.com",
   async verify(key) {
     try {
-      const res = await verifyFetch("https://api.openai.com/v1/models", {
+      const res = await verifyFetch(`${openaiBaseUrl()}/models`, {
         headers: { Authorization: `Bearer ${key}` },
       });
       if (!res.ok) return undefined;
