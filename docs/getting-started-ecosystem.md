@@ -76,6 +76,26 @@ bun run scripts/cli.ts --help    # codex-doctor, codex-install --dry-run, tools,
 
 The `companions` section says `not installed` or `too old for --ashlr-handshake` with a fix line for each tool. On a box without a host configured, the doctor also reports warnings and failures for the missing host setup.
 
+## Repair everything
+
+One command previews the repairs every installed tool offers. It runs each tool's own `doctor --fix --json` (only for tools whose handshake advertises the `doctor-fix` capability) and changes nothing:
+
+```bash
+stack doctor --ecosystem --fix   # source 0.2.2 on main; not in the published 0.1.1
+```
+
+Then make the repairs with each tool's own command. Run them yourself, directly in your shell:
+
+| Tool | Preview (writes nothing) | Apply | Notes from the run |
+|---|---|---|---|
+| Locus | `locus doctor --fix` | `locus doctor --fix --apply` | Backs up each changed file first (`.bak-<timestamp>`). Needs the control capability in the shell (`eval "$(locus hook bash)"`). |
+| Lexicon | `lexicon doctor --fix` | `lexicon doctor --fix --apply` | Backs up each file first; exit 1 if a repair was skipped. `--apply` without `--fix` exits 1. Example fix: creates a missing global lexicon. |
+| ashlr-md | `mdopener-mcp doctor --fix` | `mdopener-mcp doctor --fix --apply` | Owner-only permissions on `~/.mdopener`, moves aside corrupt saved reviews (contents backed up first); exit 1 if a repair was skipped. `--apply` without `--fix` exits 2. Never touches `ipc-token`. |
+
+Run Locus repairs directly, not through Stack. Stack's `--apply <tools>` does not pass Locus's control capability to the child, so a Locus repair that needs it is refused there; `locus doctor --fix --apply` in your own shell works. The previews exit 0 whether or not there is something to fix.
+
+Checked on Oct 25 2026 from source (locus 0.5.1, lexicon 0.5.6, mdopener-mcp 0.4.0) in a throwaway `HOME`.
+
 ## Where to go next
 
 - Phantom and Locus with Stack: [phantom-locus.md](./phantom-locus.md)
