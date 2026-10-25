@@ -28,3 +28,13 @@ Rules every implementation follows:
 - **Health:** `health.status` is `ok`, `degraded` (works, something it relies on is missing) or `unknown`. A check status is `ok`, `missing` (counts against health) or `absent` (informational, such as no `.stack.toml` in this directory).
 - **Edits:** paths the CLI may write. `~/` is the home directory; other paths are relative to the project.
 - **Receipts:** receipt kinds the CLI emits (none yet; reserved for receipt.v1).
+
+## Reading other tools: `stack doctor --ecosystem`
+
+`stack doctor --ecosystem` (add `--json` for `{ "ecosystem": [...] }`) runs
+`<command> --ashlr-handshake --json` for `phm`, `phantom`, `locus`, `lexicon`,
+`mdopener-mcp` and `ashlr-plugin`, and shows each tool's name, version and
+capabilities. Each probe has a 2 second timeout, and its environment is only
+PATH, HOME, USER, locale and TMPDIR, so no token reaches another tool. A tool
+that is not installed is `missing`; one that does not answer v1 in time is
+`no-handshake`. Neither fails the run, and no `.stack.toml` is needed.
