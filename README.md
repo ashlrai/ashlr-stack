@@ -74,6 +74,8 @@ irm https://stack.ashlr.ai/install.ps1 | iex
 bun add -g @ashlr/stack ashlr-stack-mcp     # or: npm i -g
 ```
 
+> The registry currently serves `@ashlr/stack` 0.1.1, while this source tree is 0.2.2. Check with `npm view @ashlr/stack version`. Flags added since 0.1.1, including `stack doctor --ecosystem` and `stack exec --as`, are not in the published 0.1.1 package; use the dev install below to try them.
+
 **Dev install** (from a local clone of this repo):
 
 ```bash
@@ -145,6 +147,7 @@ stack init                    # interactive template picker
 stack add supabase            # provider authentication → setup → vault/config/MCP
 stack providers               # full provider catalog
 stack doctor --fix            # inspect the report and attempt supported remediation
+stack doctor --ecosystem      # which Ashlr tools are installed (via --ashlr-handshake); informational, never fails
 stack exec -- bun dev         # run with Phantom's secret proxy active
 stack exec --as acme -- bun dev  # same, but refuse (exit 1, nothing starts) unless Locus has `acme` pinned
 ```
