@@ -168,7 +168,8 @@ esac
     },
     cleanup() {
       process.env.PATH = previousPath;
-      if (previousRegistryDir === undefined) process.env.STACK_REGISTRY_DIR = undefined;
+      if (previousRegistryDir === undefined)
+        Reflect.deleteProperty(process.env, "STACK_REGISTRY_DIR");
       else process.env.STACK_REGISTRY_DIR = previousRegistryDir;
       __resetPhantomCache();
       try {

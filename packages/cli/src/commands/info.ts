@@ -3,6 +3,7 @@ import {
   type ProviderContext,
   type ServiceEntry,
   getProvider,
+  getService,
   isPhantomInstalled,
   listSecrets,
   readConfig,
@@ -35,7 +36,7 @@ export const infoCommand = defineCommand({
     }
     intro(`stack info ${args.service}`);
     const config = await readConfig();
-    const entry = config.services[String(args.service)];
+    const entry = getService(config, String(args.service));
     if (!entry) {
       outroError(`${args.service} is not in this stack. Run \`stack list\`.`);
       return;
@@ -125,7 +126,7 @@ async function runInfoJson(service: string): Promise<void> {
   };
   let entry: ServiceEntry | undefined;
   try {
-    entry = (await readConfig()).services[service];
+    entry = getService(await readConfig(), service);
   } catch (err) {
     fail((err as Error).message);
     return;
