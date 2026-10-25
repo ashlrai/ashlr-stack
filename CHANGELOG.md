@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Templates
+
+- **`litellm-gateway` template.** Provider key slots (OpenAI, Anthropic, xAI, DeepSeek) for a LiteLLM gateway that holds Phantom placeholders instead of real keys, with a README carrying the pin, isolation and Cursor guidance. Experimental: the placeholder flow is not yet verified against a mock upstream.
 - `ANTHROPIC_BASE_URL`, `OPENAI_BASE_URL` and `OLLAMA_HOST` now override the hosts used by the `anthropic` and `openai` key checks and the `--synth` Ollama fallback, so a LiteLLM gateway or Phantom proxy can sit in front. Defaults are unchanged.
 
 ## 0.2.2 (2026-10-17)
