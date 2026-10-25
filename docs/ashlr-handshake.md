@@ -38,3 +38,10 @@ capabilities. Each probe has a 2 second timeout, and its environment is only
 PATH, HOME, USER, locale and TMPDIR, so no token reaches another tool. A tool
 that is not installed is `missing`; one that does not answer v1 in time is
 `no-handshake`. Neither fails the run, and no `.stack.toml` is needed.
+
+When locus answers with health other than `ok` and lists the `doctor-fix`
+capability, a "Next steps" block suggests `locus doctor --fix` (a dry run;
+`--apply` makes the repairs). `--json` carries the same lines in
+`next_steps`. The suggestion keys on the capability only, never on the
+version, so a locus that does not advertise `doctor-fix` gets none, and a
+healthy locus gets nothing extra.
