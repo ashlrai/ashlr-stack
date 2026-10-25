@@ -86,7 +86,13 @@ const CMD_META: Record<string, CmdMeta> = {
   },
   deps: {},
   doctor: {
-    flags: [{ name: "fix" }, { name: "all" }, { name: "json" }, { name: "ecosystem" }, { name: "reconcile" }],
+    flags: [
+      { name: "fix" },
+      { name: "all" },
+      { name: "json" },
+      { name: "ecosystem" },
+      { name: "reconcile" },
+    ],
   },
   exec: {},
   sync: {
