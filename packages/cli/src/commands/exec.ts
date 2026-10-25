@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import { constants } from "node:os";
 import { assertPhantomInstalled, hasConfig } from "@ashlr/stack-core";
 import { defineCommand } from "citty";
+import { runAgentPreflight } from "../lib/agent-preflight.ts";
 import { colors } from "../ui.ts";
 
 /**
@@ -78,6 +79,16 @@ export const execCommand = defineCommand({
       await assertPhantomInstalled();
     } catch (err) {
       fail((err as Error).message);
+      return;
+    }
+
+    // Opt-in (STACK_PHANTOM_PREFLIGHT=1 or strict): Phantom's value-free agent
+    // preflight. Off by default; a phantom without it only warns.
+    const preflight = runAgentPreflight();
+    if (preflight.message)
+      process.stderr.write(`${colors.dim(`[stack exec] ${preflight.message}`)}\n`);
+    if (preflight.refuse) {
+      process.exitCode = 1;
       return;
     }
 
