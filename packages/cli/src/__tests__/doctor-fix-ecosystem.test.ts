@@ -277,7 +277,9 @@ describe.skipIf(process.platform === "win32")("doctor --fix with fake companions
         command: `${command} doctor --fix --json`,
         preview: "2 fix(es) would be applied, 1 finding(s) to handle by hand",
         outcome: "previewed",
-        ...(tool === "locus" ? { manual_apply: "locus doctor --fix --apply" } : {}),
+        ...(tool === "locus"
+          ? { manual_apply: "locus doctor --fix --apply", manual_reason: LOCUS_MANUAL_APPLY_REASON }
+          : {}),
       })),
       stopped_at: null,
     });
@@ -288,7 +290,14 @@ describe.skipIf(process.platform === "win32")("doctor --fix with fake companions
     expect(prevText.stdout).toContain(
       "To apply: stack doctor --ecosystem --fix --apply lexicon,ashlr-md",
     );
-    expect(prevText.stdout).toContain("Run yourself: locus doctor --fix --apply");
+    const lines = prevText.stdout.split("\n");
+    expect(lines).toContain(
+      "  Nothing was changed. To apply: stack doctor --ecosystem --fix --apply lexicon,ashlr-md",
+    );
+    expect(lines).toContain(
+      `  Run Locus repairs directly, not through Stack: locus doctor --fix --apply  (${LOCUS_MANUAL_APPLY_REASON})`,
+    );
+    expect(prevText.stdout).not.toContain("--apply locus");
 
     const applied = cli(["--ecosystem", "--fix", "--apply", "locus,lexicon", "--json"]);
     expect(applied.status).toBe(0);
@@ -298,7 +307,7 @@ describe.skipIf(process.platform === "win32")("doctor --fix with fake companions
       outcome: "manual",
       manual_apply: "locus doctor --fix --apply",
     });
-    expect(out.tools[0].detail).toContain("never forwards");
+    expect(out.tools[0].detail).toBe(`refused, not run: ${LOCUS_MANUAL_APPLY_REASON}`);
     expect(out.tools[1].outcome).toBe("applied");
     expect(out.stopped_at).toBeNull();
     expect(w.read("locus")).not.toContain("--apply");
@@ -307,7 +316,9 @@ describe.skipIf(process.platform === "win32")("doctor --fix with fake companions
 
     const human = cli(["--ecosystem", "--fix", "--apply", "locus"]);
     expect(human.status).toBe(0);
-    expect(human.stdout).toContain("Run yourself: locus doctor --fix --apply");
+    expect(human.stdout.split("\n")).toContain(
+      `  Run Locus repairs directly, not through Stack: locus doctor --fix --apply  (refused, not run: ${LOCUS_MANUAL_APPLY_REASON})`,
+    );
     expect(w.read("locus")).not.toContain("--apply");
 
     const stray = cli(["--apply", "locus"]);
@@ -338,7 +349,7 @@ test("locus apply is manual even with LOCUS_CONTROL_CAPABILITY in Stack's env, a
         command: "locus doctor --fix --apply",
         preview: null,
         outcome: "manual",
-        detail: LOCUS_MANUAL_APPLY_REASON,
+        detail: `refused, not run: ${LOCUS_MANUAL_APPLY_REASON}`,
         manual_apply: "locus doctor --fix --apply",
       },
     ],

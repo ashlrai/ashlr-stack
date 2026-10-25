@@ -36,7 +36,7 @@ export interface FixTool {
  * user runs the apply step directly.
  */
 export const LOCUS_MANUAL_APPLY_REASON =
-  "locus requires its own control capability (LOCUS_CONTROL_CAPABILITY) to apply fixes, which Stack deliberately never forwards; run it yourself";
+  'Stack does not pass Locus\'s control capability to the child, so it never runs this; run it in your own shell (after `eval "$(locus hook bash)"`)';
 
 /**
  * Each row's docs/doctor-fix.md says the plain `doctor --fix` previews and
@@ -202,6 +202,8 @@ export interface ToolReport {
   detail?: string;
   /** Set when Stack will not run the apply step: the command to run directly. */
   manual_apply?: string;
+  /** Why Stack will not run `manual_apply` (preview mode; apply mode puts it in `detail`). */
+  manual_reason?: string;
 }
 
 export interface FixReport {
@@ -302,7 +304,9 @@ export async function runDoctorFix(
         });
         continue;
       }
-      const manual = t.manualApplyReason ? { manual_apply: cmdline(t.command, t.applyArgv) } : {};
+      const manual = t.manualApplyReason
+        ? { manual_apply: cmdline(t.command, t.applyArgv), manual_reason: t.manualApplyReason }
+        : {};
       const r = await runner(t.command, t.previewArgv, fixEnv(t, deps.env), PREVIEW_TIMEOUT_MS);
       const summary =
         r.kind === "exited" && r.code === 0 ? (t.summarizePreview?.(r.stdout) ?? null) : null;
@@ -367,7 +371,7 @@ export async function runDoctorFix(
       tools.push({
         ...base,
         outcome: "manual",
-        detail: t.manualApplyReason,
+        detail: `refused, not run: ${t.manualApplyReason}`,
         manual_apply: base.command,
       });
       continue;
@@ -417,7 +421,7 @@ export function formatFixReport(report: FixReport): string[] {
   }
   for (const t of manual)
     lines.push(
-      `  Run yourself: ${t.manual_apply}  (${t.tool} requires its own control capability, which Stack deliberately never forwards)`,
+      `  Run ${t.tool.charAt(0).toUpperCase()}${t.tool.slice(1)} repairs directly, not through Stack: ${t.manual_apply}  (${t.manual_reason ?? t.detail ?? ""})`,
     );
   return lines;
 }
