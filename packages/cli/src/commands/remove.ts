@@ -1,4 +1,4 @@
-import { readConfig, scanSource, writeConfig } from "@ashlr/stack-core";
+import { getService, readConfig, scanSource, writeConfig } from "@ashlr/stack-core";
 import { removeMcpEntry } from "@ashlr/stack-core/mcp-writer";
 import { defineCommand } from "citty";
 import { notInStackMessage } from "../lib/not-in-stack.ts";
@@ -133,7 +133,7 @@ async function runRemoveAllOrphans(keepRemote: boolean): Promise<void> {
 async function runRemoveOne(serviceName: string, keepRemote: boolean): Promise<void> {
   intro(`stack remove ${serviceName}`);
   const config = await readConfig();
-  const entry = config.services[serviceName];
+  const entry = getService(config, serviceName);
   if (!entry) {
     outroError(notInStackMessage(serviceName, Object.keys(config.services)));
     return;
@@ -250,7 +250,7 @@ async function runRemoveJson(
       );
       return;
     }
-    if (!config.services[service]) {
+    if (!getService(config, service)) {
       fail(notInStackMessage(service, Object.keys(config.services)));
       return;
     }

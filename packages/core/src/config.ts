@@ -186,6 +186,15 @@ export async function writeConfig(config: StackConfig, cwd: string = process.cwd
 // Helpers
 // ---------------------------------------------------------------------------
 
+/**
+ * The service named `name`, or undefined. An own-property lookup, so a name
+ * like `constructor` or `toString` that is not configured is not mistaken for
+ * an inherited Object.prototype member.
+ */
+export function getService(config: StackConfig, name: string): ServiceEntry | undefined {
+  return Object.hasOwn(config.services, name) ? config.services[name] : undefined;
+}
+
 function setOwnService<T>(services: Record<string, T>, name: string, entry: T): void {
   // Service names are data, including __proto__; never invoke prototype setters.
   Object.defineProperty(services, name, {
