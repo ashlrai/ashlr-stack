@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+
+- `stack --ashlr-handshake` prints the Ashlr companion handshake v1: name, version, protocols, capabilities, local health (phantom on PATH, `.stack.toml` present) and the files Stack may edit, as one JSON object. No network, no secrets. Contract: docs/ashlr-handshake.md.
+
 ### Templates
 
 - **`litellm-gateway` template.** Provider key slots (OpenAI, Anthropic, xAI, DeepSeek) for a LiteLLM gateway that holds Phantom placeholders instead of real keys, with a README carrying the pin, isolation and Cursor guidance. Experimental: the placeholder flow is not yet verified against a mock upstream.
