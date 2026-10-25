@@ -15,6 +15,7 @@ import {
 } from "@ashlr/stack-core";
 import { defineCommand } from "citty";
 import { runAgentPreflight } from "../lib/agent-preflight.ts";
+import { checkEcosystem, formatEcosystem } from "../lib/ecosystem.ts";
 import { requirePhantom } from "../lib/phantom-preflight.ts";
 import { colors, intro, logEvent, outro, outroError, prompts, spinnerBridge } from "../ui.ts";
 
@@ -67,6 +68,12 @@ export const doctorCommand = defineCommand({
       default: false,
       description: "Emit machine-readable JSON (exit 0/1 on pass/fail). CI-friendly.",
     },
+    ecosystem: {
+      type: "boolean",
+      default: false,
+      description:
+        "List installed Ashlr tools (phantom, locus, lexicon, ...) via --ashlr-handshake. Informational; never fails.",
+    },
     reconcile: {
       type: "boolean",
       default: false,
@@ -76,6 +83,18 @@ export const doctorCommand = defineCommand({
   async run({ args }) {
     const json = Boolean(args.json);
     const reconcile = Boolean(args.reconcile);
+
+    // --ecosystem: which Ashlr tools are installed. Needs no .stack.toml and
+    // never fails the run: a missing or older tool is just reported.
+    if (args.ecosystem) {
+      const tools = await checkEcosystem();
+      if (json) process.stdout.write(`${JSON.stringify({ ecosystem: tools }, null, 2)}\n`);
+      else {
+        console.log(colors.bold("Ashlr ecosystem"));
+        for (const line of formatEcosystem(tools)) console.log(line);
+      }
+      return;
+    }
 
     // --reconcile mode: source-drift check (additive — runs alongside reachability if both given)
     if (reconcile) {
