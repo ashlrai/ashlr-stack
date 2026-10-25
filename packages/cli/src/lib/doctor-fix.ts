@@ -26,10 +26,11 @@ export interface FixTool {
 }
 
 /**
- * locus: docs/doctor-fix.md ("`locus doctor --fix` previews repairs and writes
- * nothing"; `--json` gives `{mode, plan, outcome}` with `plan.fixes` and
- * `plan.report_only` arrays). Lexicon and ashlr-md join this table once their
- * `doctor-fix` commands exist; until then they show as info.
+ * Each row's docs/doctor-fix.md says the plain `doctor --fix` previews and
+ * writes nothing, and `--json` gives `{mode, plan, outcome}` with `plan.fixes`
+ * and `plan.report_only` arrays (locus, lexicon #203, ashlr-md #176). Any
+ * non-zero exit stops the apply run: 1 is a skipped fix or a refusal, 2 is a
+ * usage error (mdopener-mcp).
  */
 export const FIX_TOOLS: FixTool[] = [
   {
@@ -40,11 +41,34 @@ export const FIX_TOOLS: FixTool[] = [
     previewReadOnly: true,
     applyArgv: ["doctor", "--fix", "--apply"],
     envPassthrough: ["LOCUS_HOME"],
-    summarizePreview: summarizeLocusPreview,
+    summarizePreview: summarizeDoctorFixPreview,
+  },
+  {
+    tool: "lexicon",
+    command: "lexicon",
+    capability: "doctor-fix",
+    previewArgv: ["doctor", "--fix", "--json"],
+    previewReadOnly: true,
+    applyArgv: ["doctor", "--fix", "--apply"],
+    // Where lexicon keeps its files (src/core/store.ts, cmd-install.ts).
+    envPassthrough: ["LEXICON_PATH", "XDG_CONFIG_HOME", "APPDATA"],
+    summarizePreview: summarizeDoctorFixPreview,
+  },
+  {
+    tool: "ashlr-md",
+    command: "mdopener-mcp",
+    capability: "doctor-fix",
+    previewArgv: ["doctor", "--fix", "--json"],
+    previewReadOnly: true,
+    applyArgv: ["doctor", "--fix", "--apply"],
+    // Its state folder is ~/.mdopener, found through HOME (already kept).
+    envPassthrough: [],
+    summarizePreview: summarizeDoctorFixPreview,
   },
 ];
 
-export function summarizeLocusPreview(stdout: string): string | null {
+/** Shared `{mode:"dry_run", plan:{fixes[], report_only[]}}` shape. */
+export function summarizeDoctorFixPreview(stdout: string): string | null {
   try {
     const v = JSON.parse(stdout);
     if (
@@ -322,7 +346,7 @@ export async function runDoctorFix(
     stopped = t.tool;
     const detail =
       r.kind === "exited"
-        ? `exited ${r.code}; ${t.tool}'s own rules refused or a fix was skipped. Run \`${base.command}\` yourself to see why.`
+        ? `exited ${r.code}${r.code === 2 ? " (usage error)" : ""}; ${t.tool}'s own rules refused or a fix was skipped. Run \`${base.command}\` yourself to see why.`
         : r.kind === "timeout"
           ? "timed out"
           : r.kind === "missing"

@@ -6,12 +6,13 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
+  FIX_TOOLS,
   type FixTool,
   FixUsageError,
   fixEnv,
   parseApplyArg,
   runDoctorFix,
-  summarizeLocusPreview,
+  summarizeDoctorFixPreview,
 } from "../lib/doctor-fix.ts";
 import type { EcosystemEntry } from "../lib/ecosystem.ts";
 
@@ -76,7 +77,7 @@ function tableFor(names: string[]): FixTool[] {
     previewReadOnly: true,
     applyArgv: ["doctor", "--fix", "--apply"],
     envPassthrough: ["LOCUS_HOME"],
-    summarizePreview: summarizeLocusPreview,
+    summarizePreview: summarizeDoctorFixPreview,
   }));
 }
 
@@ -95,14 +96,14 @@ describe("pure helpers", () => {
     expect(parseApplyArg(["--apply", "locus,lexicon"])).toEqual(["locus", "lexicon"]);
     expect(parseApplyArg(["--apply=locus"])).toEqual(["locus"]);
   });
-  test("summarizeLocusPreview accepts only the documented dry-run shape", () => {
-    expect(summarizeLocusPreview(PREVIEW_JSON)).toBe(
+  test("summarizeDoctorFixPreview accepts only the documented dry-run shape", () => {
+    expect(summarizeDoctorFixPreview(PREVIEW_JSON)).toBe(
       "2 fix(es) would be applied, 1 finding(s) to handle by hand",
     );
     expect(
-      summarizeLocusPreview('{"mode":"apply","plan":{"fixes":[],"report_only":[]}}'),
+      summarizeDoctorFixPreview('{"mode":"apply","plan":{"fixes":[],"report_only":[]}}'),
     ).toBeNull();
-    expect(summarizeLocusPreview("nope")).toBeNull();
+    expect(summarizeDoctorFixPreview("nope")).toBeNull();
   });
   test("child env is the allowlist plus the tool's store variable, never secrets", () => {
     const env = fixEnv(tableFor(["locus"])[0] as FixTool, {
@@ -236,7 +237,11 @@ describe.skipIf(process.platform === "win32")("doctor --fix with fake companions
   });
 
   test("CLI: bare --apply refuses with the eligible tools; --json shape; plain --apply needs --ecosystem --fix", () => {
-    const w = world([["locus", {}]]);
+    const w = world([
+      ["locus", {}],
+      ["lexicon", {}],
+      ["mdopener-mcp", {}],
+    ]);
     const cli = (args: string[]) =>
       spawnSync(process.execPath, [CLI_ENTRY, "doctor", ...args], {
         cwd: w.bin,
@@ -251,7 +256,9 @@ describe.skipIf(process.platform === "win32")("doctor --fix with fake companions
       });
     const bare = cli(["--ecosystem", "--fix", "--apply"]);
     expect(bare.status).toBe(1);
-    expect(bare.stderr).toContain("--apply needs the tools to fix; eligible: locus");
+    expect(bare.stderr).toContain(
+      "--apply needs the tools to fix; eligible: locus, lexicon, ashlr-md",
+    );
     expect(w.read("locus")).toBe("");
 
     const prev = cli(["--ecosystem", "--fix", "--json"]);
@@ -260,17 +267,20 @@ describe.skipIf(process.platform === "win32")("doctor --fix with fake companions
     expect(doc).toEqual({
       mode: "preview",
       tools: [
-        {
-          tool: "locus",
-          capability: "doctor-fix",
-          command: "locus doctor --fix --json",
-          preview: "2 fix(es) would be applied, 1 finding(s) to handle by hand",
-          outcome: "previewed",
-        },
-      ],
+        ["locus", "locus"],
+        ["lexicon", "lexicon"],
+        ["ashlr-md", "mdopener-mcp"],
+      ].map(([tool, command]) => ({
+        tool,
+        capability: "doctor-fix",
+        command: `${command} doctor --fix --json`,
+        preview: "2 fix(es) would be applied, 1 finding(s) to handle by hand",
+        outcome: "previewed",
+      })),
       stopped_at: null,
     });
-    expect(w.read("locus")).not.toContain("--apply");
+    for (const n of ["locus", "lexicon", "mdopener-mcp"])
+      expect(w.read(n)).not.toContain("--apply");
 
     const applied = cli(["--ecosystem", "--fix", "--apply", "locus", "--json"]);
     expect(applied.status).toBe(0);
@@ -286,4 +296,78 @@ describe.skipIf(process.platform === "win32")("doctor --fix with fake companions
 
 test("FixUsageError is an Error", () => {
   expect(new FixUsageError("x")).toBeInstanceOf(Error);
+});
+
+describe("companion table", () => {
+  test("locus, lexicon and ashlr-md (mdopener-mcp) with their documented argv", () => {
+    expect(
+      FIX_TOOLS.map((t) => [
+        t.tool,
+        t.command,
+        t.capability,
+        t.previewArgv,
+        t.applyArgv,
+        t.previewReadOnly,
+      ]),
+    ).toEqual([
+      [
+        "locus",
+        "locus",
+        "doctor-fix",
+        ["doctor", "--fix", "--json"],
+        ["doctor", "--fix", "--apply"],
+        true,
+      ],
+      [
+        "lexicon",
+        "lexicon",
+        "doctor-fix",
+        ["doctor", "--fix", "--json"],
+        ["doctor", "--fix", "--apply"],
+        true,
+      ],
+      [
+        "ashlr-md",
+        "mdopener-mcp",
+        "doctor-fix",
+        ["doctor", "--fix", "--json"],
+        ["doctor", "--fix", "--apply"],
+        true,
+      ],
+    ]);
+  });
+  test("lexicon sees its store variables and nothing secret", () => {
+    const lex = FIX_TOOLS.find((t) => t.tool === "lexicon") as FixTool;
+    expect(
+      fixEnv(lex, {
+        PATH: "/b",
+        LEXICON_PATH: "/x/l.json",
+        XDG_CONFIG_HOME: "/c",
+        LOCUS_HOME: "/l",
+        ...SECRET_ENV,
+      }),
+    ).toEqual({ PATH: "/b", LEXICON_PATH: "/x/l.json", XDG_CONFIG_HOME: "/c", NO_COLOR: "1" });
+  });
+  test("exit 1 and exit 2 both stop the run; later tools are not run", async () => {
+    const entries: EcosystemEntry[] = ["locus", "lexicon", "ashlr-md"].map((n) => ({
+      name: n,
+      command: n,
+      status: "ok",
+      capabilities: ["doctor-fix"],
+    }));
+    for (const code of [1, 2]) {
+      const ran: string[] = [];
+      const r = await runDoctorFix(["locus", "ashlr-md", "lexicon"], {
+        entries,
+        runner: async (command) => {
+          ran.push(command);
+          return { kind: "exited", code: command === "mdopener-mcp" ? code : 0, stdout: "" };
+        },
+      });
+      expect(ran).toEqual(["locus", "mdopener-mcp"]);
+      expect(r.stopped_at).toBe("ashlr-md");
+      expect(r.tools.map((t) => t.outcome)).toEqual(["applied", "refused", "not_run"]);
+      if (code === 2) expect(r.tools[1]?.detail).toContain("usage error");
+    }
+  });
 });
