@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   type ProbeRunner,
   checkEcosystem,
@@ -8,13 +10,19 @@ import {
   probeEnv,
 } from "../lib/ecosystem.ts";
 
+/** A handshake that conforms to the v1 contract. */
 const hs = (version: string, caps: string[], health = "ok") =>
   JSON.stringify({
     kind: "ashlr.handshake",
     schema_version: 1,
+    name: "locus",
+    command: "locus",
     version,
+    protocols: { "ashlr.handshake": 1 },
     capabilities: caps,
     health: { status: health, checks: [] },
+    edits: ["~/.locus/"],
+    receipts: [],
   });
 
 const onlyLocus =
@@ -93,5 +101,53 @@ describe("stack doctor --ecosystem", () => {
   test("missing or old locus: no suggestion", async () => {
     expect(ecosystemNextSteps(await checkEcosystem(async () => ({ kind: "missing" })))).toEqual([]);
     expect(ecosystemNextSteps(await checkEcosystem(onlyLocus("not json")))).toEqual([]);
+  });
+});
+
+describe("stack doctor --ecosystem: v1 contract drift", () => {
+  test("the bundled contract is byte-identical to contract/ashlr-handshake.v1.json", () => {
+    const root = join(import.meta.dir, "..", "..", "..", "..");
+    expect(readFileSync(join(import.meta.dir, "..", "lib", "handshake-contract.v1.json"))).toEqual(
+      readFileSync(join(root, "contract", "ashlr-handshake.v1.json")),
+    );
+  });
+
+  test("a conforming handshake is contract ok and shown as before", async () => {
+    const [e] = await checkEcosystem(onlyLocus(hs("0.5.1", ["doctor-fix"])), [
+      { name: "locus", command: "locus" },
+    ]);
+    expect(e).toMatchObject({ status: "ok", contract: "ok" });
+    expect(e!.contract_problems).toBeUndefined();
+    expect(formatEcosystem([e!]).join("\n")).toContain("  ok   locus 0.5.1");
+  });
+
+  test("a drifting handshake is flagged with short problems and an upgrade hint", async () => {
+    const drift = JSON.stringify({
+      ...JSON.parse(hs("0.5.1", ["Doctor_Fix"], "ok")),
+      edits: ["/etc/passwd"],
+      health: { status: "ok", checks: [{ id: "home", status: "missing" }] },
+    });
+    const [e] = await checkEcosystem(onlyLocus(drift), [{ name: "locus", command: "locus" }]);
+    expect(e!.contract).toBe("drift");
+    expect(e!.contract_problems!.length).toBeGreaterThan(0);
+    expect(e!.contract_problems!.length).toBeLessThanOrEqual(3);
+    expect(e!.contract_problems!.every((p) => p.length <= 100)).toBe(true);
+    const text = formatEcosystem([e!]).join("\n");
+    expect(text).toContain("  !!   locus 0.5.1");
+    expect(text).toContain("contract drift");
+    const steps = ecosystemNextSteps([e!]);
+    expect(steps[0]).toContain("upgrade locus");
+    expect(steps[0]).toContain("does not match the v1 contract");
+  });
+
+  test("a minimal v1 handshake missing required fields is drift, not a crash", async () => {
+    const minimal = JSON.stringify({
+      kind: "ashlr.handshake",
+      schema_version: 1,
+      version: "1.0.0",
+    });
+    const [e] = await checkEcosystem(onlyLocus(minimal), [{ name: "locus", command: "locus" }]);
+    expect(e).toMatchObject({ status: "ok", contract: "drift" });
+    expect(e!.contract_problems![0]).toBe("missing field name");
   });
 });
