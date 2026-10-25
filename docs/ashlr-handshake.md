@@ -45,3 +45,33 @@ capability, a "Next steps" block suggests `locus doctor --fix` (a dry run;
 `next_steps`. The suggestion keys on the capability only, never on the
 version, so a locus that does not advertise `doctor-fix` gets none, and a
 healthy locus gets nothing extra.
+
+## Conformance kit
+
+The machine-readable v1 contract is `contract/ashlr-handshake.v1.json` in this
+repo, with its sha256 in `contract/ashlr-handshake.v1.json.sha256`. It lists
+the required fields and their types, the health enums, the kebab-case id rule,
+and the **gated capabilities**: capabilities another tool acts on, each with the
+argv it must accept.
+
+| Capability | Argv the tool must accept | Expectation |
+|---|---|---|
+| `doctor-fix` | `doctor --fix --json` | read-only preview, exit 0 or 1, stdout JSON with `mode` and `plan` |
+
+Each implementation (stack, locus, lexicon, mdopener-mcp, ashlr-plugin) vendors
+the contract file and one small test that:
+
+1. checks the vendored file against the pinned sha256 (no network fetch in CI),
+2. runs its own `--ashlr-handshake --json` and validates it against the contract,
+3. for every gated capability it advertises, runs the mapped argv in a throwaway
+   HOME and checks the exit code and output shape.
+
+`packages/cli/src/lib/handshake-conformance.ts` is a dependency-free reference
+checker that TypeScript repos can vendor as is. Stack's own test also checks
+that `stack doctor --ecosystem --fix` runs exactly the contract's `doctor-fix`
+argv, so the consumer cannot drift from the contract either.
+
+Changing the contract: edit the JSON (new optional fields and new gated
+capabilities stay v1; renames or removals bump `schema_version`), update the
+`.sha256` file and the pin in `handshake-conformance.test.ts`, then re-vendor
+the file and pin in each tool.
