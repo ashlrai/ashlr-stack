@@ -125,3 +125,38 @@ describe("callers read the variables at call time", () => {
     expect(seen).toContain("http://gpu-box:11435/v1/models");
   });
 });
+
+describe("gateway rule for keyed providers", () => {
+  test("https anywhere and http to loopback literals are allowed", () => {
+    expect(anthropicBaseUrl({ ANTHROPIC_BASE_URL: "https://gw.example" })).toBe(
+      "https://gw.example",
+    );
+    expect(openaiBaseUrl({ OPENAI_BASE_URL: "http://[::1]:4000/v1" })).toBe("http://[::1]:4000/v1");
+  });
+  test.each([
+    "http://gw.example",
+    "http://localhost:4000",
+    "http://10.0.0.5:4000",
+    "ftp://127.0.0.1",
+    "not a url",
+  ])("%s is refused without echoing the URL", (v) => {
+    for (const [fn, name] of [
+      [anthropicBaseUrl, "ANTHROPIC_BASE_URL"],
+      [openaiBaseUrl, "OPENAI_BASE_URL"],
+    ] as const) {
+      let msg = "";
+      try {
+        fn({ [name]: v });
+      } catch (e) {
+        msg = (e as Error).message;
+      }
+      expect(msg).toContain(name);
+      expect(msg).not.toContain(v);
+    }
+  });
+  test("credentials in a refused URL are not echoed", () => {
+    expect(() => openaiBaseUrl({ OPENAI_BASE_URL: "http://user:sk-secret@gw.example" })).toThrow(
+      /^OPENAI_BASE_URL must use https/,
+    );
+  });
+});

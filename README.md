@@ -184,7 +184,7 @@ Stack reads these environment variables when it calls a model provider. Unset or
 | `OPENAI_BASE_URL` | `https://api.openai.com/v1` | `openai` key check (`/models`) |
 | `OLLAMA_HOST` | `http://localhost:11434` | `--synth` Ollama fallback (`/v1`); accepts `host`, `host:port`, `:port` or a URL |
 
-Trailing slashes are trimmed. This lets a LiteLLM gateway or a Phantom proxy sit in front of the providers. Only the URL handling is covered by tests; Stack has not been tested against a specific gateway. A key check sends the key to the URL you set, so point these only at endpoints you trust. LM Studio keeps its own `STACK_LM_URL`.
+Trailing slashes are trimmed. This lets a LiteLLM gateway or a Phantom proxy sit in front of the providers. Only the URL handling is covered by tests; Stack has not been tested against a specific gateway. A key check sends the key to the URL you set, so point these only at endpoints you trust. `ANTHROPIC_BASE_URL` and `OPENAI_BASE_URL` must be `https`, or plain `http` only to `127.0.0.1` or `[::1]`; any other value is refused and no key is sent. LM Studio keeps its own `STACK_LM_URL`.
 
 ## Bring Stack to an existing project
 

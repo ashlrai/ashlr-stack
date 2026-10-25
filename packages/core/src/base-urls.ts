@@ -19,14 +19,36 @@ function clean(raw: string | undefined): string | undefined {
   return v ? v : undefined;
 }
 
+/**
+ * A keyed gateway URL must be https, or plain http only to the loopback
+ * literals 127.0.0.1 and [::1], so an API key is never sent in clear text
+ * across a network. Throws with the variable name only, never the URL (it
+ * can carry credentials).
+ */
+export function assertGatewayUrl(name: string, value: string): string {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new Error(`${name} is not a valid URL`);
+  }
+  if (url.protocol === "https:") return value;
+  if (url.protocol === "http:" && (url.hostname === "127.0.0.1" || url.hostname === "[::1]")) {
+    return value;
+  }
+  throw new Error(`${name} must use https, or http only to 127.0.0.1 or [::1]`);
+}
+
 /** Anthropic API root; Stack appends `/v1/...`. */
 export function anthropicBaseUrl(env: Env = process.env): string {
-  return clean(env.ANTHROPIC_BASE_URL) ?? DEFAULT_ANTHROPIC_BASE_URL;
+  const v = clean(env.ANTHROPIC_BASE_URL);
+  return v ? assertGatewayUrl("ANTHROPIC_BASE_URL", v) : DEFAULT_ANTHROPIC_BASE_URL;
 }
 
 /** OpenAI API root including `/v1`, the same convention as the OpenAI SDKs. */
 export function openaiBaseUrl(env: Env = process.env): string {
-  return clean(env.OPENAI_BASE_URL) ?? DEFAULT_OPENAI_BASE_URL;
+  const v = clean(env.OPENAI_BASE_URL);
+  return v ? assertGatewayUrl("OPENAI_BASE_URL", v) : DEFAULT_OPENAI_BASE_URL;
 }
 
 /**
