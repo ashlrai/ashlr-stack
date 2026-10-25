@@ -44,8 +44,9 @@ const defaultRunner: PreflightRunner = () => {
     timeout: 15_000,
     stdio: ["ignore", "pipe", "ignore"],
   });
-  const missing = (r.error as NodeJS.ErrnoException | undefined)?.code === "ENOENT";
-  return { status: r.error ? null : r.status, stdout: r.stdout ?? "", missing };
+  // Bun 1.2.0 sets `error` even on a normal exit, so trust `status` first.
+  const missing = r.status === null && (r.error as NodeJS.ErrnoException | undefined)?.code === "ENOENT";
+  return { status: r.status ?? null, stdout: r.stdout ?? "", missing };
 };
 
 const VERDICT_BY_EXIT: Record<number, Verdict> = {
