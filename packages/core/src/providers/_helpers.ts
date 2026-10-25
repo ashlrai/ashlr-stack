@@ -88,7 +88,7 @@ export async function readLine(): Promise<string> {
  * Bearer-token providers. Providers with custom auth header shapes (Anthropic,
  * Upstash, Linear, Supabase PKCE) inline their own.
  */
-export function bearerJsonHeaders(token: string): HeadersInit {
+export function bearerJsonHeaders(token: string): NonNullable<RequestInit["headers"]> {
   return {
     Authorization: `Bearer ${token}`,
     "content-type": "application/json",
@@ -104,7 +104,7 @@ export function bearerJsonHeaders(token: string): HeadersInit {
  * 429/5xx is always safe. Keeps each provider's `verify` free of retry glue.
  */
 export function verifyFetch(
-  input: RequestInfo | URL,
+  input: string | URL | Request,
   init?: RequestInit,
   opts?: RetryOptions,
 ): Promise<Response> {

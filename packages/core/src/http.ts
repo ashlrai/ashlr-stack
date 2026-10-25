@@ -48,7 +48,7 @@ export function defaultRetryOn(res: Response): boolean {
  * executed exactly once unless `idempotent: true` is passed.
  */
 export async function fetchWithRetry(
-  input: RequestInfo | URL,
+  input: string | URL | Request,
   init?: RequestInit,
   opts: RetryOptions = {},
 ): Promise<Response> {

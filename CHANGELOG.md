@@ -5,6 +5,7 @@
 ### Templates
 
 - **`litellm-gateway` template.** Provider key slots (OpenAI, Anthropic, xAI, DeepSeek) for a LiteLLM gateway that holds Phantom placeholders instead of real keys, with a README carrying the pin, isolation and Cursor guidance. Experimental: the placeholder flow is not yet verified against a mock upstream.
+- `ANTHROPIC_BASE_URL`, `OPENAI_BASE_URL` and `OLLAMA_HOST` now override the hosts used by the `anthropic` and `openai` key checks and the `--synth` Ollama fallback, so a LiteLLM gateway or Phantom proxy can sit in front. Defaults are unchanged.
 
 ## 0.2.2 (2026-10-17)
 
@@ -23,6 +24,7 @@ Covers #67, #68, #70, #73, #74, #75 and #76 together with the sections below.
 
 ### Silent acceptance
 
+- **`stack providers --category <category>`.** Only `recommend` could filter by category, so an agent asking which databases Stack supports listed all 39 providers and filtered them itself. `stack providers --category database` (any case) lists one category; with `--json` the report carries `category` and `total` counts that category. An unknown category exits 1 and names the valid ones (`{"error": ...}` on stdout with `--json`). `stack_providers` takes `category`.
 - **`stack upgrade --json`.** `stack_upgrade` returned a clack banner ("A newer version is available.") that an agent had to scrape for the versions. `stack upgrade --json` prints `ashlr.stack.upgrade/v1` with `current`, `latest`, `status` (`up_to_date`, `update_available`, `ahead`) and the `install` command, and installs nothing; a registry failure prints `{"error": ...}` with exit 1. `stack_upgrade` always passes `--json`.
 - **`stack import --json` names what was stored and skipped.** `stack_import` returned a banner and a count ("Imported 3 secret(s)"), so an agent could not tell which names reached Phantom, which were already in the vault and left unchanged, and which were dropped for having no value (those were never reported at all). `stack import --json` prints `ashlr.stack.import/v1` with `stored`, `skipped_existing`, `skipped_empty`, the detected `providers`, `unattributed` names and `services_added`/`services_kept`, names only. An error prints `{"error": ...}` with exit 1 and, after a partial write, the names already `stored`. `stack_import` always passes `--json`.
 - **`stack env diff --json`.** `stack_env_diff` was the one vault check with no JSON form, so an agent got a clack banner and red circles to scrape. `stack env diff --json` prints `ashlr.stack.env-diff/v1`: `ok`, each missing secret name with the service that declares it, and totals (names only, never values). It still exits 1 when anything is missing, so a CI gate works either way; a missing project or Phantom prints `{"error": ...}`. `stack_env_diff` takes `json` like `stack_env_show`.

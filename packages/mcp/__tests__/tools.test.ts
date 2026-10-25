@@ -239,6 +239,17 @@ describe("structured-output tools", () => {
     }
   });
 
+  test("stack_providers passes a trimmed category before --json", () => {
+    const def = tool("stack_providers");
+    expect(def.cliArgs({ category: " database ", json: true })).toEqual([
+      "providers",
+      "--category",
+      "database",
+      "--json",
+    ]);
+    expect(def.cliArgs({ category: "ai" })).toEqual(["providers", "--category", "ai"]);
+  });
+
   test("stack_projects_list and stack_templates_list pass --json only when asked", () => {
     for (const [name, command] of [
       ["stack_projects_list", ["projects", "list"]],

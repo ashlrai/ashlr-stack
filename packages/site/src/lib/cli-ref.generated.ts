@@ -736,8 +736,16 @@ export const CLI_COMMANDS: CliCommand[] = [
   {
     name: "stack providers",
     description: "List every curated provider Stack can wire up.",
-    synopsis: "stack providers [--json]",
+    synopsis: "stack providers [--category <category>] [--json]",
     flags: [
+      {
+        name: "category",
+        synopsis: "--category <category>",
+        type: "string",
+        required: false,
+        description:
+          "Only this category, any case (database, deploy, cloud, ai, analytics, observability, errors, payments, code, tickets, email, auth, featureflags).",
+      },
       {
         name: "json",
         synopsis: "--json",

@@ -12,13 +12,15 @@
  *   2. LocalSLMBackend — when Stack runs standalone (no MCP host), talk to
  *      a local OpenAI-compatible server. Default to LM Studio at :1234,
  *      fall back to Ollama at :11434. Zero remote calls, zero SDKs — raw
- *      `fetch` over `/v1/chat/completions`.
+ *      `fetch` over `/v1/chat/completions`. `OLLAMA_HOST` overrides the
+ *      Ollama address.
  *
  * Selection is driven by `STACK_MCP_MODE` / `MCP_CLIENT` env vars; the
  * loose coupling keeps the CLI entrypoint dumb and lets the MCP server
  * force-pick its own backend when needed.
  */
 
+import { ollamaBaseUrl } from "../base-urls.ts";
 import { CircuitBreaker } from "./circuit-breaker.ts";
 import { type CostTracker, defaultCostTracker } from "./cost-tracker.ts";
 
@@ -141,7 +143,6 @@ export interface LocalSLMBackendOptions {
 }
 
 const LM_STUDIO_URL = "http://localhost:1234/v1";
-const OLLAMA_URL = "http://localhost:11434/v1";
 
 const DEFAULT_LM_STUDIO: LocalSLMEndpoint = {
   name: "lm-studio",
@@ -149,11 +150,16 @@ const DEFAULT_LM_STUDIO: LocalSLMEndpoint = {
   model: process.env.STACK_LM_MODEL ?? "local-model",
 };
 
-const DEFAULT_OLLAMA: LocalSLMEndpoint = {
-  name: "ollama",
-  baseUrl: OLLAMA_URL,
-  model: process.env.STACK_OLLAMA_MODEL ?? "llama3.1",
-};
+/** Ollama's OpenAI-compatible endpoint; `OLLAMA_HOST` is read on each call. */
+export function defaultOllamaEndpoint(
+  env: Record<string, string | undefined> = process.env,
+): LocalSLMEndpoint {
+  return {
+    name: "ollama",
+    baseUrl: `${ollamaBaseUrl(env)}/v1`,
+    model: env.STACK_OLLAMA_MODEL ?? "llama3.1",
+  };
+}
 
 const SYSTEM_PROMPT = [
   "You are Stack, a CLI that recommends third-party providers for a dev project.",
@@ -174,7 +180,7 @@ export class LocalSLMBackend implements InferenceBackend {
   private lastUsedEndpoint: string | null = null;
 
   constructor(opts: LocalSLMBackendOptions = {}) {
-    this.endpoints = opts.endpoints ?? [DEFAULT_LM_STUDIO, DEFAULT_OLLAMA];
+    this.endpoints = opts.endpoints ?? [DEFAULT_LM_STUDIO, defaultOllamaEndpoint()];
     this.timeoutMs = opts.timeoutMs ?? 30_000;
     this.costTracker = opts.costTracker ?? defaultCostTracker;
     // `bind` keeps the right receiver without picking up Bun's
@@ -355,8 +361,10 @@ export async function getInferenceBackend(
   const local = new LocalSLMBackend(opts.localOptions);
   if (!(await local.healthy())) {
     throw new NoInferenceBackendError(
-      `No local inference endpoint reachable. Start LM Studio (${LM_STUDIO_URL.replace("/v1", "")}) or Ollama (${OLLAMA_URL.replace("/v1", "")}), or run Stack inside Claude Code (MCP mode).`,
-      (opts.localOptions?.endpoints ?? [DEFAULT_LM_STUDIO, DEFAULT_OLLAMA]).map((e) => e.name),
+      `No local inference endpoint reachable. Start LM Studio (${LM_STUDIO_URL.replace("/v1", "")}) or Ollama (${ollamaBaseUrl(env)}), or run Stack inside Claude Code (MCP mode).`,
+      (opts.localOptions?.endpoints ?? [DEFAULT_LM_STUDIO, defaultOllamaEndpoint(env)]).map(
+        (e) => e.name,
+      ),
     );
   }
   return local;

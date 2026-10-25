@@ -20,7 +20,7 @@ describe("cross-project registry", () => {
   });
 
   afterEach(() => {
-    if (previousDir === undefined) process.env.STACK_REGISTRY_DIR = undefined;
+    if (previousDir === undefined) Reflect.deleteProperty(process.env, "STACK_REGISTRY_DIR");
     else process.env.STACK_REGISTRY_DIR = previousDir;
   });
 

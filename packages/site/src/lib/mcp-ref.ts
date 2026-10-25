@@ -260,12 +260,17 @@ export const MCP_TOOLS: McpTool[] = [
       "List the curated source provider catalog by category; inclusion does not attest complete provisioning or active credentials.",
     inputs: [
       {
+        name: "category",
+        type: "string",
+        description: "Only this category, any case (e.g. ai, database, payments).",
+      },
+      {
         name: "json",
         type: "boolean",
         description: "Machine-readable JSON (schema ashlr.stack.providers/v1).",
       },
     ],
-    cli: "stack providers [--json]",
+    cli: "stack providers [--category <category>] [--json]",
   },
   {
     name: "stack_projects_list",

@@ -256,13 +256,23 @@ export const TOOLS: ToolDef[] = [
     inputSchema: {
       type: "object",
       properties: {
+        category: {
+          type: "string",
+          description: "Only this category, any case (e.g. ai, database, payments).",
+        },
         json: {
           type: "boolean",
           description: "Machine-readable JSON (schema ashlr.stack.providers/v1).",
         },
       },
     },
-    cliArgs: (input) => (input.json ? ["providers", "--json"] : ["providers"]),
+    cliArgs: (input) => [
+      "providers",
+      ...(typeof input.category === "string" && input.category.trim()
+        ? ["--category", input.category.trim()]
+        : []),
+      ...(input.json ? ["--json"] : []),
+    ],
   },
   {
     name: "stack_projects_list",
