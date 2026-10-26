@@ -13,6 +13,16 @@ export interface PhantomExecResult {
   code: number;
   signal?: NodeJS.Signals;
   completion?: "exited" | "signal" | "unknown";
+  /** True when `timeoutMs` elapsed and Stack killed the child. */
+  timedOut?: boolean;
+}
+
+/** A phantom call was killed after its `timeoutMs`. Distinct from a failed or unparseable call. */
+export class PhantomTimeoutError extends Error {
+  constructor(args: string[], timeoutMs: number | undefined) {
+    super(`phantom ${args[0] ?? ""} timed out after ${timeoutMs ?? "?"}ms`);
+    this.name = "PhantomTimeoutError";
+  }
 }
 
 /** Interpret close fields only; this does not attest provider or vault state. */
@@ -25,15 +35,31 @@ export function completionForClose(
 
 let cachedInstalled: boolean | undefined;
 
-export async function isPhantomInstalled(): Promise<boolean> {
-  if (cachedInstalled !== undefined) return cachedInstalled;
+/**
+ * `phantom --version` as three states. A timeout is not cached, because a slow
+ * Phantom is still installed; the next probe asks again.
+ */
+export async function probePhantomInstalled(opts?: {
+  timeoutMs?: number;
+}): Promise<"installed" | "missing" | "timeout"> {
+  if (cachedInstalled !== undefined) return cachedInstalled ? "installed" : "missing";
   try {
-    const result = await exec(["--version"], { allowFailure: true });
+    const result = await exec(
+      ["--version"],
+      opts?.timeoutMs !== undefined
+        ? { allowFailure: true, timeoutMs: opts.timeoutMs }
+        : { allowFailure: true },
+    );
+    if (result.timedOut) return "timeout";
     cachedInstalled = result.code === 0 && result.completion === "exited";
   } catch {
     cachedInstalled = false;
   }
-  return cachedInstalled;
+  return cachedInstalled ? "installed" : "missing";
+}
+
+export async function isPhantomInstalled(opts?: { timeoutMs?: number }): Promise<boolean> {
+  return (await probePhantomInstalled(opts)) === "installed";
 }
 
 export async function assertPhantomInstalled(): Promise<void> {
@@ -46,17 +72,93 @@ export interface ExecOptions {
   stdin?: string;
   /** If true, inherit stdio so interactive flows (OAuth browser) work. */
   interactive?: boolean;
+  /** Kill the phantom child after this many milliseconds. */
+  timeoutMs?: number;
 }
 
 export async function exec(args: string[], opts: ExecOptions = {}): Promise<PhantomExecResult> {
   return new Promise((resolvePromise, reject) => {
+    const hasTimeout = typeof opts.timeoutMs === "number" && Number.isFinite(opts.timeoutMs);
+    // A timed probe gets its own process group (POSIX) so a timeout can kill
+    // phantom and any grandchild holding its stdio. Interactive runs stay in
+    // the foreground group so the TTY keeps working.
+    const useGroup = hasTimeout && !opts.interactive && process.platform !== "win32";
     const child = spawn("phantom", args, {
       cwd: opts.cwd,
       stdio: opts.interactive ? "inherit" : ["pipe", "pipe", "pipe"],
+      ...(useGroup ? { detached: true } : {}),
     });
 
     let stdout = "";
     let stderr = "";
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let timedOut = false;
+    let settled = false;
+    const clearTimer = () => {
+      if (timer !== undefined) {
+        clearTimeout(timer);
+        timer = undefined;
+      }
+    };
+    const killTree = () => {
+      if (useGroup && child.pid !== undefined) {
+        try {
+          process.kill(-child.pid, "SIGKILL");
+          return;
+        } catch {
+          // Group already gone or not a group leader; fall back to the child.
+        }
+      }
+      try {
+        child.kill("SIGKILL");
+      } catch {
+        // Already exited.
+      }
+    };
+    const releaseChild = () => {
+      // A grandchild may still hold the pipes; never let them (or the child)
+      // keep the CLI's event loop alive after we have settled.
+      child.stdin?.destroy();
+      child.stdout?.destroy();
+      child.stderr?.destroy();
+      child.unref();
+    };
+    const settle = (code: number | null, signal: NodeJS.Signals | null) => {
+      if (settled) return;
+      settled = true;
+      clearTimer();
+      if (timedOut) releaseChild();
+      // A signal/unknown exit is not evidence that a vault mutation committed.
+      const result: PhantomExecResult = {
+        stdout,
+        stderr,
+        code: signal ? code || 1 : (code ?? 1),
+        completion: completionForClose(code, signal),
+        ...(signal ? { signal } : {}),
+        ...(timedOut ? { timedOut: true } : {}),
+      };
+      if (result.code !== 0 && !opts.allowFailure) {
+        reject(
+          new StackError(
+            "PHANTOM_EXEC_FAILED",
+            result.completion === "exited"
+              ? `phantom ${formatArgsForError(args)} failed (exit ${result.code}): ${stderr.trim() || stdout.trim()}`
+              : `phantom ${formatArgsForError(args)} did not complete (${result.completion}); result unconfirmed`,
+          ),
+        );
+        return;
+      }
+      resolvePromise(result);
+    };
+    if (hasTimeout) {
+      timer = setTimeout(() => {
+        timer = undefined;
+        timedOut = true;
+        killTree();
+        // Settle now: do not wait for `close`, which a grandchild can delay.
+        settle(null, "SIGKILL");
+      }, opts.timeoutMs);
+    }
 
     if (!opts.interactive) {
       child.stdout?.on("data", (chunk) => {
@@ -75,6 +177,9 @@ export async function exec(args: string[], opts: ExecOptions = {}): Promise<Phan
     }
 
     child.on("error", (err) => {
+      if (settled) return;
+      settled = true;
+      clearTimer();
       if ((err as NodeJS.ErrnoException).code === "ENOENT") {
         reject(new PhantomNotInstalledError());
         return;
@@ -82,28 +187,9 @@ export async function exec(args: string[], opts: ExecOptions = {}): Promise<Phan
       reject(err);
     });
 
-    child.on("close", (code, signal) => {
-      // A signal/unknown exit is not evidence that a vault mutation committed.
-      const result: PhantomExecResult = {
-        stdout,
-        stderr,
-        code: signal ? code || 1 : (code ?? 1),
-        completion: completionForClose(code, signal),
-        ...(signal ? { signal } : {}),
-      };
-      if (result.code !== 0 && !opts.allowFailure) {
-        reject(
-          new StackError(
-            "PHANTOM_EXEC_FAILED",
-            result.completion === "exited"
-              ? `phantom ${formatArgsForError(args)} failed (exit ${result.code}): ${stderr.trim() || stdout.trim()}`
-              : `phantom ${formatArgsForError(args)} did not complete (${result.completion}); result unconfirmed`,
-          ),
-        );
-        return;
-      }
-      resolvePromise(result);
-    });
+    // `close` waits for stdio to drain, so normal runs keep full output.
+    // A timed out run has already settled from the timer.
+    child.on("close", (code, signal) => settle(code, signal));
   });
 }
 
@@ -175,9 +261,17 @@ export async function removeSecret(
  * Secret names in the vault, from `phantom list --json` (never values). The
  * human `phantom list` output is a decorated table and is not parsed.
  */
-export async function listSecrets(cwd?: string): Promise<string[]> {
-  await assertPhantomInstalled();
-  const { stdout, code } = await exec(["list", "--json"], { cwd, allowFailure: true });
+export async function listSecrets(
+  cwd?: string,
+  opts?: { timeoutMs?: number; skipInstallCheck?: boolean },
+): Promise<string[]> {
+  if (!opts?.skipInstallCheck) await assertPhantomInstalled();
+  const { stdout, code, timedOut } = await exec(["list", "--json"], {
+    cwd,
+    allowFailure: true,
+    ...(opts?.timeoutMs !== undefined ? { timeoutMs: opts.timeoutMs } : {}),
+  });
+  if (timedOut) throw new PhantomTimeoutError(["list"], opts?.timeoutMs);
   if (code !== 0) {
     throw new StackError(
       "PHANTOM_METADATA_UNAVAILABLE",
@@ -224,10 +318,21 @@ export async function listSecrets(cwd?: string): Promise<string[]> {
  * inventory cannot be read (Phantom missing, no .phantom.toml, unrecognized
  * output), so callers never report an unreadable vault as empty.
  */
-export async function countSecrets(cwd?: string): Promise<number | null> {
+export async function countSecrets(
+  cwd?: string,
+  opts?: { timeoutMs?: number; skipInstallCheck?: boolean },
+): Promise<number | null> {
   try {
-    if (!(await isPhantomInstalled())) return null;
-    return (await listSecrets(cwd)).length;
+    // skipInstallCheck lets `stack status` overlap this list with the version probe.
+    if (
+      !opts?.skipInstallCheck &&
+      !(await isPhantomInstalled(
+        opts?.timeoutMs !== undefined ? { timeoutMs: opts.timeoutMs } : undefined,
+      ))
+    ) {
+      return null;
+    }
+    return (await listSecrets(cwd, opts)).length;
   } catch {
     return null;
   }

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Changed
+
+- `stack status` runs its Phantom version and vault-count probes together with the config read (at most 3 at once). Each Phantom probe is capped at 2 s and killed on timeout; the config read has no timeout, as before. A timeout is now visible: human output shows `(timed out after 2s)`, and `--json` keeps `secret_count: null` but adds `secret_count_error: "timeout"` or `"error"` (and `installed_error: "timeout"` when `phantom --version` timed out). Additive only, and absent when everything answers. A timed out version probe is not cached as not installed. Normal output is unchanged. On a synthetic slow-phantom fixture the median dropped from 385.5 ms to 223.0 ms.
+- With no `.phantom.toml`, `stack status --json` still reports `secret_count: null` and now also reports `secret_count_error: "error"`.
+- A timed out Phantom probe now kills its whole process group, so a grandchild holding stdout or stderr can no longer stretch the 2 s cap.
+
 ## 0.2.2 (2026-10-25)
 
 0.2.1 was tagged but its npm publish failed, so nothing from 0.2.1 reached npm. 0.2.2 supersedes it: it ships everything listed here and under 0.2.1 below. Source versions (core, cli, mcp, `server.json`, `VERSION` in `packages/cli/src/index.ts`) are 0.2.2, which `scripts/publish.sh` checks before it publishes core, then cli, then mcp.
