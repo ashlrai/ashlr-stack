@@ -24,8 +24,12 @@
     },
     {
       "description": "Major updates stay in their own pull request",
-      "matchUpdateTypes": ["major"],
-      "groupName": "major updates"
+      "matchUpdateTypes": ["major"]
+    },
+    {
+      "description": "Wait 3 days after an npm release before proposing it",
+      "matchDatasources": ["npm"],
+      "minimumReleaseAge": "3 days"
     }
   ]
 }
