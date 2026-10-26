@@ -6,7 +6,7 @@
 
 **Configure supported services from your terminal or your AI agent.** Stack uses provider-specific OAuth or supplied credentials, provisions where the adapter supports it, and records selected credentials in [Phantom Secrets](https://phm.dev/secrets), Stack configuration and provider MCP entries. Vercel requires an existing personal access token; Stack does not create that token. Export an empty `.env.example` separately with `stack env export --example`.
 
-**Status:** pre-alpha, active development. This checkout describes source version 0.2.1; registry metadata checked on October 14, 2026 reported 0.1.1 for the CLI and MCP packages. That published release starts both with [Bun](https://bun.sh), so install Bun first, even for the `npx` commands below. Check `stack --version`, `stack --help` and `stack providers` for your installed release. Source changes do not establish package publication or provider readiness.
+**Status:** pre-alpha, active development. This checkout describes source version 0.2.2; registry metadata checked on October 14, 2026 reported 0.1.1 for the CLI and MCP packages. That published release starts both with [Bun](https://bun.sh), so install Bun first, even for the `npx` commands below. Check `stack --version`, `stack --help` and `stack providers` for your installed release. Source changes do not establish package publication or provider readiness.
 
 <!-- Demo GIF: record with vhs, see docs/ -->
 
@@ -40,6 +40,8 @@ Cursor (`~/.cursor/mcp.json`):
 With only `ashlr-stack-mcp`, the server starts and lists its tools, but every call returns "Could not run the 'stack' CLI".
 
 ### One command for every agent
+
+Source only: `stack onboard` is not in the published 0.1.1 package (there it prints the usage and exits 1). Use the dev install below until a newer release is published. The 0.1.1 package also reports its version as `0.1.0` in `stack --version`.
 
 ```bash
 stack onboard            # plan: shows which of Codex, Claude Code, Cursor, Gemini CLI would be wired
