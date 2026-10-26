@@ -402,28 +402,21 @@ jobs:
       startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
-      - name: Check for tap-write credential
-        id: cred_check
-        # Accept either a fine-grained PAT (preferred — write to homebrew-ashlr only)
-        # or a deploy key SSH private key. PAT first because the ashlrai org has
-        # repo-level deploy keys disabled by policy.
-        run: |
-          if [ -n "${{ secrets.HOMEBREW_TAP_PAT }}" ]; then
-            echo "method=pat" >> "$GITHUB_OUTPUT"
-          elif [ -n "${{ secrets.HOMEBREW_TAP_DEPLOY_KEY }}" ]; then
-            echo "method=ssh" >> "$GITHUB_OUTPUT"
-          else
-            echo "::warning title=Homebrew tap not updated::Neither HOMEBREW_TAP_PAT nor HOMEBREW_TAP_DEPLOY_KEY is set — skipping formula update. Create a fine-grained PAT with 'Contents: write' on ashlrai/homebrew-ashlr and add it as HOMEBREW_TAP_PAT."
-            echo "method=skip" >> "$GITHUB_OUTPUT"
-          fi
+      - name: Mint ashlr-release App token for the tap (contents write, homebrew-ashlr only)
+        id: tap_token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          app-id: ${{ vars.ASHLR_RELEASE_APP_ID }}
+          private-key: ${{ secrets.ASHLR_RELEASE_APP_KEY }}
+          owner: ashlrai
+          repositories: homebrew-ashlr
+          permission-contents: write
 
-      - if: steps.cred_check.outputs.method != 'skip'
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           path: stack-repo
 
-      - if: steps.cred_check.outputs.method != 'skip'
-        name: Download SHA-256 files from release
+      - name: Download SHA-256 files from release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -431,24 +424,14 @@ jobs:
           mkdir -p sha256s
           gh release download "${TAG}" -R ashlrai/ashlr-stack -p "*.sha256" -D sha256s/
 
-      - if: steps.cred_check.outputs.method == 'pat'
-        name: Checkout homebrew tap (PAT auth)
-        uses: actions/checkout@v4
+      - name: Checkout homebrew tap (App token)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           repository: ashlrai/homebrew-ashlr
-          token: ${{ secrets.HOMEBREW_TAP_PAT }}
+          token: ${{ steps.tap_token.outputs.token }}
           path: homebrew-tap
 
-      - if: steps.cred_check.outputs.method == 'ssh'
-        name: Checkout homebrew tap (SSH auth)
-        uses: actions/checkout@v4
-        with:
-          repository: ashlrai/homebrew-ashlr
-          ssh-key: ${{ secrets.HOMEBREW_TAP_DEPLOY_KEY }}
-          path: homebrew-tap
-
-      - if: steps.cred_check.outputs.method != 'skip'
-        name: Generate Formula/stack.rb from template
+      - name: Generate Formula/stack.rb from template
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           SHA_DARWIN_ARM64=$(awk '{print $1}' sha256s/stack-darwin-arm64.sha256)
@@ -465,8 +448,7 @@ jobs:
             stack-repo/.github/homebrew-formula.template.rb \
             > homebrew-tap/Formula/stack.rb
 
-      - if: steps.cred_check.outputs.method != 'skip'
-        name: Commit and push updated formula
+      - name: Commit and push updated formula
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           cd homebrew-tap
