@@ -17,6 +17,17 @@ ashlrcode) working on **Ashlr Stack itself**. It's read alongside `CLAUDE.md`
 The product is the control plane that provisions, wires, and operates every
 third-party service in a developer's project with one command.
 
+<!-- fresh:begin version-table -->
+| Package | Manifest | Version |
+| --- | --- | --- |
+| `@ashlr/stack-core` | `packages/core/package.json` | 0.2.2 |
+| `@ashlr/stack` | `packages/cli/package.json` | 0.2.2 |
+| `ashlr-stack-mcp` | `packages/mcp/package.json` | 0.2.2 |
+| `ashlr-stack-monorepo` (private) | `package.json` | 0.1.0 |
+
+Latest released CHANGELOG section: `0.2.2 (2026-10-25)`.
+<!-- fresh:end -->
+
 ## Quick orientation
 
 - 27 CLI commands live under `packages/cli/src/commands/*.ts` (registered in `packages/cli/src/index.ts`)
