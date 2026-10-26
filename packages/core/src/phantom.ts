@@ -78,55 +78,56 @@ export interface ExecOptions {
 
 export async function exec(args: string[], opts: ExecOptions = {}): Promise<PhantomExecResult> {
   return new Promise((resolvePromise, reject) => {
+    const hasTimeout = typeof opts.timeoutMs === "number" && Number.isFinite(opts.timeoutMs);
+    // A timed probe gets its own process group (POSIX) so a timeout can kill
+    // phantom and any grandchild holding its stdio. Interactive runs stay in
+    // the foreground group so the TTY keeps working.
+    const useGroup = hasTimeout && !opts.interactive && process.platform !== "win32";
     const child = spawn("phantom", args, {
       cwd: opts.cwd,
       stdio: opts.interactive ? "inherit" : ["pipe", "pipe", "pipe"],
+      ...(useGroup ? { detached: true } : {}),
     });
 
     let stdout = "";
     let stderr = "";
     let timer: ReturnType<typeof setTimeout> | undefined;
     let timedOut = false;
+    let settled = false;
     const clearTimer = () => {
       if (timer !== undefined) {
         clearTimeout(timer);
         timer = undefined;
       }
     };
-    if (typeof opts.timeoutMs === "number" && Number.isFinite(opts.timeoutMs)) {
-      timer = setTimeout(() => {
-        timedOut = true;
+    const killTree = () => {
+      if (useGroup && child.pid !== undefined) {
+        try {
+          process.kill(-child.pid, "SIGKILL");
+          return;
+        } catch {
+          // Group already gone or not a group leader; fall back to the child.
+        }
+      }
+      try {
         child.kill("SIGKILL");
-      }, opts.timeoutMs);
-    }
-
-    if (!opts.interactive) {
-      child.stdout?.on("data", (chunk) => {
-        stdout += chunk.toString();
-      });
-      child.stderr?.on("data", (chunk) => {
-        stderr += chunk.toString();
-      });
-      if (opts.stdin !== undefined) {
-        // Phantom may refuse (e.g. an existing name) and exit before reading
-        // stdin; the exit code reports that, so a broken pipe is not fatal.
-        child.stdin?.on("error", () => {});
-        child.stdin?.write(opts.stdin);
-        child.stdin?.end();
+      } catch {
+        // Already exited.
       }
-    }
-
-    child.on("error", (err) => {
+    };
+    const releaseChild = () => {
+      // A grandchild may still hold the pipes; never let them (or the child)
+      // keep the CLI's event loop alive after we have settled.
+      child.stdin?.destroy();
+      child.stdout?.destroy();
+      child.stderr?.destroy();
+      child.unref();
+    };
+    const settle = (code: number | null, signal: NodeJS.Signals | null) => {
+      if (settled) return;
+      settled = true;
       clearTimer();
-      if ((err as NodeJS.ErrnoException).code === "ENOENT") {
-        reject(new PhantomNotInstalledError());
-        return;
-      }
-      reject(err);
-    });
-
-    child.on("close", (code, signal) => {
-      clearTimer();
+      if (timedOut) releaseChild();
       // A signal/unknown exit is not evidence that a vault mutation committed.
       const result: PhantomExecResult = {
         stdout,
@@ -148,7 +149,47 @@ export async function exec(args: string[], opts: ExecOptions = {}): Promise<Phan
         return;
       }
       resolvePromise(result);
+    };
+    if (hasTimeout) {
+      timer = setTimeout(() => {
+        timer = undefined;
+        timedOut = true;
+        killTree();
+        // Settle now: do not wait for `close`, which a grandchild can delay.
+        settle(null, "SIGKILL");
+      }, opts.timeoutMs);
+    }
+
+    if (!opts.interactive) {
+      child.stdout?.on("data", (chunk) => {
+        stdout += chunk.toString();
+      });
+      child.stderr?.on("data", (chunk) => {
+        stderr += chunk.toString();
+      });
+      if (opts.stdin !== undefined) {
+        // Phantom may refuse (e.g. an existing name) and exit before reading
+        // stdin; the exit code reports that, so a broken pipe is not fatal.
+        child.stdin?.on("error", () => {});
+        child.stdin?.write(opts.stdin);
+        child.stdin?.end();
+      }
+    }
+
+    child.on("error", (err) => {
+      if (settled) return;
+      settled = true;
+      clearTimer();
+      if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+        reject(new PhantomNotInstalledError());
+        return;
+      }
+      reject(err);
     });
+
+    // `close` waits for stdio to drain, so normal runs keep full output.
+    // A timed out run has already settled from the timer.
+    child.on("close", (code, signal) => settle(code, signal));
   });
 }
 
