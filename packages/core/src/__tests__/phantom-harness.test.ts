@@ -197,7 +197,10 @@ describe("phantom wrapper against the fake harness", () => {
     "timeout kills a grandchild that holds stdio and settles within the cap",
     async () => {
       const pidFile = join(tmpdir(), `stack-grandchild-${process.pid}-${Date.now()}.pid`);
-      writeFileSync(join(h.dir, "phantom"), `#!/bin/sh\nsleep 30 &\necho $! > '${pidFile}'\nwait\n`);
+      writeFileSync(
+        join(h.dir, "phantom"),
+        `#!/bin/sh\nsleep 30 &\necho $! > '${pidFile}'\nwait\n`,
+      );
       const started = Date.now();
       const result = await exec(["--version"], { allowFailure: true, timeoutMs: 300 });
       expect(result.timedOut).toBe(true);
