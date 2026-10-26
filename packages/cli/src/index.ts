@@ -1,149 +1,32 @@
 #!/usr/bin/env bun
-import { emitTelemetry } from "@ashlr/stack-core";
-import { defineCommand } from "citty";
-import { addCommand } from "./commands/add.ts";
-import { applyCommand } from "./commands/apply.ts";
-import { ciCommand } from "./commands/ci.ts";
-import { cloneCommand } from "./commands/clone.ts";
-import { completionCommand } from "./commands/completion.ts";
-import { depsCommand } from "./commands/deps.ts";
-import { doctorCommand } from "./commands/doctor.ts";
-import { envCommand } from "./commands/env.ts";
-import { execCommand } from "./commands/exec.ts";
-import { importCommand } from "./commands/import.ts";
-import { infoCommand } from "./commands/info.ts";
-import { initCommand } from "./commands/init.ts";
-import { listCommand } from "./commands/list.ts";
-import { loginCommand } from "./commands/login.ts";
-import { onboardCommand } from "./commands/onboard.ts";
-import { openCommand } from "./commands/open.ts";
-import { projectsCommand } from "./commands/projects.ts";
-import { providersCommand } from "./commands/providers.ts";
-import { recommendCommand } from "./commands/recommend.ts";
-import { removeCommand } from "./commands/remove.ts";
-import { scanCommand } from "./commands/scan.ts";
-import { statusCommand } from "./commands/status.ts";
-import { swapCommand } from "./commands/swap.ts";
-import { syncCommand } from "./commands/sync.ts";
-import { telemetryCommand } from "./commands/telemetry.ts";
-import { templatesCommand } from "./commands/templates.ts";
-import { upgradeCommand } from "./commands/upgrade.ts";
-import { buildHandshake } from "./lib/handshake.ts";
-import { normalizeKebabFlags } from "./lib/normalize-args.ts";
-import { runCli } from "./lib/run-cli.ts";
 import { installSynchronousStdio } from "./lib/sync-stdout.ts";
-import { checkForUpdate } from "./lib/update-check.ts";
+import { printVersion } from "./lib/version.ts";
 
-// Single source of truth for the CLI version. citty wires this into `--help`
-// and we also use it for `stack --version` (citty ships a standalone flag when
-// `version` is on the meta object — but older citty needs a fallback, below).
+// Keep this literal here: the source-version release guard reads this declaration.
 const VERSION = "0.2.2";
 
-const main = defineCommand({
-  meta: {
-    name: "stack",
-    version: VERSION,
-    description:
-      "Ashlr Stack — provision, wire, and operate every third-party service in your project.",
-  },
-  args: {
-    version: {
-      type: "boolean",
-      alias: "v",
-      description: "Print the CLI version and exit.",
-    },
-    json: {
-      type: "boolean",
-      description: "Emit machine-readable JSON (used with --version).",
-    },
-    ashlrHandshake: {
-      type: "boolean",
-      description: "Print the Ashlr companion handshake (JSON) and exit.",
-    },
-  },
-  run({ args }) {
-    if (args.version) {
-      const platform = `${process.platform}-${process.arch}`;
-      const node = process.versions.node ? `v${process.versions.node}` : undefined;
-      const bun =
-        typeof (globalThis as Record<string, unknown>).Bun !== "undefined"
-          ? (globalThis as { Bun?: { version?: string } }).Bun?.version
-          : undefined;
-
-      if (process.argv.includes("--json")) {
-        const obj: Record<string, string> = { version: VERSION, platform };
-        if (bun !== undefined) obj.bun = bun;
-        if (node !== undefined) obj.node = node;
-        console.log(JSON.stringify(obj));
-      } else {
-        console.log(`stack ${VERSION}`);
-        console.log(`platform: ${platform}`);
-        if (bun !== undefined) console.log(`bun: ${bun}`);
-        if (node !== undefined) console.log(`node: ${node}`);
-      }
-      return;
-    }
-    // citty 0.1.6 calls the root `run` even when a subcommand matched. Detect
-    // that case by checking process.argv — if the first non-bun arg is a known
-    // subcommand, the subcommand already handled the request and we should
-    // stay silent (otherwise every `stack <sub>` trails a banner and breaks
-    // machine-readable output like `stack recommend --json`).
-    const firstArg = process.argv[2];
-    if (firstArg && !firstArg.startsWith("-")) return;
-    console.log(`\n  ▲ stack ${VERSION}`);
-    console.log("  The control plane for your entire dev stack.");
-    console.log("  Run `stack --help` for the full command list.\n");
-  },
-  subCommands: {
-    init: initCommand,
-    import: importCommand,
-    scan: scanCommand,
-    clone: cloneCommand,
-    add: addCommand,
-    remove: removeCommand,
-    list: listCommand,
-    info: infoCommand,
-    status: statusCommand,
-    env: envCommand,
-    deps: depsCommand,
-    doctor: doctorCommand,
-    exec: execCommand,
-    swap: swapCommand,
-    sync: syncCommand,
-    onboard: onboardCommand,
-    open: openCommand,
-    login: loginCommand,
-    telemetry: telemetryCommand,
-    templates: templatesCommand,
-    providers: providersCommand,
-    recommend: recommendCommand,
-    apply: applyCommand,
-    projects: projectsCommand,
-    ci: ciCommand,
-    completion: completionCommand,
-    upgrade: upgradeCommand,
-  },
-});
-
-// The companion handshake answers before the update check and telemetry:
-// it must stay local and fast (docs/ashlr-handshake.md).
-if (process.argv.slice(2).includes("--ashlr-handshake")) {
-  process.stdout.write(`${JSON.stringify(buildHandshake(VERSION))}\n`);
-  process.exit(0);
-}
-
-// Before any output: outroError exits the process, and Bun 1.2 drops queued
-// stdout writes on exit unless they were written synchronously.
+// Before any output: Bun can otherwise drop queued writes on process.exit().
 installSynchronousStdio();
-const _startMs = Date.now();
-void checkForUpdate(VERSION);
-// Normalize kebab-case flags (`--dry-run`) to the camelCase keys our commands
-// declare (`dryRun`) before citty parses them — see lib/normalize-args.ts.
-runCli(main, normalizeKebabFlags(process.argv.slice(2))).finally(() => {
-  void emitTelemetry({
-    type: "command",
-    command: process.argv[2] ?? "unknown",
-    exitCode: typeof process.exitCode === "number" ? process.exitCode : 0,
-    durationMs: Date.now() - _startMs,
-  });
-});
+const argv = process.argv.slice(2);
+
+// Preserve the companion handshake's precedence and local-only behavior.
+if (argv.includes("--ashlr-handshake")) {
+  const { buildHandshake } = await import("./lib/handshake.ts");
+  process.stdout.write(`${JSON.stringify(buildHandshake(VERSION))}\n`);
+} else if (argv.length === 1 && argv[0] === "--version") {
+  console.log(VERSION);
+} else if (
+  argv.some((arg) => arg === "--version" || arg === "-v") &&
+  argv.every((arg) => arg === "--version" || arg === "-v" || arg === "--json")
+) {
+  // Only recognized root options qualify. Subcommands, typos and passthrough
+  // arguments must still reach normal command validation and dispatch.
+  printVersion(VERSION, argv.includes("--json"));
+} else {
+  const end = argv.indexOf("--");
+  const own = end < 0 ? argv : argv.slice(0, end);
+  const helpOnly =
+    (own.includes("--help") || own.includes("-h")) && !argv.some((arg) => !arg.startsWith("-"));
+  const { run } = await import("./main.ts");
+  await run(argv, VERSION, helpOnly);
+}
