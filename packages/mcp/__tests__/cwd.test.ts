@@ -200,6 +200,29 @@ async function call(name: string, args: Record<string, unknown>): Promise<ToolRe
 }
 
 describe("cwd input: stdio server started in another directory", () => {
+  test.each(TOOLS)("$name refuses invalid cwd through tools/call", async (def) => {
+    const required = Object.fromEntries(
+      (def.inputSchema.required ?? []).map((key) => [key, "example"]),
+    );
+    const result = await call(def.name, { ...required, cwd: "relative" });
+    expect(result.isError).toBe(true);
+    expect(result.content[0]?.text).toContain(`${def.name}: argument "cwd"`);
+    expect(result.content[0]?.text).toContain(
+      acceptsCwd(def) ? "must be an absolute path" : "is not supported by this tool",
+    );
+  });
+
+  test.each([
+    { name: "stack_scan", args: { path: "../a-server" } },
+    { name: "stack_import", args: { from: "../a-server/.env" } },
+    { name: "stack_apply", args: { recipe_id: "../outside" } },
+  ])("$name refuses project escapes through tools/call", async ({ name, args }) => {
+    const result = await call(name, { ...args, cwd: projectDir });
+    expect(result.isError).toBe(true);
+    expect(result.content[0]?.text).toStartWith(`${name}: argument`);
+    expect(result.content[0]?.text).toMatch(/inside the project directory|filename stem/);
+  });
+
   test("stack_list without cwd sees the server's directory (no project there)", async () => {
     const result = await call("stack_list", { json: true });
     expect(result.content[0]?.text ?? "").not.toContain('"openai"');
