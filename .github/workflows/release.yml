@@ -14,8 +14,7 @@ on:
         default: ''
 
 permissions:
-  contents: write   # create GitHub Releases + upload assets
-  id-token: write   # npm provenance
+  contents: read
 
 concurrency:
   group: release-${{ github.ref }}
@@ -50,7 +49,7 @@ jobs:
             os: ubuntu-latest
             asset: stack-darwin-arm64
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Validate release source before producers
         env:
@@ -146,7 +145,7 @@ jobs:
           ./dist/${{ matrix.asset }} --help | head -20
           ./dist/${{ matrix.asset }} providers | head -5
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ${{ matrix.asset }}
           path: dist/${{ matrix.asset }}*
@@ -158,7 +157,7 @@ jobs:
     if: ${{ !cancelled() && needs.build-binaries.result == 'success' }}
     runs-on: macos-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: stack-darwin-arm64
           path: dist
@@ -173,6 +172,9 @@ jobs:
           ./stack-darwin-arm64 providers | head -5
 
   publish-npm:
+    permissions:
+      contents: read
+      id-token: write   # npm OIDC trusted publishing + provenance
     name: Publish to npm
     needs: build-binaries
     runs-on: ubuntu-latest
@@ -190,7 +192,7 @@ jobs:
         run: echo "enabled=true" >> "$GITHUB_OUTPUT"
 
       - if: steps.gate.outputs.enabled == 'true'
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0   # scripts/publish.sh uses git tag
 
@@ -200,7 +202,7 @@ jobs:
           bun-version: latest
 
       - if: steps.gate.outputs.enabled == 'true'
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '22'
           registry-url: 'https://registry.npmjs.org/'
@@ -310,15 +312,17 @@ jobs:
         run: git checkout -- packages/core/src/env.ts || true
 
   create-release:
+    permissions:
+      contents: write   # create GitHub Release + upload assets
     name: Create GitHub Release
     # Producer, native macOS smoke and npm job success are required before this downstream effect.
     needs: [build-binaries, smoke-darwin-arm64, publish-npm]
     if: ${{ !cancelled() && needs.build-binaries.result == 'success' && needs.smoke-darwin-arm64.result == 'success' && needs.publish-npm.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           path: dist
           merge-multiple: true
@@ -404,21 +408,18 @@ jobs:
     steps:
       - name: Check for tap-write credential
         id: cred_check
-        # Accept either a fine-grained PAT (preferred — write to homebrew-ashlr only)
-        # or a deploy key SSH private key. PAT first because the ashlrai org has
-        # repo-level deploy keys disabled by policy.
+        # Deploy key only: no long-lived PAT. Add HOMEBREW_TAP_DEPLOY_KEY (write
+        # deploy key on ashlrai/homebrew-ashlr) to enable formula updates.
         run: |
-          if [ -n "${{ secrets.HOMEBREW_TAP_PAT }}" ]; then
-            echo "method=pat" >> "$GITHUB_OUTPUT"
-          elif [ -n "${{ secrets.HOMEBREW_TAP_DEPLOY_KEY }}" ]; then
+          if [ -n "${{ secrets.HOMEBREW_TAP_DEPLOY_KEY }}" ]; then
             echo "method=ssh" >> "$GITHUB_OUTPUT"
           else
-            echo "::warning title=Homebrew tap not updated::Neither HOMEBREW_TAP_PAT nor HOMEBREW_TAP_DEPLOY_KEY is set — skipping formula update. Create a fine-grained PAT with 'Contents: write' on ashlrai/homebrew-ashlr and add it as HOMEBREW_TAP_PAT."
+            echo "::warning title=Homebrew tap not updated::HOMEBREW_TAP_DEPLOY_KEY is not set, skipping formula update. Add a write deploy key on ashlrai/homebrew-ashlr and store its private key as HOMEBREW_TAP_DEPLOY_KEY."
             echo "method=skip" >> "$GITHUB_OUTPUT"
           fi
 
       - if: steps.cred_check.outputs.method != 'skip'
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           path: stack-repo
 
@@ -431,17 +432,9 @@ jobs:
           mkdir -p sha256s
           gh release download "${TAG}" -R ashlrai/ashlr-stack -p "*.sha256" -D sha256s/
 
-      - if: steps.cred_check.outputs.method == 'pat'
-        name: Checkout homebrew tap (PAT auth)
-        uses: actions/checkout@v4
-        with:
-          repository: ashlrai/homebrew-ashlr
-          token: ${{ secrets.HOMEBREW_TAP_PAT }}
-          path: homebrew-tap
-
       - if: steps.cred_check.outputs.method == 'ssh'
         name: Checkout homebrew tap (SSH auth)
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           repository: ashlrai/homebrew-ashlr
           ssh-key: ${{ secrets.HOMEBREW_TAP_DEPLOY_KEY }}
