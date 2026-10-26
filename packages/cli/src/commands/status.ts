@@ -1,8 +1,9 @@
 import {
+  PhantomTimeoutError,
   type StackConfig,
-  countSecrets,
   hasConfig,
-  isPhantomInstalled,
+  listSecrets,
+  probePhantomInstalled,
   readConfig,
 } from "@ashlr/stack-core";
 import { defineCommand } from "citty";
@@ -12,6 +13,7 @@ import {
   type StatusCheck,
   type StatusCheckResult,
   type StatusCheckRunOptions,
+  StatusCheckTimeoutError,
   runStatusChecks,
 } from "../lib/status-checks.ts";
 import { colors } from "../ui.ts";
@@ -33,6 +35,10 @@ export interface StatusReport {
     installed: boolean;
     /** Names in the vault, or null when the vault could not be read. */
     secret_count: number | null;
+    /** Present only when secret_count is null because the vault read timed out or failed. */
+    secret_count_error?: "timeout" | "error";
+    /** Present only when `phantom --version` timed out, so installed is unknown. */
+    installed_error?: "timeout";
   };
   services: Array<{
     name: string;
@@ -48,8 +54,11 @@ export function buildStatusReport(input: {
   config: StackConfig | undefined;
   phantomInstalled: boolean;
   secretCount: number | null;
+  secretCountError?: "timeout" | "error";
+  installedError?: "timeout";
 }): StatusReport {
   const { config } = input;
+  const secretCount = input.phantomInstalled ? input.secretCount : null;
   return {
     schema: "ashlr.stack.status/v1",
     config: {
@@ -59,7 +68,11 @@ export function buildStatusReport(input: {
     },
     phantom: {
       installed: input.phantomInstalled,
-      secret_count: input.phantomInstalled ? input.secretCount : null,
+      secret_count: secretCount,
+      ...(secretCount === null && input.phantomInstalled && input.secretCountError
+        ? { secret_count_error: input.secretCountError }
+        : {}),
+      ...(input.installedError ? { installed_error: input.installedError } : {}),
     },
     services: Object.entries(config?.services ?? {}).map(([name, entry]) => ({
       name,
@@ -76,7 +89,9 @@ export function buildStatusReport(input: {
 export interface StatusDeps {
   hasConfig: () => boolean;
   readConfig: () => Promise<StackConfig>;
-  isPhantomInstalled: (timeoutMs: number) => Promise<boolean>;
+  /** `"timeout"` means installed is unknown, not missing. */
+  isPhantomInstalled: (timeoutMs: number) => Promise<boolean | "timeout">;
+  /** Throws when the vault cannot be read; null also means unreadable. */
   countSecrets: (timeoutMs: number) => Promise<number | null>;
 }
 
@@ -84,15 +99,19 @@ export function defaultStatusDeps(): StatusDeps {
   return {
     hasConfig: () => hasConfig(),
     readConfig: () => readConfig(),
-    isPhantomInstalled: (timeoutMs) => isPhantomInstalled({ timeoutMs }),
+    isPhantomInstalled: async (timeoutMs) => {
+      const state = await probePhantomInstalled({ timeoutMs });
+      return state === "timeout" ? "timeout" : state === "installed";
+    },
     // The version probe runs as its own check, so the vault list overlaps it.
-    countSecrets: (timeoutMs) => countSecrets(undefined, { skipInstallCheck: true, timeoutMs }),
+    // Errors propagate so status can tell a timeout from a failed read.
+    countSecrets: async (timeoutMs) =>
+      (await listSecrets(undefined, { skipInstallCheck: true, timeoutMs })).length,
   };
 }
 
 type ProbeValue =
-  | { kind: "config"; config: StackConfig | undefined }
-  | { kind: "phantom"; installed: boolean }
+  | { kind: "phantom"; installed: boolean | "timeout" }
   | { kind: "secrets"; count: number | null };
 
 export interface LoadedStatus {
@@ -101,12 +120,18 @@ export interface LoadedStatus {
   phantomInstalled: boolean;
   /** Null when Phantom is missing or the vault could not be read. */
   secretCount: number | null;
+  /** Why secretCount is null while Phantom is installed. */
+  secretCountError?: "timeout" | "error";
+  /** Set when the version probe timed out and the vault list did not prove Phantom is there. */
+  installedError?: "timeout";
 }
 
 /**
- * Config, Phantom, and the vault count are independent. They run together.
- * A config failure still throws the original error. A Phantom or vault failure
- * becomes the same installed/count values the sequential command used.
+ * Config, Phantom, and the vault count are independent. They run together
+ * (three at once at most: config plus two capped probes). The config read has
+ * no timeout, as on main, and a config failure still throws the original
+ * error. A Phantom or vault failure becomes the same installed/count values
+ * the sequential command used, plus a marker saying whether it timed out.
  */
 export async function loadStatus(
   deps: StatusDeps = defaultStatusDeps(),
@@ -116,14 +141,11 @@ export async function loadStatus(
   },
 ): Promise<LoadedStatus> {
   const hasStack = deps.hasConfig();
+  const configPromise = hasStack ? deps.readConfig() : Promise.resolve(undefined);
+  // Avoid an unhandled rejection while the probes run; the await below rethrows.
+  configPromise.catch(() => {});
+  const probeOpts = { ...opts, concurrency: Math.max(1, opts.concurrency - 1) };
   const checks: Array<StatusCheck<ProbeValue>> = [
-    {
-      name: "config",
-      run: async () => ({
-        kind: "config",
-        config: hasStack ? await deps.readConfig() : undefined,
-      }),
-    },
     {
       name: "phantom",
       run: async () => ({
@@ -136,54 +158,71 @@ export async function loadStatus(
       run: async () => ({ kind: "secrets", count: await deps.countSecrets(opts.timeoutMs) }),
     },
   ];
-  const [configResult, phantomResult, secretsResult] = await runStatusChecks(checks, opts);
-  const phantomInstalled = phantomFrom(phantomResult);
-  return {
+  const [probes, config] = await Promise.all([runStatusChecks(checks, probeOpts), configPromise]);
+  const [phantomResult, secretsResult] = probes;
+  const installState = phantomFrom(phantomResult);
+  const secrets = secretsFrom(secretsResult);
+  // A vault list that answered proves Phantom is installed even if --version was slow.
+  const phantomInstalled =
+    installState === true || (installState === "timeout" && secrets.count !== null);
+  const loaded: LoadedStatus = {
     hasStack,
-    config: configFrom(configResult),
+    config,
     phantomInstalled,
-    secretCount: secretCountFrom(secretsResult, phantomInstalled),
+    secretCount: phantomInstalled ? secrets.count : null,
   };
+  if (installState === "timeout" && !phantomInstalled) loaded.installedError = "timeout";
+  if (phantomInstalled && secrets.count === null && secrets.error) {
+    loaded.secretCountError = secrets.error;
+  }
+  return loaded;
 }
 
-function configFrom(result: StatusCheckResult<ProbeValue> | undefined): StackConfig | undefined {
-  if (!result) throw new Error("status config check did not finish");
-  if (result.state === "error" || result.state === "timeout") throw result.error;
-  if (result.value.kind !== "config")
-    throw new Error("status config check returned the wrong value");
-  return result.value.config;
+/** A thrown install probe matches `isPhantomInstalled` returning false. A timeout stays unknown. */
+function phantomFrom(result: StatusCheckResult<ProbeValue> | undefined): boolean | "timeout" {
+  if (result?.state === "timeout") return "timeout";
+  if (result?.state !== "ok" || result.value.kind !== "phantom") return false;
+  return result.value.installed;
 }
 
-/** A thrown or timed out install probe matches `isPhantomInstalled` catching and returning false. */
-function phantomFrom(result: StatusCheckResult<ProbeValue> | undefined): boolean {
-  return (
-    result?.state === "ok" && result.value.kind === "phantom" && result.value.installed === true
-  );
+function isTimeout(err: unknown): boolean {
+  return err instanceof StatusCheckTimeoutError || err instanceof PhantomTimeoutError;
 }
 
-/**
- * A thrown or timed out count matches `countSecrets` returning null.
- * The count is ignored when Phantom itself is not installed.
- */
-function secretCountFrom(
-  result: StatusCheckResult<ProbeValue> | undefined,
-  phantomInstalled: boolean,
-): number | null {
-  if (!phantomInstalled) return null;
-  if (!result || result.state !== "ok" || result.value.kind !== "secrets") return null;
-  return result.value.count;
+/** A thrown or timed out count is null, as `countSecrets` returned, with the cause kept. */
+function secretsFrom(result: StatusCheckResult<ProbeValue> | undefined): {
+  count: number | null;
+  error?: "timeout" | "error";
+} {
+  if (!result) return { count: null, error: "error" };
+  if (result.state === "timeout") return { count: null, error: "timeout" };
+  if (result.state === "error") {
+    return { count: null, error: isTimeout(result.error) ? "timeout" : "error" };
+  }
+  if (result.value.kind !== "secrets" || result.value.count === null) {
+    return { count: null, error: "error" };
+  }
+  return { count: result.value.count };
+}
+
+const TIMED_OUT = `(timed out after ${STATUS_CHECK_TIMEOUT_MS / 1000}s)`;
+
+function phantomDetail(loaded: LoadedStatus): string {
+  if (loaded.installedError === "timeout") return `unknown ${TIMED_OUT}`;
+  if (!loaded.phantomInstalled) return "not installed";
+  if (loaded.secretCountError === "timeout") return `vault count unknown ${TIMED_OUT}`;
+  return `${loaded.secretCount ?? 0} secrets in vault`;
 }
 
 /** Human lines in the historical order. `console.log` prints each one. */
 export function statusLines(loaded: LoadedStatus): string[] {
   const { hasStack, config, phantomInstalled } = loaded;
-  const vaultCount = phantomInstalled ? (loaded.secretCount ?? 0) : 0;
   const lines = [
     "",
     colors.bold("  Ashlr Stack"),
     "",
     `  ${statusDot(hasStack)} .stack.toml       ${hasStack ? colors.dim(config?.stack.project_id) : colors.dim("missing — run `stack init`")}`,
-    `  ${statusDot(phantomInstalled)} phantom           ${phantomInstalled ? colors.dim(`${vaultCount} secrets in vault`) : colors.dim("not installed")}`,
+    `  ${statusDot(phantomInstalled)} phantom           ${colors.dim(phantomDetail(loaded))}`,
     `  ${statusDot(hasStack && Object.keys(config?.services ?? {}).length > 0)} services          ${colors.dim(`${Object.keys(config?.services ?? {}).length} configured`)}`,
     "",
   ];
@@ -225,6 +264,8 @@ export const statusCommand = defineCommand({
         config: loaded.config,
         phantomInstalled: loaded.phantomInstalled,
         secretCount: loaded.secretCount,
+        ...(loaded.secretCountError ? { secretCountError: loaded.secretCountError } : {}),
+        ...(loaded.installedError ? { installedError: loaded.installedError } : {}),
       });
       process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
       return;

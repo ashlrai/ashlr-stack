@@ -4,7 +4,7 @@
 
 ### Changed
 
-- `stack status` runs its config, Phantom version and vault-count probes together (at most 3 at once), each capped at 2 s; a Phantom probe that times out is killed and reported like before (not installed, or an unreadable vault). Output and order are unchanged. On a synthetic slow-phantom fixture the median dropped from 385.5 ms to 223.0 ms.
+- `stack status` runs its Phantom version and vault-count probes together with the config read (at most 3 at once). Each Phantom probe is capped at 2 s and killed on timeout; the config read has no timeout, as before. A timeout is now visible: human output shows `(timed out after 2s)`, and `--json` keeps `secret_count: null` but adds `secret_count_error: "timeout"` or `"error"` (and `installed_error: "timeout"` when `phantom --version` timed out). Additive only, and absent when everything answers. A timed out version probe is not cached as not installed. Normal output is unchanged. On a synthetic slow-phantom fixture the median dropped from 385.5 ms to 223.0 ms.
 - Site: removed the unused `@vercel/analytics` package (and five other unused site dependencies). Analytics still loads via the inline script tag in `packages/site/src/layouts/Base.astro`, so nothing changes at runtime.
 - `stack doctor --ecosystem --fix --apply locus` no longer runs locus (it was always refused, because locus requires `LOCUS_CONTROL_CAPABILITY` and Stack passes only `LOCUS_HOME`). Stack now reports outcome `manual` with the reason and prints `locus doctor --fix --apply` for you to run directly. Stack deliberately never forwards that capability or any token. The preview still runs and lists `manual_apply` for locus; other selected tools still apply, and `manual` never stops the run or changes the exit code.
 

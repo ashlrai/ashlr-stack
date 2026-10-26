@@ -13,6 +13,16 @@ export interface PhantomExecResult {
   code: number;
   signal?: NodeJS.Signals;
   completion?: "exited" | "signal" | "unknown";
+  /** True when `timeoutMs` elapsed and Stack killed the child. */
+  timedOut?: boolean;
+}
+
+/** A phantom call was killed after its `timeoutMs`. Distinct from a failed or unparseable call. */
+export class PhantomTimeoutError extends Error {
+  constructor(args: string[], timeoutMs: number | undefined) {
+    super(`phantom ${args[0] ?? ""} timed out after ${timeoutMs ?? "?"}ms`);
+    this.name = "PhantomTimeoutError";
+  }
 }
 
 /** Interpret close fields only; this does not attest provider or vault state. */
@@ -25,8 +35,14 @@ export function completionForClose(
 
 let cachedInstalled: boolean | undefined;
 
-export async function isPhantomInstalled(opts?: { timeoutMs?: number }): Promise<boolean> {
-  if (cachedInstalled !== undefined) return cachedInstalled;
+/**
+ * `phantom --version` as three states. A timeout is not cached, because a slow
+ * Phantom is still installed; the next probe asks again.
+ */
+export async function probePhantomInstalled(opts?: {
+  timeoutMs?: number;
+}): Promise<"installed" | "missing" | "timeout"> {
+  if (cachedInstalled !== undefined) return cachedInstalled ? "installed" : "missing";
   try {
     const result = await exec(
       ["--version"],
@@ -34,11 +50,16 @@ export async function isPhantomInstalled(opts?: { timeoutMs?: number }): Promise
         ? { allowFailure: true, timeoutMs: opts.timeoutMs }
         : { allowFailure: true },
     );
+    if (result.timedOut) return "timeout";
     cachedInstalled = result.code === 0 && result.completion === "exited";
   } catch {
     cachedInstalled = false;
   }
-  return cachedInstalled;
+  return cachedInstalled ? "installed" : "missing";
+}
+
+export async function isPhantomInstalled(opts?: { timeoutMs?: number }): Promise<boolean> {
+  return (await probePhantomInstalled(opts)) === "installed";
 }
 
 export async function assertPhantomInstalled(): Promise<void> {
@@ -65,6 +86,7 @@ export async function exec(args: string[], opts: ExecOptions = {}): Promise<Phan
     let stdout = "";
     let stderr = "";
     let timer: ReturnType<typeof setTimeout> | undefined;
+    let timedOut = false;
     const clearTimer = () => {
       if (timer !== undefined) {
         clearTimeout(timer);
@@ -73,6 +95,7 @@ export async function exec(args: string[], opts: ExecOptions = {}): Promise<Phan
     };
     if (typeof opts.timeoutMs === "number" && Number.isFinite(opts.timeoutMs)) {
       timer = setTimeout(() => {
+        timedOut = true;
         child.kill("SIGKILL");
       }, opts.timeoutMs);
     }
@@ -111,6 +134,7 @@ export async function exec(args: string[], opts: ExecOptions = {}): Promise<Phan
         code: signal ? code || 1 : (code ?? 1),
         completion: completionForClose(code, signal),
         ...(signal ? { signal } : {}),
+        ...(timedOut ? { timedOut: true } : {}),
       };
       if (result.code !== 0 && !opts.allowFailure) {
         reject(
@@ -201,11 +225,12 @@ export async function listSecrets(
   opts?: { timeoutMs?: number; skipInstallCheck?: boolean },
 ): Promise<string[]> {
   if (!opts?.skipInstallCheck) await assertPhantomInstalled();
-  const { stdout, code } = await exec(["list", "--json"], {
+  const { stdout, code, timedOut } = await exec(["list", "--json"], {
     cwd,
     allowFailure: true,
     ...(opts?.timeoutMs !== undefined ? { timeoutMs: opts.timeoutMs } : {}),
   });
+  if (timedOut) throw new PhantomTimeoutError(["list"], opts?.timeoutMs);
   if (code !== 0) {
     throw new StackError(
       "PHANTOM_METADATA_UNAVAILABLE",

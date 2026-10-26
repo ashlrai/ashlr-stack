@@ -190,7 +190,12 @@ describe("stack status --json", () => {
   test("unreadable vault (phantom list exits 1) reports secret_count null", () => {
     const { stdout, code } = runStatus(project(), ["--json"], "error");
     expect(code).toBe(0);
-    expect(JSON.parse(stdout).phantom).toEqual({ installed: true, secret_count: null });
+    // Additive: secret_count stays null; secret_count_error says it was a failure, not a timeout.
+    expect(JSON.parse(stdout).phantom).toEqual({
+      installed: true,
+      secret_count: null,
+      secret_count_error: "error",
+    });
   });
 
   test("no .stack.toml: exits 0 with empty services and present=false", () => {

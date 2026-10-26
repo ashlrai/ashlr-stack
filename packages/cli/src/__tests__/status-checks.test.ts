@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { StackConfig } from "@ashlr/stack-core";
+import { PhantomTimeoutError, type StackConfig, StackError } from "@ashlr/stack-core";
 import { buildStatusReport, loadStatus, statusLines } from "../commands/status.ts";
 import { type StatusCheck, runStatusChecks } from "../lib/status-checks.ts";
 
@@ -233,21 +233,165 @@ describe("loadStatus failure reporting", () => {
     ).rejects.toBe(err);
   });
 
-  test("a hanging phantom check times out and is reported as not installed", async () => {
+  test("a hanging phantom version probe is shown as timed out, not as not installed", async () => {
     const started = Date.now();
     const loaded = await loadStatus(
       {
         hasConfig: () => true,
         readConfig: async () => config,
         isPhantomInstalled: () => new Promise(() => {}),
-        countSecrets: async () => 4,
+        countSecrets: () => new Promise(() => {}),
       },
       { timeoutMs: 40, concurrency: 3 },
     );
     expect(Date.now() - started).toBeLessThan(1_000);
     expect(loaded.config?.stack.project_id).toBe("stk_test0001");
     expect(loaded.phantomInstalled).toBe(false);
+    expect(loaded.installedError).toBe("timeout");
     expect(loaded.secretCount).toBeNull();
-    expect(statusLines(loaded).join("\n")).toContain("not installed");
+    const text = statusLines(loaded).join("\n");
+    expect(text).toContain("unknown (timed out after 2s)");
+    expect(text).not.toContain("not installed");
+    const report = buildStatusReport({
+      config: loaded.config,
+      phantomInstalled: loaded.phantomInstalled,
+      secretCount: loaded.secretCount,
+      installedError: loaded.installedError,
+    });
+    expect(report.phantom).toEqual({
+      installed: false,
+      secret_count: null,
+      installed_error: "timeout",
+    });
+  });
+
+  test("a slow version probe with a vault that answers counts Phantom as installed", async () => {
+    const loaded = await loadStatus(
+      {
+        hasConfig: () => false,
+        readConfig: async () => config,
+        isPhantomInstalled: async () => "timeout",
+        countSecrets: async () => 3,
+      },
+      fastOpts,
+    );
+    expect(loaded.phantomInstalled).toBe(true);
+    expect(loaded.installedError).toBeUndefined();
+    expect(loaded.secretCount).toBe(3);
+  });
+
+  test("a vault read timeout keeps secret_count null and marks it timeout", async () => {
+    const loaded = await loadStatus(
+      {
+        hasConfig: () => false,
+        readConfig: async () => config,
+        isPhantomInstalled: async () => true,
+        countSecrets: () => new Promise(() => {}),
+      },
+      { timeoutMs: 40, concurrency: 3 },
+    );
+    expect(loaded.secretCount).toBeNull();
+    expect(loaded.secretCountError).toBe("timeout");
+    expect(statusLines(loaded).join("\n")).toContain("vault count unknown (timed out after 2s)");
+    const report = buildStatusReport({
+      config: undefined,
+      phantomInstalled: true,
+      secretCount: null,
+      secretCountError: "timeout",
+    });
+    expect(report.phantom).toEqual({
+      installed: true,
+      secret_count: null,
+      secret_count_error: "timeout",
+    });
+  });
+
+  test("a PhantomTimeoutError from the vault list is classified as timeout", async () => {
+    const loaded = await loadStatus(
+      {
+        hasConfig: () => false,
+        readConfig: async () => config,
+        isPhantomInstalled: async () => true,
+        countSecrets: async () => {
+          throw new PhantomTimeoutError(["list"], 40);
+        },
+      },
+      fastOpts,
+    );
+    expect(loaded.secretCountError).toBe("timeout");
+  });
+
+  test("a thrown vault error stays an error with the old human line", async () => {
+    const loaded = await loadStatus(
+      {
+        hasConfig: () => false,
+        readConfig: async () => config,
+        isPhantomInstalled: async () => true,
+        countSecrets: async () => {
+          throw new StackError("PHANTOM_METADATA_UNAVAILABLE", "inventory unavailable");
+        },
+      },
+      fastOpts,
+    );
+    expect(loaded.secretCount).toBeNull();
+    expect(loaded.secretCountError).toBe("error");
+    const text = statusLines(loaded).join("\n");
+    expect(text).toContain("0 secrets in vault");
+    expect(text).not.toContain("timed out");
+  });
+
+  test("a vault parse failure is an error, not a timeout", async () => {
+    const loaded = await loadStatus(
+      {
+        hasConfig: () => false,
+        readConfig: async () => config,
+        isPhantomInstalled: async () => true,
+        countSecrets: async () => {
+          throw new StackError(
+            "PHANTOM_OUTPUT_UNRECOGNIZED",
+            "phantom list --json did not return JSON",
+          );
+        },
+      },
+      fastOpts,
+    );
+    expect(loaded.secretCountError).toBe("error");
+  });
+
+  test("a normal report has no error fields", async () => {
+    const loaded = await loadStatus(
+      {
+        hasConfig: () => true,
+        readConfig: async () => config,
+        isPhantomInstalled: async () => true,
+        countSecrets: async () => 2,
+      },
+      fastOpts,
+    );
+    expect(loaded.secretCountError).toBeUndefined();
+    expect(loaded.installedError).toBeUndefined();
+    const report = buildStatusReport({
+      config: loaded.config,
+      phantomInstalled: loaded.phantomInstalled,
+      secretCount: loaded.secretCount,
+    });
+    expect(report.phantom).toEqual({ installed: true, secret_count: 2 });
+  });
+
+  test("a slow config read is waited for, not timed out", async () => {
+    const loaded = await loadStatus(
+      {
+        hasConfig: () => true,
+        readConfig: async () => {
+          await delay(120);
+          return config;
+        },
+        isPhantomInstalled: async () => true,
+        countSecrets: async () => 1,
+      },
+      { timeoutMs: 40, concurrency: 3 },
+    );
+    expect(loaded.config?.stack.project_id).toBe("stk_test0001");
+    expect(loaded.secretCount).toBe(1);
   });
 });

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  PhantomTimeoutError,
   __resetPhantomCache,
   addSecret,
   assertProjectInitialized,
@@ -10,6 +11,7 @@ import {
   exec,
   isPhantomInstalled,
   listSecrets,
+  probePhantomInstalled,
   removeSecret,
   revealSecret,
 } from "../phantom.ts";
@@ -173,8 +175,19 @@ describe("phantom wrapper against the fake harness", () => {
     const result = await exec(["--version"], { allowFailure: true, timeoutMs: 200 });
     expect(result.completion).toBe("signal");
     expect(result.code).not.toBe(0);
+    expect(result.timedOut).toBe(true);
+    __resetPhantomCache();
+    expect(await probePhantomInstalled({ timeoutMs: 200 })).toBe("timeout");
+    // A timeout is not cached: once Phantom answers, it is installed.
+    writeFileSync(join(h.dir, "phantom"), "#!/bin/sh\necho phantom 0.9.0\n");
+    expect(await probePhantomInstalled({ timeoutMs: 2_000 })).toBe("installed");
+    writeFileSync(join(h.dir, "phantom"), "#!/bin/sh\nexec sleep 5\n");
     __resetPhantomCache();
     expect(await isPhantomInstalled({ timeoutMs: 200 })).toBe(false);
+    __resetPhantomCache();
+    await expect(
+      listSecrets(undefined, { skipInstallCheck: true, timeoutMs: 200 }),
+    ).rejects.toBeInstanceOf(PhantomTimeoutError);
     __resetPhantomCache();
     expect(await countSecrets(undefined, { skipInstallCheck: true, timeoutMs: 200 })).toBeNull();
     expect(Date.now() - started).toBeLessThan(2_000);
