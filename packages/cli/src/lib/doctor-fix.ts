@@ -117,8 +117,16 @@ export function fixEnv(
   tool: FixTool,
   source: NodeJS.ProcessEnv = process.env,
 ): Record<string, string> {
+  return childEnv(tool.envPassthrough, source);
+}
+
+/** The base allowlist plus `extra` non-secret keys; NO_COLOR set. */
+export function childEnv(
+  extra: string[] = [],
+  source: NodeJS.ProcessEnv = process.env,
+): Record<string, string> {
   const env: Record<string, string> = {};
-  for (const key of [...BASE_ENV_KEYS, ...tool.envPassthrough]) {
+  for (const key of [...BASE_ENV_KEYS, ...extra]) {
     const value = source[key];
     if (typeof value === "string" && value !== "") env[key] = value;
   }
@@ -212,23 +220,23 @@ export interface FixReport {
   stopped_at: string | null;
 }
 
-const NAME_RE = /^[a-z0-9-]{1,32}$/;
+export const NAME_RE = /^[a-z0-9-]{1,32}$/;
 
-/** Parse `--apply` from raw argv: undefined (absent), [] (bare) or tool names. */
-export function parseApplyArg(rawArgs: string[]): string[] | undefined {
+/** Parse a list flag from raw argv: undefined (absent), [] (bare) or names. */
+export function parseListArg(rawArgs: string[], flag: string): string[] | undefined {
   let found: string | undefined;
   let seen = false;
   for (let i = 0; i < rawArgs.length; i++) {
     const tok = rawArgs[i] as string;
     if (tok === "--") break;
-    if (tok === "--apply") {
+    if (tok === flag) {
       seen = true;
       const next = rawArgs[i + 1];
       found = next !== undefined && !next.startsWith("-") ? next : "";
       if (found) i++;
-    } else if (tok.startsWith("--apply=")) {
+    } else if (tok.startsWith(`${flag}=`)) {
       seen = true;
-      found = tok.slice("--apply=".length);
+      found = tok.slice(flag.length + 1);
     }
   }
   if (!seen) return undefined;
@@ -238,7 +246,9 @@ export function parseApplyArg(rawArgs: string[]): string[] | undefined {
     .filter((s) => s !== "");
 }
 
-function cmdline(command: string, argv: string[]): string {
+export const parseApplyArg = (rawArgs: string[]) => parseListArg(rawArgs, "--apply");
+
+export function cmdline(command: string, argv: string[]): string {
   return [command, ...argv].join(" ");
 }
 

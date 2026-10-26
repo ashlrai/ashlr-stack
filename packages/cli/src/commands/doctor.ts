@@ -19,10 +19,18 @@ import {
   ecosystemEnvelope,
   errorEnvelope,
   fixEnvelope,
+  installEnvelope,
   reconcileEnvelope,
   reportsEnvelope,
 } from "../lib/doctor-envelope.ts";
-import { FixUsageError, formatFixReport, parseApplyArg, runDoctorFix } from "../lib/doctor-fix.ts";
+import {
+  FixUsageError,
+  formatFixReport,
+  parseApplyArg,
+  parseListArg,
+  runDoctorFix,
+} from "../lib/doctor-fix.ts";
+import { InstallUsageError, formatInstallReport, runDoctorInstall } from "../lib/doctor-install.ts";
 import { checkEcosystem, ecosystemNextSteps, formatEcosystem } from "../lib/ecosystem.ts";
 import { requirePhantom } from "../lib/phantom-preflight.ts";
 import { colors, intro, logEvent, outro, outroError, prompts, spinnerBridge } from "../ui.ts";
@@ -82,10 +90,16 @@ export const doctorCommand = defineCommand({
       description:
         "List installed Ashlr tools (phantom, locus, lexicon, ...) via --ashlr-handshake. Informational; never fails.",
     },
+    install: {
+      type: "string",
+      description:
+        "With --ecosystem: print install commands for missing or outdated companions (optional comma list: phantom, locus, lexicon, ashlr-md). Runs nothing without --apply.",
+      valueHint: "tools",
+    },
     apply: {
       type: "string",
       description:
-        "With --ecosystem --fix: run these tools' own doctor --fix --apply (comma list, e.g. locus). Required per tool.",
+        "With --ecosystem --fix or --install: run the step for these tools only (comma list, e.g. lexicon). Required per tool.",
       valueHint: "tools",
     },
     reconcile: {
@@ -98,6 +112,36 @@ export const doctorCommand = defineCommand({
     const json = Boolean(args.json);
     const reconcile = Boolean(args.reconcile);
     const apply = parseApplyArg(rawArgs);
+    const install = parseListArg(rawArgs, "--install");
+    const usage = (message: string) => {
+      if (json) process.stdout.write(`${JSON.stringify(errorEnvelope(message))}\n`);
+      else process.stderr.write(`${colors.red(`[stack doctor] ${message}`)}\n`);
+      process.exitCode = 1;
+    };
+
+    // --ecosystem --install: print install commands (product call (a));
+    // --apply <tools> runs them for the named tools only.
+    if (install !== undefined) {
+      if (!args.ecosystem || args.fix) {
+        usage(
+          "--install works with --ecosystem and without --fix (e.g. stack doctor --ecosystem --install)",
+        );
+        return;
+      }
+      try {
+        const report = await runDoctorInstall(install, apply);
+        if (json) process.stdout.write(`${JSON.stringify(installEnvelope(report), null, 2)}\n`);
+        else {
+          console.log(colors.bold(`Ashlr ecosystem doctor --install (${report.mode})`));
+          for (const line of formatInstallReport(report)) console.log(line);
+        }
+        if (report.outcome?.stopped_at) process.exitCode = 1;
+      } catch (err) {
+        if (!(err instanceof InstallUsageError)) throw err;
+        usage(err.message);
+      }
+      return;
+    }
 
     // --ecosystem --fix: companions' own `doctor --fix`, gated on their
     // handshake capability. Preview by default; --apply needs named tools.
@@ -112,18 +156,14 @@ export const doctorCommand = defineCommand({
         if (report.stopped_at) process.exitCode = 1;
       } catch (err) {
         if (!(err instanceof FixUsageError)) throw err;
-        if (json) process.stdout.write(`${JSON.stringify(errorEnvelope(err.message))}\n`);
-        else process.stderr.write(`${colors.red(`[stack doctor] ${err.message}`)}\n`);
-        process.exitCode = 1;
+        usage(err.message);
       }
       return;
     }
     if (apply !== undefined) {
-      const message =
-        "--apply only works with --ecosystem --fix (e.g. stack doctor --ecosystem --fix --apply locus)";
-      if (json) process.stdout.write(`${JSON.stringify(errorEnvelope(message))}\n`);
-      else process.stderr.write(`${colors.red(`[stack doctor] ${message}`)}\n`);
-      process.exitCode = 1;
+      usage(
+        "--apply only works with --ecosystem --fix or --ecosystem --install (e.g. stack doctor --ecosystem --fix --apply lexicon)",
+      );
       return;
     }
 

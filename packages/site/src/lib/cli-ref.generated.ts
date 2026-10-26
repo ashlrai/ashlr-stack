@@ -475,7 +475,8 @@ export const CLI_COMMANDS: CliCommand[] = [
   {
     name: "stack doctor",
     description: "Verify every service is reachable and credentials are valid.",
-    synopsis: "stack doctor [--fix] [--all] [--json] [--ecosystem] [--apply <apply>] [--reconcile]",
+    synopsis:
+      "stack doctor [--fix] [--all] [--json] [--ecosystem] [--install <mode>] [--apply <apply>] [--reconcile]",
     flags: [
       {
         name: "fix",
@@ -507,11 +508,18 @@ export const CLI_COMMANDS: CliCommand[] = [
           "List installed Ashlr tools (phantom, locus, lexicon, ...) via --ashlr-handshake. Informational; never fails.",
       },
       {
+        name: "install",
+        synopsis: "--install <mode>",
+        type: "string",
+        description:
+          "With --ecosystem: print install commands for missing or outdated companions (optional comma list: phantom, locus, lexicon, ashlr-md). Runs nothing without --apply.",
+      },
+      {
         name: "apply",
         synopsis: "--apply <apply>",
         type: "string",
         description:
-          "With --ecosystem --fix: run these tools' own doctor --fix --apply (comma list, e.g. locus). Required per tool.",
+          "With --ecosystem --fix or --install: run the step for these tools only (comma list, e.g. lexicon). Required per tool.",
       },
       {
         name: "reconcile",
