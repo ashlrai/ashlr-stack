@@ -17,3 +17,7 @@
 ## Screenshots / terminal output
 
 <!-- only if the change is user-visible -->
+
+## Notes for reviewers
+
+<!-- Anything risky, breaking, or worth a closer look -->
