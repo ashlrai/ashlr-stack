@@ -2,9 +2,11 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  __resetPhantomCache,
   addSecret,
   assertProjectInitialized,
   completionForClose,
+  countSecrets,
   exec,
   isPhantomInstalled,
   listSecrets,
@@ -157,5 +159,24 @@ describe("phantom wrapper against the fake harness", () => {
   test("removeSecret without a terminal reports false and keeps the secret", async () => {
     expect(await removeSecret("EXISTING_KEY")).toBe(false);
     expect(await listSecrets()).toContain("EXISTING_KEY");
+  });
+
+  test("countSecrets reports the vault size, including when the install probe is skipped", async () => {
+    expect(await countSecrets()).toBe(1);
+    expect(await countSecrets(undefined, { skipInstallCheck: true })).toBe(1);
+  });
+
+  test("exec timeout kills a hung phantom and the install probe reports not installed", async () => {
+    writeFileSync(join(h.dir, "phantom"), "#!/bin/sh\nexec sleep 5\n");
+    __resetPhantomCache();
+    const started = Date.now();
+    const result = await exec(["--version"], { allowFailure: true, timeoutMs: 200 });
+    expect(result.completion).toBe("signal");
+    expect(result.code).not.toBe(0);
+    __resetPhantomCache();
+    expect(await isPhantomInstalled({ timeoutMs: 200 })).toBe(false);
+    __resetPhantomCache();
+    expect(await countSecrets(undefined, { skipInstallCheck: true, timeoutMs: 200 })).toBeNull();
+    expect(Date.now() - started).toBeLessThan(2_000);
   });
 });

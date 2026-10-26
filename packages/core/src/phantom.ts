@@ -25,10 +25,15 @@ export function completionForClose(
 
 let cachedInstalled: boolean | undefined;
 
-export async function isPhantomInstalled(): Promise<boolean> {
+export async function isPhantomInstalled(opts?: { timeoutMs?: number }): Promise<boolean> {
   if (cachedInstalled !== undefined) return cachedInstalled;
   try {
-    const result = await exec(["--version"], { allowFailure: true });
+    const result = await exec(
+      ["--version"],
+      opts?.timeoutMs !== undefined
+        ? { allowFailure: true, timeoutMs: opts.timeoutMs }
+        : { allowFailure: true },
+    );
     cachedInstalled = result.code === 0 && result.completion === "exited";
   } catch {
     cachedInstalled = false;
@@ -46,6 +51,8 @@ export interface ExecOptions {
   stdin?: string;
   /** If true, inherit stdio so interactive flows (OAuth browser) work. */
   interactive?: boolean;
+  /** Kill the phantom child after this many milliseconds. */
+  timeoutMs?: number;
 }
 
 export async function exec(args: string[], opts: ExecOptions = {}): Promise<PhantomExecResult> {
@@ -57,6 +64,18 @@ export async function exec(args: string[], opts: ExecOptions = {}): Promise<Phan
 
     let stdout = "";
     let stderr = "";
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const clearTimer = () => {
+      if (timer !== undefined) {
+        clearTimeout(timer);
+        timer = undefined;
+      }
+    };
+    if (typeof opts.timeoutMs === "number" && Number.isFinite(opts.timeoutMs)) {
+      timer = setTimeout(() => {
+        child.kill("SIGKILL");
+      }, opts.timeoutMs);
+    }
 
     if (!opts.interactive) {
       child.stdout?.on("data", (chunk) => {
@@ -75,6 +94,7 @@ export async function exec(args: string[], opts: ExecOptions = {}): Promise<Phan
     }
 
     child.on("error", (err) => {
+      clearTimer();
       if ((err as NodeJS.ErrnoException).code === "ENOENT") {
         reject(new PhantomNotInstalledError());
         return;
@@ -83,6 +103,7 @@ export async function exec(args: string[], opts: ExecOptions = {}): Promise<Phan
     });
 
     child.on("close", (code, signal) => {
+      clearTimer();
       // A signal/unknown exit is not evidence that a vault mutation committed.
       const result: PhantomExecResult = {
         stdout,
@@ -175,9 +196,16 @@ export async function removeSecret(
  * Secret names in the vault, from `phantom list --json` (never values). The
  * human `phantom list` output is a decorated table and is not parsed.
  */
-export async function listSecrets(cwd?: string): Promise<string[]> {
-  await assertPhantomInstalled();
-  const { stdout, code } = await exec(["list", "--json"], { cwd, allowFailure: true });
+export async function listSecrets(
+  cwd?: string,
+  opts?: { timeoutMs?: number; skipInstallCheck?: boolean },
+): Promise<string[]> {
+  if (!opts?.skipInstallCheck) await assertPhantomInstalled();
+  const { stdout, code } = await exec(["list", "--json"], {
+    cwd,
+    allowFailure: true,
+    ...(opts?.timeoutMs !== undefined ? { timeoutMs: opts.timeoutMs } : {}),
+  });
   if (code !== 0) {
     throw new StackError(
       "PHANTOM_METADATA_UNAVAILABLE",
@@ -224,10 +252,21 @@ export async function listSecrets(cwd?: string): Promise<string[]> {
  * inventory cannot be read (Phantom missing, no .phantom.toml, unrecognized
  * output), so callers never report an unreadable vault as empty.
  */
-export async function countSecrets(cwd?: string): Promise<number | null> {
+export async function countSecrets(
+  cwd?: string,
+  opts?: { timeoutMs?: number; skipInstallCheck?: boolean },
+): Promise<number | null> {
   try {
-    if (!(await isPhantomInstalled())) return null;
-    return (await listSecrets(cwd)).length;
+    // skipInstallCheck lets `stack status` overlap this list with the version probe.
+    if (
+      !opts?.skipInstallCheck &&
+      !(await isPhantomInstalled(
+        opts?.timeoutMs !== undefined ? { timeoutMs: opts.timeoutMs } : undefined,
+      ))
+    ) {
+      return null;
+    }
+    return (await listSecrets(cwd, opts)).length;
   } catch {
     return null;
   }
