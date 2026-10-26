@@ -1,19 +1,33 @@
 {
   "$schema": "https://raw.githubusercontent.com/modelcontextprotocol/specification/main/schema/schema.json",
   "name": "ashlr-stack",
-  "description": "Static catalog of 19 tools declared by reviewed Stack source 0.2.1, a subset of CLI commands; the catalog version label is not an installed or published package claim. The stdio server dispatches CLI arguments and returns stdout plus any nonempty stderr as text, with isError reflecting command completion, not provider/client acceptance. It is a control plane, not a sandbox or redaction layer. Public CLI and MCP packages recorded at 0.1.1 require Bun 1.2 or newer on PATH even when launched via npm/npx. Both stack and ashlr-stack-mcp commands are needed; STACK_BIN can override the CLI path. Adapt setup to your client and confirm the server working directory and actual advertised tools. Project-scoped tools accept an optional absolute cwd so a server started outside the project can target it; resources always read the server working directory. Resources are conditional on existing cwd files and return raw text. Provider configuration may contain literal $(phantom reveal NAME) strings; Stack supplies no general expansion step, so actual client/provider credential setup remains necessary.",
-  "version": "0.2.0",
+  "description": "Static catalog of 19 tools declared by reviewed Stack source 0.2.2, a subset of CLI commands; the catalog version label is not an installed or published package claim. The stdio server dispatches CLI arguments and returns stdout plus any nonempty stderr as text, with isError reflecting command completion, not provider/client acceptance. It is a control plane, not a sandbox or redaction layer. Public CLI and MCP packages recorded at 0.1.1 require Bun 1.2 or newer on PATH even when launched via npm/npx. Both stack and ashlr-stack-mcp commands are needed; STACK_BIN can override the CLI path. Adapt setup to your client and confirm the server working directory and actual advertised tools. Project-scoped tools accept an optional absolute cwd so a server started outside the project can target it; resources always read the server working directory. Resources are conditional on existing cwd files and return raw text. Provider configuration may contain literal $(phantom reveal NAME) strings; Stack supplies no general expansion step, so actual client/provider credential setup remains necessary.",
+  "version": "0.2.2",
   "homepage": "https://stack.ashlr.ai",
   "repository": "https://github.com/ashlrai/ashlr-stack",
   "license": "MIT",
   "install": {
     "command": "npx",
-    "args": ["-y", "-p", "@ashlr/stack@0.1.1", "-p", "ashlr-stack-mcp@0.1.1", "ashlr-stack-mcp"],
+    "args": [
+      "-y",
+      "-p",
+      "@ashlr/stack@0.1.1",
+      "-p",
+      "ashlr-stack-mcp@0.1.1",
+      "ashlr-stack-mcp"
+    ],
     "mcpConfigSnippet": {
       "mcpServers": {
         "stack": {
           "command": "npx",
-          "args": ["-y", "-p", "@ashlr/stack@0.1.1", "-p", "ashlr-stack-mcp@0.1.1", "ashlr-stack-mcp"]
+          "args": [
+            "-y",
+            "-p",
+            "@ashlr/stack@0.1.1",
+            "-p",
+            "ashlr-stack-mcp@0.1.1",
+            "ashlr-stack-mcp"
+          ]
         }
       }
     }
@@ -26,11 +40,19 @@
       "inputSchema": {
         "type": "object",
         "properties": {
-          "template": { "type": "string", "description": "Optional starter template name." },
-          "force": { "type": "boolean", "description": "Overwrite an existing .stack.toml." },
-          "cwd": { "type": "string", "description": "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory." }
-        },
-        "required": []
+          "template": {
+            "type": "string",
+            "description": "Optional starter template name."
+          },
+          "force": {
+            "type": "boolean",
+            "description": "Overwrite an existing .stack.toml."
+          },
+          "cwd": {
+            "type": "string",
+            "description": "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory."
+          }
+        }
       }
     },
     {
@@ -40,11 +62,19 @@
       "inputSchema": {
         "type": "object",
         "properties": {
-          "from": { "type": "string", "description": "Path to the .env file (default: .env)." },
-          "dryRun": { "type": "boolean", "description": "Preview without writing." },
-          "cwd": { "type": "string", "description": "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory." }
-        },
-        "required": []
+          "from": {
+            "type": "string",
+            "description": "Path to the .env file (default: .env)."
+          },
+          "dryRun": {
+            "type": "boolean",
+            "description": "Preview without writing."
+          },
+          "cwd": {
+            "type": "string",
+            "description": "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory."
+          }
+        }
       }
     },
     {
@@ -54,11 +84,19 @@
       "inputSchema": {
         "type": "object",
         "properties": {
-          "path": { "type": "string", "description": "Directory to scan (default: cwd)." },
-          "confidence": { "type": "string", "enum": ["low", "medium", "high"], "description": "Minimum confidence (default: medium)." },
-          "cwd": { "type": "string", "description": "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory." }
-        },
-        "required": []
+          "path": {
+            "type": "string",
+            "description": "Directory to scan (default: cwd)."
+          },
+          "confidence": {
+            "type": "string",
+            "description": "Minimum confidence: low, medium, or high (default: medium)."
+          },
+          "cwd": {
+            "type": "string",
+            "description": "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory."
+          }
+        }
       }
     },
     {
@@ -68,11 +106,22 @@
       "inputSchema": {
         "type": "object",
         "properties": {
-          "service": { "type": "string", "description": "Service name (e.g. supabase, neon, vercel)." },
-          "use": { "type": "string", "description": "Existing resource id to attach to." },
-          "cwd": { "type": "string", "description": "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory." }
+          "service": {
+            "type": "string",
+            "description": "Service name (e.g. supabase, neon, vercel)."
+          },
+          "use": {
+            "type": "string",
+            "description": "Existing resource id to attach to."
+          },
+          "cwd": {
+            "type": "string",
+            "description": "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory."
+          }
         },
-        "required": ["service"]
+        "required": [
+          "service"
+        ]
       }
     },
     {
@@ -82,11 +131,20 @@
       "inputSchema": {
         "type": "object",
         "properties": {
-          "service": { "type": "string", "description": "Service name." },
-          "keepRemote": { "type": "boolean", "description": "Accepted and forwarded compatibility flag; the CLI keeps upstream resources in every removal mode." },
-          "cwd": { "type": "string", "description": "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory." }
+          "service": {
+            "type": "string"
+          },
+          "keepRemote": {
+            "type": "boolean"
+          },
+          "cwd": {
+            "type": "string",
+            "description": "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory."
+          }
         },
-        "required": ["service"]
+        "required": [
+          "service"
+        ]
       }
     },
     {
@@ -96,10 +154,15 @@
       "inputSchema": {
         "type": "object",
         "properties": {
-          "json": { "type": "boolean", "description": "Machine-readable JSON (schema ashlr.stack.list/v1)." },
-          "cwd": { "type": "string", "description": "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory." }
-        },
-        "required": []
+          "json": {
+            "type": "boolean",
+            "description": "Machine-readable JSON (schema ashlr.stack.list/v1)."
+          },
+          "cwd": {
+            "type": "string",
+            "description": "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory."
+          }
+        }
       }
     },
     {
@@ -109,11 +172,21 @@
       "inputSchema": {
         "type": "object",
         "properties": {
-          "service": { "type": "string", "description": "Service name." },
-          "json": { "type": "boolean", "description": "Machine-readable JSON (schema ashlr.stack.info/v1)." },
-          "cwd": { "type": "string", "description": "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory." }
+          "service": {
+            "type": "string"
+          },
+          "json": {
+            "type": "boolean",
+            "description": "Machine-readable JSON (schema ashlr.stack.info/v1)."
+          },
+          "cwd": {
+            "type": "string",
+            "description": "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory."
+          }
         },
-        "required": ["service"]
+        "required": [
+          "service"
+        ]
       }
     },
     {
@@ -123,10 +196,15 @@
       "inputSchema": {
         "type": "object",
         "properties": {
-          "json": { "type": "boolean", "description": "Machine-readable JSON (schema ashlr.stack.status/v1)." },
-          "cwd": { "type": "string", "description": "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory." }
-        },
-        "required": []
+          "json": {
+            "type": "boolean",
+            "description": "Machine-readable JSON (schema ashlr.stack.status/v1)."
+          },
+          "cwd": {
+            "type": "string",
+            "description": "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory."
+          }
+        }
       }
     },
     {
@@ -136,10 +214,15 @@
       "inputSchema": {
         "type": "object",
         "properties": {
-          "json": { "type": "boolean", "description": "Machine-readable JSON (schema ashlr.stack.env/v1, names only)." },
-          "cwd": { "type": "string", "description": "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory." }
-        },
-        "required": []
+          "json": {
+            "type": "boolean",
+            "description": "Machine-readable JSON (schema ashlr.stack.env/v1, names only)."
+          },
+          "cwd": {
+            "type": "string",
+            "description": "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory."
+          }
+        }
       }
     },
     {
@@ -149,10 +232,15 @@
       "inputSchema": {
         "type": "object",
         "properties": {
-          "json": { "type": "boolean", "description": "Machine-readable JSON (schema ashlr.stack.env-diff/v1, names and declaring service only); still an error result when any are missing." },
-          "cwd": { "type": "string", "description": "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory." }
-        },
-        "required": []
+          "json": {
+            "type": "boolean",
+            "description": "Machine-readable JSON (schema ashlr.stack.env-diff/v1, names and declaring service only); still an error result when any are missing."
+          },
+          "cwd": {
+            "type": "string",
+            "description": "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory."
+          }
+        }
       }
     },
     {
@@ -162,12 +250,23 @@
       "inputSchema": {
         "type": "object",
         "properties": {
-          "fix": { "type": "boolean", "description": "Attempt auto-remediation." },
-          "all": { "type": "boolean", "description": "Run across every registered project." },
-          "json": { "type": "boolean", "description": "Machine-readable JSON output." },
-          "cwd": { "type": "string", "description": "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory." }
-        },
-        "required": []
+          "fix": {
+            "type": "boolean",
+            "description": "Attempt auto-remediation."
+          },
+          "all": {
+            "type": "boolean",
+            "description": "Run across every registered project."
+          },
+          "json": {
+            "type": "boolean",
+            "description": "Machine-readable JSON output."
+          },
+          "cwd": {
+            "type": "string",
+            "description": "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory."
+          }
+        }
       }
     },
     {
@@ -177,10 +276,18 @@
       "inputSchema": {
         "type": "object",
         "properties": {
-          "platform": { "type": "string", "enum": ["vercel", "railway", "fly"] },
-          "cwd": { "type": "string", "description": "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory." }
+          "platform": {
+            "type": "string",
+            "description": "One of: vercel, railway, fly."
+          },
+          "cwd": {
+            "type": "string",
+            "description": "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory."
+          }
         },
-        "required": ["platform"]
+        "required": [
+          "platform"
+        ]
       }
     },
     {
@@ -190,10 +297,15 @@
       "inputSchema": {
         "type": "object",
         "properties": {
-          "category": { "type": "string", "description": "Only this category, any case (e.g. ai, database, payments)." },
-          "json": { "type": "boolean", "description": "Machine-readable JSON (schema ashlr.stack.providers/v1)." }
-        },
-        "required": []
+          "category": {
+            "type": "string",
+            "description": "Only this category, any case (e.g. ai, database, payments)."
+          },
+          "json": {
+            "type": "boolean",
+            "description": "Machine-readable JSON (schema ashlr.stack.providers/v1)."
+          }
+        }
       }
     },
     {
@@ -203,9 +315,11 @@
       "inputSchema": {
         "type": "object",
         "properties": {
-          "json": { "type": "boolean", "description": "Machine-readable JSON (schema ashlr.stack.projects/v1)." }
-        },
-        "required": []
+          "json": {
+            "type": "boolean",
+            "description": "Machine-readable JSON (schema ashlr.stack.projects/v1)."
+          }
+        }
       }
     },
     {
@@ -215,10 +329,15 @@
       "inputSchema": {
         "type": "object",
         "properties": {
-          "json": { "type": "boolean", "description": "Machine-readable JSON (schema ashlr.stack.deps/v1)." },
-          "cwd": { "type": "string", "description": "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory." }
-        },
-        "required": []
+          "json": {
+            "type": "boolean",
+            "description": "Machine-readable JSON (schema ashlr.stack.deps/v1)."
+          },
+          "cwd": {
+            "type": "string",
+            "description": "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory."
+          }
+        }
       }
     },
     {
@@ -228,16 +347,21 @@
       "inputSchema": {
         "type": "object",
         "properties": {
-          "json": { "type": "boolean", "description": "Machine-readable JSON (schema ashlr.stack.templates/v1): each template with its services, providers and secret names." }
-        },
-        "required": []
+          "json": {
+            "type": "boolean",
+            "description": "Machine-readable JSON (schema ashlr.stack.templates/v1): each template with its services, providers and secret names."
+          }
+        }
       }
     },
     {
       "name": "stack_upgrade",
       "description": "Check npm for a newer @ashlr/stack release. Returns ashlr.stack.upgrade/v1 JSON (current, latest, status, install command); installs nothing.",
       "cli": "stack upgrade --json",
-      "inputSchema": { "type": "object", "properties": {}, "required": [] }
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
     },
     {
       "name": "stack_recommend",
@@ -256,15 +380,20 @@
           },
           "category": {
             "type": "string",
-            "description": "Optional filter to a source catalog category: Database, Deploy, Cloud, AI, Analytics, Observability, Errors, Payments, Code, Tickets, Email, Auth, FeatureFlags. The server input is a string, not an enforced enum."
+            "description": "Optional filter to a source catalog category: Database, Deploy, Cloud, AI, Analytics, Observability, Errors, Payments, Code, Tickets, Email, Auth, FeatureFlags. Matched case-insensitively; an unknown category is an error."
           },
           "save": {
             "type": "boolean",
             "description": "When true, also freeze the result to .stack/recipes/<id>.toml so you can run stack_apply. Returns the recipe id in the response."
           },
-          "cwd": { "type": "string", "description": "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory." }
+          "cwd": {
+            "type": "string",
+            "description": "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory."
+          }
         },
-        "required": ["query"]
+        "required": [
+          "query"
+        ]
       }
     },
     {
@@ -280,11 +409,16 @@
           },
           "no_wire": {
             "type": "boolean",
-            "description": "Skip optional Phantom wiring and webhook stubs; provider credential writes remain."
+            "description": "Skip the Phantom vault check and webhook stubs."
           },
-          "cwd": { "type": "string", "description": "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory." }
+          "cwd": {
+            "type": "string",
+            "description": "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory."
+          }
         },
-        "required": ["recipe_id"]
+        "required": [
+          "recipe_id"
+        ]
       }
     }
   ],

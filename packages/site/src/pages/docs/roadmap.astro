@@ -1,5 +1,6 @@
 ---
 import Docs from "~/layouts/Docs.astro";
+import { PUBLISHED_VERSION, SOURCE_VERSION } from "~/lib/site-facts.generated";
 ---
 
 <Docs
@@ -8,8 +9,8 @@ import Docs from "~/layouts/Docs.astro";
   eyebrow="Meta"
 >
   <p>
-    This page describes <strong>source 0.2.1</strong>. Recorded public CLI/MCP
-    packages are 0.1.1; historical native 0.2.0 is separate. Source capabilities
+    This page describes <strong>source {SOURCE_VERSION}</strong>. Recorded public CLI/MCP
+    packages are {PUBLISHED_VERSION}; historical native 0.2.0 is separate. Source capabilities
     and proposed directions below are not release, installed or provider
     acceptance, and timelines are not commitments.
   </p>

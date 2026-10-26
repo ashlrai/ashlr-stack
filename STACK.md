@@ -41,7 +41,8 @@ Things that trip agents up:
 - **MCP from source needs the CLI too.** Point the server at the source CLI with `STACK_BIN` (see `packages/mcp/README.md`), or build `packages/cli` so `dist/index.js` exists. Otherwise every tool call fails with "Could not run the 'stack' CLI".
 - **MCP tests run the built bundles.** `packages/mcp/__tests__/server.test.ts` drives `packages/mcp/dist/server.js` and `packages/cli/dist/index.js` and only builds them when they are missing. Run `bun run build` after changing CLI or MCP source before trusting an MCP test failure.
 - **`stack onboard` edits files in your home directory.** Without `--apply` it only prints a plan. Use `--home <dir>` to point it at a scratch directory.
-- **`bun run build` rewrites tracked site files** (`packages/site/public/install.ps1`, `packages/site/src/data/CHANGELOG.md`, the generated CLI reference). Don't commit that churn with an unrelated change; `git checkout -- packages/site` after a local build.
+- **`bun run build` rewrites tracked site files** (`packages/site/public/install.ps1`, `packages/site/src/data/CHANGELOG.md`, `public/llms*.txt`, `public/mcp.json`, `public/openapi.json`, `public/.well-known/ai-plugin.json`, `src/data/site-facts.json` and the generated CLI/MCP/facts references in `src/lib/`). Don't commit that churn with an unrelated change; `git checkout -- packages/site` after a local build.
+- **Site facts are generated.** `packages/site/scripts/gen-site-facts.ts` derives every version string, install command, provider/template/tool count and slash-command list the site publishes from the repo sources of truth; it runs as part of `bun run gen:cli-ref` (which `bun run dev`/`build` already invoke). Pages import `~/lib/site-facts.generated`; `src/data/agent-guide.txt` and `src/data/llms-full.txt` use `{{PLACEHOLDER}}` tokens. `packages/site/tests/site-facts.test.ts` fails on drift, including a stale literal version in any page or manifest.
 - Site is Astro 5 + Tailwind v4 + Framer Motion
 
 ## Coding conventions (actually followed here)
@@ -78,8 +79,8 @@ Things that trip agents up:
 ### Add a new MCP tool
 
 1. Add to the `TOOLS` array in `packages/mcp/src/tools.ts`.
-2. Update `packages/site/src/lib/mcp-ref.ts`.
-3. Update `packages/site/public/mcp.json` (regenerate via agent or hand edit).
+2. Add its `cli` synopsis to `TOOL_CLI_EXTRAS` in `packages/site/scripts/gen-site-facts.ts`.
+3. Run `bun packages/site/scripts/gen-cli-ref.ts`, which regenerates `src/lib/mcp-ref.generated.ts`, `public/mcp.json` and the rest of the site facts.
 4. Update `packages/site/src/data/agent-guide.txt` "When to recommend" if appropriate, then run the site build to regenerate `packages/site/public/llms.txt`.
 
 ## Do NOT do these

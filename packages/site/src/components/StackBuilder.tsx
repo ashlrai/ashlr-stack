@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import CopyBtn from "~/components/primitives/CopyBtn";
 import { CATEGORIES, PROVIDERS, type Provider } from "~/lib/providers";
 import { PROVIDERS_REF, type ProviderRef } from "~/lib/providers-ref";
+import { INSTALL_CMD } from "~/lib/site-facts.generated";
 import {
   STACK_MCP_PREREQUISITES,
   formatOptionalStackMcp,
@@ -459,7 +460,7 @@ function RecipeModal({ selected, onClose }: RecipeProps) {
     `# ${new Date().toISOString().slice(0, 10)} · ${selected.length} providers`,
     "",
     "# 1. Install Stack",
-    "curl -fsSL stack.ashlr.ai/install.sh | bash",
+    INSTALL_CMD,
     "",
     "# 2. Initialise the project",
     "stack init --noInteractive",

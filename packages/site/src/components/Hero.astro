@@ -6,6 +6,7 @@ import GenerateStackDemo from "./GenerateStackDemo";
 import { PROVIDERS } from "~/lib/providers";
 import { PROVIDERS_REF } from "~/lib/providers-ref";
 import { getIconPath } from "~/lib/icons";
+import { PUBLISHED_VERSION, INSTALL_CMD } from "~/lib/site-facts.generated";
 
 const iconPaths: Record<string, string | null> = Object.fromEntries(
   PROVIDERS.map((p) => [p.slug, getIconPath(p.slug)]),
@@ -51,7 +52,7 @@ const orbitIconPaths: Record<string, string | null> = Object.fromEntries(
           <span class="text-[color:var(--color-ink-600)]">/</span>
           <span>CONTROL PLANE</span>
           <span class="text-[color:var(--color-ink-600)]">/</span>
-          <span>v0.1.1</span>
+          <span>v{PUBLISHED_VERSION}</span>
           <span class="ml-2 inline-flex items-center gap-1.5">
             <span class="w-1.5 h-1.5 bg-[color:var(--color-blade-500)]" style="animation: pulse 1800ms ease-in-out infinite;"></span>
             <span class="text-[color:var(--color-blade-400)]">LIVE ON NPM</span>
@@ -95,11 +96,11 @@ const orbitIconPaths: Record<string, string | null> = Object.fromEntries(
           <div class="flex-1 min-w-0 mono text-[11px] text-[color:var(--color-ink-400)] truncate">
             <span class="text-[color:var(--color-ink-500)]">install</span>
             <span class="text-[color:var(--color-ink-600)]">›</span>
-            <span class="text-[color:var(--color-ink-200)]">curl -fsSL stack.ashlr.ai/install.sh | bash</span>
+            <span class="text-[color:var(--color-ink-200)]">{INSTALL_CMD}</span>
           </div>
           <button
             class="copy-btn px-2 py-1 border border-[color:var(--color-ink-700)] text-[10px] tracking-[0.12em] uppercase text-[color:var(--color-ink-400)] hover:border-[color:var(--color-steel-500)] hover:text-[color:var(--color-ink-200)] transition-colors"
-            data-copy="curl -fsSL stack.ashlr.ai/install.sh | bash"
+            data-copy={INSTALL_CMD}
             aria-label="Copy install command"
           >
             <span class="copy-label">Copy</span>
