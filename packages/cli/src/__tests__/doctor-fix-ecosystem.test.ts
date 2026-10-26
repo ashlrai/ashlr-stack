@@ -287,7 +287,16 @@ describe.skipIf(process.platform === "win32")("doctor --fix with fake companions
     const prev = cli(["--ecosystem", "--fix", "--json"]);
     expect(prev.status).toBe(0);
     const doc = JSON.parse(prev.stdout);
-    expect(doc).toEqual({
+    // The ashlr.doctor v1 wrapper is additive; the native report is unchanged.
+    const { kind, schema_version, tool: _tool, status, native_status, checks, ...native } = doc;
+    expect({ kind, schema_version, status, native_status }).toEqual({
+      kind: "ashlr.doctor",
+      schema_version: 1,
+      status: "ok",
+      native_status: "preview",
+    });
+    expect(checks).toHaveLength(3);
+    expect(native).toEqual({
       mode: "preview",
       tools: [
         ["locus", "locus"],
