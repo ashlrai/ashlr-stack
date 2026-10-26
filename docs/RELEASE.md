@@ -48,7 +48,8 @@ Acceptance gaps remain:
   archive integrity and provenance.
 
 The workflow configures an OIDC attempt with `id-token: write`, npm 11.5.1 or
-newer, and provenance enabled. Its token fallback references `NPM_TOKEN`.
+newer, and provenance enabled. It has no token fallback: the publish step does
+not pass `NPM_TOKEN`, so a failed OIDC exchange fails the publish.
 Actual publisher connections, permissions, and accepted publication remain
 unverified here; no credential creation or settings change is prescribed.
 
