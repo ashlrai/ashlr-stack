@@ -134,7 +134,7 @@ export default function OneCommand() {
                     >
                       {i + 1}
                     </span>
-                    <h4 className="text-[13px] font-medium text-ink-100">{step.title}</h4>
+                    <h3 className="text-[13px] font-medium text-ink-100">{step.title}</h3>
                   </div>
                   <div className="mono text-[12px] leading-[1.65] space-y-0.5">
                     {step.lines.map((l, i) => (

@@ -1,0 +1,72 @@
+---
+import Docs from "~/layouts/Docs.astro";
+import cliPackage from "../../../../cli/package.json";
+import { softwareApplicationSchema } from "~/lib/structured-data";
+---
+
+<Docs
+  title="Capabilities and install"
+  description="Install Ashlr Stack for CLI or MCP use, inspect supported services, and understand source versions, credentials and provider costs."
+  eyebrow="Getting started"
+  extraSchemas={[softwareApplicationSchema()]}
+>
+  <h2 id="capabilities">What Stack can do</h2>
+  <p>
+    Stack is a pre-alpha CLI and stdio MCP bridge for planning and configuring
+    supported project services on macOS, Linux and Windows. The MIT-licensed
+    software is free; provider accounts, infrastructure and API usage can cost money.
+    This documentation describes source version <strong>{cliPackage.version}</strong>.
+    Source version and registry publication are separate.
+  </p>
+  <ul>
+    <li><code>stack providers</code> lists the installed provider catalog.</li>
+    <li><code>stack recommend "project brief"</code> ranks service choices.</li>
+    <li><code>stack scan --json</code> inspects a local repository without provisioning.</li>
+    <li><code>stack add &lt;provider&gt;</code> runs provider-specific setup.</li>
+    <li><code>stack doctor</code> reports configured-service health.</li>
+  </ul>
+
+  <h2 id="install">Install the CLI</h2>
+  <p>
+    Install <a href="https://bun.sh">Bun</a> first. The recorded published 0.1.1
+    packages require Bun, including when started through npx. Check the registry
+    and installed help before relying on a source-only command.
+  </p>
+  <pre><code>{`npm view @ashlr/stack version
+bun add -g @ashlr/stack ashlr-stack-mcp
+stack --version
+stack --help
+stack providers`}</code></pre>
+  <p>For the current source checkout:</p>
+  <pre><code>{`git clone https://github.com/ashlrai/ashlr-stack
+cd ashlr-stack
+bun install
+bun run packages/cli/src/index.ts --help`}</code></pre>
+
+  <h2 id="mcp">Connect an MCP client</h2>
+  <p>
+    Add this stdio server to your client's MCP configuration. Both packages are
+    needed: the server forwards tool calls to the CLI. Run it in the intended
+    project directory and inspect tool errors and output.
+  </p>
+  <pre><code>{JSON.stringify({ mcpServers: { "ashlr-stack": { command: "npx", args: ["-y", "-p", "@ashlr/stack", "-p", "ashlr-stack-mcp", "ashlr-stack-mcp"] } } }, null, 2)}</code></pre>
+
+  <h2 id="boundaries">Credentials and limits</h2>
+  <p>
+    Authentication and provisioning vary by adapter. Vercel requires an existing
+    personal access token. Selected credentials persist through
+    <a href="https://phm.dev/secrets">Phantom Secrets</a>; setup processes and
+    provider requests still handle values. MCP output is not a sandbox or a
+    universal redaction boundary. Local removal does not delete remote resources.
+    Review provider costs and authorize provisioning before running setup.
+  </p>
+
+  <h2 id="references">References for agents</h2>
+  <ul>
+    <li><a href="/docs/cli">CLI reference</a> and <a href="/docs/mcp">MCP reference</a></li>
+    <li><a href="/docs/for-ai-agents">Agent integration guide</a></li>
+    <li><a href="/llms.txt">Generated documentation index</a> and <a href="/llms-full.txt">full text reference</a></li>
+    <li><a href="/mcp.json">Machine-readable tool catalog</a></li>
+    <li><a href="https://github.com/ashlrai/ashlr-stack">Source repository</a> and <a href="https://github.com/ashlrai/ashlr-stack/blob/main/LICENSE">MIT license</a></li>
+  </ul>
+</Docs>

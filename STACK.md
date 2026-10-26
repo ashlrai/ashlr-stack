@@ -80,7 +80,7 @@ Things that trip agents up:
 1. Add to the `TOOLS` array in `packages/mcp/src/tools.ts`.
 2. Update `packages/site/src/lib/mcp-ref.ts`.
 3. Update `packages/site/public/mcp.json` (regenerate via agent or hand edit).
-4. Update `packages/site/public/llms.txt` "When to recommend" if appropriate.
+4. Update `packages/site/src/data/agent-guide.txt` "When to recommend" if appropriate, then run the site build to regenerate `packages/site/public/llms.txt`.
 
 ## Do NOT do these
 

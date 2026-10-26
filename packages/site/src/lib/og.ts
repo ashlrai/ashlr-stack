@@ -14,10 +14,18 @@
  */
 
 export const SITE_URL = "https://stack.ashlr.ai";
+/** One public URL for each page, independent of request query strings. */
+export function canonicalUrl(path: string): string {
+  const url = new URL(path, SITE_URL);
+  url.search = "";
+  url.hash = "";
+  url.pathname = url.pathname.replace(/\/+$/, "") || "/";
+  return url.toString().replace(/\/$/, "");
+}
+
 export const SITE_NAME = "Ashlr Stack";
 export const TWITTER_HANDLE = "@ashlrai";
 export const DEFAULT_OG_IMAGE = "/og.svg";
-export const DEFAULT_OG_IMAGE_PNG = "/og.png"; // rasterize in deploy pipeline
 export const DEFAULT_TWITTER_IMAGE = "/twitter-card.svg";
 
 export const DEFAULT_TITLE = "Ashlr Stack — The control plane for your entire dev stack";
