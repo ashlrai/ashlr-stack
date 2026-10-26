@@ -1,13 +1,20 @@
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { delimiter, dirname, join } from "node:path";
 import { installEnvelope } from "../lib/doctor-envelope.ts";
-import type { FixRunner, RunResult } from "../lib/doctor-fix.ts";
+import {
+  type FixRunner,
+  type RunResult,
+  absolutePath,
+  childEnv,
+  resolveExecutable,
+} from "../lib/doctor-fix.ts";
 import {
   InstallUsageError,
   LOCUS_CARGO_ARGV,
+  LOCUS_REV,
   formatInstallReport,
   installTable,
   locusInstall,
@@ -127,10 +134,16 @@ describe("doctor --install", () => {
 
   test("apply stops at the first non-zero exit; phm doctor exit 1 is expected", async () => {
     const f = fake("v22.15.0", { cargo: 101, phm: 1 });
+    const lines: string[] = [];
     const r = await runDoctorInstall([], ["phantom", "locus", "lexicon"], {
       entries: missingAll,
       runner: f.runner,
+      env: SECRET_ENV,
+      progress: (l) => lines.push(l),
     });
+    expect(lines[0]).toBe("running: npm install -g @ashlr/phantom");
+    expect(lines.filter((l) => l.startsWith("running: "))).toHaveLength(2);
+    expect(lines.filter((l) => /done in \d+s/.test(l))).toHaveLength(2);
     expect(r.outcome).toEqual({ stopped_at: "locus" });
     expect(r.plan.steps.map((s) => s.outcome)).toEqual([
       "installed",
@@ -142,7 +155,18 @@ describe("doctor --install", () => {
     expect(f.calls.map((c) => c.argv[0])).toEqual(["node", "npm", "cargo"]);
 
     const g = fake("v22.15.0", { phm: 1 });
-    const ok = await runDoctorInstall([], ["phantom"], { entries: missingAll, runner: g.runner });
+    const ok = await runDoctorInstall([], ["phantom"], {
+      entries: missingAll,
+      runner: g.runner,
+      env: SECRET_ENV,
+    });
+    expect(g.calls.map((c) => c.argv)).toEqual([
+      ["node", "--version"],
+      ["npm", "install", "-g", "@ashlr/phantom"],
+      ["phm", "doctor"],
+    ]);
+    for (const c of [...f.calls, ...g.calls])
+      expect(c.env).toEqual({ PATH: "/bin", HOME: "/h", NO_COLOR: "1" });
     expect(ok.outcome).toEqual({ stopped_at: null });
     expect(ok.plan.steps.at(-1)?.outcome).toBe("checked");
     expect(installEnvelope(ok).status).toBe("warn"); // the manual ashlr-md step
@@ -169,6 +193,54 @@ describe("doctor --install", () => {
     expect(f.calls).toEqual([]);
   });
 
+  test("locus source install is pinned to a full commit, never a bare --git", () => {
+    expect(LOCUS_REV).toMatch(/^[0-9a-f]{40}$/);
+    const argv = locusInstall(null).argv as string[];
+    expect(argv[argv.indexOf("--rev") + 1]).toBe(LOCUS_REV);
+    for (const t of installTable())
+      if (t.argv?.includes("--git"))
+        expect(t.argv.includes("--rev") || t.argv.includes("--tag")).toBe(true);
+  });
+
+  test("win32: npm and phm .cmd steps are manual with the exact command; cargo still runs", async () => {
+    const f = fake("v22.15.0");
+    const r = await runDoctorInstall([], ["phantom", "locus"], {
+      entries: missingAll,
+      runner: f.runner,
+      platform: "win32",
+    });
+    const by = (tool: string, reason = "missing") =>
+      r.plan.steps.find((s) => s.tool === tool && s.reason === reason);
+    expect(by("phantom")?.outcome).toBe("manual");
+    expect(by("phantom")?.detail).toContain("`npm install -g @ashlr/phantom`");
+    expect(by("phantom", "verify")?.outcome).toBe("manual");
+    expect(by("locus")?.outcome).toBe("installed");
+    expect(f.calls.map((c) => c.argv[0])).toEqual(["node", "cargo"]);
+  });
+
+  test("PATH: relative and empty entries are dropped; bare names resolve only to absolute files", () => {
+    expect(absolutePath(".:/usr/bin::bin:/opt/x", ":")).toBe("/usr/bin:/opt/x");
+    expect(childEnv([], { PATH: `.${delimiter}${delimiter}/bin` }).PATH).toBe("/bin");
+    const dir = mkdtempSync(join(tmpdir(), "stack-path-"));
+    try {
+      const cwdOnly = mkdtempSync(join(tmpdir(), "stack-cwd-"));
+      writeFileSync(join(cwdOnly, "npm"), "#!/bin/sh\n", { mode: 0o755 });
+      writeFileSync(join(dir, "cargo"), "#!/bin/sh\n", { mode: 0o755 });
+      const prev = process.cwd();
+      process.chdir(cwdOnly);
+      try {
+        expect(resolveExecutable("npm", { PATH: ".:" }, "linux")).toBeNull();
+        expect(resolveExecutable("cargo", { PATH: `.:${dir}` }, "linux")).toBe(join(dir, "cargo"));
+        expect(resolveExecutable("./npm", { PATH: dir }, "linux")).toBeNull();
+      } finally {
+        process.chdir(prev);
+        rmSync(cwdOnly, { recursive: true, force: true });
+      }
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   test("table: every command is a fixed argv with no shell metacharacters", () => {
     for (const t of installTable())
       for (const a of t.argv ?? []) expect(a).not.toMatch(/[;&|`$<>]/);
@@ -176,7 +248,6 @@ describe("doctor --install", () => {
 });
 
 describe("stack doctor --ecosystem --install (CLI)", () => {
-  const { spawnSync } = require("node:child_process") as typeof import("node:child_process");
   const entry = join(dirname(import.meta.path), "..", "index.ts");
   const cli = (args: string[]) => {
     const empty = mkdtempSync(join(tmpdir(), "stack-install-"));

@@ -129,7 +129,9 @@ export const doctorCommand = defineCommand({
         return;
       }
       try {
-        const report = await runDoctorInstall(install, apply);
+        const report = await runDoctorInstall(install, apply, {
+          progress: json ? undefined : (line) => process.stderr.write(`${line}\n`),
+        });
         if (json) process.stdout.write(`${JSON.stringify(installEnvelope(report), null, 2)}\n`);
         else {
           console.log(colors.bold(`Ashlr ecosystem doctor --install (${report.mode})`));

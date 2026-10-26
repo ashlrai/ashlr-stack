@@ -37,11 +37,22 @@ export interface InstallTool {
 export const LOCUS_NPM_BROKEN = ["0.5.0"];
 export const LOCUS_NPM_FIXED: string | null = null;
 
+/**
+ * The locus commit the source install builds: `--locked` pins only the
+ * dependency graph, so the source itself is pinned here. A locus main commit
+ * whose CI (including `cargo build --workspace --release`) passed, workspace
+ * version 0.5.1. Bump it to a newer green main commit with a review, or switch
+ * to `--tag v0.5.1` once that tag exists.
+ */
+export const LOCUS_REV = "2c28eb4001ef5cc56c0d6dc8ea9bc2dd611fe43b";
+
 export const LOCUS_CARGO_ARGV = [
   "cargo",
   "install",
   "--git",
   "https://github.com/ashlrai/locus",
+  "--rev",
+  LOCUS_REV,
   "locus-cli",
   "locus-mcp",
   "--locked",
@@ -75,6 +86,15 @@ export function installTable(): InstallTool[] {
 export const PHM_DOCTOR_ARGV = ["phm", "doctor"];
 export const PHM_DOCTOR_NOTE =
   "exit 1 is expected while optional companions (locus, a local model) are missing";
+
+/**
+ * npm and phm are .cmd shims on Windows, and a .cmd cannot start without a
+ * shell, which Stack never uses. There those steps are manual, with the exact
+ * command to run in a terminal.
+ */
+const WIN_SHIMS = new Set(["npm", "phm"]);
+const winManual = (command: string) =>
+  `run \`${command}\` in a terminal (on Windows npm and phm are .cmd shims, which Stack does not start without a shell)`;
 
 export const INSTALL_TIMEOUT_MS = 900_000;
 export const NODE_PROBE_TIMEOUT_MS = 5_000;
@@ -128,6 +148,9 @@ export interface InstallDeps {
   entries?: EcosystemEntry[];
   runner?: FixRunner;
   env?: NodeJS.ProcessEnv;
+  platform?: NodeJS.Platform;
+  /** Progress lines (`running: ...`, elapsed); the CLI sends them to stderr outside --json. */
+  progress?: (line: string) => void;
 }
 
 export async function runDoctorInstall(
@@ -138,6 +161,16 @@ export async function runDoctorInstall(
   const table = deps.table ?? installTable();
   const runner = deps.runner ?? defaultFixRunner;
   const env = childEnv([], deps.env);
+  const shim = (cmd: string | undefined) =>
+    (deps.platform ?? process.platform) === "win32" && WIN_SHIMS.has(cmd ?? "");
+  const progress = deps.progress ?? (() => {});
+  const run = async (argv: string[], timeoutMs: number) => {
+    progress(`running: ${cmdline(argv[0] as string, argv.slice(1))}`);
+    const t0 = Date.now();
+    const res = await runner(argv[0] as string, argv.slice(1), env, timeoutMs);
+    progress(`  done in ${Math.round((Date.now() - t0) / 1000)}s`);
+    return res;
+  };
   const label = (n: string) => (NAME_RE.test(n) ? `'${n}'` : "<invalid name>");
   const known = table.map((t) => t.tool).join(", ");
   for (const n of [...only, ...(apply ?? [])])
@@ -182,6 +215,7 @@ export async function runDoctorInstall(
     const command = t.argv ? cmdline(t.argv[0] as string, t.argv.slice(1)) : (t.manual ?? "");
     const base = { tool: t.tool, reason: why, command, ...(t.note ? { note: t.note } : {}) };
     if (!t.argv) return { ...base, outcome: "manual" as const, detail: t.manual };
+    if (shim(t.argv[0])) return { ...base, outcome: "manual" as const, detail: winManual(command) };
     if (t.node && !nodeOk(nodeVer, t.node))
       return {
         ...base,
@@ -193,14 +227,18 @@ export async function runDoctorInstall(
   if (
     pending.some((p) => p.t.tool === "phantom") ||
     entries.some((e) => e.name === "phantom" && e.status !== "missing")
-  )
+  ) {
+    const command = cmdline(PHM_DOCTOR_ARGV[0] as string, PHM_DOCTOR_ARGV.slice(1));
     steps.push({
       tool: "phantom",
       reason: "verify",
-      command: cmdline(PHM_DOCTOR_ARGV[0] as string, PHM_DOCTOR_ARGV.slice(1)),
-      outcome: "planned",
+      command,
       note: PHM_DOCTOR_NOTE,
+      ...(shim(PHM_DOCTOR_ARGV[0])
+        ? { outcome: "manual" as const, detail: winManual(command) }
+        : { outcome: "planned" as const }),
     });
+  }
 
   if (apply === undefined)
     return { mode: "preview", plan: { node: nodeLabel, steps }, outcome: null };
@@ -214,8 +252,9 @@ export async function runDoctorInstall(
         s.outcome = "not_run";
         continue;
       }
+      if (s.outcome === "manual") continue;
       // Read-only check with the base env only; 0 and 1 both count as ran.
-      const r = await runner("phm", PHM_DOCTOR_ARGV.slice(1), env, 60_000);
+      const r = await run(PHM_DOCTOR_ARGV, 60_000);
       s.outcome = r.kind === "exited" && (r.code === 0 || r.code === 1) ? "checked" : "failed";
       if (s.outcome === "failed") s.detail = "phm doctor could not run";
       continue;
@@ -233,7 +272,7 @@ export async function runDoctorInstall(
     }
     const t = table.find((x) => x.tool === s.tool) as InstallTool;
     const argv = t.argv as string[];
-    const r = await runner(argv[0] as string, argv.slice(1), env, INSTALL_TIMEOUT_MS);
+    const r = await run(argv, INSTALL_TIMEOUT_MS);
     if (r.kind === "exited" && r.code === 0) {
       s.outcome = "installed";
       continue;
