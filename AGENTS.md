@@ -17,6 +17,13 @@ This repository is part of the AshlrAI ecosystem. It is maintained by Phantom (`
 ## Getting started
 Build, test and run instructions for agents are in [STACK.md](./STACK.md#agent-quickstart-from-a-clone).
 
+## Documentation freshness
+
+- Treat `packages/cli/src/index.ts` and `packages/cli/src/commands/` as the CLI source of truth, and `packages/mcp/src/tools.ts` as the MCP tool source of truth.
+- Keep the complete command and tool tables in `README.md` aligned with those sources. MCP exposes a subset of CLI commands.
+- Run `HOME=$(mktemp -d) bun test scripts/docs-freshness.test.ts` after changing commands, tools or their documentation. The check reads source without invoking provider setup.
+- Source capabilities do not establish published package versions or provider readiness. Verify installed command help, such as `stack onboard --help`, before using release-specific examples.
+
 ## Ground rules
 - Keep diffs small and reviewable, with one concern per PR.
 - Never commit secrets. Use Phantom Secrets placeholders.

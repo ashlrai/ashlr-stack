@@ -10,7 +10,7 @@ ashlrcode) working on **Ashlr Stack itself**. It's read alongside `CLAUDE.md`
 
 - **`@ashlr/stack-core`** — provider adapters, config schema, pipeline
 - **`@ashlr/stack`** — the `stack` CLI
-- **`ashlr-stack-mcp`** — an MCP server that exposes every CLI command
+- **`ashlr-stack-mcp`**: an MCP server that exposes a subset of CLI commands
 - **Claude Code plugin** — `/stack:add`, `/stack:list`, etc.
 - **Marketing site + docs** at `packages/site/` — deploys to https://stack.ashlr.ai
 
@@ -22,13 +22,13 @@ third-party service in a developer's project with one command.
 - 27 CLI commands live under `packages/cli/src/commands/*.ts` (registered in `packages/cli/src/index.ts`)
 - 39 providers in 13 categories under `packages/core/src/providers/*.ts` (factory: `_api-key.ts`; pilot: `supabase.ts`)
 - 19 MCP tools in the `TOOLS` array of `packages/mcp/src/tools.ts` (served by `server.ts`). Each runs the CLI: `STACK_BIN` if set, else the `stack` bin of the `@ashlr/stack` dependency (`packages/cli/dist/index.js`, present after a build), else `stack` on PATH (`packages/mcp/src/stack-bin.ts`)
-- Tests live in `packages/*/src/__tests__/` — run with `bun test` from the repo root
+- Tests live in `packages/*/src/__tests__/`, `packages/mcp/__tests__/`, `packages/site/tests/` and `scripts/`. Run with `HOME=$(mktemp -d) bun test` from the repo root
 
 ## Agent quickstart (from a clone)
 
 ```bash
 bun install --frozen-lockfile
-bun test                                   # full suite, no network or accounts
+HOME=$(mktemp -d) bun test                  # full suite, isolated home
 bunx tsc --noEmit -p tsconfig.json
 bunx biome check .
 bun run packages/cli/src/index.ts --help   # the CLI from source
@@ -73,14 +73,16 @@ Things that trip agents up:
 3. Add to `packages/cli/src/commands/completion.ts` so shell completion stays current.
 4. Add to the `TOOLS` array in `packages/mcp/src/tools.ts` if it should be exposed to MCP.
 5. Add the name to `COMMAND_ORDER` (and examples to `EXTRAS`) in `packages/site/scripts/gen-cli-ref.ts`, run `bun packages/site/scripts/gen-cli-ref.ts`, and commit `packages/site/src/lib/cli-ref.generated.ts`. CI fails if the committed copy drifts, and `packages/site/tests/cli-ref.test.ts` fails if it does not list exactly the commands in `stack --help`.
-6. Smoke test: `bun run packages/cli/src/index.ts <name> --help`.
+6. Update the command table in `README.md` and run `HOME=$(mktemp -d) bun test scripts/docs-freshness.test.ts`.
+7. Smoke test: `bun run packages/cli/src/index.ts <name> --help`.
 
 ### Add a new MCP tool
 
 1. Add to the `TOOLS` array in `packages/mcp/src/tools.ts`.
-2. Update `packages/site/src/lib/mcp-ref.ts`.
-3. Update `packages/site/public/mcp.json` (regenerate via agent or hand edit).
-4. Update `packages/site/public/llms.txt` "When to recommend" if appropriate.
+2. Update the tool table in `README.md` and run `HOME=$(mktemp -d) bun test scripts/docs-freshness.test.ts`.
+3. Update `packages/site/src/lib/mcp-ref.ts`.
+4. Update `packages/site/public/mcp.json` (regenerate via agent or hand edit).
+5. Update `packages/site/public/llms.txt` "When to recommend" if appropriate.
 
 ## Do NOT do these
 

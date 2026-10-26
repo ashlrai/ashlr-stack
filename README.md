@@ -25,7 +25,7 @@ To provision a real service, install Stack (below) and run `stack add <provider>
 
 ## Connect your agent (MCP)
 
-Every MCP tool runs the `stack` CLI, so the server needs `stack` on its PATH (or `STACK_BIN` set to it). These snippets fetch both packages in one `npx`, which puts `stack` on the server's PATH:
+Every MCP tool runs the `stack` CLI. Resolution checks `STACK_BIN` first, then the installed `@ashlr/stack` dependency's binary, then `stack` on PATH. These snippets request both packages explicitly:
 
 ```bash
 claude mcp add ashlr-stack -- npx -y -p @ashlr/stack -p ashlr-stack-mcp ashlr-stack-mcp   # Claude Code
@@ -38,7 +38,7 @@ Cursor (`~/.cursor/mcp.json`):
 { "mcpServers": { "ashlr-stack": { "command": "npx", "args": ["-y", "-p", "@ashlr/stack", "-p", "ashlr-stack-mcp", "ashlr-stack-mcp"] } } }
 ```
 
-With only `ashlr-stack-mcp`, the server starts and lists its tools, but every call returns "Could not run the 'stack' CLI".
+The current MCP package depends on `@ashlr/stack`. If no runnable CLI is available, the server can still list tools, but tool calls return "Could not run the 'stack' CLI". For source development, build the CLI or point `STACK_BIN` at its executable source entry.
 
 ### One command for every agent
 
@@ -85,7 +85,8 @@ bun add -g @ashlr/stack ashlr-stack-mcp     # or: npm i -g
 git clone https://github.com/ashlrai/ashlr-stack && cd ashlr-stack
 bun install
 bun run packages/cli/src/index.ts --help
-# Optional: alias stack=`bun run $(pwd)/packages/cli/src/index.ts` so it's on your PATH
+# Run source commands with: bun run packages/cli/src/index.ts <command>
+# For MCP, build the CLI: bun run --cwd packages/cli build
 ```
 
 > Using Stack with an AI coding agent? See [STACK.md](./STACK.md): a self-contained project brief for agents pulling context from the repo.
@@ -160,6 +161,80 @@ phantom exec -- bun dev       # run directly with Phantom's secret proxy active
 stack exec -- bun dev         # Stack wrapper for the same runtime
 stack exec --as acme -- bun dev  # same, but refuse (exit 1, nothing starts) unless Locus has `acme` pinned
 ```
+
+### Source command reference
+
+This checkout registers 27 top-level commands. Run `stack <command> --help`
+for arguments and subcommands supported by your installed version.
+
+<!-- freshness:commands:start -->
+| Command | Purpose |
+| --- | --- |
+| `stack init` | Write configuration; optionally set up template services |
+| `stack import` | Import an existing env file into Phantom and Stack configuration |
+| `stack scan` | Detect providers; --json is read-only |
+| `stack clone` | Clone a Git repository, scan it and print next steps |
+| `stack add` | Run provider-specific setup or attach an existing resource |
+| `stack remove` | Remove local wiring and vault entries; does not delete upstream resources |
+| `stack list` | List configured services |
+| `stack info` | Inspect one configured service |
+| `stack status` | Report Phantom, service and configuration status |
+| `stack env` | Show or diff environment slots; export an empty example file |
+| `stack deps` | Show services grouped by category |
+| `stack doctor` | Inspect health and attempt supported repairs with --fix |
+| `stack exec` | Forward a command to Phantom; --as checks the pinned Locus identity |
+| `stack swap` | Migrate between providers in the same category; --dryRun previews |
+| `stack sync` | Push through Phantom to a configured deployment target |
+| `stack onboard` | Plan agent gateway configuration; --apply writes and --undo restores |
+| `stack open` | Open a configured service dashboard |
+| `stack login` | Refresh provider credentials |
+| `stack telemetry` | Inspect status, enable or disable anonymous usage telemetry |
+| `stack templates` | List starter provider presets |
+| `stack providers` | List the provider catalog |
+| `stack recommend` | Rank providers for a query; --save records a recipe |
+| `stack apply` | Apply a saved recipe; --noWire skips optional Phantom wiring |
+| `stack projects` | List, register, remove or locate projects in the local registry |
+| `stack ci` | Report unavailable CI workflow generation; ci init exits nonzero |
+| `stack completion` | Emit bash, zsh or fish completions |
+| `stack upgrade` | Check npm for a newer CLI release |
+<!-- freshness:commands:end -->
+
+### Source MCP tool reference
+
+The server declares 19 tools, a subset of the CLI. Each tool accepts its
+advertised input schema; CLI flags are not automatically MCP arguments.
+Project-scoped tools accept an absolute `cwd`; global catalog, registry,
+template and upgrade tools reject it. Results contain CLI output and an
+`isError` flag. They do not guarantee credential validity or provider health.
+
+<!-- freshness:tools:start -->
+| Tool | CLI route |
+| --- | --- |
+| `stack_init` | `stack init` |
+| `stack_import` | `stack import` |
+| `stack_scan` | `stack scan` |
+| `stack_add` | `stack add` |
+| `stack_remove` | `stack remove` |
+| `stack_list` | `stack list` |
+| `stack_info` | `stack info` |
+| `stack_status` | `stack status` |
+| `stack_env_show` | `stack env show` |
+| `stack_env_diff` | `stack env diff` |
+| `stack_doctor` | `stack doctor` |
+| `stack_sync` | `stack sync` |
+| `stack_providers` | `stack providers` |
+| `stack_projects_list` | `stack projects list` |
+| `stack_deps` | `stack deps` |
+| `stack_templates_list` | `stack templates list` |
+| `stack_upgrade` | `stack upgrade` |
+| `stack_recommend` | `stack recommend` |
+| `stack_apply` | `stack apply` |
+<!-- freshness:tools:end -->
+
+The server lists up to three resources when their files exist in its working
+directory: `stack://current/.stack.toml`, `stack://current/.stack.local.toml`
+and `stack://current/.mcp.json`. Resources do not accept `cwd`. Review output
+before sharing: the MCP wrapper is not a general secret-redaction boundary.
 
 ### AI recommendation layer
 
