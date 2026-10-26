@@ -116,6 +116,27 @@ export function fixEnvelope<
   return envelope(native, native.stopped_at ? "fail" : "ok", native.mode, checks);
 }
 
+/** `--ecosystem --install`: blocked or failed steps are fail; manual steps warn. */
+export function installEnvelope<
+  T extends {
+    mode: string;
+    plan: { steps: Array<{ tool: string; reason: string; outcome: string; detail?: string }> };
+    outcome: { stopped_at: string | null } | null;
+  },
+>(native: T) {
+  const checks: DoctorCheck[] = native.plan.steps.map((s) => ({
+    id: kebab(`${s.reason === "verify" ? "verify" : "install"}-${s.tool}`),
+    status:
+      s.outcome === "failed" || s.outcome === "blocked"
+        ? "fail"
+        : s.outcome === "manual"
+          ? "warn"
+          : "info",
+    summary: `${s.tool}: ${s.outcome}${s.detail ? ` (${s.detail})` : ""}`,
+  }));
+  return envelope(native, worst(checks), native.mode, checks);
+}
+
 /** `--reconcile`: drift between .stack.toml and source is a warning. */
 export function reconcileEnvelope<T extends { orphans: string[]; untracked: string[] }>(native: T) {
   const checks: DoctorCheck[] = [

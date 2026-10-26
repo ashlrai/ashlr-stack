@@ -1,4 +1,6 @@
 import { spawn } from "node:child_process";
+import { constants, accessSync, statSync } from "node:fs";
+import { delimiter, isAbsolute, join } from "node:path";
 import { ECOSYSTEM_TOOLS, type EcosystemEntry, checkEcosystem } from "./ecosystem.ts";
 
 /**
@@ -117,13 +119,61 @@ export function fixEnv(
   tool: FixTool,
   source: NodeJS.ProcessEnv = process.env,
 ): Record<string, string> {
+  return childEnv(tool.envPassthrough, source);
+}
+
+/** The base allowlist plus `extra` non-secret keys; NO_COLOR set. */
+export function childEnv(
+  extra: string[] = [],
+  source: NodeJS.ProcessEnv = process.env,
+): Record<string, string> {
   const env: Record<string, string> = {};
-  for (const key of [...BASE_ENV_KEYS, ...tool.envPassthrough]) {
+  for (const key of [...BASE_ENV_KEYS, ...extra]) {
     const value = source[key];
-    if (typeof value === "string" && value !== "") env[key] = value;
+    if (typeof value === "string" && value !== "")
+      env[key] = key === "PATH" || key === "Path" ? absolutePath(value) : value;
   }
   env.NO_COLOR = "1";
   return env;
+}
+
+/** Keep only absolute PATH entries, so `.` or an empty entry never resolves from the cwd. */
+export function absolutePath(value: string, sep: string = delimiter): string {
+  return value
+    .split(sep)
+    .filter((d) => d !== "" && isAbsolute(d))
+    .join(sep);
+}
+
+/**
+ * Resolve a bare command to an absolute file on the env's absolute PATH
+ * entries, or null. Spawning the absolute path means the OS never searches
+ * the cwd (Windows does that first for bare names). On Windows only .exe and
+ * .com resolve: .cmd shims need a shell, which Stack never uses.
+ */
+export function resolveExecutable(
+  command: string,
+  env: Record<string, string>,
+  platform: NodeJS.Platform = process.platform,
+): string | null {
+  if (isAbsolute(command)) return command;
+  if (command.includes("/") || command.includes("\\")) return null;
+  const win = platform === "win32";
+  const exts = win ? [".exe", ".com"] : [""];
+  for (const dir of absolutePath(env.PATH ?? env.Path ?? "", win ? ";" : ":").split(
+    win ? ";" : ":",
+  )) {
+    if (!dir) continue;
+    for (const ext of exts) {
+      const file = join(dir, command + ext);
+      try {
+        if (!statSync(file).isFile()) continue;
+        if (!win) accessSync(file, constants.X_OK);
+        return file;
+      } catch {}
+    }
+  }
+  return null;
 }
 
 export const PREVIEW_TIMEOUT_MS = 15_000;
@@ -153,9 +203,14 @@ export const defaultFixRunner: FixRunner = (command, argv, env, timeoutMs) =>
         resolve(r);
       }
     };
+    const file = resolveExecutable(command, env);
+    if (!file) {
+      done({ kind: "missing" });
+      return;
+    }
     let child: ReturnType<typeof spawn>;
     try {
-      child = spawn(command, argv, {
+      child = spawn(file, argv, {
         env,
         stdio: ["ignore", "pipe", "ignore"],
         shell: false,
@@ -212,23 +267,23 @@ export interface FixReport {
   stopped_at: string | null;
 }
 
-const NAME_RE = /^[a-z0-9-]{1,32}$/;
+export const NAME_RE = /^[a-z0-9-]{1,32}$/;
 
-/** Parse `--apply` from raw argv: undefined (absent), [] (bare) or tool names. */
-export function parseApplyArg(rawArgs: string[]): string[] | undefined {
+/** Parse a list flag from raw argv: undefined (absent), [] (bare) or names. */
+export function parseListArg(rawArgs: string[], flag: string): string[] | undefined {
   let found: string | undefined;
   let seen = false;
   for (let i = 0; i < rawArgs.length; i++) {
     const tok = rawArgs[i] as string;
     if (tok === "--") break;
-    if (tok === "--apply") {
+    if (tok === flag) {
       seen = true;
       const next = rawArgs[i + 1];
       found = next !== undefined && !next.startsWith("-") ? next : "";
       if (found) i++;
-    } else if (tok.startsWith("--apply=")) {
+    } else if (tok.startsWith(`${flag}=`)) {
       seen = true;
-      found = tok.slice("--apply=".length);
+      found = tok.slice(flag.length + 1);
     }
   }
   if (!seen) return undefined;
@@ -238,7 +293,9 @@ export function parseApplyArg(rawArgs: string[]): string[] | undefined {
     .filter((s) => s !== "");
 }
 
-function cmdline(command: string, argv: string[]): string {
+export const parseApplyArg = (rawArgs: string[]) => parseListArg(rawArgs, "--apply");
+
+export function cmdline(command: string, argv: string[]): string {
   return [command, ...argv].join(" ");
 }
 

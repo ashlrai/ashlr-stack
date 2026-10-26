@@ -153,6 +153,8 @@ stack doctor --ecosystem      # which Ashlr tools are installed (via --ashlr-han
 stack doctor --ecosystem --fix                 # preview companions' own doctor --fix (changes nothing)
 stack doctor --ecosystem --fix --apply lexicon # run `lexicon doctor --fix --apply`, opted in per tool
 locus doctor --fix --apply                     # locus: run it yourself (needs its own control capability, which Stack never forwards)
+stack doctor --ecosystem --install             # print install commands for missing or outdated companions (runs nothing)
+stack doctor --ecosystem --install --apply lexicon  # run the printed step for lexicon only; stops at the first non-zero exit
 stack exec -- bun dev         # run with Phantom's secret proxy active
 stack exec --as acme -- bun dev  # same, but refuse (exit 1, nothing starts) unless Locus has `acme` pinned
 ```

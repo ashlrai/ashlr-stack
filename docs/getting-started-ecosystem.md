@@ -76,6 +76,15 @@ bun run scripts/cli.ts --help    # codex-doctor, codex-install --dry-run, tools,
 
 The `companions` section says `not installed` or `too old for --ashlr-handshake` with a fix line for each tool. On a box without a host configured, the doctor also reports warnings and failures for the missing host setup.
 
+## Install what is missing
+
+```bash
+stack doctor --ecosystem --install                 # prints the commands, in order; installs nothing
+stack doctor --ecosystem --install --apply phantom,lexicon   # runs them for the named tools only
+```
+
+The order follows the first-run measurements: Node 22.15+ is checked first, then phantom, locus (from source with cargo while npm 0.5.0 is broken), lexicon and the ashlr-md desktop app (a manual step), with `phm doctor` last. That `phm doctor` exits 1 while optional companions such as locus or a local model are missing, and Stack counts that as expected. Stack never suggests `stack onboard` from the npm 0.1.1 build.
+
 ## Repair everything
 
 One command previews the repairs every installed tool offers. It runs each tool's own `doctor --fix --json` (only for tools whose handshake advertises the `doctor-fix` capability) and changes nothing:
