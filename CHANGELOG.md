@@ -4,6 +4,7 @@
 
 ### Changed
 
+- `stack status` runs its config, Phantom version and vault-count probes together (at most 3 at once), each capped at 2 s; a Phantom probe that times out is killed and reported like before (not installed, or an unreadable vault). Output and order are unchanged. On a synthetic slow-phantom fixture the median dropped from 385.5 ms to 223.0 ms.
 - Site: removed the unused `@vercel/analytics` package (and five other unused site dependencies). Analytics still loads via the inline script tag in `packages/site/src/layouts/Base.astro`, so nothing changes at runtime.
 - `stack doctor --ecosystem --fix --apply locus` no longer runs locus (it was always refused, because locus requires `LOCUS_CONTROL_CAPABILITY` and Stack passes only `LOCUS_HOME`). Stack now reports outcome `manual` with the reason and prints `locus doctor --fix --apply` for you to run directly. Stack deliberately never forwards that capability or any token. The preview still runs and lists `manual_apply` for locus; other selected tools still apply, and `manual` never stops the run or changes the exit code.
 

@@ -68,7 +68,7 @@ describe("runStatusChecks", () => {
 
   test("a failing check is reported and the others still finish", async () => {
     const err = new Error("vault down");
-    const results = await runStatusChecks(
+    const results = await runStatusChecks<string | number>(
       [
         { name: "config", run: async () => "cfg" },
         {
