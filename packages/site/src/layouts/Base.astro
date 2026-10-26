@@ -8,6 +8,7 @@ import {
   SITE_NAME,
   SITE_URL,
   buildOgMeta,
+  canonicalUrl,
 } from "~/lib/og";
 import {
   breadcrumbSchema,
@@ -58,9 +59,7 @@ const {
   nextLink,
 } = Astro.props;
 
-const canonical =
-  canonicalProp ??
-  new URL(Astro.url.pathname, Astro.site ?? SITE_URL).toString();
+const canonical = canonicalUrl(canonicalProp ?? Astro.url.pathname);
 
 const ogMeta = buildOgMeta({
   title,
@@ -169,7 +168,7 @@ const absoluteNext = nextLink ? toAbsoluteLink(nextLink) : undefined;
         <script
           is:inline
           type="application/ld+json"
-          set:html={JSON.stringify(schema)}
+          set:html={JSON.stringify(schema).replace(/</g, "\\u003c")}
         />
       ))
     }

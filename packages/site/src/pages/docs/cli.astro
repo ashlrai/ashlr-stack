@@ -86,12 +86,12 @@ const commandList = itemListSchema({
 
       {cmd.notes && <p class="text-ink-300">{cmd.notes}</p>}
 
-      <h4>Synopsis</h4>
+      <h3>Synopsis</h3>
       <Code code={cmd.synopsis} lang="bash" theme="github-dark-dimmed" />
 
       {cmd.flags && cmd.flags.length > 0 && (
         <>
-          <h4>Flags</h4>
+          <h3>Flags</h3>
           <table>
             <thead>
               <tr>
@@ -129,7 +129,7 @@ const commandList = itemListSchema({
 
       {cmd.subcommands && cmd.subcommands.length > 0 && (
         <>
-          <h4>Subcommands</h4>
+          <h3>Subcommands</h3>
           {cmd.subcommands.map((sub) => (
             <div class="mt-5 panel-inner rounded-xl p-5">
               <div class="flex items-baseline justify-between gap-3 mb-1.5 flex-wrap">
@@ -189,7 +189,7 @@ const commandList = itemListSchema({
 
       {cmd.examples && cmd.examples.length > 0 && (
         <>
-          <h4>Examples</h4>
+          <h3>Examples</h3>
           <Code
             code={cmd.examples
               .map((e) => (e.comment ? `${e.comment}\n${e.command}` : e.command))
