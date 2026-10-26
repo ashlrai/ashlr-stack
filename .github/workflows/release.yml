@@ -50,7 +50,7 @@ jobs:
             os: ubuntu-latest
             asset: stack-darwin-arm64
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Validate release source before producers
         env:
@@ -146,7 +146,7 @@ jobs:
           ./dist/${{ matrix.asset }} --help | head -20
           ./dist/${{ matrix.asset }} providers | head -5
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ${{ matrix.asset }}
           path: dist/${{ matrix.asset }}*
@@ -158,7 +158,7 @@ jobs:
     if: ${{ !cancelled() && needs.build-binaries.result == 'success' }}
     runs-on: macos-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: stack-darwin-arm64
           path: dist
@@ -190,7 +190,7 @@ jobs:
         run: echo "enabled=true" >> "$GITHUB_OUTPUT"
 
       - if: steps.gate.outputs.enabled == 'true'
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0   # scripts/publish.sh uses git tag
 
@@ -200,7 +200,7 @@ jobs:
           bun-version: latest
 
       - if: steps.gate.outputs.enabled == 'true'
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '22'
           registry-url: 'https://registry.npmjs.org/'
@@ -316,9 +316,9 @@ jobs:
     if: ${{ !cancelled() && needs.build-binaries.result == 'success' && needs.smoke-darwin-arm64.result == 'success' && needs.publish-npm.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           path: dist
           merge-multiple: true
@@ -412,7 +412,7 @@ jobs:
           repositories: homebrew-ashlr
           permission-contents: write
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           path: stack-repo
 
