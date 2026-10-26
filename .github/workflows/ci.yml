@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 
 # Cancel superseded PR runs only. Pushes to main keep one group per commit so
@@ -35,8 +36,11 @@ jobs:
         env:
           EVENT: ${{ github.event_name }}
           BASE: ${{ github.event.pull_request.base.sha }}
+          DRAFT: ${{ github.event.pull_request.draft == true }}
         run: |
           code=true
+          # G1: draft PRs skip the heavy steps; the job name still reports.
+          if [ "$DRAFT" = "true" ]; then code=false; fi
           if [ "$EVENT" = "pull_request" ] && files="$(git diff --name-only "$BASE...HEAD")" && [ -n "$files" ]; then
             if ! printf '%s\n' "$files" | grep -Ev '^(docs/provider-auth-matrix\.md|README\.md)$' | grep -Evq '^(docs/[^/]+\.md|[A-Za-z_-]+\.md|LICENSE)$' && ! printf '%s\n' "$files" | grep -Eq '^(docs/provider-auth-matrix\.md|README\.md)$'; then
               code=false
@@ -119,10 +123,12 @@ jobs:
       - uses: actions/checkout@v4
 
       - uses: oven-sh/setup-bun@v2
+        if: github.event.pull_request.draft != true
         with:
           bun-version: latest
 
       - name: Cache Bun install
+        if: github.event.pull_request.draft != true
         uses: actions/cache@v4
         with:
           path: ~/.bun/install/cache
@@ -130,17 +136,21 @@ jobs:
           restore-keys: bun-${{ runner.os }}-latest-
 
       - name: Install root
+        if: github.event.pull_request.draft != true
         run: bun install --frozen-lockfile
 
       - name: Install site deps
+        if: github.event.pull_request.draft != true
         working-directory: packages/site
         run: bun install --frozen-lockfile
 
       - name: astro check
+        if: github.event.pull_request.draft != true
         working-directory: packages/site
         run: bunx astro check
 
       - name: astro build
+        if: github.event.pull_request.draft != true
         working-directory: packages/site
         run: bun run build
 
@@ -148,9 +158,11 @@ jobs:
       # the deployed site is always current; this keeps the committed copy
       # (what reviewers and source readers see) from drifting behind it.
       - name: CLI reference is committed up to date
+        if: github.event.pull_request.draft != true
         run: git diff --exit-code -- packages/site/src/lib/cli-ref.generated.ts || { echo "::error::Run 'bun packages/site/scripts/gen-cli-ref.ts' and commit packages/site/src/lib/cli-ref.generated.ts"; exit 1; }
 
       - name: Smoke — key public routes exist in dist/
+        if: github.event.pull_request.draft != true
         working-directory: packages/site
         run: |
           set -e
@@ -165,6 +177,7 @@ jobs:
           echo "All public routes present."
 
       - name: Validate public JSON is actually JSON
+        if: github.event.pull_request.draft != true
         working-directory: packages/site
         run: |
           for f in dist/openapi.json dist/mcp.json dist/.well-known/ai-plugin.json dist/manifest.webmanifest; do
@@ -190,8 +203,11 @@ jobs:
         env:
           EVENT: ${{ github.event_name }}
           BASE: ${{ github.event.pull_request.base.sha }}
+          DRAFT: ${{ github.event.pull_request.draft == true }}
         run: |
           code=true
+          # G1: draft PRs skip the heavy steps; the job name still reports.
+          if [ "$DRAFT" = "true" ]; then code=false; fi
           if [ "$EVENT" = "pull_request" ] && files="$(git diff --name-only "$BASE...HEAD")" && [ -n "$files" ]; then
             if ! printf '%s\n' "$files" | grep -Ev '^(docs/provider-auth-matrix\.md|README\.md)$' | grep -Evq '^(docs/[^/]+\.md|[A-Za-z_-]+\.md|LICENSE)$' && ! printf '%s\n' "$files" | grep -Eq '^(docs/provider-auth-matrix\.md|README\.md)$'; then
               code=false
