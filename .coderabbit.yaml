@@ -43,3 +43,6 @@ reviews:
     - path: "packages/mcp/**"
       instructions: |
         High scrutiny. Tier-1 path: the MCP server shells out to the CLI. Flag a tool that passes secrets through arguments, logs, or resource bodies.
+    - path: "packages/plugin/**"
+      instructions: |
+        High scrutiny. Tier-1 path: listed under core product surface in .github/CODEOWNERS. Flag a change that handles secrets outside Phantom or widens what the plugin can run.
