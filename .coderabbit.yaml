@@ -1,0 +1,48 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: en-US
+chat:
+  auto_reply: false
+reviews:
+  profile: assertive
+  high_level_summary: true
+  poem: false
+  request_changes_workflow: false
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - main
+  path_filters:
+    - "!bun.lock"
+    - "!**/dist/**"
+    - "!**/*.generated.ts"
+    - "!packages/site/src/data/CHANGELOG.md"
+    - "!packages/site/public/install.ps1"
+  path_instructions:
+    - path: "packages/core/src/phantom.ts"
+      instructions: |
+        High scrutiny. Secret handling: every secret read and write goes through the Phantom wrapper in this file. Flag a secret value written to disk, logged, or returned in command output.
+    - path: "packages/core/src/providers/_credential-stage.ts"
+      instructions: |
+        High scrutiny. Secret handling: staged credentials and generated passwords must stay with Phantom. Flag a token, API key, or generated password written to the repo, an env file, or logs.
+    - path: "packages/core/src/providers/**"
+      instructions: |
+        High scrutiny. Secret handling: provider adapters must not store credentials themselves. Flag a new path that writes a token outside Phantom.
+    - path: "packages/core/src/base-urls.ts"
+      instructions: |
+        High scrutiny. Loopback-only rule: a keyed gateway URL must be https, or plain http only to 127.0.0.1 or [::1]. Flag a change that sends an API key to any other host.
+    - path: "packages/core/src/oauth.ts"
+      instructions: |
+        High scrutiny. Loopback-only rule: the OAuth callback server must bind to 127.0.0.1. Flag a listen address other than loopback, or a redirect URI that is not loopback.
+    - path: "packages/core/**"
+      instructions: |
+        High scrutiny. Tier-1 path: packages/core is the control plane (config split, provisioning, provider auth, and secret access).
+    - path: "packages/cli/**"
+      instructions: |
+        High scrutiny. Tier-1 path: the published stack CLI. Flag a command that writes secrets, skips the Phantom preflight, or changes the default of add, apply, exec, or env.
+    - path: "packages/mcp/**"
+      instructions: |
+        High scrutiny. Tier-1 path: the MCP server shells out to the CLI. Flag a tool that passes secrets through arguments, logs, or resource bodies.
+    - path: "packages/plugin/**"
+      instructions: |
+        High scrutiny. Tier-1 path: listed under core product surface in .github/CODEOWNERS. Flag a change that handles secrets outside Phantom or widens what the plugin can run.

@@ -1,0 +1,16 @@
+version: 2
+
+# No test fixture trees, and no fixture package manifests, so there is
+# nothing to put in projectIgnorePaths.
+issueRules:
+  didYouMean: true
+  installScripts: true
+  telemetry: true
+  troll: true
+  malware: true
+  hasNativeCode: true
+  shellScriptOverride: true
+  gitDependency: true
+  httpDependency: true
+  invalidPackageJSON: true
+  unresolvedRequire: true
