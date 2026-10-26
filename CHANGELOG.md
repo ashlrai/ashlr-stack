@@ -5,6 +5,15 @@
 ### Changed
 
 - `stack status` runs its Phantom version and vault-count probes together with the config read (at most 3 at once). Each Phantom probe is capped at 2 s and killed on timeout; the config read has no timeout, as before. A timeout is now visible: human output shows `(timed out after 2s)`, and `--json` keeps `secret_count: null` but adds `secret_count_error: "timeout"` or `"error"` (and `installed_error: "timeout"` when `phantom --version` timed out). Additive only, and absent when everything answers. A timed out version probe is not cached as not installed. Normal output is unchanged. On a synthetic slow-phantom fixture the median dropped from 385.5 ms to 223.0 ms.
+
+## 0.2.2 (2026-10-25)
+
+0.2.1 was tagged but its npm publish failed, so nothing from 0.2.1 reached npm. 0.2.2 supersedes it: it ships everything listed here and under 0.2.1 below. Source versions (core, cli, mcp, `server.json`, `VERSION` in `packages/cli/src/index.ts`) are 0.2.2, which `scripts/publish.sh` checks before it publishes core, then cli, then mcp.
+
+### Changed
+
+- Release: npm publishing relies only on npm trusted publishing (OIDC) with provenance. The workflow no longer passes the `NPM_TOKEN` secret as `NODE_AUTH_TOKEN`, so a failed OIDC exchange stops the release instead of falling back to a token without write access.
+
 - Site: removed the unused `@vercel/analytics` package (and five other unused site dependencies). Analytics still loads via the inline script tag in `packages/site/src/layouts/Base.astro`, so nothing changes at runtime.
 - `stack doctor --ecosystem --fix --apply locus` no longer runs locus (it was always refused, because locus requires `LOCUS_CONTROL_CAPABILITY` and Stack passes only `LOCUS_HOME`). Stack now reports outcome `manual` with the reason and prints `locus doctor --fix --apply` for you to run directly. Stack deliberately never forwards that capability or any token. The preview still runs and lists `manual_apply` for locus; other selected tools still apply, and `manual` never stops the run or changes the exit code.
 
@@ -27,10 +36,6 @@
 - **`litellm-gateway` template.** Provider key slots (OpenAI, Anthropic, xAI, DeepSeek) for a LiteLLM gateway that holds Phantom placeholders instead of real keys, with a README carrying the pin, isolation and Cursor guidance. Experimental: the placeholder flow is not yet verified against a mock upstream.
 - `ANTHROPIC_BASE_URL`, `OPENAI_BASE_URL` and `OLLAMA_HOST` now override the hosts used by the `anthropic` and `openai` key checks and the `--synth` Ollama fallback, so a LiteLLM gateway or Phantom proxy can sit in front. Defaults are unchanged.
 - **`temporal-worker-phantom` template.** Guidance for a Temporal worker whose credentials come from Phantom (`phantom exec`), with no services declared because Stack has no Temporal provider. Experimental: not run against a Temporal cluster.
-
-## 0.2.2 (2026-10-17)
-
-0.2.1 was tagged but its npm publish failed, so nothing from 0.2.1 reached npm. 0.2.2 supersedes it: it ships everything listed here and under 0.2.1 below. Source versions (core, cli, mcp, `server.json`, `VERSION` in `packages/cli/src/index.ts`) are 0.2.2, which `scripts/publish.sh` checks before it publishes core, then cli, then mcp.
 
 ### Round 9: usage errors an agent can act on
 

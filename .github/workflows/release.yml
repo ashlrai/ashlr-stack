@@ -183,7 +183,8 @@ jobs:
       # npm exchanges the workflow identity for a short-lived publish token.
       # No NPM_TOKEN or OTP needed once each package (@ashlr/stack-core,
       # @ashlr/stack, ashlr-stack-mcp) lists ashlrai/ashlr-stack release.yml
-      # as a trusted publisher on npmjs.com. NPM_TOKEN remains a fallback.
+      # as a trusted publisher on npmjs.com. No token fallback: if the OIDC
+      # exchange fails, the publish fails closed (the NPM_TOKEN secret lacks write).
       - name: Enable npm publish
         id: gate
         run: echo "enabled=true" >> "$GITHUB_OUTPUT"
@@ -294,7 +295,6 @@ jobs:
         name: Publish @ashlr/stack-core + @ashlr/stack + ashlr-stack-mcp
         id: npm_publish
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: 'true'
           RELEASE_VERSION: ${{ steps.ver.outputs.version }}
         run: |
