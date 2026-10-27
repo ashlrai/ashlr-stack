@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -18,9 +18,9 @@ function emptyDir(): string {
   return d;
 }
 
-function stack(args: string[], extraEnv: Record<string, string> = {}) {
+function stack(args: string[], extraEnv: Record<string, string> = {}, preload?: string) {
   const cwd = emptyDir();
-  const r = spawnSync("bun", [CLI_ENTRY, ...args], {
+  const r = spawnSync("bun", [...(preload ? ["--preload", preload] : []), CLI_ENTRY, ...args], {
     cwd,
     encoding: "utf8",
     // A minimal env: consola hides log output when it detects a test run,
@@ -75,5 +75,48 @@ describe("command errors", () => {
     const r = stack(["--version"]);
     expect(r.code).toBe(0);
     expect(r.stdout.trim()).toMatch(/^\d+\.\d+\.\d+/);
+  });
+});
+
+describe("cold startup", () => {
+  test("version forms never load command modules", () => {
+    const preload = join(emptyDir(), "reject-commands.ts");
+    writeFileSync(
+      preload,
+      `import { plugin } from "bun";
+plugin({
+  name: "reject-command-loads",
+  setup(build) {
+    build.onLoad({ filter: /[/\\\\]commands[/\\\\].*\\.ts$/ }, (args) => {
+      throw new Error("Unexpected command module: " + args.path);
+    });
+  },
+});`,
+    );
+    for (const args of [["--version"], ["-v"], ["--version", "--json"]]) {
+      const r = stack(args, {}, preload);
+      expect(r.stderr).toBe("");
+      expect(r.code).toBe(0);
+      if (args.includes("--json")) {
+        expect(JSON.parse(r.stdout).version).toMatch(/^\d+\.\d+\.\d+$/);
+      } else {
+        expect(r.stdout).toMatch(/\d+\.\d+\.\d+/);
+      }
+    }
+    // Prove the guard is active when a command is actually selected.
+    const selected = stack(["list"], {}, preload);
+    expect(selected.code).not.toBe(0);
+    expect(selected.stderr).toContain("Unexpected command module:");
+  }, 20_000);
+
+  test("version completes within a generous cold-start budget", () => {
+    // Include process creation and module loading. This is a regression ceiling,
+    // not a microbenchmark: allow substantial headroom for shared CI runners.
+    const start = performance.now();
+    const r = stack(["--version"]);
+    const durationMs = performance.now() - start;
+    expect(r.code).toBe(0);
+    expect(r.stdout.trim()).toMatch(/^\d+\.\d+\.\d+/);
+    expect(durationMs).toBeLessThan(5_000);
   });
 });
