@@ -167,8 +167,10 @@ export interface TechArticleInput {
 
 export function techArticleSchema(input: TechArticleInput): Record<string, unknown> {
   // Explicit null omits unknown dates on new guides instead of backdating them.
-  const datePublished = input.datePublished === null ? undefined : input.datePublished ?? "2026-04-17";
-  const dateModified = input.dateModified === null ? undefined : input.dateModified ?? datePublished;
+  const datePublished =
+    input.datePublished === null ? undefined : (input.datePublished ?? "2026-04-17");
+  const dateModified =
+    input.dateModified === null ? undefined : (input.dateModified ?? datePublished);
   const schema: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "TechArticle",
