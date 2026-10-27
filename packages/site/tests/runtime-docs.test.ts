@@ -4,13 +4,15 @@ import { resolve } from "node:path";
 
 const root = resolve(import.meta.dir, "../../..");
 const read = (path: string) => readFileSync(resolve(root, path), "utf8");
+// Freshness markers (scripts/freshness) wrap generated values; compare the rendered text.
+const stripFresh = (doc: string) => doc.replace(/<!-- fresh:(?:begin [\w-]+|end) -->/g, "");
 const version = JSON.parse(read("packages/cli/package.json")).version as string;
 
 describe("Stack release and credential guidance", () => {
   for (const path of ["README.md", "docs/phantom-locus.md"]) {
     test(`${path} tracks the checkout without shell secret extraction`, () => {
       const doc = read(path);
-      expect(doc).toContain(`checkout${path === "README.md" ? " is version " : ": "}${version}`);
+      expect(stripFresh(doc)).toContain(`checkout${path === "README.md" ? " is version " : ": "}${version}`);
       expect(doc).not.toMatch(/\$\(phantom\s+reveal\b/);
       expect(doc).not.toContain("\u2014");
     });
