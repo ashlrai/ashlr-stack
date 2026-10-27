@@ -5,9 +5,21 @@ import { join } from "node:path";
 const site = fileURLToPath(new URL("../", import.meta.url));
 const read = (path) => readFileSync(path, "utf8");
 
+/** Generated placeholder values written by scripts/gen-site-facts.ts (run as part of `bun run gen:cli-ref`). */
+function sitePlaceholders() {
+  const factsPath = join(site, "src/data/site-facts.json");
+  let parsed;
+  try {
+    parsed = JSON.parse(read(factsPath));
+  } catch {
+    throw new Error(`${factsPath} is missing - run \`bun run scripts/gen-cli-ref.ts\` first`);
+  }
+  return parsed.placeholders;
+}
+
 /** Generate from reviewed guidance, README headings and rendered docs headings. */
 export function generateAgentIndex(pages) {
-  const { version } = JSON.parse(read(join(site, "../cli/package.json")));
+  const values = sitePlaceholders();
   const readme = read(join(site, "../../README.md"));
   const summary = readme.match(/^\*\*Configure[^\n]+/m)?.[0];
   if (!summary) throw new Error("README product summary is missing");
@@ -17,8 +29,12 @@ export function generateAgentIndex(pages) {
     return `- [${title}](https://github.com/ashlrai/ashlr-stack#${anchor})`;
   });
   const docs = pages.filter((page) => page.path.startsWith("/docs")).sort((a, b) => a.path.localeCompare(b.path));
+  const guide = read(join(site, "src/data/agent-guide.txt")).replace(/\{\{(\w+)\}\}/g, (whole, key) => {
+    if (!(key in values)) throw new Error(`unknown placeholder {{${key}}} in src/data/agent-guide.txt`);
+    return values[key];
+  });
   return [
-    read(join(site, "src/data/agent-guide.txt")).replaceAll("{{VERSION}}", version).trim(),
+    guide.trim(),
     "## README overview\n\n" + summary,
     "## README sections\n\n" + headings.join("\n"),
     "## Documentation\n\n" + docs.map((page) => `- [${page.title}](https://stack.ashlr.ai${page.path}): ${page.headings.join("; ")}`).join("\n"),

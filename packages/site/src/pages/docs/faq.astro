@@ -3,6 +3,7 @@ import Docs from "~/layouts/Docs.astro";
 import { Code } from "astro:components";
 import { faqPageSchema } from "~/lib/structured-data";
 import { SITE_URL } from "~/lib/og";
+import { PUBLISHED_VERSION, SOURCE_VERSION } from "~/lib/site-facts.generated";
 
 const pageUrl = `${SITE_URL}/docs/faq/`;
 
@@ -11,7 +12,7 @@ const faq = faqPageSchema(
     {
       question: "Is this production-ready?",
       answer:
-        "These docs describe reviewed source 0.2.1, not a new release or production acceptance. Recorded public CLI/MCP packages are 0.1.1; historical native 0.2.0 is separate. Interfaces and provider coverage vary. Check the installed version and help; no future CLI stability or migration guarantee follows from this source.",
+        `These docs describe reviewed source ${SOURCE_VERSION}, not a new release or production acceptance. Recorded public CLI/MCP packages are ${PUBLISHED_VERSION}; historical native 0.2.0 is separate. Interfaces and provider coverage vary. Check the installed version and help; no future CLI stability or migration guarantee follows from this source.`,
     },
     {
       question: "Why is Phantom required?",
@@ -86,8 +87,8 @@ const faq = faqPageSchema(
 >
   <h2>Is this production-ready?</h2>
   <p>
-    <strong>These docs describe source 0.2.1.</strong> Recorded public CLI/MCP
-    packages are 0.1.1; historical native 0.2.0 is separate. Neither the docs
+    <strong>These docs describe source {SOURCE_VERSION}.</strong> Recorded public CLI/MCP
+    packages are {PUBLISHED_VERSION}; historical native 0.2.0 is separate. Neither the docs
     nor a source version establishes production or provider acceptance.
   </p>
   <p>

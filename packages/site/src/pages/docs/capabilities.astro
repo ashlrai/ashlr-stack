@@ -2,6 +2,7 @@
 import Docs from "~/layouts/Docs.astro";
 import cliPackage from "../../../../cli/package.json";
 import { softwareApplicationSchema } from "~/lib/structured-data";
+import { PUBLISHED_VERSION } from "~/lib/site-facts.generated";
 ---
 
 <Docs
@@ -28,7 +29,7 @@ import { softwareApplicationSchema } from "~/lib/structured-data";
 
   <h2 id="install">Install the CLI</h2>
   <p>
-    Install <a href="https://bun.sh">Bun</a> first. The recorded published 0.1.1
+    Install <a href="https://bun.sh">Bun</a> first. The recorded published {PUBLISHED_VERSION}
     packages require Bun, including when started through npx. Check the registry
     and installed help before relying on a source-only command.
   </p>

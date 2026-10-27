@@ -4,6 +4,14 @@ import { Code } from "astro:components";
 import { MCP_TOOLS } from "~/lib/mcp-ref";
 import { PROVIDERS_REF, groupByCategory } from "~/lib/providers-ref";
 import { itemListSchema } from "~/lib/structured-data";
+import {
+  INSTALL_BUN_ALL,
+  INSTALL_CMD_HTTPS,
+  INSTALL_NPM_ALL,
+  MCP_STDIO_CONFIG,
+  PUBLISHED_VERSION,
+  SOURCE_VERSION,
+} from "~/lib/site-facts.generated";
 
 const grouped = groupByCategory();
 const providerTriggers: { phrase: string; command: string; provider: string }[] =
@@ -98,23 +106,23 @@ const toolsList = itemListSchema({
 
   <h2>Install and runtime</h2>
   <Code
-    code={`curl -fsSL https://stack.ashlr.ai/install.sh | bash`}
+    code={INSTALL_CMD_HTTPS}
     lang="bash"
     theme="github-dark-dimmed"
   />
 
   <p>
     The source installer attempts to install Stack and Phantom. At this review,
-    the public npm CLI and MCP packages are <code>0.1.1</code> and their entrypoints
-    require Bun 1.2 or newer on PATH. This page describes source <code>0.2.1</code>; verify the
+    the public npm CLI and MCP packages are <code>{PUBLISHED_VERSION}</code> and their entrypoints
+    require Bun 1.2 or newer on PATH. This page describes source <code>{SOURCE_VERSION}</code>; verify the
     commands and tools advertised by your installed version.
   </p>
 
   <p>Version-pinned npm alternatives:</p>
   <Code
-    code={`bun add -g @ashlr/stack@0.1.1 ashlr-stack-mcp@0.1.1
+    code={`${INSTALL_BUN_ALL}
 # or
-npm i -g @ashlr/stack@0.1.1 ashlr-stack-mcp@0.1.1`}
+${INSTALL_NPM_ALL}`}
     lang="bash"
     theme="github-dark-dimmed"
   />
@@ -137,14 +145,7 @@ npm i -g @ashlr/stack@0.1.1 ashlr-stack-mcp@0.1.1`}
   </p>
 
   <Code
-    code={`{
-  "mcpServers": {
-    "ashlr-stack": {
-      "command": "npx",
-      "args": ["-y", "-p", "@ashlr/stack@0.1.1", "-p", "ashlr-stack-mcp@0.1.1", "ashlr-stack-mcp"]
-    }
-  }
-}`}
+    code={MCP_STDIO_CONFIG}
     lang="json"
     theme="github-dark-dimmed"
   />

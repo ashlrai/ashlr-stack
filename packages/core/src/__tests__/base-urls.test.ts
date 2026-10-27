@@ -160,3 +160,13 @@ describe("gateway rule for keyed providers", () => {
     );
   });
 });
+
+test.each([
+  ["gpu-box/models///", "http://gpu-box:11434/models"],
+  [":8080/models", "http://localhost:8080/models"],
+  ["[::1]/models", "http://[::1]:11434/models"],
+  ["[::1]:8080/models", "http://[::1]:8080/models"],
+  [" HTTPS://ollama.example/models/// ", "HTTPS://ollama.example/models"],
+])("Ollama normalizes %s", (input, expected) => {
+  expect(ollamaBaseUrl({ OLLAMA_HOST: input })).toBe(expected);
+});

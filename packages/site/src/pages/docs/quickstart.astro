@@ -3,6 +3,13 @@ import Docs from "~/layouts/Docs.astro";
 import { Code } from "astro:components";
 import { howToSchema } from "~/lib/structured-data";
 import { SITE_URL } from "~/lib/og";
+import {
+  INSTALL_CMD,
+  PHANTOM_BREW,
+  PHANTOM_NPM,
+  PUBLISHED_VERSION,
+  SOURCE_VERSION,
+} from "~/lib/site-facts.generated";
 
 const pageUrl = `${SITE_URL}/docs/quickstart/`;
 
@@ -65,7 +72,7 @@ const howTo = howToSchema({
     </li>
     <li>
       <strong>Bun 1.2+</strong> — required by the recorded public CLI/MCP
-      packages <strong>0.1.1</strong>. Reviewed source <strong>0.2.1</strong>
+      packages <strong>{PUBLISHED_VERSION}</strong>. Reviewed source <strong>{SOURCE_VERSION}</strong>
       and historical native <strong>0.2.0</strong> are separate artifacts.
       Node/npm/npx alone do not prove the public binaries can run.
     </li>
@@ -75,7 +82,7 @@ const howTo = howToSchema({
   <p>One-liner:</p>
 
   <Code
-    code={`curl -fsSL stack.ashlr.ai/install.sh | bash`}
+    code={INSTALL_CMD}
     lang="bash"
     theme="github-dark-dimmed"
   />
@@ -83,9 +90,9 @@ const howTo = howToSchema({
   <p>Or via your package manager:</p>
 
   <Code
-    code={`bun add -g @ashlr/stack@0.1.1
+    code={`bun add -g @ashlr/stack@${PUBLISHED_VERSION}
 # or (Bun 1.2+ still required)
-npm i -g @ashlr/stack@0.1.1`}
+npm i -g @ashlr/stack@${PUBLISHED_VERSION}`}
     lang="bash"
     theme="github-dark-dimmed"
   />
@@ -93,9 +100,9 @@ npm i -g @ashlr/stack@0.1.1`}
   <p>And Phantom (required for anything that touches secrets):</p>
 
   <Code
-    code={`brew install ashlrai/phantom/phantom
+    code={`${PHANTOM_BREW}
 # or
-npm i -g phantom-secrets`}
+${PHANTOM_NPM}`}
     lang="bash"
     theme="github-dark-dimmed"
   />

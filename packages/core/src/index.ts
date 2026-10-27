@@ -1,4 +1,5 @@
 export * from "./config.ts";
+export { STACK_MANIFEST, type StackManifest, type StackComponent } from "./stack-manifest.ts";
 export {
   isEnabled as isTelemetryEnabled,
   promptFirstRun as promptTelemetryFirstRun,
