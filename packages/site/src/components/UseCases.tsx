@@ -322,9 +322,8 @@ export default function UseCases() {
             illustrative interaction
           </div>
           <div className="space-y-0">
-            {c.turns.map((t, i) => (
-              // biome-ignore lint/suspicious/noArrayIndexKey: TurnLine has no id; turns are static illustrative examples.
-              <Turn key={i} line={t} />
+            {c.turns.map((t) => (
+              <Turn key={JSON.stringify([t.kind, t.text, t.detail])} line={t} />
             ))}
           </div>
         </div>
