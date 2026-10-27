@@ -326,7 +326,7 @@ export const MCP_TOOLS: McpTool[] = [
   {
     name: "stack_recommend",
     description:
-      "Retrieve scored curated-provider matches and per-category ranking for a query. save:true writes a Recipe for a later stack_apply request. The CLI JSON payload is forwarded as text; this tool does not request LLM inference.",
+      "Rank curated providers by query, returning JSON as text without LLM inference. save:true writes a Recipe for stack_apply.",
     inputs: [
       {
         name: "query",
