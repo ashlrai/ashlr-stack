@@ -5,10 +5,11 @@ on:
     branches: [main]
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
+  merge_group:
   workflow_dispatch:
 
-# Cancel superseded PR runs only. Pushes to main keep one group per commit so
-# no main run is ever cancelled.
+# Cancel superseded PR runs only. Pushes to main and merge_group runs keep one
+# group per commit (github.sha), so no main or queue run is ever cancelled.
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -187,7 +188,7 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -235,3 +236,24 @@ jobs:
       - name: Biome check
         if: steps.scope.outputs.code == 'true'
         run: bunx biome check . --reporter=github
+
+  # Single aggregate for the merge queue. Fails unless every needed job
+  # succeeded (failure, cancelled or skipped all fail). Lint runs only on
+  # pull_request and merge_group, so on push and dispatch it may be skipped.
+  gate:
+    name: CI Gate
+    if: always()
+    needs: [test, site, lint]
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions: {}
+    steps:
+      - name: Require every needed job
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          bad="$(printf '%s' "$NEEDS" | jq -r --arg ev "$EVENT" 'to_entries[] | select(.value.result != "success") | select(($ev != "pull_request" and $ev != "merge_group" and .key == "lint" and .value.result == "skipped") | not) | "\(.key)=\(.value.result)"')"
+          if [ -n "$bad" ]; then echo "::error::CI Gate: $bad"; exit 1; fi
+          echo "CI Gate passed ($EVENT)"
