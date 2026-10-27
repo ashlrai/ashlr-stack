@@ -4,6 +4,7 @@
  * Keep displayed commands and clipboard payloads on the same supported path.
  * CLI/server runtime, project cwd and client loading must be checked separately.
  */
+import { PUBLISHED_VERSION, SOURCE_VERSION } from "~/lib/site-facts.generated";
 ---
 
 <section
@@ -31,7 +32,7 @@
       you can request <span class="mono text-[color:var(--color-ink-100)]">/stack:add</span>.
       Provider setup may need an account, credentials or interactive approval.
       Install both Stack packages and use the runtime required by your versions;
-      public 0.1.1 needs Bun 1.2+, while reviewed source 0.2.1 is not a publication claim.
+      public {PUBLISHED_VERSION} needs Bun 1.2+, while reviewed source {SOURCE_VERSION} is not a publication claim.
     </p>
   </header>
 

@@ -2,6 +2,7 @@
 import Docs from "~/layouts/Docs.astro";
 import { faqPageSchema } from "~/lib/structured-data";
 import { SITE_URL } from "~/lib/og";
+import { PUBLISHED_VERSION } from "~/lib/site-facts.generated";
 
 const pageUrl = `${SITE_URL}/compare/stack-vs-terraform/`;
 
@@ -124,7 +125,7 @@ const faq = faqPageSchema(
       </tr>
       <tr>
         <td>License</td>
-        <td>MIT · pre-alpha v0.1.1</td>
+        <td>MIT · pre-alpha v{PUBLISHED_VERSION}</td>
         <td>BSL 1.1 (since 2023); OpenTofu is the Apache 2.0 fork</td>
       </tr>
       <tr>
@@ -247,7 +248,7 @@ const faq = faqPageSchema(
 
   <h2>Migration and caveats</h2>
   <p>
-    Stack is pre-alpha — these comparisons reflect v0.1.1 as of April 2026.
+    Stack is pre-alpha — these comparisons reflect v{PUBLISHED_VERSION} as of April 2026.
     We do not claim parity with Terraform's maturity, provider breadth, or
     enterprise tooling. If you already have a working Terraform monorepo,
     don't rip it out; add Stack for the SaaS services you're currently
