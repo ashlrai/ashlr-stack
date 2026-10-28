@@ -130,7 +130,9 @@ const CMD_META: Record<string, CmdMeta> = {
   projects: {
     subcommands: ["list", "register", "remove", "where"],
   },
-  upgrade: {},
+  upgrade: {
+    flags: [{ name: "apply" }, { name: "dryRun" }, { name: "json" }],
+  },
   ci: {
     subcommands: ["init"],
   },

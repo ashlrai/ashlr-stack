@@ -95,7 +95,7 @@ A cheat sheet for the current source interface:
 | `stack projects list|register|remove|where` | Cross-project registry; `projects list --json` prints `ashlr.stack.projects/v1` |
 | `stack ci init` | Inspect unavailable CI health workflow generation; exits nonzero without writing a workflow |
 | `stack completion <bash\|zsh\|fish>` | Emit a shell-completion script |
-| `stack upgrade` | Check npm for a newer `@ashlr/stack` release |
+| `stack upgrade` | Check npm for a newer release; `--apply` upgrades an npm global CLI with rollback |
 | `stack login <provider>` | Refresh credentials for that provider; existing stored credentials are separate from setup staging |
 | `stack sync --platform <name>` | Push through Phantom to a configured Vercel, Railway or Fly target |
 | `stack onboard [--apply] [--undo]` | Detect Codex, Claude Code, Cursor and Gemini CLI and register the Phantom gateway (`ashlr-hub`) in each; plan only without `--apply`, existing config files backed up before writing; `--undo` restores them |
@@ -128,3 +128,33 @@ Full schema: [stack.ashlr.ai/docs/config](https://stack.ashlr.ai/docs/config).
 ## License
 
 MIT. See the repository [LICENSE](../../LICENSE).
+
+### Safe CLI upgrades
+
+`stack upgrade` checks for a newer stable release without installing it. For an
+existing npm global installation on macOS or Linux, run `stack upgrade --apply`.
+Use `--apply --dry-run` to preview, or add `--json` for machine-readable output.
+Bun, linked development installs, Windows, and other ecosystem components are
+outside this first upgrade slice; use the manual installation hint for those.
+
+The command checks the current package identity and CLI health, installs the exact
+new version into a temporary prefix with lifecycle scripts disabled, and checks
+its version and help output. It then replaces the package directory while keeping
+the existing launcher. If either active health check fails, it restores the original
+directory locally and verifies it, without downloading the previous version.
+Failures exit nonzero, including a successfully rolled back upgrade. Successful
+`--apply --json` reports have status `upgraded`; read-only reports retain the
+existing `ashlr.stack.upgrade/v1` shape.
+
+An exclusive lock prevents overlapping Stack upgrades. Do not run another package
+manager against the same installation during an upgrade. Each npm operation has
+a two-minute timeout and each CLI health check has a fifteen-second timeout.
+These checks cover CLI startup, version, and command registration, not remote
+service health. No provider resources or credentials are changed.
+
+A process kill or power loss between directory renames requires manual recovery.
+Recovery files live beside the installed package under `.stack-upgrade-*`, with
+the original package in `previous`. Keep those files until the installation is
+verified. If automatic recovery fails, the error identifies the retained directory.
+Only remove a stale `.stack-upgrade-lock` after confirming no upgrade is running
+and restoring/verifying the installation.

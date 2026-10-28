@@ -1,27 +1,11 @@
 /**
  * upgrade command tests
  *
- * Validates the registry-version comparison logic (isNewer) and the
- * --dryRun flag behavior independently of network calls.
+ * Exercises version comparison and command behavior with a mocked registry.
  */
 import { afterEach, describe, expect, mock, test } from "bun:test";
 
-// Re-export isNewer by importing the internal helper indirectly.
-// We test the comparison logic by importing the command module's private
-// helper through a thin re-export shim — or we duplicate the logic here
-// since it's simple semver comparison.
-
-function isNewer(a: string, b: string): boolean {
-  const pa = a.split(".").map((x) => Number.parseInt(x, 10));
-  const pb = b.split(".").map((x) => Number.parseInt(x, 10));
-  for (let i = 0; i < Math.max(pa.length, pb.length); i += 1) {
-    const av = pa[i] ?? 0;
-    const bv = pb[i] ?? 0;
-    if (av > bv) return true;
-    if (av < bv) return false;
-  }
-  return false;
-}
+import { isNewer, runUpgrade } from "../commands/upgrade.ts";
 
 afterEach(() => {
   mock.restore();
@@ -37,78 +21,66 @@ describe("isNewer (upgrade registry comparison)", () => {
     expect(isNewer("0.10.0", "0.9.0")).toBe(true));
 });
 
-describe("upgrade --dryRun flag", () => {
-  test("dryRun=true: prints dry-run message, does not print normal install hint", async () => {
-    const lines: string[] = [];
-    const origLog = console.log;
-    console.log = (...args: unknown[]) => lines.push(args.map(String).join(" "));
-
-    // Simulate what the command does with dryRun=true and a newer version available
-    const CURRENT = "0.2.0";
-    const latest = "0.3.0";
-    const dryRun = true;
-
-    if (isNewer(latest, CURRENT)) {
-      if (dryRun) {
-        lines.push(`(dry-run) would run: bun add -g @ashlr/stack@${latest}`);
-      } else {
-        lines.push("bun add -g @ashlr/stack");
-      }
-    }
-
-    console.log = origLog;
-
-    const output = lines.join("\n");
-    expect(output).toContain("dry-run");
-    expect(output).toContain("0.3.0");
-    expect(output).not.toMatch(/bun add -g @ashlr\/stack\s*$/m);
-  });
-
-  test("dryRun=false: prints normal install hint", () => {
-    const CURRENT = "0.2.0";
-    const latest = "0.3.0";
-    const dryRun = false;
-    const lines: string[] = [];
-
-    if (isNewer(latest, CURRENT)) {
-      if (dryRun) {
-        lines.push(`(dry-run) would run: bun add -g @ashlr/stack@${latest}`);
-      } else {
-        lines.push("bun add -g @ashlr/stack");
-      }
-    }
-
-    expect(lines.join("\n")).not.toContain("dry-run");
-    expect(lines.join("\n")).toContain("bun add -g @ashlr/stack");
-  });
-
-  test("up-to-date: isNewer returns false, no install hint shown", () => {
-    const CURRENT = "0.2.0";
-    const latest = "0.2.0";
-    const lines: string[] = [];
-
-    if (isNewer(latest, CURRENT)) {
-      lines.push("install hint");
-    } else {
-      lines.push(`Up to date (${latest})`);
-    }
-
-    expect(lines[0]).toContain("Up to date");
-  });
-
-  test("npm registry fetch failure: error is caught gracefully", async () => {
-    global.fetch = mock(async () => {
-      throw new Error("network error");
-    }) as unknown as typeof fetch;
-
-    let errorCaught = false;
+describe("upgrade command execution", () => {
+  async function exercise(
+    options: { apply?: boolean; dryRun?: boolean },
+    version = "9.9.9",
+    failure = false,
+  ) {
+    const origFetch = globalThis.fetch;
+    const origWrite = process.stdout.write;
+    const origExit = process.exitCode;
+    let output = "";
+    const install = mock(async (current: string, latest: string) => {
+      if (failure) throw new Error("Upgrade failed; previous version restored.");
+      return { status: "upgraded" as const, current, latest };
+    });
+    globalThis.fetch = mock(
+      async () => new Response(JSON.stringify({ version })),
+    ) as unknown as typeof fetch;
+    process.stdout.write = ((chunk: string | Uint8Array) => {
+      output += String(chunk);
+      return true;
+    }) as typeof process.stdout.write;
     try {
-      await fetch("https://registry.npmjs.org/@ashlr/stack/latest");
-    } catch {
-      errorCaught = true;
+      await runUpgrade({ ...options, json: true }, "0.2.0", install);
+      return { body: JSON.parse(output), calls: install.mock.calls.length, exit: process.exitCode };
+    } finally {
+      globalThis.fetch = origFetch;
+      process.stdout.write = origWrite;
+      process.exitCode = origExit ?? 0;
     }
+  }
 
-    expect(errorCaught).toBe(true);
+  test("dry-run overrides apply and never installs", async () => {
+    const result = await exercise({ apply: true, dryRun: true });
+    expect(result.calls).toBe(0);
+    expect(result.body.status).toBe("update_available");
+  });
+  test("default mode only prints an install hint", async () => {
+    const result = await exercise({});
+    expect(result.calls).toBe(0);
+    expect(result.body.install).toContain("@9.9.9");
+  });
+  test("apply installs and reports success", async () => {
+    const result = await exercise({ apply: true });
+    expect(result.calls).toBe(1);
+    expect(result.body.status).toBe("upgraded");
+  });
+  test("up-to-date and ahead installs are untouched", async () => {
+    for (const version of ["0.2.0", "0.1.0"]) {
+      expect((await exercise({ apply: true }, version)).calls).toBe(0);
+    }
+  });
+  test("invalid registry version is rejected before mutation", async () => {
+    const result = await exercise({ apply: true }, "../../malicious");
+    expect(result.calls).toBe(0);
+    expect(result.exit).toBe(1);
+  });
+  test("rollback is reported as failure rather than successful upgrade", async () => {
+    const result = await exercise({ apply: true }, "9.9.9", true);
+    expect(result.exit).toBe(1);
+    expect(result.body.error).toContain("restored");
   });
 });
 
@@ -154,6 +126,22 @@ describe("stack upgrade --json", () => {
       expect(report.latest).toBe("9.9.9");
     } finally {
       globalThis.fetch = origFetch;
+    }
+  });
+
+  test("an unreachable registry fails without throwing out of the command", async () => {
+    const origFetch = globalThis.fetch;
+    const origExit = process.exitCode;
+    globalThis.fetch = mock(async () => {
+      throw new Error("network unavailable");
+    }) as unknown as typeof fetch;
+    try {
+      const body = JSON.parse(await capture(() => runUpgrade({ json: true }, "0.2.0")));
+      expect(body.error).toBe("network unavailable");
+      expect(process.exitCode).toBe(1);
+    } finally {
+      globalThis.fetch = origFetch;
+      process.exitCode = origExit ?? 0;
     }
   });
 
