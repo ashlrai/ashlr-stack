@@ -55,6 +55,14 @@ async function elements(html: string, selector: string) {
   return results;
 }
 
+test("landing page retains reveal targets and the shared scroll island", async () => {
+  const home = pages.find((page) => page.path === "/");
+  expect(home).toBeDefined();
+  const html = home!.html;
+  expect((await elements(html, "[data-reveal]")).length).toBeGreaterThan(0);
+  expect(html).toContain("SmoothScroll");
+});
+
 test("every rendered page has one canonical, one h1, description and matching OpenGraph", async () => {
   const canonicals = new Set<string>();
   for (const page of pages) {
