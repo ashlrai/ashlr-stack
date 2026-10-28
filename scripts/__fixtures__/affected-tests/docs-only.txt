@@ -1,0 +1,4 @@
+README.md
+docs/provider-auth-matrix.md
+docs/config.md
+packages/core/README.md
