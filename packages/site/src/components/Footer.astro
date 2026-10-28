@@ -1,6 +1,7 @@
 ---
 import Logo from "./Logo.astro";
 import { PROVIDERS } from "~/lib/providers";
+import { INSTALL_CMD } from "~/lib/site-facts.generated";
 ---
 
 <footer class="relative hairline-top mt-8">
@@ -26,11 +27,11 @@ import { PROVIDERS } from "~/lib/providers";
         <div class="flex flex-col sm:flex-row gap-3">
           <div class="flex min-w-0 items-center gap-2 pl-3 pr-1.5 py-1.5 rounded-xl hairline bg-ink-900 mono text-[13px]">
             <span class="ansi-magenta select-none">$</span>
-            <code class="text-ink-100 pr-2 min-w-0 flex-1 whitespace-normal break-all">curl -fsSL stack.ashlr.ai/install.sh | bash</code>
+            <code class="text-ink-100 pr-2 min-w-0 flex-1 whitespace-normal break-all">{INSTALL_CMD}</code>
             <button
               type="button"
               class="copy-btn inline-flex shrink-0 items-center gap-1 h-7 px-2 text-[11px] rounded-md bg-white/5 hover:bg-white/10 text-ink-200 transition-colors"
-              data-copy="curl -fsSL stack.ashlr.ai/install.sh | bash"
+              data-copy={INSTALL_CMD}
               aria-label="Copy install command"
             >
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">

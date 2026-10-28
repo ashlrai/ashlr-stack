@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { INSTALL_CMD } from "~/lib/site-facts.generated";
 
 /**
  * A condensed install one-liner that pins to the top of the viewport
@@ -8,7 +9,6 @@ import { useEffect, useState } from "react";
  * Dismissible per-session via sessionStorage.
  */
 
-const INSTALL_CMD = "curl -fsSL stack.ashlr.ai/install.sh | bash";
 const DISMISS_KEY = "stack-install-dismissed";
 
 export default function StickyInstall() {

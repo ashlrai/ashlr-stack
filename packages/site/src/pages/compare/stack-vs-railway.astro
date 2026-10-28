@@ -2,6 +2,7 @@
 import Docs from "~/layouts/Docs.astro";
 import { faqPageSchema } from "~/lib/structured-data";
 import { SITE_URL } from "~/lib/og";
+import { PUBLISHED_VERSION } from "~/lib/site-facts.generated";
 
 const pageUrl = `${SITE_URL}/compare/stack-vs-railway/`;
 
@@ -126,7 +127,7 @@ const faq = faqPageSchema(
       </tr>
       <tr>
         <td>License</td>
-        <td>MIT · pre-alpha v0.1.1</td>
+        <td>MIT · pre-alpha v{PUBLISHED_VERSION}</td>
         <td>Closed-source commercial platform</td>
       </tr>
       <tr>
@@ -226,7 +227,7 @@ const faq = faqPageSchema(
     <li>
       <strong>Templates + community.</strong> Railway's template marketplace
       has hundreds of one-click starters maintained by a large community.
-      Stack has 5 first-party templates as of v0.1.1.
+      Stack has 5 first-party templates as of v{PUBLISHED_VERSION}.
     </li>
   </ul>
 
@@ -246,7 +247,7 @@ const faq = faqPageSchema(
 
   <h2>Migration and caveats</h2>
   <p>
-    Stack is pre-alpha — these comparisons reflect v0.1.1 as of April 2026.
+    Stack is pre-alpha — these comparisons reflect v{PUBLISHED_VERSION} as of April 2026.
     We don't claim parity with Railway's deploy UX or operational maturity.
     Pricing specifics shift; check Railway's current plans on their site
     rather than trusting a comparison page. For Stack's full provider

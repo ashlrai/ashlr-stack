@@ -15,6 +15,7 @@
 import { spawnSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { generateSiteFacts } from "./gen-site-facts.ts";
 
 // ---------------------------------------------------------------------------
 // Types (mirror the exported shape of cli-ref.ts)
@@ -576,10 +577,20 @@ async function main() {
 
   // Biome's line-wrap rules require multi-line breaks on long strings; run
   // the formatter over the output so the generated file always lands biome-clean.
-  spawnSync("bunx", ["biome", "format", "--write", OUT_PATH], { stdio: "ignore" });
+  // files.include globs resolve relative to the repo-root biome.jsonc, so the
+  // format must run from the repo root to take effect.
+  spawnSync("bunx", ["biome", "format", "--write", "packages/site/src/lib/cli-ref.generated.ts"], {
+    stdio: "ignore",
+    cwd: resolve(SCRIPT_DIR, "..", "..", ".."),
+  });
 
   console.log(`\n  wrote ${OUT_PATH}`);
   console.log(`  ${commands.length} commands extracted.`);
+
+  // packages/site/package.json is a frozen path, so this wired entry point
+  // also runs the site freshness generator (version strings, install
+  // commands, feature counts and MCP tool lists -> generated files).
+  await generateSiteFacts();
 }
 
 main().catch((err) => {

@@ -1,8 +1,9 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import CopyBtn from "~/components/primitives/CopyBtn";
 import { CATEGORIES, PROVIDERS, type Provider } from "~/lib/providers";
 import { PROVIDERS_REF, type ProviderRef } from "~/lib/providers-ref";
+import { INSTALL_CMD } from "~/lib/site-facts.generated";
 import {
   STACK_MCP_PREREQUISITES,
   formatOptionalStackMcp,
@@ -100,14 +101,16 @@ interface CardProps {
 }
 
 function ProviderCard({ m, selected, expanded, onToggle, onExpand }: CardProps) {
-  const brand = `#${m.display.color}`;
+  const brandStyle: CSSProperties & { "--brand": string } = {
+    "--brand": `#${m.display.color}`,
+  };
   const hasMcp = Boolean(m.ref?.mcp);
   return (
     <div
       className={`provider-card group relative block panel p-4 transition-all duration-200 ${
         selected ? "ring-1 ring-[color:var(--color-blade-500)]" : ""
       } ${expanded ? "ring-1 ring-[color:var(--color-steel-300)]" : ""}`}
-      style={{ ["--brand" as string]: brand }}
+      style={brandStyle}
     >
       <button
         type="button"
@@ -459,7 +462,7 @@ function RecipeModal({ selected, onClose }: RecipeProps) {
     `# ${new Date().toISOString().slice(0, 10)} · ${selected.length} providers`,
     "",
     "# 1. Install Stack",
-    "curl -fsSL stack.ashlr.ai/install.sh | bash",
+    INSTALL_CMD,
     "",
     "# 2. Initialise the project",
     "stack init --noInteractive",
@@ -479,21 +482,19 @@ function RecipeModal({ selected, onClose }: RecipeProps) {
     .filter(Boolean)
     .join("\n");
 
-  // Intentionally omit `onClose` from deps — listener + body scroll lock
-  // should mount/unmount exactly once per modal instance.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", onKey);
+    const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     closeBtnRef.current?.focus();
     return () => {
       window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = "";
+      document.body.style.overflow = previousOverflow;
     };
-  }, []);
+  }, [onClose]);
 
   return (
     <div

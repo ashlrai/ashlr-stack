@@ -1,5 +1,6 @@
 ---
 import McpClientsGrid from "./McpClientsGrid";
+import { PUBLISHED_VERSION, SOURCE_VERSION } from "~/lib/site-facts.generated";
 ---
 
 <section
@@ -17,7 +18,7 @@ import McpClientsGrid from "./McpClientsGrid";
     <p class="mt-5 text-[15px] leading-[1.6] text-[color:var(--color-ink-300)] max-w-[620px]">
       The <code class="mono text-[color:var(--color-blade-400)]">ashlr-stack-mcp</code>
       stdio server also needs the Stack CLI and the runtime required by your installed versions.
-      Public 0.1.1 packages require Bun 1.2+; reviewed source 0.2.1 is not a publication claim.
+      Public {PUBLISHED_VERSION} packages require Bun 1.2+; reviewed source {SOURCE_VERSION} is not a publication claim.
       Click a client for a canonical server-entry example, then adapt it to that client's
       configuration format and launch it in your project directory.
     </p>

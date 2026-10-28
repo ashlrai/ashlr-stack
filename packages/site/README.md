@@ -85,3 +85,23 @@ public/
 ## License
 
 MIT.
+
+## Agent discoverability checks
+
+Run the production build and inspect the emitted artifacts with:
+
+```bash
+HOME=$(mktemp -d) bun test packages/site/tests/discoverability.test.ts # from repo root
+```
+
+The test builds through the existing site command and requires Python 3.9 or newer for
+standard-library XML parsing. It checks every HTML page's canonical URL,
+OpenGraph metadata, description, H1 and heading order; parses JSON-LD; checks
+sitemap coverage; and verifies the generated agent index.
+
+`astro build` generates `public/llms.txt` and `dist/llms.txt` from the root README,
+rendered documentation headings and `src/data/agent-guide.txt`. Edit those sources,
+then rebuild and include the generated index in the change. Source version comes
+from the CLI manifest. `llms-full.txt` remains the detailed reviewed reference.
+The sitemap excludes launch notes marked noindex. Deployment continues through
+the existing merge-to-main path.
