@@ -2,6 +2,7 @@
 import Docs from "~/layouts/Docs.astro";
 import { Code } from "astro:components";
 import { DOCS_NAV } from "~/lib/docs-nav";
+import { PUBLISHED_VERSION, SOURCE_VERSION } from "~/lib/site-facts.generated";
 ---
 
 <Docs
@@ -141,8 +142,8 @@ stack add supabase`}
 
   <h2>Pre-alpha status</h2>
   <div class="callout callout-warn">
-    <strong>Heads up:</strong> These docs describe reviewed <strong>source 0.2.1</strong>, not a new
-    publication. Recorded public CLI/MCP packages are <strong>0.1.1</strong>;
+    <strong>Heads up:</strong> These docs describe reviewed <strong>source {SOURCE_VERSION}</strong>, not a new
+    publication. Recorded public CLI/MCP packages are <strong>{PUBLISHED_VERSION}</strong>;
     historical native <strong>0.2.0</strong> is separate. Check installed help;
     provider access and client setup remain conditional. See the <a href="/docs/faq/">FAQ</a> for the
     honest caveats.

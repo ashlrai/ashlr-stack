@@ -6,7 +6,7 @@ import DocsToc from "~/components/docs/DocsToc.astro";
 import PageNav from "~/components/docs/PageNav.astro";
 import Footer from "~/components/Footer.astro";
 import { neighboursOf } from "~/lib/docs-nav";
-import { SITE_URL } from "~/lib/og";
+import { canonicalUrl } from "~/lib/og";
 import {
   techArticleSchema,
   type BreadcrumbItem,
@@ -23,8 +23,8 @@ interface Props {
    * ISO-8601 publish / modify dates for the TechArticle schema. Both default
    * to 2026-04-17 (docs launch).
    */
-  datePublished?: string;
-  dateModified?: string;
+  datePublished?: string | null;
+  dateModified?: string | null;
 }
 
 const {
@@ -38,7 +38,7 @@ const {
 
 const pathname = Astro.url.pathname;
 const pageTitle = `${title} · Ashlr Stack docs`;
-const canonical = new URL(pathname, Astro.site ?? SITE_URL).toString();
+const canonical = canonicalUrl(pathname);
 
 // Breadcrumbs: Home → Docs → <current page title>.
 // The index page is just Home → Docs.
@@ -92,8 +92,8 @@ const allExtraSchemas: Record<string, unknown>[] = [techArticle, ...extraSchemas
           itemscope
           itemtype="https://schema.org/TechArticle"
         >
-          <meta itemprop="datePublished" content={datePublished} />
-          <meta itemprop="dateModified" content={dateModified} />
+          {datePublished && <meta itemprop="datePublished" content={datePublished} />}
+          {dateModified && <meta itemprop="dateModified" content={dateModified} />}
           <meta itemprop="inLanguage" content="en-US" />
           <link itemprop="mainEntityOfPage" href={canonical} />
           {eyebrow && (

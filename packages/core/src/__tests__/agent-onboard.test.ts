@@ -215,3 +215,65 @@ describe("applyOnboarding and undoOnboarding", () => {
     expect(readFileSync(configPathFor("gemini", home), "utf-8")).not.toMatch(/key|token|secret/i);
   });
 });
+
+it.each(["null", "[]", "42", '{"mcpServers":null}', '{"mcpServers":42}', "{broken"])(
+  "refuses malformed JSON config %s without writing",
+  async (raw) => {
+    const path = configPathFor("claude", home);
+    writeFileSync(path, raw);
+    const result = await applyOnboarding({ ...opts(), clients: ["claude"] });
+    expect(result.written).toEqual([]);
+    expect(result.manifestPath).toBeNull();
+    expect(result.skipped[0]?.state).toBe("error");
+    expect(result.skipped[0]?.error).toBeTruthy();
+    expect(readFileSync(path, "utf-8")).toBe(raw);
+  },
+);
+
+it.each([
+  ["", "not-wired"],
+  ['[mcp_servers.other]\ncommand = "ashlr"', "not-wired"],
+  [
+    '[mcp_servers."ashlr-hub"] # gateway\r\ncommand = "ashlr" # command\r\nargs = ["mcp"]\r\n[other]\r\ncommand = "different"',
+    "wired",
+  ],
+  ['[mcp_servers.ashlr-hub]\ncommand = "ashlr"\nargs = []', "differs"],
+  ['[mcp_servers.ashlr-hub]\nargs = ["mcp"]', "differs"],
+] as const)("inspects TOML %s", (raw, state) => {
+  const path = configPathFor("codex", home);
+  mkdirSync(join(home, ".codex"));
+  writeFileSync(path, raw);
+  expect(planOnboarding({ ...opts(), clients: ["codex"] })[0]?.state).toBe(state);
+  expect(readFileSync(path, "utf-8")).toBe(raw);
+});
+
+it.each(["missing config", "missing backup"])(
+  "undo retains manifest for %s and permits retry",
+  async (mode) => {
+    const path = configPathFor("claude", home);
+    writeFileSync(path, "{}");
+    const applied = await applyOnboarding({
+      ...opts(),
+      clients: ["claude"],
+      includeUndetected: true,
+    });
+    const entry = applied.written[0]!;
+    const target = mode === "missing config" ? path : entry.backupPath!;
+    const original = readFileSync(target, "utf-8");
+    rmSync(target);
+    const result = await undoOnboarding({ home });
+    expect(result.restored).toEqual([]);
+    expect(result.refused).toEqual([
+      {
+        entry,
+        reason:
+          mode === "missing config" ? "config file no longer exists" : "backup file is missing",
+      },
+    ]);
+    expect(JSON.parse(readFileSync(applied.manifestPath!, "utf-8")).entries).toEqual([entry]);
+    writeFileSync(target, original);
+    expect((await undoOnboarding({ home })).restored).toEqual([entry]);
+    expect(readFileSync(path, "utf-8")).toBe("{}");
+    expect(existsSync(applied.manifestPath!)).toBe(false);
+  },
+);
