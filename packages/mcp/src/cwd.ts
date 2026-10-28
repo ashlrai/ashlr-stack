@@ -9,8 +9,8 @@
  * already read), nothing more.
  */
 
-import { realpathSync, statSync } from "node:fs";
-import { isAbsolute } from "node:path";
+import { lstatSync, realpathSync, statSync } from "node:fs";
+import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import type { ToolDef } from "./tools.ts";
 import { validateToolInput } from "./tools.ts";
 
@@ -76,5 +76,67 @@ export function planToolCall(
   if (invalid) return { ok: false, error: invalid };
   const resolved = resolveToolCwd(tool, input);
   if (resolved.error !== undefined) return { ok: false, error: resolved.error };
+  const pathKey =
+    tool.name === "stack_scan" ? "path" : tool.name === "stack_import" ? "from" : null;
+  const project = resolved.cwd ?? process.cwd();
+  if (pathKey) {
+    const value = input[pathKey] ?? (pathKey === "path" ? "." : ".env");
+    const error = validateProjectPath(tool, pathKey, String(value), project);
+    if (error) return { ok: false, error };
+  }
+  if (tool.name === "stack_apply" && typeof input.recipe_id === "string") {
+    if (!/^[a-zA-Z0-9_-]+$/.test(input.recipe_id)) {
+      return {
+        ok: false,
+        error: `${tool.name}: argument "recipe_id" must be a filename stem using letters, numbers, underscores or hyphens.`,
+      };
+    }
+    const error = validateProjectPath(
+      tool,
+      "recipe_id",
+      `.stack/recipes/${input.recipe_id}.toml`,
+      project,
+    );
+    if (error) return { ok: false, error };
+  }
   return { ok: true, args: tool.cliArgs(input), cwd: resolved.cwd };
+}
+
+// Resolve the nearest existing ancestor so missing files retain CLI usage errors,
+// while a symlinked parent cannot redirect reads outside the selected project.
+function canonicalPath(path: string): string {
+  try {
+    return realpathSync(path);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    // A dangling symlink is not a missing ordinary file. Refuse it rather
+    // than assuming that its target will eventually be inside the project.
+    try {
+      if (lstatSync(path).isSymbolicLink()) throw error;
+    } catch (statError) {
+      if (statError === error || (statError as NodeJS.ErrnoException).code !== "ENOENT") {
+        throw statError;
+      }
+    }
+    const parent = dirname(path);
+    if (parent === path) throw error;
+    return resolve(canonicalPath(parent), relative(parent, path));
+  }
+}
+
+function validateProjectPath(
+  tool: ToolDef,
+  key: string,
+  value: string,
+  project: string,
+): string | null {
+  try {
+    const root = realpathSync(project);
+    const target = canonicalPath(isAbsolute(value) ? value : `${root}${sep}${value}`);
+    const suffix = relative(root, target);
+    if (suffix !== ".." && !suffix.startsWith(`..${sep}`) && !isAbsolute(suffix)) return null;
+  } catch {
+    return `${tool.name}: argument "${key}" cannot be resolved; use a valid path inside the project directory.`;
+  }
+  return `${tool.name}: argument "${key}" must stay inside the project directory (got ${JSON.stringify(value)}); use a path relative to cwd within the project.`;
 }

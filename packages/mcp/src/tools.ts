@@ -52,7 +52,10 @@ export const TOOLS: ToolDef[] = [
     inputSchema: {
       type: "object",
       properties: {
-        from: { type: "string", description: "Path to the .env file (default: .env)." },
+        from: {
+          type: "string",
+          description: "Path to the .env file inside the project (default: .env).",
+        },
         dryRun: { type: "boolean", description: "Preview without writing." },
         cwd: CWD_INPUT,
       },
@@ -73,7 +76,10 @@ export const TOOLS: ToolDef[] = [
     inputSchema: {
       type: "object",
       properties: {
-        path: { type: "string", description: "Directory to scan (default: cwd)." },
+        path: {
+          type: "string",
+          description: "Directory to scan inside the project (default: cwd).",
+        },
         confidence: {
           type: "string",
           description: "Minimum confidence: low, medium, or high (default: medium).",
@@ -372,7 +378,8 @@ export const TOOLS: ToolDef[] = [
       properties: {
         recipe_id: {
           type: "string",
-          description: "Recipe id (filename stem in .stack/recipes/).",
+          description:
+            "Recipe id (filename stem in .stack/recipes/, letters, numbers, underscores or hyphens).",
         },
         no_wire: {
           type: "boolean",

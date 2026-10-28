@@ -156,7 +156,7 @@ describe("MCP server runtime", () => {
       );
       const result = (await client.callTool({
         name: "stack_scan",
-        arguments: { path: project },
+        arguments: { cwd: project, path: "." },
       })) as { isError?: boolean; content: Array<{ type: string; text: string }> };
       const text = result.content[0]?.text ?? "";
       expect(result.isError).toBeFalsy();
@@ -172,7 +172,7 @@ describe("MCP server runtime", () => {
   test.each([
     {
       label: "nonexistent path",
-      args: { path: join(tmpdir(), "stack-mcp-scan-missing-xyz") },
+      args: { path: "stack-mcp-scan-missing-xyz" },
       needle: "stack-mcp-scan-missing-xyz",
     },
     {
