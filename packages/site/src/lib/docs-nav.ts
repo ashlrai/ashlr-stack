@@ -7,6 +7,7 @@
  */
 
 import { PROVIDERS_REF } from "./providers-ref";
+import { USE_CASES } from "./use-cases";
 
 export interface DocsNavItem {
   label: string;
@@ -53,6 +54,14 @@ export const DOCS_NAV: DocsNavGroup[] = [
           "Retrieve provider suggestions, save a recipe, then review setup and optional wiring.",
       },
     ],
+  },
+  {
+    title: "Use cases",
+    items: USE_CASES.map((guide) => ({
+      label: guide.title,
+      href: `/use-cases/${guide.slug}/`,
+      blurb: guide.description,
+    })),
   },
   {
     title: "Reference",

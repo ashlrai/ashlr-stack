@@ -1,10 +1,11 @@
 import { beforeAll, expect, test } from "bun:test";
 import { mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve, sep } from "node:path";
 import cliPackage from "../../cli/package.json";
 import { canonicalUrl } from "../src/lib/og";
 import { generateAgentIndex } from "../scripts/agent-index.mjs";
+import { USE_CASES } from "../src/lib/use-cases";
 
 const site = join(import.meta.dir, "..");
 const dist = join(site, "dist");
@@ -120,7 +121,7 @@ test("JSON-LD parses and software metadata follows source with honest free licen
 test("sitemap XML is well formed and lists exactly the indexable canonical pages", () => {
   // Python's standard-library XML parser validates structure without fetching a schema.
   const parsed = Bun.spawnSync(["python3", "-c", `
-import json, pathlib, xml.etree.ElementTree as ET
+import datetime, json, pathlib, re, xml.etree.ElementTree as ET
 root = pathlib.Path(${JSON.stringify(dist)})
 ns = '{http://www.sitemaps.org/schemas/sitemap/0.9}'
 index = ET.parse(root / 'sitemap-index.xml').getroot()
@@ -133,7 +134,15 @@ for entry in index:
     assert path.resolve().parent == root.resolve()
     sitemap = ET.parse(path).getroot()
     assert sitemap.tag == ns + 'urlset'
-    urls.extend(item.find(ns + 'loc').text for item in sitemap)
+    for item in sitemap:
+        assert item.tag == ns + 'url'
+        assert len(item.findall(ns + 'loc')) == 1
+        assert len(item.findall(ns + 'lastmod')) == 1
+        modified = item.find(ns + 'lastmod').text
+        assert re.fullmatch(r'\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{3})?Z', modified), modified
+        timestamp = datetime.datetime.fromisoformat(modified.replace('Z', '+00:00'))
+        assert timestamp <= datetime.datetime.now(datetime.timezone.utc), modified
+        urls.append(item.find(ns + 'loc').text)
 print(json.dumps(urls))
 `]);
   expect(parsed.exitCode, parsed.stderr.toString()).toBe(0);
@@ -160,4 +169,115 @@ test("llms.txt parses as an index and is reproducible from README and all docs h
 test("canonical URLs collapse slash, query and fragment variants", () => {
   expect(canonicalUrl("/docs/quickstart/?utm_source=agent#install")).toBe(`${origin}/docs/quickstart`);
   expect(canonicalUrl("/?ref=agent")).toBe(origin);
+});
+
+
+async function assertInternalLink(href: string, context: string) {
+  const url = new URL(href, origin);
+  expect(url.origin, context).toBe(origin);
+  const path = url.pathname.replace(/\/$/, "") || "/";
+  const target = pages.find((page) => page.path === path);
+  expect(target, `${context}: missing page ${path}`).toBeDefined();
+  if (url.hash && target) {
+    const ids = await elements(target.html, "[id]");
+    expect(ids.map((element) => element.attrs.id), context).toContain(decodeURIComponent(url.hash.slice(1)));
+  }
+}
+
+test("every use-case claim renders its cited evidence and links to a real repository file or docs page", async () => {
+  expect(USE_CASES.length).toBeGreaterThanOrEqual(2);
+  expect(USE_CASES.length).toBeLessThanOrEqual(4);
+  expect(new Set(USE_CASES.map((guide) => guide.slug)).size).toBe(USE_CASES.length);
+  const repo = resolve(site, "../..");
+  for (const guide of USE_CASES) {
+    const path = `/use-cases/${guide.slug}`;
+    const page = pages.find((entry) => entry.path === path);
+    expect(page, path).toBeDefined();
+    if (!page) throw new Error(`Missing rendered guide: ${path}`);
+    expect(JSON.stringify(guide), path).not.toContain("\u2014");
+    expect(guide.claims.length, path).toBeGreaterThanOrEqual(3);
+    const claims = await elements(page.html, "section[data-claim]");
+    expect(claims.map((claim) => claim.attrs["data-claim"]), path).toEqual(guide.claims.map((claim) => claim.id));
+    expect(new Set(guide.claims.map((claim) => claim.id)).size, path).toBe(guide.claims.length);
+    for (const claim of guide.claims) {
+      expect(claim.id).toMatch(/^[a-z0-9-]+$/);
+      const context = `${path}#${claim.id}`;
+      const selector = `section[data-claim="${claim.id}"]`;
+      const sources = await elements(page.html, `${selector} a[data-source]`);
+      expect(sources.length, `${context}: every claim needs evidence`).toBeGreaterThan(0);
+      expect(sources.map((source) => source.attrs.href), context).toEqual(claim.sources.map((source) => source.href));
+      expect((await elements(page.html, `${selector} h2`))[0]?.text.trim(), context).toBe(claim.title);
+      if (claim.command) {
+        const code = await elements(page.html, `${selector} pre code`);
+        expect(code.map((block) => block.text.trim()), context).toContain(claim.command.trim());
+      }
+      for (const source of sources) {
+        expect(source.text.trim().length, context).toBeGreaterThan(3);
+        const url = new URL(source.attrs.href, origin);
+        if (url.origin === origin) {
+          expect(url.pathname, context).toMatch(/^\/docs(?:\/|$)/);
+          await assertInternalLink(source.attrs.href, context);
+          continue;
+        }
+        expect(url.origin, context).toBe("https://github.com");
+        const prefix = "/ashlrai/ashlr-stack/blob/main/";
+        expect(url.pathname.startsWith(prefix), context).toBe(true);
+        const relative = decodeURIComponent(url.pathname.slice(prefix.length));
+        const sourcePath = resolve(repo, relative);
+        expect(sourcePath.startsWith(repo + sep), context).toBe(true);
+        const sourceText = readFileSync(sourcePath, "utf8");
+        expect(sourceText.trim().length, context).toBeGreaterThan(0);
+        if (url.hash) {
+          const lines = url.hash.match(/^#L(\d+)(?:-L(\d+))?$/);
+          expect(lines, context).not.toBeNull();
+          if (lines) {
+            const first = Number(lines[1]);
+            const last = Number(lines[2] ?? lines[1]);
+            expect(first, context).toBeGreaterThan(0);
+            expect(last, context).toBeGreaterThanOrEqual(first);
+            expect(last, context).toBeLessThanOrEqual(sourceText.split("\n").length);
+          }
+        }
+      }
+    }
+  }
+});
+
+test("use-case guides connect readers to install, docs and related workflows without orphan pages", async () => {
+  for (const guide of USE_CASES) {
+    const path = `/use-cases/${guide.slug}`;
+    const html = read(`use-cases/${guide.slug}/index.html`);
+    const hrefs = (await elements(html, "a[href]")).map((link) => link.attrs.href);
+    expect(hrefs, path).toContain("/docs/capabilities#install");
+    expect(hrefs.some((href) => /^\/docs(?:\/|$)/.test(href)), path).toBe(true);
+    for (const related of USE_CASES.filter((candidate) => candidate.slug !== guide.slug)) {
+      expect(hrefs.map((href) => new URL(href, origin).pathname.replace(/\/$/, "")), path).toContain(`/use-cases/${related.slug}`);
+    }
+    for (const href of hrefs.filter((href) => href.startsWith("/") || href.startsWith("#"))) {
+      await assertInternalLink(new URL(href, pageUrl(path)).href, path);
+    }
+    for (const inbound of ["/", "/docs"]) {
+      const page = pages.find((candidate) => candidate.path === inbound);
+      expect(page).toBeDefined();
+      const links = await elements(page?.html ?? "", "a[href]");
+      expect(links.map((link) => new URL(link.attrs.href, origin).pathname.replace(/\/$/, "")), `${inbound} links to ${path}`).toContain(path);
+    }
+  }
+});
+
+test("reading pages avoid global motion hydration and images reserve dimensions", async () => {
+  for (const page of pages) {
+    for (const img of await elements(page.html, "img")) {
+      expect(Number(img.attrs.width), `${page.path}: ${img.attrs.src} width`).toBeGreaterThan(0);
+      expect(Number(img.attrs.height), `${page.path}: ${img.attrs.src} height`).toBeGreaterThan(0);
+    }
+    if (page.path !== "/") {
+      const islands = await elements(page.html, "astro-island[component-url]");
+      for (const island of islands) {
+        expect(island.attrs["component-url"], page.path).not.toMatch(/(?:SmoothScroll|StickyInstall)/);
+      }
+    }
+    const resources = await elements(page.html, "link[href]");
+    expect(resources.some((link) => /fonts\.(?:googleapis|gstatic)\.com/.test(link.attrs.href)), page.path).toBe(false);
+  }
 });
