@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { emptyConfig, readConfig, writeConfig } from "../config.ts";
@@ -267,8 +267,9 @@ describe("operation-owned credential persistence", () => {
       .trim()
       .split("\n")
       .map((line) => JSON.parse(line));
+    // Python getcwd resolves filesystem aliases such as macOS /var.
     for (const row of rows.filter((r) => ["status", "reveal", "add"].includes(r.cmd)))
-      expect(row.cwd).toBe(cwd);
+      expect(row.cwd).toBe(realpathSync(cwd));
     expect((await readConfig(cwd)).services.stagefixture).toBeDefined();
   });
   for (const fail of ["login", "provision", "materialize", "success"] as const) {
