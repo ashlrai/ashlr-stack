@@ -98,12 +98,6 @@ const JS_RULES: DepRule[] = [
     matches: (d) => d === "braintrust" || d === "@braintrust/sdk",
     confidence: "high",
   },
-  {
-    provider: "modal",
-    // Modal is Python-first; the dep lives in requirements.txt.
-    matches: () => false,
-    confidence: "low",
-  },
 ];
 
 const PY_RULES: DepRule[] = [
@@ -195,6 +189,10 @@ function rankUp(a: DetectionConfidence, b: DetectionConfidence): DetectionConfid
   return order[Math.max(order.indexOf(a), order.indexOf(b))];
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 async function scanPackageJson(
   cwd: string,
   add: (p: string, s: string, c: DetectionConfidence) => void,
@@ -202,11 +200,12 @@ async function scanPackageJson(
   const pkgPath = join(cwd, "package.json");
   if (!existsSync(pkgPath)) return;
   try {
-    const pkg = JSON.parse(await readFile(pkgPath, "utf-8")) as {
-      dependencies?: Record<string, string>;
-      devDependencies?: Record<string, string>;
+    const pkg: unknown = JSON.parse(await readFile(pkgPath, "utf-8"));
+    if (!isRecord(pkg)) return;
+    const allDeps = {
+      ...(isRecord(pkg.dependencies) ? pkg.dependencies : {}),
+      ...(isRecord(pkg.devDependencies) ? pkg.devDependencies : {}),
     };
-    const allDeps = { ...(pkg.dependencies ?? {}), ...(pkg.devDependencies ?? {}) };
     for (const dep of Object.keys(allDeps)) {
       for (const rule of JS_RULES) {
         if (rule.matches(dep)) {
