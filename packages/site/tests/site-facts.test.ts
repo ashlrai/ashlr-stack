@@ -56,9 +56,9 @@ describe("site facts: sources of truth agree", () => {
   });
 
   test("recorded published version comes from docs/getting-started-ecosystem.md", () => {
-    const row = readRepo("docs/getting-started-ecosystem.md").match(
-      /\|\s*Stack `@ashlr\/stack`\s*\|\s*(\d+\.\d+\.\d+)\s*\|\s*(\d+\.\d+\.\d+)\s*\|/,
-    );
+    const row = readRepo("docs/getting-started-ecosystem.md")
+      .replace(/<!-- fresh:(?:begin [\w-]+|end) -->/g, "")
+      .match(/\|\s*Stack `@ashlr\/stack`\s*\|\s*(\d+\.\d+\.\d+)\s*\|\s*(\d+\.\d+\.\d+)\s*\|/);
     expect(row?.[1]).toBe(facts.publishedVersion);
     expect(row?.[2]).toBe(facts.sourceVersion);
   });

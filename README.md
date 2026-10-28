@@ -1,14 +1,28 @@
-# Ashlr Stack
+<div align="center">
 
-[![CI](https://github.com/ashlrai/ashlr-stack/actions/workflows/ci.yml/badge.svg)](https://github.com/ashlrai/ashlr-stack/actions/workflows/ci.yml)
-[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/ashlrai/ashlr-stack/badge)](https://scorecard.dev/viewer/?uri=github.com/ashlrai/ashlr-stack)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
-[![npm version](https://img.shields.io/npm/v/@ashlr/stack.svg)](https://www.npmjs.com/package/@ashlr/stack)
-<!-- fresh:begin version-badge -->
-[![source v0.2.2](https://img.shields.io/badge/source-v0.2.2-blue.svg)](CHANGELOG.md)
-<!-- fresh:end -->
+<img src="https://stack.ashlr.ai/og.svg" alt="Ashlr Stack: the control plane for your dev stack." width="720" />
+
+<h1>Ashlr Stack</h1>
+
+**The control plane for your dev stack · by [Ashlr](https://ashlr.ai).**
 
 **Configure supported services from your terminal or your AI agent.** Stack uses provider-specific OAuth or supplied credentials, provisions where the adapter supports it, and records selected credentials in [Phantom Secrets](https://phm.dev/secrets), Stack configuration and provider MCP entries. Vercel requires an existing personal access token; Stack does not create that token. Export an empty `.env.example` separately with `stack env export --example`.
+
+[**Try it in 30 seconds**](#try-it-in-30-seconds) ·
+[**Connect your agent**](#connect-your-agent-mcp) ·
+[**Install**](#install) ·
+[**Plugs into Phantom**](#how-stack-plugs-into-phantom) ·
+[**Docs**](./docs/)
+
+<!-- fresh:begin version-badge -->
+[![source v0.2.2](https://img.shields.io/badge/source-v0.2.2-blue.svg?style=for-the-badge&labelColor=0b0b14)](CHANGELOG.md)
+<!-- fresh:end -->
+[![CI](https://img.shields.io/github/actions/workflow/status/ashlrai/ashlr-stack/ci.yml?style=for-the-badge&label=CI&logo=github&labelColor=0b0b14)](https://github.com/ashlrai/ashlr-stack/actions/workflows/ci.yml)
+[![npm: @ashlr/stack](https://img.shields.io/npm/v/@ashlr/stack?style=for-the-badge&logo=npm&label=%40ashlr%2Fstack&labelColor=0b0b14)](https://www.npmjs.com/package/@ashlr/stack)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg?style=for-the-badge&labelColor=0b0b14)](./LICENSE)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/ashlrai/ashlr-stack/badge)](https://scorecard.dev/viewer/?uri=github.com/ashlrai/ashlr-stack)
+
+</div>
 
 **Status:** pre-alpha, active development. The 0.2 release line adds a Node-compatible CLI, expanded providers and headless workflows; this checkout is version <!-- fresh:begin version-pin -->0.2.2<!-- fresh:end -->. See [CHANGELOG.md](./CHANGELOG.md) for the 0.2.0 baseline and subsequent fixes. Source versions do not establish npm publication or provider readiness. Check `npm view @ashlr/stack version`, `npm view ashlr-stack-mcp version`, and your installed `stack --version` before relying on release-specific commands.
 
@@ -116,14 +130,26 @@ stack init --template nextjs-supabase-posthog
 stack env export --example    # separate empty KEY= skeleton in .env.example
 ```
 
-## How it relates to the rest of Ashlr
+## How Stack plugs into Phantom
 
-- **[Phantom Secrets](https://phm.dev/secrets)**: the vault. Stack uses its CLI for selected credential storage and runtime operations; provider authentication still uses credentials.
-- **[Locus](https://github.com/ashlrai/locus)**: the identity plane. Run `locus run -b <binding> -- stack add …` so provider CLIs act only in the pinned personal / company / client account. See [docs/phantom-locus.md](./docs/phantom-locus.md).
-- **ashlr-plugin**: token-efficiency layer for Claude Code. Orthogonal to Stack.
-- **ashlrcode**: multi-provider AI coding CLI. Orthogonal.
+Stack is the service plane of the Ashlr toolchain; it never stores a raw secret itself. The companions it relies on:
 
-Stack is the *control plane*. [Phantom Secrets](https://phm.dev/secrets) is the *vault*. ashlr-plugin is the *context compressor*. They compose.
+| Plane | Tool | Question it answers |
+|---|---|---|
+| Secret plane | [Phantom Secrets](https://phm.dev/secrets) (`phantom`) | Where selected credentials live, and how commands run with them. Stack's vault and `phantom exec --` runtime. |
+| Identity plane | [Locus](https://github.com/ashlrai/locus) (`locus`) | As whom does a provider CLI act? |
+| Service plane | Stack (`stack`, this repo) | Which services does this project need, and are they wired? |
+| Workbench | [Phantom](https://phm.dev) (`phm`) | The agent workbench that orchestrates all three. |
+
+The concrete hooks, detailed in [docs/phantom-locus.md](./docs/phantom-locus.md):
+
+- **Credentials in, secrets out.** Every secret read/write goes through the Phantom Secrets CLI; [`packages/core/src/phantom.ts`](./packages/core/src/phantom.ts) is the only shell wrapper Stack uses. Before `stack add`, `stack apply`, or a writing `stack import`, Stack checks `phantom status --json` and stops rather than initialize the vault itself.
+- **Runtime.** `stack exec -- <cmd>` delegates to `phantom exec --`, so the app runs behind Phantom's secret proxy.
+- **Discovery.** `phm companions` / `phm doctor` detect Stack through `stack --ashlr-handshake` (v1 contract: [contract/ashlr-handshake.v1.json](./contract/ashlr-handshake.v1.json)); `stack doctor --ecosystem` runs the same handshake in reverse against `phm`, `phantom`, `locus`, `lexicon`, `mdopener-mcp` and `ashlr-plugin`. Each probe gets a scrubbed environment (PATH, HOME, USER, locale, TMPDIR) so no token crosses between tools.
+- **Agent wiring.** `stack onboard --apply` writes only the `ashlr-hub` MCP entry into Claude Code, Codex, Cursor and Gemini CLI configs; backups are saved first and `stack onboard --undo` restores.
+- **In the Phantom workbench.** Agents call Stack's MCP tools from a Locus-pinned session: `locus run -b <binding> -- stack add …` provisions into the pinned account, not whichever one was last.
+
+**Other siblings:** [ashlr-plugin](https://github.com/ashlrai/ashlr-plugin) (token-efficiency layer for Claude Code) and ashlrcode (multi-provider AI coding CLI) are orthogonal to Stack. Stack is the *control plane*; Phantom Secrets is the *vault*; Locus is the *identity*. They compose.
 
 ## Curated v1 provider catalog
 
@@ -265,7 +291,14 @@ Dark-first, magenta accent, Astro + Tailwind v4 + Framer Motion. Three interacti
 
 ## Part of the Ashlr ecosystem
 
-Ashlr Stack is one of the open-source tools from [Ashlr](https://ashlr.ai), a forward-deployed engineering company. Its siblings: [Lexicon](https://github.com/ashlrai/lexicon), [Locus](https://github.com/ashlrai/locus), [Phantom Secrets](https://github.com/ashlrai/phantom-secrets), [Ashlr Markdown](https://github.com/ashlrai/ashlr-md), [Ashlr plugin](https://github.com/ashlrai/ashlr-plugin).
+Ashlr Stack is one of the open-source tools from [Ashlr](https://ashlr.ai), a forward-deployed engineering company. Each one installs and runs on its own:
+
+- **[Phantom](https://phm.dev)** (`phm`): the engineering agent workbench. Source: [ashlrai/phantom](https://github.com/ashlrai/phantom).
+- **[Phantom Secrets](https://phm.dev/secrets)** (`phantom`): the vault Stack stores selected credentials in. Source: [ashlrai/phantom-secrets](https://github.com/ashlrai/phantom-secrets).
+- **[Locus](https://github.com/ashlrai/locus)** (`locus`): pins each agent session to one account.
+- **[Lexicon](https://lexicon.ashlr.ai)** (`lexicon`): fixes the words dictation gets wrong. Source: [ashlrai/lexicon](https://github.com/ashlrai/lexicon).
+- **[Ashlr MD](https://md.ashlr.ai)**: a Markdown app with an MCP server. Source: [ashlrai/ashlr-md](https://github.com/ashlrai/ashlr-md).
+- **[ashlr-plugin](https://plugin.ashlr.ai/)** (`ashlr-plugin`): token-efficiency tools for Claude Code and Codex. Source: [ashlrai/ashlr-plugin](https://github.com/ashlrai/ashlr-plugin).
 
 ## Contributing
 
