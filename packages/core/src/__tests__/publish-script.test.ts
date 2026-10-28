@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, jest, test } from "bun:test";
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
@@ -27,6 +27,10 @@ const validatorProgram = readFileSync(sourceScript, "utf8")
   ?.split("\nSTACK_RELEASE_SOURCE")[0];
 if (!validatorProgram) throw new Error("copied release validator is missing");
 const validatorHash = createHash("sha256").update(`${validatorProgram}\n`).digest("hex");
+
+// Each case runs the copied publish.sh end to end; its several real `node`
+// calls take multiple seconds on a loaded runner, well past the 5s default.
+jest.setTimeout(20_000);
 
 function workflowBlock(name: string) {
   const source = readFileSync(sourceWorkflow, "utf8");
@@ -82,10 +86,12 @@ function runFixture(command: string, args: string[], cwd: string, env: Record<st
     let timedOut = false;
     let outputLimitExceeded = false;
     let error: Error | undefined;
+    // The deadline only exists to reap a hung fixture: refuse-path runs still
+    // finish in seconds even on loaded runners, so a kill means a real hang.
     const timer = setTimeout(() => {
       timedOut = true;
       child.kill("SIGKILL");
-    }, 1500);
+    }, 10_000);
     function capture(chunks: Buffer[], chunk: Buffer) {
       if (outputLimitExceeded) return;
       const remaining = 64 * 1024 - bytes;
@@ -160,7 +166,7 @@ if (args.length !== 3 || args[0] !== '--input-type=module' || args[1] !== '-'
 }
 appendFileSync(process.env.VALIDATOR_TRACE, 'read\\n');
 const result = spawnSync(${JSON.stringify(realNode)}, args, {
-  cwd: process.cwd(), env: process.env, input, timeout: 1000, maxBuffer: 64 * 1024,
+  cwd: process.cwd(), env: process.env, input, timeout: 5000, maxBuffer: 64 * 1024,
 });
 if (result.error || result.signal || result.status === null) process.exit(98);
 process.stdout.write(result.stdout); process.stderr.write(result.stderr);

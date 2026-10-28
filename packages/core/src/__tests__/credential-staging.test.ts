@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { emptyConfig, readConfig, writeConfig } from "../config.ts";
@@ -40,7 +40,9 @@ describe("operation-owned credential persistence", () => {
       },
     );
     h = setupFakePhantom();
-    cwd = mkdtempSync(join(tmpdir(), "stack-staging-"));
+    // realpath: spawned children report physical getcwd(), which differs from
+    // tmpdir() on platforms where it is a symlink (macOS /var -> /private/var).
+    cwd = realpathSync(mkdtempSync(join(tmpdir(), "stack-staging-")));
     await writeConfig(emptyConfig("inert"), cwd);
   });
   afterEach(() => {

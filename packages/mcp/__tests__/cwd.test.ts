@@ -3,6 +3,12 @@
  * outside the project (Claude Desktop, a global Cursor config) can still
  * target it. Unit tests cover argv/cwd planning and validation; the stdio
  * test starts the real server in directory A and drives a project in B.
+ *
+ * The server lifecycle is scoped to the stdio describe on purpose: the
+ * catalog/planning describes are pure unit tests, and when a file-level
+ * beforeAll spawn flake (EAGAIN, a slow connect) took the hook down, the unit
+ * tests failed with it. Now a connect failure can only fail the tests that
+ * actually make tool calls.
  */
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
@@ -55,17 +61,20 @@ let root: string;
 let serverDir: string; // A: where the MCP server runs
 let projectDir: string; // B: the project the agent targets
 let initDir: string; // C: an empty directory stack_init scaffolds into
-let client: Client;
+let home: string; // isolated HOME for the spawned server and CLI
+let launcher: string; // `stack` shim that execs the CLI from source
 
 const SERVICE_TOML =
   '[stack]\nversion = "1"\n\n[services.openai]\nprovider = "openai"\nsecrets = ["OPENAI_API_KEY"]\n';
 
-beforeAll(async () => {
+// The fixture tree is synchronous and self-contained; only the stdio describe
+// below spawns the server.
+beforeAll(() => {
   root = realpathSync(mkdtempSync(join(tmpdir(), "stack-mcp-cwd-")));
   serverDir = join(root, "a-server");
   projectDir = join(root, "b-project");
   initDir = join(root, "c-init");
-  const home = join(root, "home");
+  home = join(root, "home");
   const bin = join(root, "bin");
   for (const d of [serverDir, projectDir, initDir, home, bin]) mkdirSync(d, { recursive: true });
   writeFileSync(join(projectDir, ".stack.toml"), SERVICE_TOML);
@@ -73,34 +82,12 @@ beforeAll(async () => {
   writeFileSync(join(root, "a-file"), "not a directory\n");
   symlinkSync(projectDir, join(root, "b-link"));
 
-  const launcher = join(bin, "stack");
+  launcher = join(bin, "stack");
   writeFileSync(launcher, `#!/bin/sh\nexec "${process.execPath}" "${CLI_SRC}" "$@"\n`);
   chmodSync(launcher, 0o755);
+});
 
-  const transport = new StdioClientTransport({
-    command: process.execPath,
-    args: [SERVER_SRC],
-    cwd: serverDir,
-    env: {
-      // No phantom on PATH: keeps the result independent of the host.
-      PATH: [dirname(process.execPath), "/usr/bin", "/bin"].join(":"),
-      HOME: home,
-      STACK_BIN: launcher,
-      STACK_NO_UPDATE_CHECK: "1",
-      STACK_TELEMETRY: "0",
-      DO_NOT_TRACK: "1",
-    },
-  });
-  client = new Client({ name: "cwd-test", version: "0.0.1" });
-  await client.connect(transport);
-}, 15_000);
-
-afterAll(async () => {
-  try {
-    await client.close();
-  } catch {
-    // best-effort
-  }
+afterAll(() => {
   rmSync(root, { recursive: true, force: true });
 });
 
@@ -195,11 +182,70 @@ describe("cwd input: planning and validation", () => {
 
 type ToolResult = { isError?: boolean; content: Array<{ type: string; text: string }> };
 
-async function call(name: string, args: Record<string, unknown>): Promise<ToolResult> {
-  return (await client.callTool({ name, arguments: args })) as ToolResult;
-}
-
 describe("cwd input: stdio server started in another directory", () => {
+  let client: Client | undefined;
+  let connecting: Promise<Client> | undefined;
+
+  // One connect shared by every call. A transient spawn failure (EAGAIN,
+  // EMFILE on a loaded runner) gets a second attempt on a fresh transport;
+  // a real startup failure still fails, contained to this describe.
+  function ensureClient(): Promise<Client> {
+    connecting ??= (async () => {
+      let lastError: unknown;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const next = new Client({ name: "cwd-test", version: "0.0.1" });
+        try {
+          await next.connect(
+            new StdioClientTransport({
+              command: process.execPath,
+              args: [SERVER_SRC],
+              cwd: serverDir,
+              env: {
+                // No phantom on PATH: keeps the result independent of the host.
+                PATH: [dirname(process.execPath), "/usr/bin", "/bin"].join(":"),
+                HOME: home,
+                STACK_BIN: launcher,
+                STACK_NO_UPDATE_CHECK: "1",
+                STACK_TELEMETRY: "0",
+                DO_NOT_TRACK: "1",
+              },
+            }),
+          );
+          client = next;
+          return next;
+        } catch (error) {
+          lastError = error;
+          try {
+            // Kill a half-started server child before the retry.
+            await next.close();
+          } catch {
+            // best-effort
+          }
+        }
+      }
+      throw lastError;
+    })();
+    return connecting;
+  }
+
+  async function call(name: string, args: Record<string, unknown>): Promise<ToolResult> {
+    return (await (await ensureClient()).callTool({ name, arguments: args })) as ToolResult;
+  }
+
+  // Warm the connection up front. The lazy path in call() stays as a
+  // fallback for runners where a timed-out hook lets tests run anyway.
+  beforeAll(async () => {
+    await ensureClient();
+  }, 30_000);
+
+  afterAll(async () => {
+    try {
+      await client?.close();
+    } catch {
+      // best-effort
+    }
+  });
+
   test("stack_list without cwd sees the server's directory (no project there)", async () => {
     const result = await call("stack_list", { json: true });
     expect(result.content[0]?.text ?? "").not.toContain('"openai"');
