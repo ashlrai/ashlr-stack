@@ -1,0 +1,209 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`doctor CLI output snapshots --json without a project 1`] = `
+{
+  "checks": [
+    {
+      "id": "stack-doctor",
+      "status": "fail",
+      "summary": "No .stack.toml at <project>/.stack.toml. Run \`stack init\` first.",
+    },
+  ],
+  "error": "No .stack.toml at <project>/.stack.toml. Run \`stack init\` first.",
+  "kind": "ashlr.doctor",
+  "native_status": "error",
+  "schema_version": 1,
+  "status": "fail",
+  "tool": "ashlr-stack",
+}
+`;
+
+exports[`doctor CLI output snapshots --json without Phantom 1`] = `
+{
+  "checks": [
+    {
+      "id": "stack-doctor",
+      "status": "fail",
+      "summary": "Phantom is not installed. Stack cannot verify secrets without it.",
+    },
+  ],
+  "error": "Phantom is not installed. Stack cannot verify secrets without it.",
+  "kind": "ashlr.doctor",
+  "native_status": "error",
+  "schema_version": 1,
+  "status": "fail",
+  "tool": "ashlr-stack",
+}
+`;
+
+exports[`doctor CLI output snapshots --json with no services 1`] = `
+{
+  "checks": [
+    {
+      "id": "no-services",
+      "status": "warn",
+      "summary": "no services to check",
+    },
+  ],
+  "kind": "ashlr.doctor",
+  "native_status": "passed",
+  "reports": [
+    {
+      "path": "<project>",
+      "project": "cwd",
+      "services": [],
+    },
+  ],
+  "schema_version": 1,
+  "status": "warn",
+  "tool": "ashlr-stack",
+}
+`;
+
+exports[`doctor CLI output snapshots --json with a failing service 1`] = `
+{
+  "checks": [
+    {
+      "id": "cwd-unregistered",
+      "status": "fail",
+      "summary": "unregistered: error (No provider registered for "unregistered")",
+    },
+  ],
+  "kind": "ashlr.doctor",
+  "native_status": "failed",
+  "reports": [
+    {
+      "path": "<project>",
+      "project": "cwd",
+      "services": [
+        {
+          "detail": "No provider registered for "unregistered"",
+          "name": "unregistered",
+          "status": "error",
+        },
+      ],
+    },
+  ],
+  "schema_version": 1,
+  "status": "fail",
+  "tool": "ashlr-stack",
+}
+`;
+
+exports[`doctor CLI output snapshots --ecosystem --json with healthy, degraded, drifting, old and missing companions 1`] = `
+{
+  "checks": [
+    {
+      "id": "phantom",
+      "status": "ok",
+      "summary": "phantom 0.5.2",
+    },
+    {
+      "id": "phantom-secrets",
+      "status": "info",
+      "summary": "phantom-secrets: installed, but too old to answer --ashlr-handshake",
+    },
+    {
+      "id": "locus",
+      "status": "ok",
+      "summary": "locus 0.5.2",
+    },
+    {
+      "id": "lexicon",
+      "status": "warn",
+      "summary": "lexicon 0.1.0 (contract drift)",
+    },
+    {
+      "id": "ashlr-md",
+      "status": "info",
+      "summary": "ashlr-md: not installed",
+    },
+    {
+      "id": "ashlr-plugin",
+      "status": "info",
+      "summary": "ashlr-plugin: not installed",
+    },
+  ],
+  "ecosystem": [
+    {
+      "capabilities": [
+        "doctor-json",
+        "doctor-fix",
+      ],
+      "command": "phm",
+      "contract": "ok",
+      "health": "ok",
+      "name": "phantom",
+      "status": "ok",
+      "version": "0.5.2",
+    },
+    {
+      "command": "phantom",
+      "detail": "installed, but too old to answer --ashlr-handshake",
+      "name": "phantom-secrets",
+      "status": "no-handshake",
+    },
+    {
+      "capabilities": [
+        "doctor-json",
+        "doctor-fix",
+      ],
+      "command": "locus",
+      "contract": "ok",
+      "health": "degraded",
+      "name": "locus",
+      "status": "ok",
+      "version": "0.5.2",
+    },
+    {
+      "capabilities": [],
+      "command": "lexicon",
+      "contract": "drift",
+      "contract_problems": [
+        "missing field name",
+        "missing field command",
+        "missing field protocols",
+      ],
+      "name": "lexicon",
+      "status": "ok",
+      "version": "0.1.0",
+    },
+    {
+      "command": "mdopener-mcp",
+      "detail": "not installed",
+      "name": "ashlr-md",
+      "status": "missing",
+    },
+    {
+      "command": "ashlr-plugin",
+      "detail": "not installed",
+      "name": "ashlr-plugin",
+      "status": "missing",
+    },
+  ],
+  "kind": "ashlr.doctor",
+  "native_status": "informational",
+  "next_steps": [
+    "upgrade lexicon: its \`lexicon --ashlr-handshake\` does not match the v1 contract (missing field name); see docs/ashlr-handshake.md",
+    "locus doctor --fix   # preview safe repairs (writes nothing); add --apply to make them",
+  ],
+  "schema_version": 1,
+  "status": "warn",
+  "tool": "ashlr-stack",
+}
+`;
+
+exports[`doctor CLI output snapshots --ecosystem human output with the same fake companions 1`] = `
+"Ashlr ecosystem
+  ok   phantom 0.5.2 [doctor-json, doctor-fix]
+  --   phantom-secrets (phantom): installed, but too old to answer --ashlr-handshake
+  ok   locus 0.5.2 [doctor-json, doctor-fix] (health: degraded)
+  !!   lexicon 0.1.0 (contract drift: 3 problems)
+  --   ashlr-md (mdopener-mcp): not installed
+  --   ashlr-plugin (ashlr-plugin): not installed
+
+  Next steps:
+    upgrade lexicon: its \`lexicon --ashlr-handshake\` does not match the v1 contract (missing field name); see docs/ashlr-handshake.md
+    locus doctor --fix   # preview safe repairs (writes nothing); add --apply to make them
+"
+`;
