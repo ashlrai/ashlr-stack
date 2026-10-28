@@ -321,8 +321,8 @@ const EXTRAS: Record<string, CommandExtra> = {
     },
   },
   upgrade: {
-    examples: [{ command: "stack upgrade" }],
-    notes: "Checks the npm registry for a newer version, prints an install hint — does not auto-install.",
+    examples: [{ command: "stack upgrade" }, { command: "stack upgrade --apply" }],
+    notes: "Checks npm by default. --apply upgrades an npm global CLI install with local rollback on failed health checks; --dryRun never installs.",
   },
   completion: {
     examples: [

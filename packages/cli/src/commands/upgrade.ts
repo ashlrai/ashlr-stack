@@ -1,81 +1,36 @@
 import { defineCommand } from "citty";
-import { colors, intro, outro, outroError } from "../ui.ts";
-
 import pkg from "../../package.json" with { type: "json" };
+import { installUpgrade, isReleaseVersion } from "../lib/upgrade-install.ts";
+import { colors, intro, outro, outroError } from "../ui.ts";
 
 const PKG = "@ashlr/stack";
 const CURRENT_VERSION = pkg.version;
 
-/**
- * `stack upgrade` — lightweight self-update helper. Checks npm for the latest
- * @ashlr/stack version, prints a hint when a newer one exists. Does not
- * auto-install (too many opinions about bun vs npm vs brew).
- */
 export const upgradeCommand = defineCommand({
   meta: {
     name: "upgrade",
-    description: "Check npm for a newer @ashlr/stack release.",
+    description: "Check for a release or safely upgrade an npm global CLI install.",
   },
   args: {
+    apply: {
+      type: "boolean",
+      default: false,
+      description:
+        "Upgrade the npm global CLI, restoring the previous install on failed health checks.",
+    },
     dryRun: {
       type: "boolean",
       alias: "n",
-      description: "Print what would be installed without running the install command.",
+      description: "Print what would be installed without changing the installation.",
     },
     json: {
       type: "boolean",
       default: false,
-      description:
-        "Emit machine-readable JSON (schema ashlr.stack.upgrade/v1): current, latest, status and the install command.",
+      description: "Emit a machine-readable upgrade report without a banner.",
     },
   },
   async run({ args }) {
-    if (args.json) {
-      await runUpgradeJson();
-      return;
-    }
-    intro("stack upgrade");
-    try {
-      const res = await fetch(`https://registry.npmjs.org/${encodeURIComponent(PKG)}/latest`);
-      if (!res.ok) {
-        outroError(`npm registry returned ${res.status}.`);
-        return;
-      }
-      const body = (await res.json()) as { version?: string };
-      const latest = body.version;
-      if (!latest) {
-        outroError("npm registry response missing version field.");
-        return;
-      }
-      if (latest === CURRENT_VERSION) {
-        outro(colors.green(`Up to date (${latest}).`));
-        return;
-      }
-      if (isNewer(latest, CURRENT_VERSION)) {
-        console.log();
-        console.log(
-          `  ${colors.bold(CURRENT_VERSION)} ${colors.dim("→")} ${colors.bold(colors.green(latest))}`,
-        );
-        console.log();
-        if (args.dryRun) {
-          console.log(colors.dim("  (dry-run) would run:"));
-          console.log(
-            colors.dim(`    bun add -g ${PKG}@${latest}   # or: npm i -g ${PKG}@${latest}`),
-          );
-          console.log();
-          outro(colors.yellow("Dry run — nothing installed."));
-        } else {
-          console.log(colors.dim("  Install:"));
-          console.log(colors.dim(`    bun add -g ${PKG}   # or: npm i -g ${PKG}`));
-          console.log();
-          outro(colors.yellow("A newer version is available."));
-        }
-      } else {
-        outro(colors.dim(`Local version (${CURRENT_VERSION}) is ahead of npm (${latest}).`));
-      }
-    } catch (err) {
-      outroError(`Couldn't reach npm: ${(err as Error).message}`);
-    }
+    await runUpgrade({ apply: args.apply, dryRun: args.dryRun, json: args.json });
   },
 });
 
@@ -85,11 +40,10 @@ export interface UpgradeReport {
   current: string;
   latest: string;
   status: "up_to_date" | "update_available" | "ahead";
-  /** The command a person runs to upgrade; null unless an update exists. Never run by Stack. */
+  /** Manual installation hint, present only when an update exists. */
   install: string | null;
 }
 
-/** The `--json` report for a known registry version. Pure, for tests. */
 export function buildUpgradeReport(current: string, latest: string): UpgradeReport {
   const status =
     latest === current ? "up_to_date" : isNewer(latest, current) ? "update_available" : "ahead";
@@ -103,36 +57,62 @@ export function buildUpgradeReport(current: string, latest: string): UpgradeRepo
   };
 }
 
-/**
- * `stack upgrade --json`: one JSON object on stdout, no banner. It only reads
- * the registry and installs nothing. An unreachable or malformed registry
- * prints `{"error": ...}` and exits 1.
- */
-export async function runUpgradeJson(current: string = CURRENT_VERSION): Promise<void> {
-  const fail = (error: string) => {
-    process.stdout.write(`${JSON.stringify({ error, current })}\n`);
-    process.exitCode = 1;
-  };
+export async function runUpgrade(
+  options: { apply?: boolean; dryRun?: boolean; json?: boolean },
+  current = CURRENT_VERSION,
+  install = installUpgrade,
+): Promise<void> {
+  if (!options.json) intro("stack upgrade");
   try {
-    const res = await fetch(`https://registry.npmjs.org/${encodeURIComponent(PKG)}/latest`);
-    if (!res.ok) {
-      fail(`npm registry returned ${res.status}.`);
-      return;
-    }
+    const res = await fetch(`https://registry.npmjs.org/${encodeURIComponent(PKG)}/latest`, {
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (!res.ok) throw new Error(`npm registry returned ${res.status}.`);
     const latest = ((await res.json()) as { version?: unknown }).version;
-    if (typeof latest !== "string" || !latest) {
-      fail("npm registry response missing version field.");
-      return;
+    if (!isReleaseVersion(latest)) {
+      throw new Error("npm registry response missing a valid stable version field.");
     }
-    process.stdout.write(`${JSON.stringify(buildUpgradeReport(current, latest), null, 2)}\n`);
+    const report = buildUpgradeReport(current, latest);
+    const applied = options.apply && !options.dryRun && report.status === "update_available";
+    if (applied) await install(current, latest);
+    if (options.json) {
+      process.stdout.write(
+        `${JSON.stringify(applied ? { ...report, status: "upgraded", install: null } : report, null, 2)}\n`,
+      );
+    } else if (applied) {
+      outro(colors.green(`Upgraded to ${latest}; version and help health checks passed.`));
+    } else if (report.status === "update_available") {
+      console.log(`  ${current} → ${latest}`);
+      console.log("  stack upgrade --apply   # npm global installs, with rollback");
+      console.log(`  ${report.install}   # manual install`);
+      outro(
+        colors.yellow(
+          options.dryRun ? "Dry run - nothing installed." : "A newer version is available.",
+        ),
+      );
+    } else {
+      outro(
+        report.status === "up_to_date"
+          ? `Up to date (${latest}).`
+          : `Local version (${current}) is ahead of npm (${latest}).`,
+      );
+    }
   } catch (err) {
-    fail(`Couldn't reach npm: ${(err as Error).message}`);
+    const error = err instanceof Error ? err.message : "Upgrade failed.";
+    if (options.json) process.stdout.write(`${JSON.stringify({ error, current })}\n`);
+    else outroError(error);
+    process.exitCode = 1;
   }
 }
 
-function isNewer(a: string, b: string): boolean {
-  const pa = a.split(".").map((x) => Number.parseInt(x, 10));
-  const pb = b.split(".").map((x) => Number.parseInt(x, 10));
+/** Read-only compatibility entry point. */
+export async function runUpgradeJson(current: string = CURRENT_VERSION): Promise<void> {
+  await runUpgrade({ json: true }, current);
+}
+
+export function isNewer(a: string, b: string): boolean {
+  const pa = a.split(".").map(Number);
+  const pb = b.split(".").map(Number);
   for (let i = 0; i < Math.max(pa.length, pb.length); i += 1) {
     const av = pa[i] ?? 0;
     const bv = pb[i] ?? 0;

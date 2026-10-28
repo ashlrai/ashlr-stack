@@ -1013,26 +1013,33 @@ export const CLI_COMMANDS: CliCommand[] = [
   },
   {
     name: "stack upgrade",
-    description: "Check npm for a newer @ashlr/stack release.",
-    synopsis: "stack upgrade [--dryRun] [--json]",
+    description: "Check for a release or safely upgrade an npm global CLI install.",
+    synopsis: "stack upgrade [--apply] [--dryRun] [--json]",
     flags: [
+      {
+        name: "apply",
+        synopsis: "--apply",
+        type: "boolean",
+        default: false,
+        description:
+          "Upgrade the npm global CLI, restoring the previous install on failed health checks.",
+      },
       {
         name: "dryRun",
         synopsis: "--dryRun",
         type: "boolean",
-        description: "Print what would be installed without running the install command.",
+        description: "Print what would be installed without changing the installation.",
       },
       {
         name: "json",
         synopsis: "--json",
         type: "boolean",
         default: false,
-        description:
-          "Emit machine-readable JSON (schema ashlr.stack.upgrade/v1): current, latest, status and the install command.",
+        description: "Emit a machine-readable upgrade report without a banner.",
       },
     ],
-    examples: [{ command: "stack upgrade" }],
+    examples: [{ command: "stack upgrade" }, { command: "stack upgrade --apply" }],
     notes:
-      "Checks the npm registry for a newer version, prints an install hint — does not auto-install.",
+      "Checks npm by default. --apply upgrades an npm global CLI install with local rollback on failed health checks; --dryRun never installs.",
   },
 ];
