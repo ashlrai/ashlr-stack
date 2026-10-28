@@ -168,4 +168,29 @@ export const TEMPLATES_REF: TemplateRef[] = [
     environments: ["dev"],
     goodFor: "Agent projects planning model API access and a GitHub integration.",
   },
+  {
+    name: "litellm-gateway",
+    displayName: "LiteLLM gateway (Phantom-held keys)",
+    tagline: "Provider key slots for a placeholder-only LiteLLM proxy.",
+    blurb:
+      "Experimental: provider key slots (OpenAI, Anthropic, xAI, DeepSeek) so a LiteLLM proxy holds Phantom placeholders, not real keys. The placeholder flow is not yet verified against a mock upstream; see the template README for pinning and isolation rules.",
+    services: [
+      { name: "openai", provider: "openai", secrets: ["OPENAI_API_KEY"] },
+      { name: "anthropic", provider: "anthropic", secrets: ["ANTHROPIC_API_KEY"] },
+      { name: "xai", provider: "xai", secrets: ["XAI_API_KEY"] },
+      { name: "deepseek", provider: "deepseek", secrets: ["DEEPSEEK_API_KEY"] },
+    ],
+    environments: ["dev"],
+    goodFor: "Running a local model gateway whose provider keys stay in Phantom.",
+  },
+  {
+    name: "temporal-worker-phantom",
+    displayName: "Temporal worker (Phantom credentials)",
+    tagline: "Worker credential hygiene; declares no services.",
+    blurb:
+      "Experimental guidance, not run against a Temporal cluster. Declares no services because Stack has no Temporal provider; credentials are created in Phantom and reach the worker via phantom exec.",
+    services: [],
+    environments: ["dev"],
+    goodFor: "Temporal workers that keep credentials out of the repository.",
+  },
 ];

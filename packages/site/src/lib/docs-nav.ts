@@ -7,6 +7,7 @@
  */
 
 import { PROVIDERS_REF } from "./providers-ref";
+import { USE_CASES } from "./use-cases";
 
 export interface DocsNavItem {
   label: string;
@@ -35,6 +36,11 @@ export const DOCS_NAV: DocsNavGroup[] = [
   {
     title: "Getting started",
     items: [
+      {
+        label: "Capabilities and install",
+        href: "/docs/capabilities/",
+        blurb: "Install the CLI and MCP bridge, inspect capabilities and review limits.",
+      },
       { label: "Introduction", href: "/docs/", blurb: "What Stack is, and what it isn't." },
       {
         label: "Quickstart",
@@ -48,6 +54,14 @@ export const DOCS_NAV: DocsNavGroup[] = [
           "Retrieve provider suggestions, save a recipe, then review setup and optional wiring.",
       },
     ],
+  },
+  {
+    title: "Use cases",
+    items: USE_CASES.map((guide) => ({
+      label: guide.title,
+      href: `/use-cases/${guide.slug}/`,
+      blurb: guide.description,
+    })),
   },
   {
     title: "Reference",

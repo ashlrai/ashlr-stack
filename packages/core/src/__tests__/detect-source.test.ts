@@ -1,11 +1,17 @@
-import { describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { afterEach, describe, expect, test } from "bun:test";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { scanSource } from "../detect-source.ts";
 
+const projects: string[] = [];
+afterEach(() => {
+  for (const dir of projects.splice(0)) rmSync(dir, { recursive: true, force: true });
+});
+
 function makeProject(files: Record<string, string>): string {
   const dir = mkdtempSync(join(tmpdir(), "stack-scan-"));
+  projects.push(dir);
   for (const [path, content] of Object.entries(files)) {
     const full = join(dir, path);
     const parent = join(full, "..");
@@ -144,4 +150,74 @@ require (
     expect(names).toContain("supabase");
     expect(names).toContain("stripe");
   });
+});
+
+test.each(["{broken", "null", "{}"])(
+  "malformed or empty package %s does not hide other evidence",
+  async (raw) => {
+    const cwd = makeProject({ "package.json": raw, "fly.toml": "" });
+    expect(await scanSource(cwd)).toEqual([
+      { provider: "fly", confidence: "high", signals: ["fly.toml"] },
+    ]);
+  },
+);
+
+test.each([
+  [
+    "pyproject.toml",
+    '[project]\ndependencies = ["supabase-py>=1", "anthropic", "resend"]',
+    ["anthropic", "resend", "supabase"],
+  ],
+  [
+    "Cargo.toml",
+    '[dependencies]\nasync-openai = "1"\nsentry = "1"\nasync-stripe = "1"',
+    ["openai", "sentry", "stripe"],
+  ],
+  [
+    "requirements.txt",
+    "# openai\n\nANTHROPIC[extra]>=1\r\nmodal==1\nreplicate~=1\nbraintrust!=1\nunknown",
+    ["anthropic", "braintrust", "modal", "replicate"],
+  ],
+  [
+    "go.mod",
+    "module example.com/app\nrequire github.com/liushuangls/go-anthropic v1\nrequire github.com/sashabaranov/go-openai v1",
+    ["openai", "anthropic"],
+  ],
+] as const)("scans %s with exact evidence", async (file, content, providers) => {
+  const hits = await scanSource(makeProject({ [file]: content }));
+  expect(hits.map((hit) => hit.provider)).toEqual([...providers]);
+  for (const hit of hits) {
+    expect(hit.signals).toHaveLength(1);
+    expect(hit.signals[0]).toStartWith(`${file}:`);
+  }
+});
+
+test("deduplicates dependency evidence and upgrades confidence without losing signals", async () => {
+  const hits = await scanSource(
+    makeProject({
+      "package.json": JSON.stringify({
+        dependencies: { "@vercel/kv": "1" },
+        devDependencies: { "@vercel/kv": "1" },
+      }),
+      "vercel.json": "{}",
+      ".env.sample": "VERCEL_TOKEN=\nUNKNOWN_NAME=",
+      ".env.template": "VERCEL_TOKEN=",
+    }),
+  );
+  expect(hits).toEqual([
+    {
+      provider: "vercel",
+      confidence: "high",
+      signals: [
+        "package.json:@vercel/kv",
+        "vercel.json",
+        ".env.sample:VERCEL_TOKEN",
+        ".env.template:VERCEL_TOKEN",
+      ],
+    },
+  ]);
+});
+
+test("empty project has no detections", async () => {
+  expect(await scanSource(makeProject({}))).toEqual([]);
 });

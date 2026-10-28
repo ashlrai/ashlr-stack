@@ -2,6 +2,11 @@
 import Docs from "~/layouts/Docs.astro";
 import { Code } from "astro:components";
 import { MCP_TOOLS, MCP_RESOURCES } from "~/lib/mcp-ref";
+import {
+  MCP_STDIO_CONFIG,
+  PUBLISHED_VERSION,
+  SOURCE_VERSION,
+} from "~/lib/site-facts.generated";
 ---
 
 <Docs
@@ -49,22 +54,15 @@ import { MCP_TOOLS, MCP_RESOURCES } from "~/lib/mcp-ref";
   </p>
 
   <p>
-    Published CLI and MCP packages are currently <code>0.1.1</code> and require
+    Published CLI and MCP packages are currently <code>{PUBLISHED_VERSION}</code> and require
     <strong>Bun 1.2 or newer</strong> on PATH, including when installed through
-    npm or launched with npx. This reference describes source <code>0.2.1</code>,
+    npm or launched with npx. This reference describes source <code>{SOURCE_VERSION}</code>,
     which is not a published-version claim. The example pins those public versions; check the tools advertised by your installed server.
   </p>
 
   <h3>Example stdio configuration</h3>
   <Code
-    code={`{
-  "mcpServers": {
-    "ashlr-stack": {
-      "command": "npx",
-      "args": ["-y", "-p", "@ashlr/stack@0.1.1", "-p", "ashlr-stack-mcp@0.1.1", "ashlr-stack-mcp"]
-    }
-  }
-}`}
+    code={MCP_STDIO_CONFIG}
     lang="json"
     theme="github-dark-dimmed"
   />

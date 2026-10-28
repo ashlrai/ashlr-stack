@@ -1,10 +1,13 @@
 name: Coverage
 
-# Coverage runs in the merge queue only, so pull requests and pushes stay
-# on the plain test command in ci.yml. The test job has no id-token.
+# Coverage runs with the scheduled full suite (6 AM and 6 PM ET) and on
+# dispatch, off the merge queue so the queue only waits on CI Gate. The test job has no id-token.
 # The upload job is the only job here with id-token: write.
 on:
-  merge_group:
+  schedule:
+    - cron: "19 10 * * *"
+    - cron: "19 22 * * *"
+  workflow_dispatch:
 
 permissions:
   contents: read

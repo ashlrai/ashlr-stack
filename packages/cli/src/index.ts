@@ -1,33 +1,6 @@
 #!/usr/bin/env bun
 import { emitTelemetry } from "@ashlr/stack-core";
 import { defineCommand } from "citty";
-import { addCommand } from "./commands/add.ts";
-import { applyCommand } from "./commands/apply.ts";
-import { ciCommand } from "./commands/ci.ts";
-import { cloneCommand } from "./commands/clone.ts";
-import { completionCommand } from "./commands/completion.ts";
-import { depsCommand } from "./commands/deps.ts";
-import { doctorCommand } from "./commands/doctor.ts";
-import { envCommand } from "./commands/env.ts";
-import { execCommand } from "./commands/exec.ts";
-import { importCommand } from "./commands/import.ts";
-import { infoCommand } from "./commands/info.ts";
-import { initCommand } from "./commands/init.ts";
-import { listCommand } from "./commands/list.ts";
-import { loginCommand } from "./commands/login.ts";
-import { onboardCommand } from "./commands/onboard.ts";
-import { openCommand } from "./commands/open.ts";
-import { projectsCommand } from "./commands/projects.ts";
-import { providersCommand } from "./commands/providers.ts";
-import { recommendCommand } from "./commands/recommend.ts";
-import { removeCommand } from "./commands/remove.ts";
-import { scanCommand } from "./commands/scan.ts";
-import { statusCommand } from "./commands/status.ts";
-import { swapCommand } from "./commands/swap.ts";
-import { syncCommand } from "./commands/sync.ts";
-import { telemetryCommand } from "./commands/telemetry.ts";
-import { templatesCommand } from "./commands/templates.ts";
-import { upgradeCommand } from "./commands/upgrade.ts";
 import { buildHandshake } from "./lib/handshake.ts";
 import { normalizeKebabFlags } from "./lib/normalize-args.ts";
 import { runCli } from "./lib/run-cli.ts";
@@ -94,34 +67,35 @@ const main = defineCommand({
     console.log("  The control plane for your entire dev stack.");
     console.log("  Run `stack --help` for the full command list.\n");
   },
+  // Resolve only the selected command. Root version output must not load commands.
   subCommands: {
-    init: initCommand,
-    import: importCommand,
-    scan: scanCommand,
-    clone: cloneCommand,
-    add: addCommand,
-    remove: removeCommand,
-    list: listCommand,
-    info: infoCommand,
-    status: statusCommand,
-    env: envCommand,
-    deps: depsCommand,
-    doctor: doctorCommand,
-    exec: execCommand,
-    swap: swapCommand,
-    sync: syncCommand,
-    onboard: onboardCommand,
-    open: openCommand,
-    login: loginCommand,
-    telemetry: telemetryCommand,
-    templates: templatesCommand,
-    providers: providersCommand,
-    recommend: recommendCommand,
-    apply: applyCommand,
-    projects: projectsCommand,
-    ci: ciCommand,
-    completion: completionCommand,
-    upgrade: upgradeCommand,
+    init: () => import("./commands/init.ts").then((m) => m.initCommand),
+    import: () => import("./commands/import.ts").then((m) => m.importCommand),
+    scan: () => import("./commands/scan.ts").then((m) => m.scanCommand),
+    clone: () => import("./commands/clone.ts").then((m) => m.cloneCommand),
+    add: () => import("./commands/add.ts").then((m) => m.addCommand),
+    remove: () => import("./commands/remove.ts").then((m) => m.removeCommand),
+    list: () => import("./commands/list.ts").then((m) => m.listCommand),
+    info: () => import("./commands/info.ts").then((m) => m.infoCommand),
+    status: () => import("./commands/status.ts").then((m) => m.statusCommand),
+    env: () => import("./commands/env.ts").then((m) => m.envCommand),
+    deps: () => import("./commands/deps.ts").then((m) => m.depsCommand),
+    doctor: () => import("./commands/doctor.ts").then((m) => m.doctorCommand),
+    exec: () => import("./commands/exec.ts").then((m) => m.execCommand),
+    swap: () => import("./commands/swap.ts").then((m) => m.swapCommand),
+    sync: () => import("./commands/sync.ts").then((m) => m.syncCommand),
+    onboard: () => import("./commands/onboard.ts").then((m) => m.onboardCommand),
+    open: () => import("./commands/open.ts").then((m) => m.openCommand),
+    login: () => import("./commands/login.ts").then((m) => m.loginCommand),
+    telemetry: () => import("./commands/telemetry.ts").then((m) => m.telemetryCommand),
+    templates: () => import("./commands/templates.ts").then((m) => m.templatesCommand),
+    providers: () => import("./commands/providers.ts").then((m) => m.providersCommand),
+    recommend: () => import("./commands/recommend.ts").then((m) => m.recommendCommand),
+    apply: () => import("./commands/apply.ts").then((m) => m.applyCommand),
+    projects: () => import("./commands/projects.ts").then((m) => m.projectsCommand),
+    ci: () => import("./commands/ci.ts").then((m) => m.ciCommand),
+    completion: () => import("./commands/completion.ts").then((m) => m.completionCommand),
+    upgrade: () => import("./commands/upgrade.ts").then((m) => m.upgradeCommand),
   },
 });
 

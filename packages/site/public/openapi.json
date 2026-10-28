@@ -2,9 +2,9 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Ashlr Stack CLI",
-    "version": "0.1.0",
+    "version": "0.2.2",
     "summary": "Machine-readable catalog of the Ashlr Stack CLI (and MCP tool surface).",
-    "description": "This static documentation catalog represents selected local stack CLI commands as GET operations for discovery; it is not a running HTTP API or an exhaustive CLI surface. Source of truth is packages/cli/src/commands/*.ts, mirrored in packages/site/src/lib/cli-ref.generated.ts. The catalog version label does not establish a published or installed package version. Reviewed source is 0.2.1; public CLI and MCP packages recorded at 0.1.1 require Bun 1.2 or newer on PATH even when installed with npm. Launching the MCP server also requires stack on PATH or STACK_BIN; the MCP setup example is in /mcp.json. Inspect actual installed help, advertised tools and returned results. MCP forwards CLI stdout and any nonempty stderr as text; it is not a sandbox or redaction layer. Local MCP resources, when present in the server cwd, return raw file text; emitted provider credential placeholders are literal, not generally expanded by Stack.",
+    "description": "This static documentation catalog represents selected local stack CLI commands as GET operations for discovery; it is not a running HTTP API or an exhaustive CLI surface. Source of truth is packages/cli/src/commands/*.ts, mirrored in packages/site/src/lib/cli-ref.generated.ts. The catalog version label does not establish a published or installed package version. Reviewed source is 0.2.2; public CLI and MCP packages recorded at 0.1.1 require Bun 1.2 or newer on PATH even when installed with npm. Launching the MCP server also requires stack on PATH or STACK_BIN; the MCP setup example is in /mcp.json. Inspect actual installed help, advertised tools and returned results. MCP forwards CLI stdout and any nonempty stderr as text; it is not a sandbox or redaction layer. Local MCP resources, when present in the server cwd, return raw file text; emitted provider credential placeholders are literal, not generally expanded by Stack.",
     "contact": {
       "name": "Ashlr",
       "email": "mason@evero-consulting.com",
