@@ -63,18 +63,13 @@ describe("stack scan --json", () => {
     // CI=1 strips TTY; no prompts expected because --json bypasses all interactivity
     const { stdout, code } = runCli(["scan", "--json", "--path", cwd], undefined, { CI: "1" });
     expect(code).toBe(0);
-    let parsed: { hits: Array<{ provider: string; confidence: string; sources: string[] }> };
-    expect(() => {
-      parsed = JSON.parse(stdout);
-    }).not.toThrow();
-    // @ts-ignore — parsed assigned in expect block above
+    const parsed: { hits: Array<{ provider: string; confidence: string; sources: string[] }> } =
+      JSON.parse(stdout);
     expect(Array.isArray(parsed.hits)).toBe(true);
-    // @ts-ignore
-    const providers = parsed.hits.map((h: { provider: string }) => h.provider);
+    const providers = parsed.hits.map((h) => h.provider);
     expect(providers).toContain("supabase");
     expect(providers).toContain("sentry");
     // Each hit has required shape
-    // @ts-ignore
     for (const hit of parsed.hits) {
       expect(typeof hit.provider).toBe("string");
       expect(["high", "medium", "low"]).toContain(hit.confidence);
