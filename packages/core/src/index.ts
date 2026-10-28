@@ -75,3 +75,5 @@ export {
   type UsageRecord,
 } from "./ai/cost-tracker.ts";
 export * from "./agent-onboard.ts";
+
+export { verifyWebhookSignature, type WebhookProvider } from "./ai/webhook-signature.ts";
