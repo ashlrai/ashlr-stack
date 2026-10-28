@@ -71,3 +71,10 @@ Preserve logs and original artifacts after failure or uncertainty, then inspect
 completed effects. Publication can be partial. Never automatically rerun,
 republish, recreate, or move tags; review the exact follow-up target and release
 authorization first.
+
+## Docs freshness
+
+After a version commit lands on the default branch, run `bun run fresh:sync`
+and verify with `bun run fresh:check`. Marked blocks (version badge, install
+snippet, version table, pins) regenerate from the manifests and the latest
+released CHANGELOG section; see [../scripts/freshness/README.md](../scripts/freshness/README.md).

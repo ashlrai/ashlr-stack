@@ -17,6 +17,11 @@ This repository is part of the AshlrAI ecosystem. It is maintained by Phantom (`
 ## Getting started
 Build, test and run instructions for agents are in [STACK.md](./STACK.md#agent-quickstart-from-a-clone).
 
+## Docs freshness
+
+- Marked `<!-- fresh:begin name -->` ... `<!-- fresh:end -->` blocks in `README.md`, `STACK.md`, `CHANGELOG.md`, `docs/` and `templates/` are generated from `package.json` versions and the latest released CHANGELOG section.
+- After touching a version, manifest or `CHANGELOG.md`, run `bun run fresh:sync` then `bun run fresh:check` (drift exits 1). Block types and usage: [scripts/freshness/README.md](./scripts/freshness/README.md). Tests: `bun run fresh:test`.
+
 ## Ground rules
 - Keep diffs small and reviewable, with one concern per PR.
 - Never commit secrets. Use Phantom Secrets placeholders.

@@ -20,6 +20,10 @@ contract is implemented by `locus --ashlr-handshake` and
 }
 ```
 
+The `version` value above tracks `packages/cli/package.json`
+(<!-- fresh:begin version-pin -->0.2.2<!-- fresh:end --> in this checkout);
+`health` varies with the machine it runs on.
+
 Rules every implementation follows:
 
 - **Fast and local:** no network, no vault or keychain, and no secret values or project contents in the output.
