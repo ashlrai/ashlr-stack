@@ -3,7 +3,9 @@ import { useState } from "react";
 
 type Tab = "without" | "with";
 
-type StepLine = { t: "cmd" | "note" | "ok" | "warn" | "bare" | "blank"; text: string };
+type StepLine =
+  | { t: "cmd" | "note" | "ok" | "warn" | "bare"; text: string }
+  | { t: "blank"; text: ""; id: string };
 
 const WITHOUT: { title: string; lines: StepLine[] }[] = [
   {
@@ -65,14 +67,14 @@ const WITHOUT: { title: string; lines: StepLine[] }[] = [
 const WITH_LINES: StepLine[] = [
   { t: "note", text: "Illustrative flow — no provider call runs in this panel" },
   { t: "cmd", text: "$ stack add supabase" },
-  { t: "blank", text: "" },
+  { t: "blank", text: "", id: "before-output" },
   { t: "bare", text: "▲ stack  adding supabase" },
   { t: "bare", text: "→ approve browser sign-in if requested" },
   { t: "bare", text: "→ create or attach a resource when supported" },
   { t: "bare", text: "→ store returned credentials through Phantom" },
   { t: "bare", text: "→ record service in .stack.toml; MCP if supplied" },
   { t: "bare", text: "→ choose whether to install the SDK" },
-  { t: "blank", text: "" },
+  { t: "blank", text: "", id: "after-output" },
   { t: "ok", text: "Review the result; setup depends on provider access" },
   { t: "note", text: "  next: verify your app and run stack doctor" },
 ];
@@ -137,9 +139,8 @@ export default function OneCommand() {
                     <h3 className="text-[13px] font-medium text-ink-100">{step.title}</h3>
                   </div>
                   <div className="mono text-[12px] leading-[1.65] space-y-0.5">
-                    {step.lines.map((l, i) => (
-                      // biome-ignore lint/suspicious/noArrayIndexKey: StepLine has no stable id; lines are static and never reorder.
-                      <AnsiLine key={i} line={l} />
+                    {step.lines.map((l) => (
+                      <AnsiLine key={l.t === "blank" ? l.id : l.text} line={l} />
                     ))}
                   </div>
                 </div>
@@ -200,9 +201,8 @@ export default function OneCommand() {
                   }}
                 />
                 <div className="relative mono text-[13px] leading-[1.75] space-y-0">
-                  {WITH_LINES.map((l, i) => (
-                    // biome-ignore lint/suspicious/noArrayIndexKey: WITH_LINES is a static demo transcript; lines never reorder.
-                    <AnsiLine key={i} line={l} big />
+                  {WITH_LINES.map((l) => (
+                    <AnsiLine key={l.t === "blank" ? l.id : l.text} line={l} />
                   ))}
                 </div>
               </div>
@@ -275,27 +275,26 @@ function TabButton({
   );
 }
 
-function AnsiLine({ line, big = false }: { line: StepLine; big?: boolean }) {
-  const base = big ? "" : "";
+function AnsiLine({ line }: { line: StepLine }) {
   if (line.t === "blank") return <div className="h-[1.75em]" aria-hidden />;
   if (line.t === "cmd") {
     return (
-      <div className={base}>
+      <div>
         <span className="ansi-magenta select-none">$ </span>
         <span className="ansi-white">{line.text.replace(/^\$\s*/, "")}</span>
       </div>
     );
   }
   if (line.t === "ok") {
-    return <div className={`ansi-green ${base}`}>{line.text}</div>;
+    return <div className="ansi-green">{line.text}</div>;
   }
   if (line.t === "warn") {
-    return <div className={`ansi-yellow ${base}`}>{line.text}</div>;
+    return <div className="ansi-yellow">{line.text}</div>;
   }
   if (line.t === "note") {
-    return <div className={`ansi-dim ${base}`}>{line.text}</div>;
+    return <div className="ansi-dim">{line.text}</div>;
   }
-  return <div className={`ansi-white ${base}`}>{line.text}</div>;
+  return <div className="ansi-white">{line.text}</div>;
 }
 
 function Stat({

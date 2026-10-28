@@ -158,16 +158,19 @@ export interface TechArticleInput {
   /** Full canonical URL of the page. */
   url: string;
   /** ISO-8601 date string. */
-  datePublished?: string;
+  datePublished?: string | null;
   /** ISO-8601 date string. */
-  dateModified?: string;
+  dateModified?: string | null;
   /** Section label (e.g. "Reference", "Getting started"). Optional. */
   section?: string;
 }
 
 export function techArticleSchema(input: TechArticleInput): Record<string, unknown> {
-  const datePublished = input.datePublished ?? "2026-04-17";
-  const dateModified = input.dateModified ?? datePublished;
+  // Explicit null omits unknown dates on new guides instead of backdating them.
+  const datePublished =
+    input.datePublished === null ? undefined : (input.datePublished ?? "2026-04-17");
+  const dateModified =
+    input.dateModified === null ? undefined : (input.dateModified ?? datePublished);
   const schema: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "TechArticle",
