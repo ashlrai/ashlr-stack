@@ -23,8 +23,8 @@ interface Props {
    * ISO-8601 publish / modify dates for the TechArticle schema. Both default
    * to 2026-04-17 (docs launch).
    */
-  datePublished?: string;
-  dateModified?: string;
+  datePublished?: string | null;
+  dateModified?: string | null;
 }
 
 const {
@@ -92,8 +92,8 @@ const allExtraSchemas: Record<string, unknown>[] = [techArticle, ...extraSchemas
           itemscope
           itemtype="https://schema.org/TechArticle"
         >
-          <meta itemprop="datePublished" content={datePublished} />
-          <meta itemprop="dateModified" content={dateModified} />
+          {datePublished && <meta itemprop="datePublished" content={datePublished} />}
+          {dateModified && <meta itemprop="dateModified" content={dateModified} />}
           <meta itemprop="inLanguage" content="en-US" />
           <link itemprop="mainEntityOfPage" href={canonical} />
           {eyebrow && (

@@ -1,0 +1,277 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`catalog retains every consumer input contract 1`] = `
+[
+  {
+    "name": "stack_init",
+    "properties": {
+      "cwd": {
+        "type": "string",
+      },
+      "force": {
+        "type": "boolean",
+      },
+      "template": {
+        "type": "string",
+      },
+    },
+    "type": "object",
+  },
+  {
+    "name": "stack_import",
+    "properties": {
+      "cwd": {
+        "type": "string",
+      },
+      "dryRun": {
+        "type": "boolean",
+      },
+      "from": {
+        "type": "string",
+      },
+    },
+    "type": "object",
+  },
+  {
+    "name": "stack_scan",
+    "properties": {
+      "confidence": {
+        "type": "string",
+      },
+      "cwd": {
+        "type": "string",
+      },
+      "path": {
+        "type": "string",
+      },
+    },
+    "type": "object",
+  },
+  {
+    "name": "stack_add",
+    "properties": {
+      "cwd": {
+        "type": "string",
+      },
+      "service": {
+        "type": "string",
+      },
+      "use": {
+        "type": "string",
+      },
+    },
+    "required": [
+      "service",
+    ],
+    "type": "object",
+  },
+  {
+    "name": "stack_remove",
+    "properties": {
+      "cwd": {
+        "type": "string",
+      },
+      "keepRemote": {
+        "type": "boolean",
+      },
+      "service": {
+        "type": "string",
+      },
+    },
+    "required": [
+      "service",
+    ],
+    "type": "object",
+  },
+  {
+    "name": "stack_list",
+    "properties": {
+      "cwd": {
+        "type": "string",
+      },
+      "json": {
+        "type": "boolean",
+      },
+    },
+    "type": "object",
+  },
+  {
+    "name": "stack_info",
+    "properties": {
+      "cwd": {
+        "type": "string",
+      },
+      "json": {
+        "type": "boolean",
+      },
+      "service": {
+        "type": "string",
+      },
+    },
+    "required": [
+      "service",
+    ],
+    "type": "object",
+  },
+  {
+    "name": "stack_status",
+    "properties": {
+      "cwd": {
+        "type": "string",
+      },
+      "json": {
+        "type": "boolean",
+      },
+    },
+    "type": "object",
+  },
+  {
+    "name": "stack_env_show",
+    "properties": {
+      "cwd": {
+        "type": "string",
+      },
+      "json": {
+        "type": "boolean",
+      },
+    },
+    "type": "object",
+  },
+  {
+    "name": "stack_env_diff",
+    "properties": {
+      "cwd": {
+        "type": "string",
+      },
+      "json": {
+        "type": "boolean",
+      },
+    },
+    "type": "object",
+  },
+  {
+    "name": "stack_doctor",
+    "properties": {
+      "all": {
+        "type": "boolean",
+      },
+      "cwd": {
+        "type": "string",
+      },
+      "fix": {
+        "type": "boolean",
+      },
+      "json": {
+        "type": "boolean",
+      },
+    },
+    "type": "object",
+  },
+  {
+    "name": "stack_sync",
+    "properties": {
+      "cwd": {
+        "type": "string",
+      },
+      "platform": {
+        "type": "string",
+      },
+    },
+    "required": [
+      "platform",
+    ],
+    "type": "object",
+  },
+  {
+    "name": "stack_providers",
+    "properties": {
+      "category": {
+        "type": "string",
+      },
+      "json": {
+        "type": "boolean",
+      },
+    },
+    "type": "object",
+  },
+  {
+    "name": "stack_projects_list",
+    "properties": {
+      "json": {
+        "type": "boolean",
+      },
+    },
+    "type": "object",
+  },
+  {
+    "name": "stack_deps",
+    "properties": {
+      "cwd": {
+        "type": "string",
+      },
+      "json": {
+        "type": "boolean",
+      },
+    },
+    "type": "object",
+  },
+  {
+    "name": "stack_templates_list",
+    "properties": {
+      "json": {
+        "type": "boolean",
+      },
+    },
+    "type": "object",
+  },
+  {
+    "name": "stack_upgrade",
+    "properties": {},
+    "type": "object",
+  },
+  {
+    "name": "stack_recommend",
+    "properties": {
+      "category": {
+        "type": "string",
+      },
+      "cwd": {
+        "type": "string",
+      },
+      "k": {
+        "type": "number",
+      },
+      "query": {
+        "type": "string",
+      },
+      "save": {
+        "type": "boolean",
+      },
+    },
+    "required": [
+      "query",
+    ],
+    "type": "object",
+  },
+  {
+    "name": "stack_apply",
+    "properties": {
+      "cwd": {
+        "type": "string",
+      },
+      "no_wire": {
+        "type": "boolean",
+      },
+      "recipe_id": {
+        "type": "string",
+      },
+    },
+    "required": [
+      "recipe_id",
+    ],
+    "type": "object",
+  },
+]
+`;
+
+exports[`JSON compaction preserves nested fields, escapes, whitespace in values and numbers 1`] = `"{"schema":"fixture/v1","services":[{"name":"a b","nested":{"empty":[],"nil":null,"ok":false}}],"escaped":"quote: \\" slash: \\\\ tab: \\t","integer":9007199254740993,"exponent":1.00e+30}"`;

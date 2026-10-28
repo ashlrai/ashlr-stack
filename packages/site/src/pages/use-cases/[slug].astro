@@ -1,0 +1,64 @@
+---
+import Docs from "~/layouts/Docs.astro";
+import { USE_CASES, type UseCase } from "~/lib/use-cases";
+
+export function getStaticPaths() {
+  return USE_CASES.map((guide) => ({ params: { slug: guide.slug }, props: { guide } }));
+}
+
+interface Props {
+  guide: UseCase;
+}
+
+const { guide } = Astro.props;
+const related = USE_CASES.filter((entry) => entry.slug !== guide.slug);
+---
+
+<!-- Publication dates are unknown until release; sitemap lastmod comes from Git. -->
+<Docs title={guide.title} description={guide.description} eyebrow="Use case guide" datePublished={null} dateModified={null}>
+  <p>{guide.intent}</p>
+  <p>
+    <a href="/docs/capabilities#install">Install and check your version</a>
+    <span aria-hidden="true"> · </span>
+    <a href="/docs">Browse the documentation</a>
+  </p>
+
+  {guide.claims.map((claim) => (
+    <section data-claim={claim.id} aria-labelledby={claim.id}>
+      <h2 id={claim.id}>{claim.title}</h2>
+      {claim.body.map((paragraph) => <p>{paragraph}</p>)}
+      {claim.command && <pre><code>{claim.command}</code></pre>}
+      <p class="text-sm">
+        <strong>Sources: </strong>
+        {claim.sources.map((source, index) => (
+          <>
+            {index > 0 && <span aria-hidden="true"> · </span>}
+            <a data-source href={source.href}>{source.label}</a>
+          </>
+        ))}
+      </p>
+    </section>
+  ))}
+
+  <h2 id="references">Continue with the reference</h2>
+  <ul>
+    {guide.docs.map((link) => <li><a href={link.href}>{link.label}</a></li>)}
+    <li><a href="/docs/capabilities#install">Installation and version checks</a></li>
+  </ul>
+
+  <h2 id="related-guides">Related workflows</h2>
+  <div class="grid gap-4 sm:grid-cols-2">
+    {related.map((entry) => (
+      <a class="docs-card" href={`/use-cases/${entry.slug}`}>
+        <h3 class="!mt-0 !mb-2 !text-base">{entry.title}</h3>
+        <p class="text-sm">{entry.intent}</p>
+      </a>
+    ))}
+  </div>
+</Docs>
+
+<style>
+  section[data-claim] p + p {
+    margin-top: 1rem;
+  }
+</style>
