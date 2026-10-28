@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -42,9 +41,10 @@ function project(service = "") {
 }
 
 function doctor(args: string[], code: number, json = true) {
-  const result = spawnSync(process.execPath, [entry, "doctor", ...args], {
+  const result = Bun.spawnSync([process.execPath, entry, "doctor", ...args], {
     cwd: home,
-    encoding: "utf8",
+    stdout: "pipe",
+    stderr: "pipe",
     timeout: 15_000,
     env: {
       HOME: home,
@@ -57,12 +57,11 @@ function doctor(args: string[], code: number, json = true) {
       CI: "1",
     },
   });
-  expect(result.error).toBeUndefined();
-  expect(result.signal).toBeNull();
-  expect(result.status).toBe(code);
-  expect(result.stderr).toBe("");
+  expect(result.signalCode).toBeUndefined();
+  expect(result.exitCode, result.stderr.toString()).toBe(code);
+  expect(result.stderr.toString()).toBe("");
   // Only the scratch project path varies. Preserve every output field and value.
-  const output = result.stdout.replaceAll(home, "<project>");
+  const output = result.stdout.toString().replaceAll(home, "<project>");
   if (!json) return output;
   const parsed: unknown = JSON.parse(output);
   expect(checkDoctor(parsed, HANDSHAKE_CONTRACT)).toEqual([]);

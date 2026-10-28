@@ -56,7 +56,7 @@ describe("site facts: sources of truth agree", () => {
   });
 
   test("recorded published version comes from docs/getting-started-ecosystem.md", () => {
-    const row = readRepo("docs/getting-started-ecosystem.md").match(
+    const row = readRepo("docs/getting-started-ecosystem.md").replace(/<!--[^]*?-->/g, "").match(
       /\|\s*Stack `@ashlr\/stack`\s*\|\s*(\d+\.\d+\.\d+)\s*\|\s*(\d+\.\d+\.\d+)\s*\|/,
     );
     expect(row?.[1]).toBe(facts.publishedVersion);

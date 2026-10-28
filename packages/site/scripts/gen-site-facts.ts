@@ -134,7 +134,7 @@ function latestChangelogRelease(): { version: string; date: string } {
 
 /** Recorded published npm version from the docs version-lag table. */
 function publishedVersion(sourceVersion: string): string {
-  const doc = read("docs/getting-started-ecosystem.md");
+  const doc = read("docs/getting-started-ecosystem.md").replace(/<!--[^]*?-->/g, "");
   const row = doc.match(
     /\|\s*Stack `@ashlr\/stack`\s*\|\s*(\d+\.\d+\.\d+)\s*\|\s*(\d+\.\d+\.\d+)\s*\|/,
   );
