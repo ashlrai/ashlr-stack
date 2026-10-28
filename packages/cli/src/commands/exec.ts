@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { constants } from "node:os";
-import { assertPhantomInstalled, hasConfig } from "@ashlr/stack-core";
+import { assertPhantomInstalled, hasConfig, phantomProcess } from "@ashlr/stack-core";
 import { defineCommand } from "citty";
 import { runAgentPreflight } from "../lib/agent-preflight.ts";
 import { expectRefusal, parseExecArgv, readPinnedAlias } from "../lib/locus-identity.ts";
@@ -112,7 +112,8 @@ export const execCommand = defineCommand({
       return;
     }
 
-    const child = spawn("phantom", ["exec", "--", ...forwarded], { stdio: "inherit" });
+    const { file, env } = phantomProcess();
+    const child = spawn(file, ["exec", "--", ...forwarded], { stdio: "inherit", env });
 
     // A TERM/HUP/INT sent to `stack exec` alone (an agent's timeout, a
     // supervisor) would otherwise kill only this wrapper and leave the

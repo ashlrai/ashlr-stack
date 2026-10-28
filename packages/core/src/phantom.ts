@@ -1,4 +1,6 @@
 import { spawn } from "node:child_process";
+import { constants, accessSync, statSync } from "node:fs";
+import { delimiter, isAbsolute, join } from "node:path";
 import { PhantomNotInstalledError, StackError } from "./errors.ts";
 
 /**
@@ -6,6 +8,61 @@ import { PhantomNotInstalledError, StackError } from "./errors.ts";
  * every read/write goes through Phantom. If Phantom is missing, we surface a
  * clear install hint instead of silently falling back to a weaker store.
  */
+
+/**
+ * Only process basics reach Phantom. Credentials and runtime injection options
+ * must never cross this boundary. Ignore relative PATH entries, including cwd.
+ */
+export function phantomProcess(source: NodeJS.ProcessEnv = process.env): {
+  file: string;
+  env: Record<string, string>;
+} {
+  const env: Record<string, string> = {};
+  for (const key of [
+    "PATH",
+    "Path",
+    "HOME",
+    "USERPROFILE",
+    "SYSTEMROOT",
+    "SystemRoot",
+    "LANG",
+    "LC_ALL",
+    "LC_CTYPE",
+    "TMPDIR",
+    "TEMP",
+    "TMP",
+    "TERM",
+    "NO_COLOR",
+    "LOCUS_HOME",
+    "LOCUS_SESSION_ID",
+  ]) {
+    const value = source[key];
+    if (value !== undefined && value !== "") env[key] = value;
+  }
+  for (const key of ["PATH", "Path"]) {
+    if (env[key] !== undefined) {
+      env[key] = env[key]
+        .split(delimiter)
+        .filter((dir) => isAbsolute(dir))
+        .join(delimiter);
+    }
+  }
+  const extensions = process.platform === "win32" ? [".exe", ".com"] : [""];
+  for (const dir of (env.PATH ?? env.Path ?? "").split(delimiter)) {
+    if (!dir) continue;
+    for (const extension of extensions) {
+      const file = join(dir, `phantom${extension}`);
+      try {
+        if (!statSync(file).isFile()) continue;
+        accessSync(file, process.platform === "win32" ? constants.F_OK : constants.X_OK);
+        return { file, env };
+      } catch {
+        // Keep looking for an executable file in the remaining absolute entries.
+      }
+    }
+  }
+  throw new PhantomNotInstalledError();
+}
 
 export interface PhantomExecResult {
   stdout: string;
@@ -83,7 +140,9 @@ export async function exec(args: string[], opts: ExecOptions = {}): Promise<Phan
     // phantom and any grandchild holding its stdio. Interactive runs stay in
     // the foreground group so the TTY keeps working.
     const useGroup = hasTimeout && !opts.interactive && process.platform !== "win32";
-    const child = spawn("phantom", args, {
+    const { file, env } = phantomProcess();
+    const child = spawn(file, args, {
+      env,
       cwd: opts.cwd,
       stdio: opts.interactive ? "inherit" : ["pipe", "pipe", "pipe"],
       ...(useGroup ? { detached: true } : {}),

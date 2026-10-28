@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { phantomProcess } from "@ashlr/stack-core";
 
 /**
  * Opt-in Phantom agent preflight for `stack exec`, following phantom-secrets
@@ -39,7 +40,14 @@ export function preflightMode(env: NodeJS.ProcessEnv = process.env): PreflightMo
 }
 
 const defaultRunner: PreflightRunner = () => {
-  const r = spawnSync("phantom", ["agent", "doctor", "--json", "--strict"], {
+  let invocation: ReturnType<typeof phantomProcess>;
+  try {
+    invocation = phantomProcess();
+  } catch {
+    return { status: null, stdout: "", missing: true };
+  }
+  const r = spawnSync(invocation.file, ["agent", "doctor", "--json", "--strict"], {
+    env: invocation.env,
     encoding: "utf8",
     timeout: 15_000,
     stdio: ["ignore", "pipe", "ignore"],
