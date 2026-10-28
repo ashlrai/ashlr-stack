@@ -54,7 +54,7 @@ export const MCP_TOOLS: McpTool[] = [
       {
         name: "from",
         type: "string",
-        description: "Path to the .env file (default: .env).",
+        description: "Path to the .env file inside the project (default: .env).",
       },
       {
         name: "dryRun",
@@ -77,7 +77,7 @@ export const MCP_TOOLS: McpTool[] = [
       {
         name: "path",
         type: "string",
-        description: "Directory to scan (default: cwd).",
+        description: "Directory to scan inside the project (default: cwd).",
       },
       {
         name: "confidence",
@@ -391,7 +391,8 @@ export const MCP_TOOLS: McpTool[] = [
         name: "recipe_id",
         type: "string",
         required: true,
-        description: "Recipe id (filename stem in .stack/recipes/).",
+        description:
+          "Recipe id (filename stem in .stack/recipes/, letters, numbers, underscores or hyphens).",
       },
       {
         name: "no_wire",

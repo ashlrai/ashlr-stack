@@ -42,6 +42,7 @@ bun install --frozen-lockfile
 bun test                                   # full suite, no network or accounts
 bunx tsc --noEmit -p tsconfig.json
 bunx biome check .
+bun run check:links                        # README links/anchors/images resolve (--external also checks remote)
 bun run packages/cli/src/index.ts --help   # the CLI from source
 ```
 

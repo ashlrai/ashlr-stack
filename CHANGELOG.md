@@ -148,7 +148,7 @@ Covers #67, #68, #70, #73, #74, #75 and #76 together with the sections below.
 
 ### Docs
 
-- **Adding a provider** — [docs/adding-a-provider.md](docs/adding-a-provider.md) lists every file a new provider touches, and `provider-parity.test.ts` fails when the loader registry, the catalog and `docs/provider-auth-matrix.md` disagree (#18).
+- **Adding a provider** — [docs/adding-a-provider.md](https://github.com/ashlrai/ashlr-stack/blob/main/docs/adding-a-provider.md) lists every file a new provider touches, and `provider-parity.test.ts` fails when the loader registry, the catalog and `docs/provider-auth-matrix.md` disagree (#18).
 
 ### Bug fixes
 

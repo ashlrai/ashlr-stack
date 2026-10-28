@@ -239,7 +239,7 @@ export const GENERATORS = {
       const label = `v${ctx.release}`;
       // shields escapes: - becomes --, _ becomes __
       const escaped = label.replace(/-/g, '--').replace(/_/g, '__');
-      return `[![source ${label}](https://img.shields.io/badge/source-${escaped}-blue.svg)](${link})`;
+      return `[![source ${label}](https://img.shields.io/badge/source-${escaped}-blue.svg?style=for-the-badge&labelColor=0b0b14)](${link})`;
     },
   },
   'install-snippet': {

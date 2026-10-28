@@ -52,7 +52,7 @@ test('version-badge emits a shields badge pinned to source, linking to the chang
   assert.deepEqual(errors, []);
   assert.equal(
     GENERATORS['version-badge'].generate(ctx, 'README.md'),
-    `[![source v${V}](https://img.shields.io/badge/source-v${V}-blue.svg)](CHANGELOG.md)`,
+    `[![source v${V}](https://img.shields.io/badge/source-v${V}-blue.svg?style=for-the-badge&labelColor=0b0b14)](CHANGELOG.md)`,
   );
   // From docs/ the badge must link one level up to the changelog.
   assert.ok(GENERATORS['version-badge'].generate(ctx, 'docs/guide.md').endsWith('](../CHANGELOG.md)'));
