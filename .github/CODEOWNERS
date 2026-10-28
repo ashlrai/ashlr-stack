@@ -13,3 +13,4 @@
 # Templates + auth matrix
 /templates/                         @masonwyatt23
 /docs/                              @masonwyatt23
+/.github/tests/secret-shape/ @masonwyatt23
