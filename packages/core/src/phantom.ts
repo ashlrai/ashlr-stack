@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { delimiter, resolve } from "node:path";
 import { PhantomNotInstalledError, StackError } from "./errors.ts";
 
 /**
@@ -77,13 +78,43 @@ export interface ExecOptions {
 }
 
 export async function exec(args: string[], opts: ExecOptions = {}): Promise<PhantomExecResult> {
+  // Resolve against the caller's PATH before applying the project cwd. Normalize
+  // relative entries so scripts and their helpers cannot resolve inside that project.
+  const env: NodeJS.ProcessEnv = {};
+  for (const key of [
+    "HOME",
+    "USER",
+    "USERPROFILE",
+    "LANG",
+    "LC_ALL",
+    "TERM",
+    "NO_COLOR",
+    "TMPDIR",
+    "TMP",
+    "TEMP",
+    "SYSTEMROOT",
+    "PATHEXT",
+    "XDG_CONFIG_HOME",
+    "XDG_DATA_HOME",
+    "XDG_STATE_HOME",
+    "XDG_RUNTIME_DIR",
+  ]) {
+    if (process.env[key] !== undefined) env[key] = process.env[key];
+  }
+  env.PATH = (process.env.PATH ?? "")
+    .split(delimiter)
+    .map((entry) => resolve(entry))
+    .join(delimiter);
+  const binary = Bun.which("phantom", { PATH: env.PATH });
+  if (!binary) throw new PhantomNotInstalledError();
   return new Promise((resolvePromise, reject) => {
     const hasTimeout = typeof opts.timeoutMs === "number" && Number.isFinite(opts.timeoutMs);
     // A timed probe gets its own process group (POSIX) so a timeout can kill
     // phantom and any grandchild holding its stdio. Interactive runs stay in
     // the foreground group so the TTY keeps working.
     const useGroup = hasTimeout && !opts.interactive && process.platform !== "win32";
-    const child = spawn("phantom", args, {
+    const child = spawn(binary, args, {
+      env,
       cwd: opts.cwd,
       stdio: opts.interactive ? "inherit" : ["pipe", "pipe", "pipe"],
       ...(useGroup ? { detached: true } : {}),
