@@ -64,7 +64,7 @@
         "properties": {
           "from": {
             "type": "string",
-            "description": "Path to the .env file (default: .env)."
+            "description": "Path to the .env file inside the project (default: .env)."
           },
           "dryRun": {
             "type": "boolean",
@@ -86,7 +86,7 @@
         "properties": {
           "path": {
             "type": "string",
-            "description": "Directory to scan (default: cwd)."
+            "description": "Directory to scan inside the project (default: cwd)."
           },
           "confidence": {
             "type": "string",
@@ -405,7 +405,7 @@
         "properties": {
           "recipe_id": {
             "type": "string",
-            "description": "Recipe id (filename stem in .stack/recipes/)."
+            "description": "Recipe id (filename stem in .stack/recipes/, letters, numbers, underscores or hyphens)."
           },
           "no_wire": {
             "type": "boolean",
