@@ -1,0 +1,8 @@
+# Generated agent-facing docs and generated sources are compared byte-for-byte
+# by tests (site-facts/doc-facts) and CI freshness checks. Pin LF so a checkout
+# can never translate them to CRLF.
+packages/site/public/**/*.txt text eol=lf
+packages/site/public/**/*.json text eol=lf
+packages/site/src/data/*.txt text eol=lf
+packages/site/src/data/*.json text eol=lf
+packages/site/src/lib/*.generated.ts text eol=lf

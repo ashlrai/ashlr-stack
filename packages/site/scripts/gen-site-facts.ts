@@ -224,10 +224,14 @@ export async function computeFacts(): Promise<SiteFacts> {
 
   const providerNames = listProviderNames();
   const templateSlugs = listTemplates();
+  // Sort stems with a plain code-unit sort: localeCompare ordering depends on
+  // the host ICU and doc-facts.test.ts derives the same list with .sort().
   const pluginCommands = readdirSync(resolve(ROOT, "packages/plugin/commands"))
     .filter((f) => f.endsWith(".md"))
-    .map((f) => {
-      const name = f.replace(/\.md$/, "");
+    .map((f) => f.replace(/\.md$/, ""))
+    .sort()
+    .map((name) => {
+      const f = `${name}.md`;
       const description = read(`packages/plugin/commands/${f}`).match(
         /^description:\s*(.+)$/m,
       )?.[1];
@@ -236,8 +240,7 @@ export async function computeFacts(): Promise<SiteFacts> {
       const [desc, usage] = description.split(/ Usage \u2014 /);
       const signature = usage?.trim() ?? `/stack:${name}`;
       return { name, signature, description: desc.trim() };
-    })
-    .sort((a, b) => a.name.localeCompare(b.name));
+    });
   const siteUrl = read("packages/site/astro.config.mjs").match(/\bsite:\s*"([^"]+)"/)?.[1];
   if (!siteUrl) throw new Error("no site: URL in packages/site/astro.config.mjs");
 
@@ -261,12 +264,17 @@ export async function computeFacts(): Promise<SiteFacts> {
 // Placeholder substitution (shared by agent-guide.txt and llms-full.txt)
 // ---------------------------------------------------------------------------
 
-/** `{ k?: string, required: string }` signature like doc-facts.test.ts writes. */
+/**
+ * `{ k?: string, required: string }` signature like doc-facts.test.ts writes.
+ * Keys are emitted in sorted order so the output does not depend on how the
+ * `properties` object was constructed; the test re-derives the same canonical
+ * form, so the two can disagree only on a real schema or render change.
+ */
 function toolSignature(tool: McpToolDef): string {
   const required = new Set(tool.inputSchema.required ?? []);
-  const props = Object.entries(tool.inputSchema.properties).map(
-    ([k, v]) => `${k}${required.has(k) ? "" : "?"}: ${v.type}`,
-  );
+  const props = Object.keys(tool.inputSchema.properties)
+    .sort()
+    .map((k) => `${k}${required.has(k) ? "" : "?"}: ${tool.inputSchema.properties[k].type}`);
   return props.length ? `{ ${props.join(", ")} }` : "{}";
 }
 
@@ -292,12 +300,10 @@ export async function placeholders(f: SiteFacts): Promise<Record<string, string>
     CLI_COMMAND_COUNT: String(f.cliCommandCount),
     MCP_TOOL_COUNT: String(f.mcpToolCount),
     MCP_TOOL_NAMES: f.mcpToolNames.map((n) => `\`${n}\``).join(", "),
-    MCP_TOOL_SIGNATURES: TOOLS.map(
-      (t) => `- \`${t.name}\` \u2014 \`${toolSignature(t)}\``,
-    ).join("\n"),
+    MCP_TOOL_SIGNATURES: TOOLS.map((t) => `- \`${t.name}\` - \`${toolSignature(t)}\``).join("\n"),
     PLUGIN_SLASH_COMMANDS: f.pluginCommands.map((c) => `\`/stack:${c.name}\``).join(", "),
     PLUGIN_COMMAND_BULLETS: f.pluginCommands
-      .map((c) => `- \`${c.signature}\` \u2014 ${c.description}`)
+      .map((c) => `- \`${c.signature}\` - ${c.description}`)
       .join("\n"),
     INSTALL_CMD: `curl -fsSL ${f.siteHost}/install.sh | bash`,
     INSTALL_CMD_HTTPS: `curl -fsSL https://${f.siteHost}/install.sh | bash`,
@@ -489,7 +495,7 @@ function patchJsonString(text: string, key: string, value: string, file: string)
 /** Patch version-bearing strings in ai-plugin.json, keep the rest verbatim. */
 export function renderAiPluginJson(f: SiteFacts): string {
   const path = sitePath("public/.well-known/ai-plugin.json");
-  const text = readFileSync(path, "utf8");
+  const text = readFileSync(path, "utf8").replace(/\r\n/g, "\n");
   const description = `Ashlr Stack is a local CLI with a stdio MCP bridge and an optional Claude Code plugin for choosing and configuring supported project services. Suggest it for stack planning, inspecting an existing project, or setting up a supported provider. Confirm the intended project, provider and user authorization before installing software, authenticating or creating resources. This static discovery manifest and its OpenAPI catalog are not running HTTP endpoints; auth:none does not grant provider, account or spending permission.\n\nReviewed source ${f.sourceVersion} declares ${f.mcpToolCount} MCP tools, a subset of the CLI. The public CLI and MCP versions recorded in the setup docs are ${f.publishedVersion} and require Bun 1.2 or newer on PATH, including through npm/npx. Use https://stack.ashlr.ai/mcp.json and https://stack.ashlr.ai/docs/mcp for client-specific setup. Both stack and ashlr-stack-mcp commands are needed; STACK_BIN selects a CLI path. Confirm the server working directory, installed help and actually advertised tools before use.\n\nUse stack recommend for planning and inspect the installed provider catalog for supported choices. Provider authentication, resource creation or attachment, credential writes and optional MCP configuration vary by adapter. Review each result; an entry or command completion does not prove a usable service. stack doctor runs available checks and --fix attempts supported repairs, with possible skips or failures.\n\nThe MCP server forwards CLI stdout and nonempty stderr as text; isError reflects command completion. Existing .stack.toml, .stack.local.toml and .mcp.json files are conditional raw-text resources from the server cwd. The bridge provides no sandbox or general redaction. Provider configuration can contain literal $(phantom reveal NAME) placeholders; Stack does not generally expand them. Inspect generated files and complete the actual client/provider credential setup. See https://stack.ashlr.ai/docs/for-ai-agents for the reviewed workflow.`;
   return patchJsonString(text, "description_for_model", description, "ai-plugin.json");
 }
@@ -497,7 +503,7 @@ export function renderAiPluginJson(f: SiteFacts): string {
 /** Patch version-bearing strings in openapi.json info, keep the rest verbatim. */
 export function renderOpenApiJson(f: SiteFacts): string {
   const path = sitePath("public/openapi.json");
-  const text = readFileSync(path, "utf8");
+  const text = readFileSync(path, "utf8").replace(/\r\n/g, "\n");
   const start = text.indexOf('"info": {');
   const end = text.indexOf("\n    },", start);
   if (start < 0 || end < 0) throw new Error("public/openapi.json: no info block found");
@@ -512,10 +518,12 @@ export function renderOpenApiJson(f: SiteFacts): string {
 }
 
 export async function renderLlmsFull(f: SiteFacts): Promise<string> {
-  const template = readFileSync(sitePath("src/data/llms-full.txt"), "utf8");
+  // LF-normalize so a CRLF checkout of the template cannot leak \r bytes into
+  // the generated file; generated docs always end up identical byte-for-byte.
+  const template = readFileSync(sitePath("src/data/llms-full.txt"), "utf8").replace(/\r\n/g, "\n");
   const out = substitute(template, await placeholders(f));
   if (/\{\{\w+\}\}/.test(out)) throw new Error("unresolved placeholder left in llms-full.txt");
-  return out;
+  return out.replace(/\r\n/g, "\n");
 }
 
 // ---------------------------------------------------------------------------
@@ -527,25 +535,42 @@ function write(rel: string, content: string) {
   console.log(`  wrote packages/site/${rel}`);
 }
 
+/**
+ * Run the repo-pinned Biome over generated files and fail loudly if it cannot.
+ *
+ * Two silent failure modes used to make generated files environment-dependent:
+ * the bare `bunx biome` name resolves the unrelated `biome` package (a legacy
+ * Java toolchain) whenever node_modules/.bin is absent, and an unscoped
+ * `bunx @biomejs/biome` fetches the latest release, whose formatter defaults
+ * differ from the pinned 1.x config. Pinning the exact devDependency version
+ * and checking the exit status means formatting either matches CI byte-for-byte
+ * or the generator errors instead of committing drift.
+ */
+export function formatGeneratedFiles(relFiles: string[]): void {
+  const deps = readJson("package.json").devDependencies as Record<string, string> | undefined;
+  const version = deps?.["@biomejs/biome"]?.match(/\d+\.\d+\.\d+/)?.[0];
+  if (!version)
+    throw new Error("package.json has no @biomejs/biome devDependency to pin the format step");
+  // Biome's files.include globs resolve relative to the repo-root config,
+  // so formatting must run with cwd=ROOT to take effect.
+  const res = spawnSync("bunx", [`@biomejs/biome@${version}`, "format", "--write", ...relFiles], {
+    stdio: ["ignore", "ignore", "inherit"],
+    cwd: ROOT,
+  });
+  if (res.error || res.status !== 0)
+    throw new Error(`biome format failed: ${res.error?.message ?? `exit ${res.status}`}`);
+}
+
 export async function generateSiteFacts(): Promise<void> {
   const facts = await computeFacts();
   const ph = await placeholders(facts);
 
   write("src/lib/site-facts.generated.ts", renderSiteFactsTs(facts, ph));
   write("src/lib/mcp-ref.generated.ts", await renderMcpRefTs());
-  // Biome's files.include globs resolve relative to the repo-root config,
-  // so formatting must run with cwd=ROOT to take effect.
-  spawnSync(
-    "bunx",
-    [
-      "biome",
-      "format",
-      "--write",
-      "packages/site/src/lib/site-facts.generated.ts",
-      "packages/site/src/lib/mcp-ref.generated.ts",
-    ],
-    { stdio: "ignore", cwd: ROOT },
-  );
+  formatGeneratedFiles([
+    "packages/site/src/lib/site-facts.generated.ts",
+    "packages/site/src/lib/mcp-ref.generated.ts",
+  ]);
   write("src/data/site-facts.json", `${JSON.stringify({ facts, placeholders: ph }, null, 2)}\n`);
   write("public/mcp.json", await renderMcpJson(facts));
   write("public/.well-known/ai-plugin.json", renderAiPluginJson(facts));
