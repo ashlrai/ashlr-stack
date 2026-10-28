@@ -3,9 +3,9 @@ name: CodeQL
 # Code scanning stays off pull_request and off push.
 # Nightly minute 41 avoids the ashlr-md CodeQL run at minute 17.
 on:
-  merge_group:
+  # Daily only (Mason, Oct 28 2026): CodeQL is not a required check.
   schedule:
-    - cron: "41 6 * * *"
+    - cron: "0 10 * * *"
   workflow_dispatch:
 
 permissions:
