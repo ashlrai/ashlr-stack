@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -11,7 +11,7 @@ function runCli(
   args: string[],
   cwd?: string,
   extraEnv?: Record<string, string>,
-): { stdout: string; stderr: string; code: number } {
+): { stdout: string; stderr: string; code: number | null } {
   const result = spawnSync("bun", [CLI_ENTRY, ...args], {
     encoding: "utf8",
     cwd,
@@ -20,7 +20,7 @@ function runCli(
   return {
     stdout: result.stdout ?? "",
     stderr: result.stderr ?? "",
-    code: result.status ?? 0,
+    code: result.status,
   };
 }
 
@@ -249,20 +249,34 @@ describe("stack scan --yes", () => {
 
 describe("stack scan rejects bad arguments", () => {
   test("nonexistent --path exits 1 naming the path (--json)", () => {
-    const missing = join(tmpdir(), "stack-scan-does-not-exist-xyz");
+    const missing = join(tmp({}), "missing");
     const { stdout, stderr, code } = runCli(["scan", "--json", "--path", missing], undefined, {
       CI: "1",
     });
     expect(code).toBe(1);
     expect(stderr).toContain(missing);
+    expect(stderr).toContain("does not exist or is not a directory");
     expect(stdout).not.toContain('"hits"');
   });
 
   test("nonexistent --path exits 1 naming the path (human)", () => {
-    const missing = join(tmpdir(), "stack-scan-does-not-exist-xyz");
+    const missing = join(tmp({}), "missing");
     const { stdout, stderr, code } = runCli(["scan", "--path", missing], undefined, { CI: "1" });
     expect(code).toBe(1);
     expect(stdout + stderr).toContain(missing);
+    expect(stdout + stderr).toContain("does not exist or is not a directory");
+    expect(stdout + stderr).not.toContain("No providers detected");
+  });
+
+  test("nonexistent relative --path fails before --yes can modify the project", () => {
+    const cwd = tmp({});
+    const { stdout, stderr, code } = runCli(["scan", "--yes", "--path", "missing"], cwd, {
+      CI: "1",
+    });
+    expect(code).toBe(1);
+    expect(stdout + stderr).toContain('Path "missing" does not exist or is not a directory');
+    expect(stdout + stderr).not.toContain("scan complete");
+    expect(existsSync(join(cwd, ".stack.toml"))).toBe(false);
   });
 
   test("a file as --path exits 1", () => {
