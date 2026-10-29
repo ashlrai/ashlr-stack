@@ -65,6 +65,14 @@ describe("unknown options are refused", () => {
     expect(r.stderr).toContain("Unknown option --bogus for `stack templates list`");
   });
 
+  test("an unknown short option exits unsuccessfully and names the option", () => {
+    const r = stack(["templates", "list", "-z"]);
+    expect(r.code).toBe(1);
+    expect(r.stdout).toBe("");
+    expect(r.stderr).toContain("Unknown option -z for `stack templates list`");
+    expect(r.stderr).toContain("Run `stack templates list --help`");
+  });
+
   test("a typo exits 1, names the option and the closest real one", () => {
     const r = stack(["templates", "list", "--jsn"]);
     expect(r.code).toBe(1);
