@@ -66,6 +66,12 @@ describe("ai/phantom-wire", () => {
     expect(result.webhooks).toHaveLength(1);
 
     const stub = readFileSync(result.webhooks[0], "utf-8");
+    expect(stub.split("\n").every((line) => line === "" || line.startsWith("//"))).toBe(true);
+    expect(stub).toContain("This entire example is commented out and does not verify signatures.");
+    expect(stub).toContain(
+      "If uncommented as-is, it accepts any non-empty signature header and returns\n" +
+        "// 200 without authenticating the request. Implement verification first.",
+    );
     expect(stub).toContain(
       "Verification inputs include the body, signature, webhook secret, and any\n" +
         "//   // additional inputs required by the provider's scheme.",
