@@ -41,6 +41,43 @@ describe("ai/phantom-wire", () => {
     expect(result.webhooks).toHaveLength(1);
   });
 
+  it.each([
+    ["stripe", "stripe-signature", "handleStripeWebhook"],
+    ["clerk", "svix-signature", "handleClerkWebhook"],
+    ["supabase", "x-supabase-signature", "handleSupabaseWebhook"],
+    ["github", "x-hub-signature-256", "handleGithubWebhook"],
+  ])("rejects a missing signature in the generated %s example", async (provider, header, name) => {
+    const recipe: Recipe = { ...STRIPE_RECIPE, providers: [{ name: provider }] };
+    const result = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
+    expect(result.webhooks).toHaveLength(1);
+
+    const stub = readFileSync(result.webhooks[0], "utf-8");
+    const example = stub.match(/^\/\/ export async function [\s\S]*?^\/\/ }$/m)?.[0];
+    if (!example) throw new Error(`Missing ${provider} webhook example`);
+    const examplePath = join(harness.dir, `${provider}-example.ts`);
+    writeFileSync(examplePath, example.replace(/^\/\/ ?/gm, ""));
+    const handler: unknown = (await import(examplePath))[name];
+    expect(typeof handler).toBe("function");
+    if (typeof handler !== "function") throw new Error(`Missing ${name}`);
+
+    const missingHeaders: HeadersInit[] = [
+      {},
+      { "x-unrelated-signature": "present" },
+      { [header]: "" },
+    ];
+    for (const headers of missingHeaders) {
+      const response: Response = await handler(new Request("https://example.com", { headers }));
+      expect(response.status).toBe(400);
+      expect(await response.text()).toBe("Missing signature");
+    }
+
+    // A non-empty header reaches the placeholder; it is not signature verification.
+    const response: Response = await handler(
+      new Request("https://example.com", { headers: { [header]: "placeholder" } }),
+    );
+    expect(response.status).toBe(200);
+  });
+
   it("noWire: true skips the vault check and webhooks entirely", async () => {
     const result = await wirePhantomForRecipe(STRIPE_RECIPE, {
       cwd: harness.dir,
