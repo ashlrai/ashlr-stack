@@ -156,6 +156,21 @@ describe("stack recommend --json", () => {
     expect(human.stdout + human.stderr).toContain("No query");
   });
 
+  it("treats a whitespace-only search query as missing instead of matching services", () => {
+    const json = runCli(["recommend", " \t\n ", "--json"]);
+    expect(json.code).toBe(1);
+    expect(JSON.parse(json.stdout)).toEqual({
+      query: "",
+      hits: [],
+      byCategory: {},
+      guidance: 'Provide a query: stack recommend "what you\'re building".',
+    });
+
+    const human = runCli(["recommend", " \t\n "]);
+    expect(human.code).toBe(1);
+    expect(human.stdout + human.stderr).toContain("No query, nothing to recommend.");
+  });
+
   it("rejects a --k that is not a whole number of 1 or more", () => {
     for (const k of ["abc", "0", "2.5"]) {
       const { stdout, stderr, code } = runCli(["recommend", "postgres", "--k", k, "--json"]);
