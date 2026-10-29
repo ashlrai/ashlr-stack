@@ -58,6 +58,18 @@ Homebrew formula and commit/push to the tap, including dispatch on a tag ref.
 It uses an existing referenced tap credential or skips when unavailable. Verify
 actual tap commissioning and the remote formula separately.
 
+## Auto-tagging (pending workflow wiring)
+
+[`scripts/auto-tag.mjs`](../scripts/auto-tag.mjs) is the fail-closed core of
+the auto-tag design: when the version in `packages/cli/package.json` changes on
+`main` and every required check for that exact commit is green, it creates
+`refs/tags/v<version>` so the tag-triggered release workflow runs. It is
+invoked as `evaluate` (read-only, writes `changed`/`version`/`green` to
+`$GITHUB_OUTPUT`) and `create --version X.Y.Z` (needs a `contents: write`
+token; the ashlr-release GitHub App mints it). `run` chains both for manual
+use. No workflow calls it yet — the `.github/workflows` wrapper is applied
+separately.
+
 ## Qualification and partial failures
 
 [CI](../.github/workflows/ci.yml) checks tests/typechecks on Bun 1.2.0 and latest,
