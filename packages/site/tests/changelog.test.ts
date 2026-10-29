@@ -45,10 +45,16 @@ test("site changelog mirrors the source and explains apply's placeholder behavio
   expect(fixEntry).toContain("The wiring step never writes to the vault or fills in missing values.");
   expect(fixEntry).toContain("Provider setup may already store real values");
   expect(fixEntry).toContain("users must supply each required missing value themselves");
-  expect(fixEntry).toContain("it reports providers as skipped instead of identifying missing names");
+  expect(fixEntry).toContain("a present name does not verify its value");
+  expect(fixEntry).toContain("wiring reports providers as skipped instead of identifying missing names");
+  expect(fixEntry).toContain("`--noWire` skips the vault check entirely");
   expect(fixEntry).toContain("Previously, wiring ran `phantom add <KEY> TODO_STACK_APPLY --rotate`");
   expect(fixEntry).toContain("every call failed and the printed `envelopes` count was always 0");
   expect(applyEntry).toContain("Users must supply each required missing value");
-  for (const entry of [applyEntry, fixEntry])
+  expect(applyEntry).toContain("The check verifies names, not values");
+  expect(applyEntry).toContain("`--noWire` skips the check and webhook stubs");
+  for (const entry of [applyEntry, fixEntry]) {
     expect(entry).toContain("run `phantom add <NAME>` from a trusted terminal and enter the real value");
+    expect(entry).toContain("check Phantom and the provider requirements before supplying missing values");
+  }
 });
