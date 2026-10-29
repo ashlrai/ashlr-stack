@@ -84,6 +84,11 @@ describe("ai/phantom-wire", () => {
     expect(example).toContain(
       "//   // TODO: verify this webhook request body using the provider's signature scheme.",
     );
+    expect(example).toContain(
+      "//   // Verify the unmodified body before parsing, trusting, or acting on its contents.\n" +
+        "//   // Reject requests whose signatures are missing or invalid; only process the\n" +
+        "//   // body after successful provider-specific verification.",
+    );
     const examplePath = join(harness.dir, `${provider}-example.ts`);
     writeFileSync(examplePath, example.replace(/^\/\/ ?/gm, ""));
     const handler: unknown = (await import(examplePath))[name];

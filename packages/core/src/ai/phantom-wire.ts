@@ -130,6 +130,9 @@ function webhookStubFor(provider: string): string {
 //   // Verification inputs include the body, signature, webhook secret, and any
 //   // additional inputs required by the provider's scheme.
 //   // The body is unverified; a present signature header does not authenticate it.
+//   // Verify the unmodified body before parsing, trusting, or acting on its contents.
+//   // Reject requests whose signatures are missing or invalid; only process the
+//   // body after successful provider-specific verification.
 //   return new Response("ok", { status: 200 });
 // }
 `;
