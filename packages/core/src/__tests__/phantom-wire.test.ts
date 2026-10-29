@@ -150,6 +150,23 @@ describe("ai/phantom-wire", () => {
     expect(harness.callsTo("add")).toEqual([]);
   });
 
+  it("accepts an empty JSON inventory and reports the provider's secret as missing", async () => {
+    writeFileSync(
+      join(harness.dir, "phantom"),
+      '#!/usr/bin/env bash\ncase "$1" in\n  --version) echo "phantom fake 0.0.1" ;;\n  list) echo "[]" ;;\n  *) exit 1 ;;\nesac\n',
+    );
+
+    expect(await listSecrets(harness.dir)).toEqual([]);
+    const result = await wirePhantomForRecipe(STRIPE_RECIPE, { cwd: harness.dir });
+    expect(result).toEqual({
+      present: [],
+      missing: ["stripe:STRIPE_SECRET_KEY"],
+      skipped: [],
+      webhooks: [join(harness.dir, ".stack/webhooks/stripe.ts")],
+    });
+    expect(existsSync(result.webhooks[0])).toBe(true);
+  });
+
   it("rejects a JSON number from the vault inventory and skips the provider", async () => {
     // Return valid JSON from a successful list command, but not the required array.
     writeFileSync(
