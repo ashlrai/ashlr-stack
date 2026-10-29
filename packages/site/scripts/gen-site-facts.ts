@@ -20,7 +20,7 @@
  *                         packages/mcp/src/server.ts
  *   - providers        -> packages/core catalog + provider registry
  *   - templates        -> templates/ via packages/core listTemplates()
- *   - CLI commands     -> subCommands block of packages/cli/src/index.ts
+ *   - CLI commands     -> commandLoaders in packages/cli/src/commands.ts
  *   - plugin commands  -> packages/plugin/commands/*.md
  *   - site host        -> astro.config.mjs `site:` URL
  *
@@ -149,14 +149,6 @@ function publishedVersion(sourceVersion: string): string {
   return row[1];
 }
 
-/** Top-level CLI command names from the subCommands block of cli/src/index.ts. */
-function cliCommands(): string[] {
-  const src = read("packages/cli/src/index.ts");
-  const block = src.match(/\n {2}subCommands: \{\n([\s\S]*?)\n {2}\},/);
-  if (!block) throw new Error("no subCommands block in packages/cli/src/index.ts");
-  return [...block[1].matchAll(/^\s+(\w+):/gm)].map((m) => m[1]);
-}
-
 /** Resource objects the MCP server can advertise (server.ts resources.push). */
 function mcpResources(): McpResourceDef[] {
   const src = read("packages/mcp/src/server.ts");
@@ -221,6 +213,9 @@ export async function computeFacts(): Promise<SiteFacts> {
   const { listTemplates } = (await import(resolve(ROOT, "packages/core/src/templates.ts"))) as {
     listTemplates: () => string[];
   };
+  const { commandLoaders } = (await import(
+    resolve(ROOT, "packages/cli/src/commands.ts")
+  )) as { commandLoaders: Record<string, unknown> };
 
   const providerNames = listProviderNames();
   const templateSlugs = listTemplates();
@@ -249,7 +244,7 @@ export async function computeFacts(): Promise<SiteFacts> {
     categoryCount: new Set(PROVIDERS_REF.map((p) => p.category)).size,
     templateCount: templateSlugs.length,
     templateSlugs,
-    cliCommandCount: cliCommands().length,
+    cliCommandCount: Object.keys(commandLoaders).length,
     mcpToolCount: TOOLS.length,
     mcpToolNames: TOOLS.map((t) => t.name),
     pluginCommands,

@@ -32,7 +32,9 @@ export async function runCli<T extends ArgsDef = ArgsDef>(
 ): Promise<number> {
   // `stack env --env prod`: keep the value from being read as a subcommand.
   const rawArgs = await bindParentOptionValues(cmd, argv);
-  const wantsHelp = rawArgs.includes("--help") || rawArgs.includes("-h");
+  const end = rawArgs.indexOf("--");
+  const own = end < 0 ? rawArgs : rawArgs.slice(0, end);
+  const wantsHelp = own.includes("--help") || own.includes("-h");
   const wantsVersion = rawArgs.length === 1 && rawArgs[0] === "--version";
   if (wantsHelp || wantsVersion) {
     await runMain(cmd, { rawArgs });

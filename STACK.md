@@ -30,7 +30,7 @@ Latest released CHANGELOG section: `0.2.2 (2026-10-25)`.
 
 ## Quick orientation
 
-- 27 CLI commands live under `packages/cli/src/commands/*.ts` (registered in `packages/cli/src/index.ts`)
+- 27 CLI commands live under `packages/cli/src/commands/*.ts` (registered in `packages/cli/src/commands.ts`)
 - 39 providers in 13 categories under `packages/core/src/providers/*.ts` (factory: `_api-key.ts`; pilot: `supabase.ts`)
 - 19 MCP tools in the `TOOLS` array of `packages/mcp/src/tools.ts` (served by `server.ts`). Each runs the CLI: `STACK_BIN` if set, else the `stack` bin of the `@ashlr/stack` dependency (`packages/cli/dist/index.js`, present after a build), else `stack` on PATH (`packages/mcp/src/stack-bin.ts`)
 - Tests live in `packages/*/src/__tests__/` — run with `bun test` from the repo root
@@ -81,10 +81,10 @@ Things that trip agents up:
 ### Add a new CLI command
 
 1. `packages/cli/src/commands/<name>.ts`.
-2. Register in `packages/cli/src/index.ts` subCommands.
+2. Register in `packages/cli/src/commands.ts` (`commandLoaders` + `commandDescriptions`).
 3. Add to `packages/cli/src/commands/completion.ts` so shell completion stays current.
 4. Add to the `TOOLS` array in `packages/mcp/src/tools.ts` if it should be exposed to MCP.
-5. Add the name to `COMMAND_ORDER` (and examples to `EXTRAS`) in `packages/site/scripts/gen-cli-ref.ts`, run `bun packages/site/scripts/gen-cli-ref.ts`, and commit `packages/site/src/lib/cli-ref.generated.ts`. CI fails if the committed copy drifts, and `packages/site/tests/cli-ref.test.ts` fails if it does not list exactly the commands in `stack --help`.
+5. Add examples to `EXTRAS` in `packages/site/scripts/gen-cli-ref.ts`, run `bun packages/site/scripts/gen-cli-ref.ts`, and commit `packages/site/src/lib/cli-ref.generated.ts`. CI fails if the committed copy drifts, and `packages/site/tests/cli-ref.test.ts` fails if it does not list exactly the commands in `stack --help`.
 6. Smoke test: `bun run packages/cli/src/index.ts <name> --help`.
 
 ### Add a new MCP tool

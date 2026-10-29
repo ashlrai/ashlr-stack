@@ -4,8 +4,8 @@
  *
  * Build-time generator for packages/site/src/lib/cli-ref.generated.ts.
  *
- * Imports each command module from packages/cli/src/commands/, extracts
- * meta.name, meta.description, and the args map, then emits a typed
+ * Resolves each command through the registry in packages/cli/src/commands.ts,
+ * extracts meta.name, meta.description, and the args map, then emits a typed
  * TypeScript file with the same shape as the hand-maintained cli-ref.ts.
  *
  * Run:
@@ -46,7 +46,6 @@ interface CliCommand {
 
 // import.meta.dir is Bun's native equivalent of __dirname for the script file
 const SCRIPT_DIR = (import.meta as { dir?: string }).dir ?? resolve(process.cwd());
-const CLI_COMMANDS_DIR = resolve(SCRIPT_DIR, "../../cli/src/commands");
 const OUT_PATH = resolve(SCRIPT_DIR, "../src/lib/cli-ref.generated.ts");
 
 /** Map a citty arg type to our CliFlag type field. */
@@ -453,71 +452,26 @@ function serializeCommand(cmd: CliCommand, indent: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// Command order (matches index.ts subCommands order)
-// ---------------------------------------------------------------------------
-
-const COMMAND_ORDER = [
-  "init",
-  "import",
-  "scan",
-  "clone",
-  "add",
-  "remove",
-  "list",
-  "info",
-  "status",
-  "env",
-  "deps",
-  "doctor",
-  "exec",
-  "swap",
-  "sync",
-  "onboard",
-  "open",
-  "login",
-  "telemetry",
-  "templates",
-  "providers",
-  "recommend",
-  "apply",
-  "projects",
-  "ci",
-  "completion",
-  "upgrade",
-];
-
-// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
 async function main() {
   const commands: CliCommand[] = [];
+  const { commandLoaders } = (await import(
+    resolve(SCRIPT_DIR, "../../cli/src/commands.ts")
+  )) as { commandLoaders: Record<string, () => Promise<CommandDef>> };
 
-  for (const name of COMMAND_ORDER) {
-    const modPath = `${CLI_COMMANDS_DIR}/${name}.ts`;
-    let mod: { default?: CommandDef; [key: string]: unknown };
+  for (const name of Object.keys(commandLoaders)) {
+    let def: CommandDef | undefined;
     try {
-      mod = await import(modPath);
+      def = await commandLoaders[name]();
     } catch (err) {
-      console.warn(`  warn: could not import ${name}.ts — ${(err as Error).message}`);
+      console.warn(`  warn: could not load ${name} — ${(err as Error).message}`);
       continue;
     }
 
-    // Find the exported command def (named export ending in "Command", or default)
-    let def: CommandDef | undefined;
-    for (const [key, val] of Object.entries(mod)) {
-      if (key === "default" && val && typeof val === "object" && "meta" in val) {
-        def = val as CommandDef;
-        break;
-      }
-      if (key.endsWith("Command") && val && typeof val === "object" && "meta" in val) {
-        def = val as CommandDef;
-        break;
-      }
-    }
-
     if (!def) {
-      console.warn(`  warn: no command def found in ${name}.ts`);
+      console.warn(`  warn: no command def found for ${name}`);
       continue;
     }
 

@@ -141,7 +141,7 @@ const CMD_META: Record<string, CmdMeta> = {
   },
 };
 
-// Canonical command order (mirrors index.ts subCommands order)
+// Canonical command order (mirrors commandLoaders in packages/cli/src/commands.ts)
 const COMMANDS = [
   "init",
   "import",
