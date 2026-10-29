@@ -31,7 +31,14 @@ function runCli(args: string[], cwd?: string): { stdout: string; stderr: string;
   const result = spawnSync("bun", [CLI_ENTRY, ...args], {
     encoding: "utf8",
     cwd,
-    env: { ...process.env, NO_COLOR: "1", CI: "1", STACK_TEMPLATES_DIR: TEMPLATES_DIR },
+    env: {
+      ...process.env,
+      NO_COLOR: "1",
+      CI: "1",
+      STACK_NO_UPDATE_CHECK: "1",
+      STACK_REGISTRY_DIR: join(cwd ?? tmpdir(), ".test-registry"),
+      STACK_TEMPLATES_DIR: TEMPLATES_DIR,
+    },
   });
   return {
     stdout: result.stdout ?? "",
@@ -84,6 +91,26 @@ describe("stack init", () => {
     const out = stdout + stderr;
     expect(out).not.toContain("› stack add");
   });
+
+  it("initializes the Temporal template and reports no services", () => {
+    const dir = mkTmp();
+    const init = runCli(["init", "--template", "temporal-worker-phantom"], dir);
+    expect(init.code).toBe(0);
+    expect(init.stdout + init.stderr).not.toContain("Provisioning");
+    const toml = readFileSync(join(dir, ".stack.toml"), "utf8");
+    expect(toml).toContain('template = "temporal-worker-phantom"');
+    expect(toml).toContain('name = "dev"');
+    expect(toml).toContain("default = true");
+    expect(existsSync(join(dir, ".stack.local.toml"))).toBe(true);
+    expect(readFileSync(join(dir, ".gitignore"), "utf8")).toContain(".stack.local.toml");
+
+    const list = runCli(["list", "--json"], dir);
+    expect(list.code).toBe(0);
+    expect(JSON.parse(list.stdout)).toMatchObject({
+      template: "temporal-worker-phantom",
+      services: [],
+    });
+  }, 30000);
 
   it("--template --dryRun prints plan, writes config, does not provision", () => {
     const dir = mkTmp();
