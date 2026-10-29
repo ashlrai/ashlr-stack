@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -32,7 +32,7 @@ afterEach(() => {
   rmSync(dir, { recursive: true, force: true });
 });
 
-function stack(args: string[], cwd = dir): { code: number | null; stdout: string } {
+function stack(args: string[], cwd = dir): { code: number | null; stdout: string; stderr: string } {
   const result = spawnSync("bun", [CLI_ENTRY, ...args], {
     encoding: "utf8",
     cwd,
@@ -40,7 +40,7 @@ function stack(args: string[], cwd = dir): { code: number | null; stdout: string
     stdio: ["ignore", "pipe", "pipe"],
     timeout: 30_000,
   });
-  return { code: result.status, stdout: result.stdout ?? "" };
+  return { code: result.status, stdout: result.stdout ?? "", stderr: result.stderr ?? "" };
 }
 
 function vault(): Record<string, string> {
@@ -82,4 +82,37 @@ describe("stack import --json", () => {
     expect(code).toBe(1);
     expect(JSON.parse(stdout).error).toContain("nope.env not found");
   });
+});
+
+describe("stack import malformed input", () => {
+  const cases = [
+    { line: "BROKEN", reason: "expected a valid KEY=VALUE assignment" },
+    { line: "INVALID-KEY=value", reason: "expected a valid KEY=VALUE assignment" },
+    { line: `BROKEN="${NEW_VALUE}`, reason: "unterminated quoted value" },
+    { line: "RESEND_API_KEY=another-value", reason: "duplicate key RESEND_API_KEY" },
+  ];
+
+  for (const { line, reason } of cases) {
+    for (const flags of [[], ["--json"], ["--json", "--dryRun"]]) {
+      it(`rejects ${reason} with ${flags.join(" ") || "human output"} before writing`, () => {
+        writeFileSync(join(dir, ".env"), `# comment\nRESEND_API_KEY=${NEW_VALUE}\n${line}\n`);
+        const configPath = join(dir, ".stack.toml");
+        const originalConfig = '[services.existing]\nprovider = "existing"\n';
+        if (flags.includes("--json")) writeFileSync(configPath, originalConfig);
+
+        const { code, stdout, stderr } = stack(["import", ...flags]);
+        expect(code).toBe(1);
+        const message = flags.includes("--json") ? JSON.parse(stdout).error : stdout + stderr;
+        expect(message).toContain(`line 3: ${reason}`);
+        expect(stdout + stderr).not.toContain(NEW_VALUE);
+        expect(vault()).toEqual({ OPENAI_API_KEY: STORED_VALUE });
+        expect(h.callsTo("add")).toEqual([]);
+        if (flags.includes("--json")) {
+          expect(readFileSync(configPath, "utf8")).toBe(originalConfig);
+        } else {
+          expect(existsSync(configPath)).toBe(false);
+        }
+      });
+    }
+  }
 });
