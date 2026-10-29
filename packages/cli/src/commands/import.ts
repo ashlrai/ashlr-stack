@@ -18,6 +18,32 @@ import {
 import { defineCommand } from "citty";
 import { colors, intro, outro, outroError, prompts } from "../ui.ts";
 
+/** Validate the whole file before importing, without including values in errors. */
+function parseImportEnv(raw: string): ReturnType<typeof parseEnv> {
+  const seen = new Set<string>();
+  for (const [index, rawLine] of raw.split(/\r?\n/).entries()) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) continue;
+    const eq = line.indexOf("=");
+    const key = eq < 0 ? "" : line.slice(0, eq).trim();
+    const value = eq < 0 ? "" : line.slice(eq + 1).trim();
+    let reason: string | undefined;
+    if (eq < 0 || !/^[A-Z_][A-Z0-9_]*$/i.test(key)) {
+      reason = "expected a valid KEY=VALUE assignment";
+    } else if (
+      (value.startsWith('"') || value.startsWith("'")) &&
+      (value.length < 2 || !value.endsWith(value[0]))
+    ) {
+      reason = "unterminated quoted value";
+    } else if (seen.has(key)) {
+      reason = `duplicate key ${key}`;
+    }
+    if (reason) throw new Error(`Invalid .env input on line ${index + 1}: ${reason}.`);
+    seen.add(key);
+  }
+  return parseEnv(raw);
+}
+
 /**
  * `stack import [--from .env]` — inhale an existing .env, route each secret
  * into Phantom, and populate .stack.toml with a best-guess service map.
@@ -68,8 +94,13 @@ export const importCommand = defineCommand({
       prompts.log.warn(colors.yellow("Phantom not installed — dry-run mode will still preview."));
     }
 
-    const raw = await readFile(envPath, "utf-8");
-    const entries = parseEnv(raw);
+    let entries: ReturnType<typeof parseEnv>;
+    try {
+      entries = parseImportEnv(await readFile(envPath, "utf-8"));
+    } catch (err) {
+      outroError((err as Error).message);
+      return;
+    }
     if (entries.length === 0) {
       outro(colors.dim(`${args.from}: nothing to import.`));
       return;
@@ -174,7 +205,7 @@ async function runImportJson(from: string, dryRun: boolean): Promise<void> {
       phantomInstalled = false;
     }
 
-    const entries = parseEnv(await readFile(envPath, "utf-8"));
+    const entries = parseImportEnv(await readFile(envPath, "utf-8"));
     const grouped = groupByProvider(entries.map((e) => e.key));
     const registered = new Set(listProviderNames());
     const detected = Object.keys(grouped).filter((p) => registered.has(p));
