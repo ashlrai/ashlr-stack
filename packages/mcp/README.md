@@ -26,7 +26,25 @@ bun add -g ashlr-stack-mcp @ashlr/stack
 npm i -g ashlr-stack-mcp @ashlr/stack
 ```
 
-Every tool runs the `stack` CLI, so install `@ashlr/stack` alongside this package (or set `STACK_BIN` to the CLI). Without it the server starts and lists its tools, but each call returns "Could not run the 'stack' CLI" with the fix. The npm 0.1.1 release runs on Bun, so Bun must be installed. In source 0.2.1 this package depends on `@ashlr/stack` and runs that dependency's `stack` bin; the order is `STACK_BIN`, then that bin, then `stack` on PATH.
+Every tool runs the `stack` CLI. The server resolves it in this order: the executable specified by `STACK_BIN`, the installed `@ashlr/stack` dependency's bin, then `stack` on PATH. If none is available, the server can still start and list tools, but calls fail with a CLI error. The npm 0.1.1 release runs on Bun, so Bun must be installed for that release.
+
+## Run from a local clone
+
+Install Bun and Node.js 20 or later, then install the workspace dependencies and build the CLI from the repository root:
+
+```bash
+bun install --frozen-lockfile
+(cd packages/cli && bun run build)
+```
+
+The source server runs with Bun; the CLI build provides the workspace dependency's `dist/index.js`. Start the server from the project you want it to inspect, replacing the paths with absolute paths on your machine:
+
+```bash
+cd /absolute/path/to/my-project
+bun run /absolute/path/to/ashlr-stack/packages/mcp/src/server.ts
+```
+
+The server speaks MCP over stdin and stdout, so connect it to an MCP client rather than expecting an interactive prompt. Keep stdout reserved for the protocol. Provider operations may need Phantom and provider credentials configured separately.
 
 ## Wire it into your agent
 
@@ -42,23 +60,24 @@ Drop this into your project's `.mcp.json` (Claude Code, Cursor and Windsurf read
 }
 ```
 
-If you installed from source (no global bin), point at the entry directly:
+For a local clone, after the installation and CLI build above, point the client at the source entry directly (with `bun` available on its PATH):
 
 ```json
 {
   "mcpServers": {
     "ashlr-stack": {
       "command": "bun",
-      "args": ["run", "/absolute/path/to/ashlr-stack/packages/mcp/src/server.ts"],
-      "env": { "STACK_BIN": "/absolute/path/to/ashlr-stack/packages/cli/src/index.ts" }
+      "args": ["run", "/absolute/path/to/ashlr-stack/packages/mcp/src/server.ts"]
     }
   }
 }
 ```
 
+The client chooses the server's working directory; the absolute entry path does not set it. Configure the client to start the server in your project if supported, or pass `cwd` to project-scoped tool calls as described below.
+
 ## Targeting a project (`cwd`)
 
-Every tool runs `stack` in the server's working directory unless you pass `cwd`. When your client starts the server outside the project (Claude Desktop, a global Cursor or Windsurf config), pass the project's absolute path:
+Every tool runs `stack` in the server's working directory by default. When your client starts the server outside the project (Claude Desktop, a global Cursor or Windsurf config), pass the project's absolute path to a project-scoped tool:
 
 ```json
 { "name": "stack_list", "arguments": { "json": true, "cwd": "/home/me/code/my-app" } }
