@@ -109,6 +109,21 @@ describe("stack scan --json", () => {
     const parsed = JSON.parse(stdout) as { hits: unknown[] };
     expect(parsed.hits).toEqual([]);
   });
+
+  test("ignores provider signals in an unrelated file at every confidence level", () => {
+    const cwd = tmp({
+      "notes.txt": '{"dependencies":{"@supabase/supabase-js":"^2.45.0"}}\nOPENAI_API_KEY=example',
+    });
+    const { stdout, stderr, code } = runCli(
+      ["scan", "--json", "--confidence", "low", "--path", cwd],
+      undefined,
+      { CI: "1" },
+    );
+    expect(code).toBe(0);
+    expect(stderr).toBe("");
+    expect(JSON.parse(stdout)).toEqual({ hits: [] });
+    expect(existsSync(join(cwd, ".stack.toml"))).toBe(false);
+  });
 });
 
 // ── --confidence filter ────────────────────────────────────────────────────
