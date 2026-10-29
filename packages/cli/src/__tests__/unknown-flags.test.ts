@@ -58,6 +58,14 @@ describe("unknown options are refused", () => {
     expect(r.stderr).toContain("requires a value");
   });
 
+  test("an unknown long option exits unsuccessfully and points to usage", () => {
+    const r = stack(["templates", "list", "--bogus"]);
+    expect(r.code).toBe(1);
+    expect(r.stdout).toBe("");
+    expect(r.stderr).toContain("Unknown option --bogus for `stack templates list`");
+    expect(r.stderr).toContain("Run `stack templates list --help`");
+  });
+
   test("an unknown option with an attached value exits unsuccessfully and names the option", () => {
     const r = stack(["templates", "list", "--bogus=value"]);
     expect(r.code).toBe(1);
