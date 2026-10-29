@@ -65,6 +65,9 @@ describe("ai/phantom-wire", () => {
     expect(result.webhooks).toHaveLength(1);
 
     const stub = readFileSync(result.webhooks[0], "utf-8");
+    expect(stub).toContain(
+      "The body is unverified; a present signature header does not authenticate it.",
+    );
     const example = stub.match(/^\/\/ export async function [\s\S]*?^\/\/ }$/m)?.[0];
     if (!example) throw new Error(`Missing ${provider} webhook example`);
     const examplePath = join(harness.dir, `${provider}-example.ts`);
@@ -86,7 +89,11 @@ describe("ai/phantom-wire", () => {
 
     // A non-empty header reaches the placeholder; it is not signature verification.
     const response: Response = await handler(
-      new Request("https://example.com", { headers: { [header]: "placeholder" } }),
+      new Request("https://example.com", {
+        method: "POST",
+        headers: { [header]: "placeholder" },
+        body: "unverified webhook payload",
+      }),
     );
     expect(response.status).toBe(200);
   });
