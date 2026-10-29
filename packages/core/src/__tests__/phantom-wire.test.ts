@@ -3,6 +3,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { wirePhantomForRecipe } from "../ai/phantom-wire.ts";
 import { type Recipe, readRecipe, writeRecipe } from "../ai/recipe.ts";
+import { listSecrets } from "../phantom.ts";
 import { type Harness, setupFakePhantom } from "./_harness.ts";
 
 describe("ai/phantom-wire", () => {
@@ -141,6 +142,23 @@ describe("ai/phantom-wire", () => {
     expect(result.missing).toEqual([]);
     expect(result.webhooks).toHaveLength(1);
     expect(harness.callsTo("add")).toEqual([]);
+  });
+
+  it("rejects non-JSON inventory output and skips the vault check without throwing", async () => {
+    // Simulate an older CLI that succeeds but emits human-readable output.
+    writeFileSync(
+      join(harness.dir, "phantom"),
+      '#!/bin/sh\ncase "$1:$2" in\n  --version:) echo "phantom fixture";;\n  list:--json) echo "not json";;\n  *) exit 1;;\nesac\n',
+    );
+
+    await expect(listSecrets(harness.dir)).rejects.toMatchObject({
+      code: "PHANTOM_OUTPUT_UNRECOGNIZED",
+    });
+    const result = await wirePhantomForRecipe(STRIPE_RECIPE, { cwd: harness.dir });
+    const stubPath = join(harness.dir, ".stack/webhooks/stripe.ts");
+    expect(result).toEqual({ present: [], missing: [], webhooks: [stubPath], skipped: ["stripe"] });
+    expect(existsSync(stubPath)).toBe(true);
+    expect(readFileSync(harness.vaultPath, "utf-8")).toBe("{}");
   });
 
   it("skips providers with no webhook stub without crashing", async () => {
