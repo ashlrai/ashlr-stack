@@ -3,6 +3,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { wirePhantomForRecipe } from "../ai/phantom-wire.ts";
 import { type Recipe, readRecipe, writeRecipe } from "../ai/recipe.ts";
+import { listSecrets } from "../phantom.ts";
 import { type Harness, setupFakePhantom } from "./_harness.ts";
 
 describe("ai/phantom-wire", () => {
@@ -141,6 +142,27 @@ describe("ai/phantom-wire", () => {
     expect(result.missing).toEqual([]);
     expect(result.webhooks).toHaveLength(1);
     expect(harness.callsTo("add")).toEqual([]);
+  });
+
+  it("rejects a JSON number from the vault inventory and skips the provider", async () => {
+    // Return valid JSON from a successful list command, but not the required array.
+    writeFileSync(
+      join(harness.dir, "phantom"),
+      '#!/usr/bin/env bash\ncase "$1" in\n  --version) echo "phantom fake 0.0.1" ;;\n  list) echo 42 ;;\n  *) exit 1 ;;\nesac\n',
+    );
+
+    await expect(listSecrets(harness.dir)).rejects.toMatchObject({
+      code: "PHANTOM_OUTPUT_UNRECOGNIZED",
+      message: "phantom list --json did not return an array.",
+    });
+    const result = await wirePhantomForRecipe(STRIPE_RECIPE, { cwd: harness.dir });
+    expect(result).toEqual({
+      present: [],
+      missing: [],
+      skipped: ["stripe"],
+      webhooks: [join(harness.dir, ".stack/webhooks/stripe.ts")],
+    });
+    expect(existsSync(result.webhooks[0])).toBe(true);
   });
 
   it("skips providers with no webhook stub without crashing", async () => {
