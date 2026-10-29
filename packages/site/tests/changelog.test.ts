@@ -12,6 +12,14 @@ test("site changelog mirrors the source and explains apply's placeholder behavio
   const applyEntry = published
     .split("\n")
     .find((line) => line.startsWith("- **`stack apply [recipe-id]`**"));
-  expect(applyEntry).toContain("no longer writes `TODO_STACK_APPLY` as a placeholder secret");
-  expect(applyEntry).toContain("missing secrets are reported for the operator to store with `phantom add <NAME>`");
+  expect(applyEntry).toContain("Provider provisioning can store real values through `stack add`");
+  expect(applyEntry).toContain("the wiring step never writes to the vault or creates placeholder secrets");
+  expect(applyEntry).toContain("Missing secrets are reported for the operator to store with `phantom add <NAME>`");
+  expect(applyEntry).toContain("providers whose vault check cannot run are reported as skipped");
+
+  const fixEntry = published
+    .split("\n")
+    .find((line) => line.startsWith("- **`stack apply` stops writing placeholder secrets."));
+  expect(fixEntry).toContain("The wiring step never writes to the vault; provider provisioning through `stack add` can store real values.");
+  expect(fixEntry).toContain("If the vault cannot be read, the check reports providers as skipped rather than missing.");
 });
