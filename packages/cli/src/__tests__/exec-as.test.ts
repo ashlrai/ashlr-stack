@@ -229,22 +229,20 @@ esac
     expect(existsSync(s.marker)).toBe(false);
     expect(existsSync(s.phantomRan)).toBe(false);
   });
-  test("no pin, frozen, garbage, missing locus and junk input all refuse", () => {
-    const cases: [string | null, string[], string][] = [
-      ["echo 'no active session' >&2; exit 1", ["--as", "acme"], "pin_missing:"],
-      [`cat <<'J'\n${whoami({ frozen: true })}\nJ`, ["--as", "acme"], "pin_frozen:"],
-      ['echo \'{"alias":"acme"}\'', ["--as", "acme"], "pin_unknown:"],
-      [null, ["--as", "acme"], "locus_missing:"],
-      [okWhoami, ["--as", "a;b$(x)"], "--as needs a Locus binding alias"],
-    ];
-    for (const [script, args, expected] of cases) {
-      const s = setup(script);
-      const r = run(s, args);
-      expect(r.code).toBe(1);
-      expect(r.out).toContain(expected);
-      expect(r.out).not.toContain("$(x)");
-      expect(existsSync(s.marker)).toBe(false);
-      expect(existsSync(s.phantomRan)).toBe(false);
-    }
+  const refusalCases: [string | null, string[], string][] = [
+    ["echo 'no active session' >&2; exit 1", ["--as", "acme"], "pin_missing:"],
+    [`cat <<'J'\n${whoami({ frozen: true })}\nJ`, ["--as", "acme"], "pin_frozen:"],
+    ['echo \'{"alias":"acme"}\'', ["--as", "acme"], "pin_unknown:"],
+    [null, ["--as", "acme"], "locus_missing:"],
+    [okWhoami, ["--as", "a;b$(x)"], "--as needs a Locus binding alias"],
+  ];
+  test.each(refusalCases)("refuses before effects: %s %j %s", (script, args, expected) => {
+    const s = setup(script);
+    const r = run(s, args);
+    expect(r.code).toBe(1);
+    expect(r.out).toContain(expected);
+    expect(r.out).not.toContain("$(x)");
+    expect(existsSync(s.marker)).toBe(false);
+    expect(existsSync(s.phantomRan)).toBe(false);
   });
 });
