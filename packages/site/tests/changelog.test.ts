@@ -9,7 +9,9 @@ test("site changelog mirrors the source and explains apply's placeholder behavio
   const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
   expect(published).toBe(source);
 
-  const applyEntry = published.split("\n").find((line) => line.startsWith("- **`stack apply [recipe-id]`**"));
+  const applyEntry = published
+    .split("\n")
+    .find((line) => line.startsWith("- **`stack apply [recipe-id]`**"));
   expect(applyEntry).toContain("no longer writes `TODO_STACK_APPLY` as a placeholder secret");
-  expect(applyEntry).toContain("missing secrets are reported");
+  expect(applyEntry).toContain("missing secrets are reported for the operator to store with `phantom add <NAME>`");
 });
