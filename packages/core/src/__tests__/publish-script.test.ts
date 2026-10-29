@@ -50,7 +50,13 @@ const mutatingCommands = ["npm", "node", "git", "cp", "mv"];
 
 // Bun 1.2's sync facade mislabels nonzero exits and ignores its timeout/buffer
 // options. Own both bounds and await close so each copied fixture is reaped.
-function runFixture(command: string, args: string[], cwd: string, env: Record<string, string>) {
+function runFixture(
+  command: string,
+  args: string[],
+  cwd: string,
+  env: Record<string, string>,
+  timeoutMs = 4_000,
+) {
   return new Promise<{
     status: number | null;
     signal: NodeJS.Signals | null;
@@ -82,10 +88,12 @@ function runFixture(command: string, args: string[], cwd: string, env: Record<st
     let timedOut = false;
     let outputLimitExceeded = false;
     let error: Error | undefined;
+    // These fixtures launch Node and shell validators; coverage on a busy
+    // runner can exceed 1.5s. Retain a hard cap below Bun's per-test timeout.
     const timer = setTimeout(() => {
       timedOut = true;
       child.kill("SIGKILL");
-    }, 1500);
+    }, timeoutMs);
     function capture(chunks: Buffer[], chunk: Buffer) {
       if (outputLimitExceeded) return;
       const remaining = 64 * 1024 - bytes;
@@ -117,6 +125,21 @@ function runFixture(command: string, args: string[], cwd: string, env: Record<st
     });
   });
 }
+
+test("fixture runner kills and reaps a hung validator within its time budget", async () => {
+  const result = await runFixture(
+    realNode,
+    ["-e", "setInterval(() => {}, 1000)"],
+    process.cwd(),
+    {},
+    100,
+  );
+  expect(result.error).toBeUndefined();
+  expect(result.timedOut).toBe(true);
+  expect(result.signal).toBe("SIGKILL");
+  expect(result.status).toBeNull();
+  expect(result.outputLimitExceeded).toBe(false);
+});
 
 describe("publish script early parser (copied script, inert commands)", () => {
   let root: string;
