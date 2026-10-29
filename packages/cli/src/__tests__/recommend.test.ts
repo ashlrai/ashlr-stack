@@ -145,6 +145,28 @@ describe("stack recommend --json", () => {
     expect(payload.guidance).toContain("No strong matches");
   });
 
+  it("treats regex metacharacters as punctuation in a search query", () => {
+    const plain = runCli(["recommend", "stripe", "--json"]);
+    const query = "stripe.*[";
+    const punctuated = runCli(["recommend", query, "--json"]);
+    expect(plain.code).toBe(0);
+    expect(punctuated.code).toBe(0);
+    const plainPayload = JSON.parse(plain.stdout);
+    const payload = JSON.parse(punctuated.stdout);
+    expect(payload.query).toBe(query);
+    expect(plainPayload.hits.length).toBeGreaterThan(0);
+    expect(payload.hits).toEqual(plainPayload.hits);
+    expect(payload.byCategory).toEqual(plainPayload.byCategory);
+
+    const punctuationOnly = runCli(["recommend", ".*[", "--json"]);
+    expect(punctuationOnly.code).toBe(0);
+    const emptyPayload = JSON.parse(punctuationOnly.stdout);
+    expect(emptyPayload.query).toBe(".*[");
+    expect(emptyPayload.hits).toEqual([]);
+    expect(emptyPayload.byCategory).toEqual({});
+    expect(emptyPayload.guidance).toContain("No strong matches");
+  });
+
   it("exits 1 when no query is given, in JSON and human mode", () => {
     const json = runCli(["recommend", "--json"]);
     expect(json.code).toBe(1);
