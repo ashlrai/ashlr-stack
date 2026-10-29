@@ -12,6 +12,10 @@
  *      so the user has somewhere concrete to land the signature verification.
  *
  * An opt-out (`--no-wire`) skips both steps.
+ *
+ * Recipe manifests are unsigned: signature verification is not implemented.
+ * Checking provider names against the catalog does not authenticate a recipe's
+ * origin or integrity; callers must use recipes from a trusted source.
  */
 
 import { mkdir, writeFile } from "node:fs/promises";

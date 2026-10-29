@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { wirePhantomForRecipe } from "../ai/phantom-wire.ts";
-import type { Recipe } from "../ai/recipe.ts";
+import { type Recipe, readRecipe, writeRecipe } from "../ai/recipe.ts";
 import { type Harness, setupFakePhantom } from "./_harness.ts";
 
 describe("ai/phantom-wire", () => {
@@ -39,6 +39,19 @@ describe("ai/phantom-wire", () => {
     expect(stub).toContain("stripe-signature");
     expect(stub).toContain("STRIPE_WEBHOOK_SECRET");
     expect(result.webhooks).toHaveLength(1);
+  });
+
+  it("wires an altered local recipe without authenticating its contents", async () => {
+    const path = await writeRecipe(STRIPE_RECIPE, harness.dir);
+    const original = readFileSync(path, "utf-8");
+    expect(original).toContain("stripe");
+    writeFileSync(path, original.replace('stripe"', 'github"'));
+
+    const recipe = await readRecipe(STRIPE_RECIPE.id, harness.dir);
+    expect(recipe.providers).toEqual([{ name: "github" }]);
+    const result = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
+    expect(result.missing).toContain("github:GITHUB_TOKEN");
+    expect(result.webhooks).toEqual([join(harness.dir, ".stack/webhooks/github.ts")]);
   });
 
   it.each([
