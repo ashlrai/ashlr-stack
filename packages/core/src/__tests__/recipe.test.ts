@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { parseRecipeDraft } from "../ai/inference.ts";
 import {
   type Recipe,
   listRecipes,
@@ -20,6 +21,28 @@ function scratchDir(): { dir: string; cleanup: () => void } {
 }
 
 describe("ai/recipe", () => {
+  it("rejects a draft with no provider steps", () => {
+    expect(() => parseRecipeDraft('{"providers":[]}')).toThrow(
+      "Inference response contained no usable providers",
+    );
+  });
+
+  it("round-trips a saved recipe with no provider steps", async () => {
+    const { dir, cleanup } = scratchDir();
+    try {
+      const recipe: Recipe = {
+        id: "empty",
+        query: "no providers",
+        createdAt: "2026-01-01T00:00:00.000Z",
+        providers: [],
+      };
+      await writeRecipe(recipe, dir);
+      expect(await readRecipe(recipe.id, dir)).toEqual(recipe);
+    } finally {
+      cleanup();
+    }
+  });
+
   it("round-trips a Recipe through write → read with fields preserved", async () => {
     const { dir, cleanup } = scratchDir();
     try {
