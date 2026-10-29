@@ -20,7 +20,7 @@
  *                         packages/mcp/src/server.ts
  *   - providers        -> packages/core catalog + provider registry
  *   - templates        -> templates/ via packages/core listTemplates()
- *   - CLI commands     -> subCommands block of packages/cli/src/index.ts
+ *   - CLI commands     -> command registry in packages/cli/src/commands.ts
  *   - plugin commands  -> packages/plugin/commands/*.md
  *   - site host        -> astro.config.mjs `site:` URL
  *
@@ -40,6 +40,7 @@
 import { spawnSync } from "node:child_process";
 import { readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { commandLoaders } from "../../cli/src/commands.ts";
 
 // ---------------------------------------------------------------------------
 // Paths
@@ -149,12 +150,9 @@ function publishedVersion(sourceVersion: string): string {
   return row[1];
 }
 
-/** Top-level CLI command names from the subCommands block of cli/src/index.ts. */
+/** Top-level CLI command names from the shared command registry. */
 function cliCommands(): string[] {
-  const src = read("packages/cli/src/index.ts");
-  const block = src.match(/\n {2}subCommands: \{\n([\s\S]*?)\n {2}\},/);
-  if (!block) throw new Error("no subCommands block in packages/cli/src/index.ts");
-  return [...block[1].matchAll(/^\s+(\w+):/gm)].map((m) => m[1]);
+  return Object.keys(commandLoaders);
 }
 
 /** Resource objects the MCP server can advertise (server.ts resources.push). */

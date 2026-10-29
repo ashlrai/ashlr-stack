@@ -1,7 +1,7 @@
 /**
  * Doc facts: counts and lists that agent-facing docs state about the code.
  *
- * Each claim is derived from its source of truth (the CLI's subCommands, the
+ * Each claim is derived from its source of truth (the CLI's command registry, the
  * MCP `TOOLS` array, the provider registry, the templates directory, ...) and
  * compared with what the doc says, so a stale doc fails here with the file and
  * line to fix. The CLI reference itself is pinned by `cli-ref.test.ts`.
@@ -10,6 +10,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
+import { commandLoaders } from "../../cli/src/commands.ts";
 import { PROVIDERS_REF } from "../../core/src/catalog";
 import { listProviderNames } from "../../core/src/providers/index";
 import { listTemplates } from "../../core/src/templates";
@@ -23,14 +24,6 @@ const WORDS: Record<string, number> = {
   one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
 };
 const toNumber = (s: string) => WORDS[s.toLowerCase()] ?? Number(s);
-
-/** Top-level command names from the `subCommands` block of packages/cli/src/index.ts. */
-function cliCommands(): string[] {
-  const src = read("packages/cli/src/index.ts");
-  const block = src.match(/\n {2}subCommands: \{\n([\s\S]*?)\n {2}\},/);
-  if (!block) throw new Error("no subCommands block in packages/cli/src/index.ts");
-  return [...block[1].matchAll(/^\s+(\w+):/gm)].map((m) => m[1]);
-}
 
 /** Resource URIs the MCP server can list (packages/mcp/src/server.ts). */
 function serverResourceUris(): string[] {
@@ -77,7 +70,7 @@ function codeListOn(file: string, marker: RegExp): { line: number; names: string
   return { line: i + 1, names: [...lines[i].matchAll(/`([^`]+)`/g)].map((m) => m[1]) };
 }
 
-const commands = cliCommands();
+const commands = Object.keys(commandLoaders);
 const toolNames = TOOLS.map((t) => t.name);
 const providerNames = listProviderNames();
 const categories = new Set(PROVIDERS_REF.map((p) => p.category));
@@ -108,7 +101,7 @@ describe("doc facts: sources of truth are sane", () => {
 });
 
 describe("doc facts: CLI commands", () => {
-  test("STACK.md command count matches packages/cli/src/index.ts subCommands", () => {
+  test("STACK.md command count matches packages/cli/src/commands.ts commandLoaders", () => {
     expectCount("STACK.md", /\b(\d+) CLI commands\b/, commands.length, "top-level commands");
   });
 });
