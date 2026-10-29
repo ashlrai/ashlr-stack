@@ -17,7 +17,7 @@ test("site changelog mirrors the source and explains apply's placeholder behavio
   const fixEntry = published.split("\n").find((line) => line.startsWith("- **`stack apply` stops writing"));
   expect(fixEntry).toContain("The wiring step never writes to the vault.");
   for (const entry of [applyEntry, fixEntry]) {
-    expect(entry).toContain("Users must supply each required missing value");
-    expect(entry).toContain("run `phantom add <NAME>` from a trusted terminal and enter the real value");
+    expect(entry).toContain("you must supply the real value yourself");
+    expect(entry).toContain("run `phantom add <NAME>` in a trusted terminal and enter the value when prompted");
   }
 });
