@@ -51,6 +51,21 @@ describe("phantom wrapper against the fake harness", () => {
     }
   });
 
+  test("exec forwards Phantom's explicit vault unlock input to the child", async () => {
+    const previous = process.env.PHANTOM_VAULT_PASSPHRASE;
+    try {
+      process.env.PHANTOM_VAULT_PASSPHRASE = "inert-regression-passphrase";
+      writeFileSync(
+        join(h.dir, "phantom"),
+        '#!/bin/sh\ntest "$PHANTOM_VAULT_PASSPHRASE" = "inert-regression-passphrase"\n',
+      );
+      expect((await exec(["--version"], { allowFailure: true })).code).toBe(0);
+    } finally {
+      if (previous === undefined) Reflect.deleteProperty(process.env, "PHANTOM_VAULT_PASSPHRASE");
+      else process.env.PHANTOM_VAULT_PASSPHRASE = previous;
+    }
+  });
+
   test("exec resolves relative PATH entries before entering the project directory", async () => {
     const previousPath = process.env.PATH;
     try {
