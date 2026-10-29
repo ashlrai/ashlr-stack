@@ -15,9 +15,11 @@ test("site changelog mirrors the source and explains apply's placeholder behavio
   expect(applyEntry).toContain("The wiring step does not write placeholder secrets.");
 
   const fixEntry = published.split("\n").find((line) => line.startsWith("- **`stack apply` stops writing"));
-  expect(fixEntry).toContain("The wiring step never writes to the vault.");
-  for (const entry of [applyEntry, fixEntry]) {
-    expect(entry).toContain("Users must supply each required missing value");
+  expect(fixEntry).toContain("The wiring step never writes to the vault or fills in missing values.");
+  expect(fixEntry).toContain("Provider setup may already store real values");
+  expect(fixEntry).toContain("users must supply each required missing value themselves");
+  expect(fixEntry).toContain("it reports providers as skipped instead of identifying missing names");
+  expect(applyEntry).toContain("Users must supply each required missing value");
+  for (const entry of [applyEntry, fixEntry])
     expect(entry).toContain("run `phantom add <NAME>` from a trusted terminal and enter the real value");
-  }
 });
