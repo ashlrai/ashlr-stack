@@ -78,6 +78,48 @@ describe("MCP registry and template tools", () => {
     for (const t of report.templates) expect(Array.isArray(t.services)).toBe(true);
   }, 15_000);
 
+  test("repeated project registry requests return equivalent JSON", async () => {
+    const project = join(dir, "proj");
+    const registry = join(dir, "registry");
+    const entry = {
+      name: "proj",
+      path: project,
+      project_id: "stk_repeat0001",
+      template: "starter",
+      services: ["openai"],
+      last_seen: "2026-01-01T00:00:00.000Z",
+    };
+    mkdirSync(registry, { recursive: true });
+    writeFileSync(join(project, ".stack.toml"), '[stack]\nversion = "1"\n');
+    writeFileSync(join(registry, "projects.json"), JSON.stringify({ version: "1", projects: [entry] }));
+
+    try {
+      const request = { name: "stack_projects_list", arguments: { json: true } };
+      const first = await client.callTool(request);
+      const second = await client.callTool(request);
+      expect(first.isError).toBe(false);
+      expect(second.isError).toBe(false);
+      const report = JSON.parse(text(first));
+      expect(report).toEqual({ schema: "ashlr.stack.projects/v1", total: 1, projects: [entry] });
+      expect(JSON.parse(text(second))).toEqual(report);
+    } finally {
+      rmSync(registry, { recursive: true, force: true });
+      rmSync(join(project, ".stack.toml"), { force: true });
+    }
+  }, 15_000);
+
+  test("repeated template registry requests return equivalent JSON", async () => {
+    const request = { name: "stack_templates_list", arguments: { json: true } };
+    const first = await client.callTool(request);
+    const second = await client.callTool(request);
+    expect(first.isError).toBe(false);
+    expect(second.isError).toBe(false);
+    const report = JSON.parse(text(first));
+    expect(report.schema).toBe("ashlr.stack.templates/v1");
+    expect(report.total).toBeGreaterThan(0);
+    expect(JSON.parse(text(second))).toEqual(report);
+  }, 15_000);
+
   test("default stack_templates_list call keeps human output", async () => {
     const res = await client.callTool({ name: "stack_templates_list", arguments: {} });
     expect(text(res)).toContain("stack templates");
