@@ -94,6 +94,23 @@ describe("stack projects list --json", () => {
   });
 });
 
+describe("stack projects where", () => {
+  test("finds a project by its exact name among similarly named projects", () => {
+    const root = tmp();
+    const registry = join(root, "reg");
+    for (const name of ["shop-admin", "shop"]) {
+      const project = join(root, name);
+      mkdirSync(project);
+      writeFileSync(join(project, ".stack.toml"), '[stack]\nversion = "1"\n');
+      expect(stack(["projects", "register"], project, registry).code).toBe(0);
+    }
+
+    const result = stack(["projects", "where", "shop"], root, registry);
+    expect(result.code).toBe(0);
+    expect(result.stdout.trim()).toBe(join(root, "shop"));
+  });
+});
+
 describe("stack templates list --json", () => {
   test("emits ashlr.stack.templates/v1 with each template's services", () => {
     const root = tmp();
