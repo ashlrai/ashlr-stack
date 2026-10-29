@@ -65,6 +65,7 @@ describe("ai/phantom-wire", () => {
     expect(result.webhooks).toHaveLength(1);
 
     const stub = readFileSync(result.webhooks[0], "utf-8");
+    expect(stub).toContain("TODO: Signature verification is pending and not implemented");
     expect(stub).toContain(
       "The body is unverified; a present signature header does not authenticate it.",
     );

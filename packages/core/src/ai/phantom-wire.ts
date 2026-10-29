@@ -124,7 +124,8 @@ function webhookStubFor(provider: string): string {
 //   const signature = req.headers.get("${signatureHeaderFor(provider)}");
 //   if (!signature) return new Response("Missing signature", { status: 400 });
 //   const body = await req.text();
-//   // TODO: verify this webhook request body using the provider's signature scheme.
+//   // TODO: Signature verification is pending and not implemented; verify the body
+//   // using the provider's signature scheme before processing this request.
 //   // The body is unverified; a present signature header does not authenticate it.
 //   return new Response("ok", { status: 200 });
 // }
