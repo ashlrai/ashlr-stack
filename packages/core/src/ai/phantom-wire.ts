@@ -125,6 +125,8 @@ function webhookStubFor(provider: string): string {
 //   if (!signature) return new Response("Missing signature", { status: 400 });
 //   const body = await req.text();
 //   // TODO: verify this webhook request body using the provider's signature scheme.
+//   // Verification inputs include the body, signature, webhook secret, and any
+//   // additional inputs required by the provider's scheme.
 //   // The body is unverified; a present signature header does not authenticate it.
 //   return new Response("ok", { status: 200 });
 // }

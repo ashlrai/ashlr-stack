@@ -66,6 +66,10 @@ describe("ai/phantom-wire", () => {
 
     const stub = readFileSync(result.webhooks[0], "utf-8");
     expect(stub).toContain(
+      "Verification inputs include the body, signature, webhook secret, and any\n" +
+        "//   // additional inputs required by the provider's scheme.",
+    );
+    expect(stub).toContain(
       "The body is unverified; a present signature header does not authenticate it.",
     );
     const example = stub.match(/^\/\/ export async function [\s\S]*?^\/\/ }$/m)?.[0];
