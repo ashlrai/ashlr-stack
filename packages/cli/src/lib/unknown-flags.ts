@@ -82,6 +82,7 @@ function check(tokens: string[], args: ArgsDef, command: string, leaf = false): 
   const short = new Set<string>(["h"]);
   // Options that take a value: a separate value token is not a positional.
   const valued = new Set<string>();
+  const optionalValue = new Set<string>();
   const positionals: string[] = [];
   for (const [key, def] of Object.entries(args)) {
     if (def.type === "positional") {
@@ -92,6 +93,11 @@ function check(tokens: string[], args: ArgsDef, command: string, leaf = false): 
     const aliases = "alias" in def && def.alias ? [def.alias].flat() : [];
     for (const alias of aliases) (alias.length === 1 ? short : long).add(alias);
     if (def.type !== "boolean") for (const name of [key, ...aliases]) valued.add(name);
+    // Some commands parse a bare string option themselves to offer a preview
+    // or a more specific refusal. Keep consuming explicit values as usual.
+    if ("valueOptional" in def && def.valueOptional === true) {
+      for (const name of [key, ...aliases]) optionalValue.add(name);
+    }
   }
   let seen = 0;
   for (let i = 0; i < tokens.length; i++) {
@@ -108,9 +114,10 @@ function check(tokens: string[], args: ArgsDef, command: string, leaf = false): 
       if (valued.has(name) && !token.includes("=")) {
         const next = tokens[i + 1];
         if (next === undefined || isOption(next)) {
-          return { flag: token, command, missingValue: true };
+          if (!optionalValue.has(name)) return { flag: token, command, missingValue: true };
+        } else {
+          i++;
         }
-        i++;
       }
       if (long.has(name) || (negated && long.has(negated))) continue;
       const flag = token.split("=")[0];
@@ -130,9 +137,10 @@ function check(tokens: string[], args: ArgsDef, command: string, leaf = false): 
     if (last && valued.has(last) && !token.includes("=")) {
       const next = tokens[i + 1];
       if (next === undefined || isOption(next)) {
-        return { flag: `-${last}`, command, missingValue: true };
+        if (!optionalValue.has(last)) return { flag: `-${last}`, command, missingValue: true };
+      } else {
+        i++;
       }
-      i++;
     }
   }
   return null;

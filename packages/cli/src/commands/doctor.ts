@@ -92,12 +92,14 @@ export const doctorCommand = defineCommand({
     },
     install: {
       type: "string",
+      valueOptional: true,
       description:
         "With --ecosystem: print install commands for missing or outdated companions (optional comma list: phantom, locus, lexicon, ashlr-md). Runs nothing without --apply.",
       valueHint: "tools",
     },
     apply: {
       type: "string",
+      valueOptional: true,
       description:
         "With --ecosystem --fix or --install: run the step for these tools only (comma list, e.g. lexicon). Required per tool.",
       valueHint: "tools",

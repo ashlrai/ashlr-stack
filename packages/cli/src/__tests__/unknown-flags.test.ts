@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { type CommandDef, defineCommand } from "citty";
 import { TOOLS } from "../../../mcp/src/tools.ts";
 import { addCommand } from "../commands/add.ts";
+import { doctorCommand } from "../commands/doctor.ts";
 import { envCommand } from "../commands/env.ts";
 import { execCommand } from "../commands/exec.ts";
 import { initCommand } from "../commands/init.ts";
@@ -168,6 +169,26 @@ describe("extra positional arguments are refused", () => {
 });
 
 describe("findUnknownFlag accepts every declared spelling", () => {
+  test("doctor delegates bare install/apply values to its command-specific validation", async () => {
+    for (const flag of ["--install", "--apply"]) {
+      for (const suffix of [[], ["--json"], ["lexicon", "--json"], ["--typo"]]) {
+        const result = await findUnknownFlag(doctorCommand, ["--ecosystem", flag, ...suffix]);
+        if (suffix.includes("--typo")) expect(result).toMatchObject({ flag: "--typo" });
+        else expect(result).toBeNull();
+      }
+      expect(await findUnknownFlag(doctorCommand, [`${flag}=lexicon`, "--json"])).toBeNull();
+    }
+  });
+
+  test("optional string aliases accept bare values without swallowing following flags", async () => {
+    const cmd = defineCommand({
+      args: { tools: { type: "string", alias: "t", valueOptional: true } },
+    });
+    expect(await findUnknownFlag(cmd, ["-t"])).toBeNull();
+    expect(await findUnknownFlag(cmd, ["-t", "lexicon"])).toBeNull();
+    expect(await findUnknownFlag(cmd, ["-t", "--typo"])).toMatchObject({ flag: "--typo" });
+  });
+
   test("recognizes missing short-option values and the end-of-options marker", async () => {
     const cmd = defineCommand({ args: { output: { type: "string", alias: "o" } } });
     expect(await findUnknownFlag(cmd, ["-o"])).toMatchObject({ flag: "-o", missingValue: true });
