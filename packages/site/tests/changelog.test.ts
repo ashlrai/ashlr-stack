@@ -19,6 +19,10 @@ test("site changelog mirrors the source and explains apply's placeholder behavio
   expect(fixEntry).toContain("Provider setup may already store real values");
   expect(fixEntry).toContain("users must supply each required missing value themselves");
   expect(fixEntry).toContain("it reports providers as skipped instead of identifying missing names");
+  expect(fixEntry).toContain("Historically, wiring attempted `phantom add <KEY> TODO_STACK_APPLY --rotate`");
+  expect(fixEntry).toContain("this is an obsolete command, not an instruction to run it");
+  expect(fixEntry).toContain("Phantom Secrets refuses values in argv and has no `--rotate`");
+  expect(fixEntry).toContain("a placeholder could block the real value because Phantom does not overwrite existing names");
   expect(applyEntry).toContain("Users must supply each required missing value");
   for (const entry of [applyEntry, fixEntry])
     expect(entry).toContain("run `phantom add <NAME>` from a trusted terminal and enter the real value");
