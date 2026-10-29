@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -62,6 +62,14 @@ describe("notInStackMessage", () => {
 
 describe("unknown service names", () => {
   for (const cmd of ["remove", "open"]) {
+    it(`stack ${cmd} reports a missing stack and exits 1`, () => {
+      const dir = tmp();
+      const { out, code } = run([cmd, "nosuch"], dir, tmp());
+      expect(code).toBe(1);
+      expect(out).toContain(`No .stack.toml at ${join(realpathSync(dir), ".stack.toml")}.`);
+      expect(out).toContain("Run `stack init` first.");
+    });
+
     it(`stack ${cmd} names the configured services and exits 1`, () => {
       const dir = project(["openai"]);
       const { out, code } = run([cmd, "nosuch"], dir, tmp());
