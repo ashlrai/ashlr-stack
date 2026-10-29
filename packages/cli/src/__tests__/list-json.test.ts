@@ -99,6 +99,22 @@ describe("stack list --json", () => {
     ]);
   });
 
+  test("emits a JSON report with no services for an empty stack", () => {
+    const cwd = tmp();
+    writeFileSync(join(cwd, ".stack.toml"), '[stack]\nversion = "1"\ntemplate = "starter"\n');
+    writeFileSync(join(cwd, ".stack.local.toml"), '[stack]\nproject_id = "stk_empty001"\n');
+
+    const r = stack(["list", "--json"], cwd, true);
+    expect(r.code).toBe(0);
+    expect(r.stdout).not.toContain(ESC);
+    expect(JSON.parse(r.stdout)).toEqual({
+      schema: "ashlr.stack.list/v1",
+      project_id: "stk_empty001",
+      template: "starter",
+      services: [],
+    });
+  });
+
   test("without a .stack.toml: JSON error on stdout, exit 1", () => {
     const r = stack(["list", "--json"], tmp());
     expect(r.code).toBe(1);
