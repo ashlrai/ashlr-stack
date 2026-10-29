@@ -119,7 +119,7 @@ function webhookStubFor(provider: string): string {
 // export async function handle${capitalize(provider)}Webhook(req: Request): Promise<Response> {
 //   const signature = req.headers.get("${signatureHeaderFor(provider)}");
 //   const body = await req.text();
-//   // TODO: verify(signature, body) before trusting.
+//   // TODO: verify(signature, body) before trusting the request.
 //   return new Response("ok", { status: 200 });
 // }
 `;
