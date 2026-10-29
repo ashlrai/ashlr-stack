@@ -8,7 +8,7 @@
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
-import { chmodSync, existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
@@ -16,6 +16,7 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import packageManifest from "../package.json";
 
 const SERVER_PATH = join(import.meta.dir, "..", "dist", "server.js");
+const SERVER_SRC = join(import.meta.dir, "..", "src", "server.ts");
 // The server spawns the `stack` bin of its @ashlr/stack dependency (the
 // workspace's packages/cli), so tool calls need that dist built too.
 const CLI_DIR = join(import.meta.dir, "..", "..", "cli");
@@ -145,6 +146,51 @@ describe("MCP server smoke tests", () => {
 });
 
 describe("MCP server runtime", () => {
+  test("documented source invocation uses its launch directory and per-call cwd", async () => {
+    const root = mkdtempSync(join(tmpdir(), "stack-mcp-source-"));
+    const serverDir = join(root, "server-project");
+    const otherDir = join(root, "other-project");
+    mkdirSync(serverDir);
+    mkdirSync(otherDir);
+    const config = (service: string) =>
+      `[stack]\nversion = "1"\n\n[services.${service}]\nprovider = "${service}"\n`;
+    writeFileSync(join(serverDir, ".stack.toml"), config("openai"));
+    writeFileSync(join(otherDir, ".stack.toml"), config("anthropic"));
+
+    const sourceClient = new Client({ name: "source-invocation-test", version: "0.0.1" });
+    const sourceTransport = new StdioClientTransport({
+      command: process.execPath,
+      args: ["run", SERVER_SRC],
+      cwd: serverDir,
+      env: {
+        HOME: root,
+        PATH: process.env.PATH ?? "",
+        STACK_NO_UPDATE_CHECK: "1",
+        STACK_TELEMETRY: "0",
+        DO_NOT_TRACK: "1",
+      },
+    });
+    try {
+      await sourceClient.connect(sourceTransport);
+      for (const [cwd, expected] of [[undefined, "openai"], [otherDir, "anthropic"]] as const) {
+        const result = (await sourceClient.callTool({
+          name: "stack_list",
+          arguments: { json: true, ...(cwd ? { cwd } : {}) },
+        })) as { isError?: boolean; content: Array<{ text: string }> };
+        expect(result.isError).toBeFalsy();
+        const report = JSON.parse(result.content[0]?.text ?? "") as { services: Array<{ name: string }> };
+        expect(report.services.map((service) => service.name)).toEqual([expected]);
+      }
+      const resources = await sourceClient.listResources();
+      expect(resources.resources.map((resource) => resource.uri)).toContain("stack://current/.stack.toml");
+      const resource = await sourceClient.readResource({ uri: "stack://current/.stack.toml" });
+      expect(resource.contents[0]?.text).toBe(config("openai"));
+    } finally {
+      await sourceClient.close();
+      rmSync(root, { recursive: true, force: true });
+    }
+  }, 20_000);
+
   test("stack_scan runs the bundled CLI and returns JSON, not a TTY hint", async () => {
     // The server was spawned without STACK_BIN (StdioClientTransport passes a
     // minimal env), so this also proves the @ashlr/stack dependency resolves.
