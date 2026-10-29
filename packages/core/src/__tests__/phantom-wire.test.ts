@@ -41,6 +41,51 @@ describe("ai/phantom-wire", () => {
     expect(result.webhooks).toHaveLength(1);
   });
 
+  it("generates a complete commented handler with both response paths for each webhook provider", async () => {
+    const providers = [
+      {
+        name: "stripe",
+        handler: "Stripe",
+        header: "stripe-signature",
+        secret: "STRIPE_WEBHOOK_SECRET",
+      },
+      { name: "clerk", handler: "Clerk", header: "svix-signature", secret: "CLERK_WEBHOOK_SECRET" },
+      {
+        name: "supabase",
+        handler: "Supabase",
+        header: "x-supabase-signature",
+        secret: "SUPABASE_WEBHOOK_SECRET",
+      },
+      {
+        name: "github",
+        handler: "Github",
+        header: "x-hub-signature-256",
+        secret: "GITHUB_WEBHOOK_SECRET",
+      },
+    ];
+    const recipe: Recipe = { ...STRIPE_RECIPE, providers: providers.map(({ name }) => ({ name })) };
+    const result = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
+
+    expect(result.webhooks).toHaveLength(providers.length);
+    for (const { name, handler, header, secret } of providers) {
+      const path = join(harness.dir, `.stack/webhooks/${name}.ts`);
+      expect(result.webhooks).toContain(path);
+      const stub = readFileSync(path, "utf-8");
+      expect(stub).toContain(`//   phantom reveal ${secret}`);
+      expect(stub).toContain(
+        [
+          `// export async function handle${handler}Webhook(req: Request): Promise<Response> {`,
+          `//   const signature = req.headers.get("${header}");`,
+          '//   if (!signature) return new Response("missing signature", { status: 400 });',
+          "//   const body = await req.text();",
+          "//   // TODO: verify(signature, body) before trusting.",
+          '//   return new Response("ok", { status: 200 });',
+          "// }",
+        ].join("\n"),
+      );
+    }
+  });
+
   it("noWire: true skips the vault check and webhooks entirely", async () => {
     const result = await wirePhantomForRecipe(STRIPE_RECIPE, {
       cwd: harness.dir,
