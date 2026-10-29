@@ -12,11 +12,12 @@ test("site changelog mirrors the source and explains apply's placeholder behavio
   const applyEntry = published
     .split("\n")
     .find((line) => line.startsWith("- **`stack apply [recipe-id]`**"));
-  expect(applyEntry).toContain("no longer writes `TODO_STACK_APPLY` as a placeholder secret");
-  expect(applyEntry).toContain("for each reported missing secret, run `phantom add <NAME>`");
-  expect(applyEntry).toContain("from a trusted terminal and enter the real value");
+  expect(applyEntry).toContain("The wiring step does not write placeholder secrets.");
 
   const fixEntry = published.split("\n").find((line) => line.startsWith("- **`stack apply` stops writing"));
-  expect(fixEntry).toContain("For each missing name, run `phantom add <NAME>`");
-  expect(fixEntry).toContain("from a trusted terminal and enter the real value");
+  expect(fixEntry).toContain("The wiring step never writes to the vault.");
+  for (const entry of [applyEntry, fixEntry]) {
+    expect(entry).toContain("Users must supply each required missing value");
+    expect(entry).toContain("run `phantom add <NAME>` from a trusted terminal and enter the real value");
+  }
 });
