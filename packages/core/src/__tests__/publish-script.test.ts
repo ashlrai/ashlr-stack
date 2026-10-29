@@ -151,7 +151,6 @@ describe("publish script early parser (copied script, inert commands)", () => {
       join(bin, "node-reader.cjs"),
       `const {readFileSync, appendFileSync} = require('node:fs');
 const {createHash} = require('node:crypto');
-const {spawnSync} = require('node:child_process');
 const input = readFileSync(0);
 const args = process.argv.slice(2);
 if (args.length !== 3 || args[0] !== '--input-type=module' || args[1] !== '-'
@@ -159,12 +158,14 @@ if (args.length !== 3 || args[0] !== '--input-type=module' || args[1] !== '-'
   appendFileSync(process.env.SCRIPT_FIXTURE_TRACE, 'node\\n'); process.exit(97);
 }
 appendFileSync(process.env.VALIDATOR_TRACE, 'read\\n');
-const result = spawnSync(${JSON.stringify(realNode)}, args, {
-  cwd: process.cwd(), env: process.env, input, timeout: 1000, maxBuffer: 64 * 1024,
-});
-if (result.error || result.signal || result.status === null) process.exit(98);
-process.stdout.write(result.stdout); process.stderr.write(result.stderr);
-process.exit(result.status);
+// Run the hash-checked module in this Node process: a second Node startup
+// can exhaust the outer 1500ms fixture bound under coverage instrumentation.
+process.argv = [process.execPath, '-', args[2]];
+const timer = setTimeout(() => process.exit(98), 1000);
+import('data:text/javascript;base64,' + input.toString('base64')).then(
+  () => clearTimeout(timer),
+  () => process.exit(98),
+);
 `,
       { mode: 0o700 },
     );
@@ -398,6 +399,37 @@ process.exit(result.status);
       ).toBeUndefined();
     }
   });
+  for (const alteration of ["source", "arguments"] as const) {
+    test(`validator wrapper refuses altered ${alteration} before evaluation`, async () => {
+      removeFixtureBackups();
+      const original = readFileSync(script, "utf8");
+      const altered =
+        alteration === "source"
+          ? original.replace(
+              "import { lstatSync, readFileSync }",
+              "/* changed */ import { lstatSync, readFileSync }",
+            )
+          : original.replace(
+              'node --input-type=module - "$VERSION"',
+              'node --input-type=module - "$VERSION" extra',
+            );
+      expect(altered).not.toBe(original);
+      writeFileSync(script, altered);
+      const result = await runBackupCase();
+      expect(result.status).toBe(1);
+      expect(result.output).toContain("source version validation failed");
+      expect(readFileSync(trace, "utf8")).toBe("node\n");
+      expect(readFileSync(env.VALIDATOR_TRACE, "utf8")).toBe("");
+      for (const name of ["core", "mcp", "cli"]) {
+        expect(
+          lstatSync(join(root, "packages", name, "package.json.bak"), {
+            throwIfNoEntry: false,
+          }),
+        ).toBeUndefined();
+      }
+    });
+  }
+
   function inputs() {
     return [
       ...preserved.map((file) => file.path),

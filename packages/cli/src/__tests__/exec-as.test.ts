@@ -229,15 +229,15 @@ esac
     expect(existsSync(s.marker)).toBe(false);
     expect(existsSync(s.phantomRan)).toBe(false);
   });
-  test("no pin, frozen, garbage, missing locus and junk input all refuse", () => {
-    const cases: [string | null, string[], string][] = [
-      ["echo 'no active session' >&2; exit 1", ["--as", "acme"], "pin_missing:"],
-      [`cat <<'J'\n${whoami({ frozen: true })}\nJ`, ["--as", "acme"], "pin_frozen:"],
-      ['echo \'{"alias":"acme"}\'', ["--as", "acme"], "pin_unknown:"],
-      [null, ["--as", "acme"], "locus_missing:"],
-      [okWhoami, ["--as", "a;b$(x)"], "--as needs a Locus binding alias"],
-    ];
-    for (const [script, args, expected] of cases) {
+  const cases: [string | null, string[], string][] = [
+    ["echo 'no active session' >&2; exit 1", ["--as", "acme"], "pin_missing:"],
+    [`cat <<'J'\n${whoami({ frozen: true })}\nJ`, ["--as", "acme"], "pin_frozen:"],
+    ['echo \'{"alias":"acme"}\'', ["--as", "acme"], "pin_unknown:"],
+    [null, ["--as", "acme"], "locus_missing:"],
+    [okWhoami, ["--as", "a;b$(x)"], "--as needs a Locus binding alias"],
+  ];
+  for (const [script, args, expected] of cases) {
+    test(`refuses ${expected} before phantom or the command starts`, () => {
       const s = setup(script);
       const r = run(s, args);
       expect(r.code).toBe(1);
@@ -245,6 +245,9 @@ esac
       expect(r.out).not.toContain("$(x)");
       expect(existsSync(s.marker)).toBe(false);
       expect(existsSync(s.phantomRan)).toBe(false);
-    }
-  });
+      if (existsSync(s.envDump)) {
+        expect(readFileSync(s.envDump, "utf8")).not.toContain("SECRET_VALUE");
+      }
+    });
+  }
 });

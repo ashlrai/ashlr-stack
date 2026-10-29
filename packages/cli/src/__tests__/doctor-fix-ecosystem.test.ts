@@ -259,7 +259,7 @@ describe.skipIf(process.platform === "win32")("doctor --fix with fake companions
     }
   });
 
-  test("CLI: bare --apply refuses with the eligible tools; --json shape; plain --apply needs --ecosystem --fix", () => {
+  function cliWorld() {
     const w = world([
       ["locus", {}],
       ["lexicon", {}],
@@ -277,13 +277,21 @@ describe.skipIf(process.platform === "win32")("doctor --fix with fake companions
           PATH: `${w.env.PATH}:${dirname(process.execPath)}`,
         },
       });
+    return { w, cli };
+  }
+
+  test("CLI: bare --apply refuses with the eligible tools", () => {
+    const { w, cli } = cliWorld();
     const bare = cli(["--ecosystem", "--fix", "--apply"]);
     expect(bare.status).toBe(1);
     expect(bare.stderr).toContain(
       "--apply needs the tools to fix; eligible: lexicon, ashlr-md (e.g. --apply lexicon,ashlr-md); apply by hand: `locus doctor --fix --apply`",
     );
     expect(w.read("locus")).toBe("");
+  });
 
+  test("CLI: JSON preview retains the additive doctor wrapper", () => {
+    const { w, cli } = cliWorld();
     const prev = cli(["--ecosystem", "--fix", "--json"]);
     expect(prev.status).toBe(0);
     const doc = JSON.parse(prev.stdout);
@@ -316,7 +324,10 @@ describe.skipIf(process.platform === "win32")("doctor --fix with fake companions
     });
     for (const n of ["locus", "lexicon", "mdopener-mcp"])
       expect(w.read(n)).not.toContain("--apply");
+  });
 
+  test("CLI: human preview explains manual Locus apply", () => {
+    const { cli } = cliWorld();
     const prevText = cli(["--ecosystem", "--fix"]);
     expect(prevText.stdout).toContain(
       "To apply: stack doctor --ecosystem --fix --apply lexicon,ashlr-md",
@@ -329,7 +340,10 @@ describe.skipIf(process.platform === "win32")("doctor --fix with fake companions
       `  Run Locus repairs directly, not through Stack: locus doctor --fix --apply  (${LOCUS_MANUAL_APPLY_REASON})`,
     );
     expect(prevText.stdout).not.toContain("--apply locus");
+  });
 
+  test("CLI: explicit apply runs Lexicon and leaves Locus manual", () => {
+    const { w, cli } = cliWorld();
     const applied = cli(["--ecosystem", "--fix", "--apply", "locus,lexicon", "--json"]);
     expect(applied.status).toBe(0);
     const out = JSON.parse(applied.stdout);
@@ -344,14 +358,20 @@ describe.skipIf(process.platform === "win32")("doctor --fix with fake companions
     expect(w.read("locus")).not.toContain("--apply");
     expect(w.read("lexicon")).toContain("ARGV doctor --fix --apply");
     expect(`${applied.stdout}${applied.stderr}`).not.toContain("SECRET_VALUE");
+  });
 
+  test("CLI: human Locus apply reports the manual refusal", () => {
+    const { w, cli } = cliWorld();
     const human = cli(["--ecosystem", "--fix", "--apply", "locus"]);
     expect(human.status).toBe(0);
     expect(human.stdout.split("\n")).toContain(
       `  Run Locus repairs directly, not through Stack: locus doctor --fix --apply  (refused, not run: ${LOCUS_MANUAL_APPLY_REASON})`,
     );
     expect(w.read("locus")).not.toContain("--apply");
+  });
 
+  test("CLI: plain --apply needs --ecosystem --fix", () => {
+    const { cli } = cliWorld();
     const stray = cli(["--apply", "locus"]);
     expect(stray.status).toBe(1);
     expect(stray.stderr).toContain("--apply only works with --ecosystem --fix");
