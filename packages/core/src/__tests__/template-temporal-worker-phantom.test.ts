@@ -11,8 +11,22 @@ describe("temporal-worker-phantom template", () => {
     const cfg = await loadTemplate("temporal-worker-phantom");
     expect(cfg).toBeDefined();
     expect(cfg?.services).toEqual({});
+    expect(cfg?.environments).toEqual([{ name: "dev", default: true }]);
     const raw = readFileSync(join(dir, "stack.toml"), "utf-8");
     expect(raw).toContain('template = "temporal-worker-phantom"');
+  });
+
+  test("README describes the configuration and limits of local verification", () => {
+    for (const phrase of [
+      "stack init --template temporal-worker-phantom",
+      "stack list --json",
+      '"services": []',
+      "default `dev` environment",
+      "not connectivity, credentials or worker execution",
+      "does not guarantee raw credentials",
+    ]) {
+      expect(readme, phrase).toContain(phrase);
+    }
   });
 
   test("README keeps the security rules and avoids em dashes", () => {
