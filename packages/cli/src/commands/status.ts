@@ -1,12 +1,7 @@
-import {
-  PhantomTimeoutError,
-  type StackConfig,
-  hasConfig,
-  listSecrets,
-  probePhantomInstalled,
-  readConfig,
-} from "@ashlr/stack-core";
+import { type StackConfig, hasConfig, readConfig } from "@ashlr/stack-core/config";
+import { PhantomTimeoutError, listSecrets, probePhantomInstalled } from "@ashlr/stack-core/phantom";
 import { defineCommand } from "citty";
+import colors from "picocolors";
 import {
   STATUS_CHECK_CONCURRENCY,
   STATUS_CHECK_TIMEOUT_MS,
@@ -16,7 +11,6 @@ import {
   StatusCheckTimeoutError,
   runStatusChecks,
 } from "../lib/status-checks.ts";
-import { colors } from "../ui.ts";
 
 /**
  * Stable machine shape for `stack status --json`. Consumers (Phantom's
