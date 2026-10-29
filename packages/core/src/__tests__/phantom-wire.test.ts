@@ -143,6 +143,32 @@ describe("ai/phantom-wire", () => {
     expect(harness.callsTo("add")).toEqual([]);
   });
 
+  it.each([
+    ["whitespace", " \t", true],
+    ["non-whitespace garbage", " \tgarbage", false],
+  ])("handles trailing %s in Phantom JSON output", async (_label, suffix, valid) => {
+    // Return successful output directly: corrupting the fake vault would make
+    // the fake CLI fail before it could emit a valid JSON prefix.
+    writeFileSync(
+      join(harness.dir, "phantom"),
+      `#!/usr/bin/env bash
+case "$1" in
+  --version) echo 'phantom fake 0.0.1' ;;
+  list) cat <<'EOF'
+[{"name":"STRIPE_SECRET_KEY"}]${suffix}
+EOF
+    ;;
+esac
+`,
+    );
+
+    const result = await wirePhantomForRecipe(STRIPE_RECIPE, { cwd: harness.dir });
+    expect(result.present).toEqual(valid ? ["stripe:STRIPE_SECRET_KEY"] : []);
+    expect(result.missing).toEqual([]);
+    expect(result.skipped).toEqual(valid ? [] : ["stripe"]);
+    expect(result.webhooks).toEqual([join(harness.dir, ".stack/webhooks/stripe.ts")]);
+  });
+
   it("skips providers with no webhook stub without crashing", async () => {
     const recipe: Recipe = {
       id: "neon",
