@@ -1,8 +1,10 @@
-// Source-of-truth freshness for versioned docs. Reads the release version from
+// Source-of-truth freshness for generated docs. Reads the release version from
 // package.json manifests, the CHANGELOG's latest released section, server.json
-// and the CLI VERSION constant, then regenerates marked blocks
-// (<!-- fresh:begin name --> ... <!-- fresh:end -->) in docs. Shared by
-// sync.mjs (writes), check.mjs (read-only gate) and the node:test suite.
+// and the CLI VERSION constant, plus the CLI command registry, command meta
+// descriptions, the MCP tool catalog and the provider registry, then
+// regenerates marked blocks (<!-- fresh:begin name --> ... <!-- fresh:end -->)
+// in docs. Shared by sync.mjs (writes), check.mjs (read-only gate) and the
+// node:test suite.
 import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join, posix, relative, sep } from 'node:path';
 
@@ -15,6 +17,19 @@ const RELEASED_MANIFESTS = [
   'packages/cli/package.json',
   'packages/mcp/package.json',
 ];
+
+const CLI_INDEX = 'packages/cli/src/index.ts';
+const CLI_COMMANDS_DIR = 'packages/cli/src/commands';
+const MCP_TOOLS = 'packages/mcp/src/tools.ts';
+const PROVIDER_INDEX = 'packages/core/src/providers/index.ts';
+const PROVIDERS_DIR = 'packages/core/src/providers';
+
+// A single-line string literal (double, single or backtick quoted). Group 1
+// captures the raw literal including its quotes.
+const STRING_LITERAL = /("(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|`(?:[^`\\]|\\.)*`)/;
+const ESCAPES = { n: '\n', r: '\r', t: '\t' };
+
+const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const BEGIN_LINE = /^\s*<!--\s*fresh:begin\s+([a-z0-9][a-z0-9-]*)\s*-->\s*$/;
 const END_LINE = /^\s*<!--\s*fresh:end\s*-->\s*$/;
@@ -105,7 +120,173 @@ export function buildContext(root) {
     monorepo: { name: rootManifest.name, version: rootManifest.version, private: rootManifest.private === true },
     packages,
   };
+
+  // Lazily parsed source-of-truth tables (CLI commands, MCP tools, provider
+  // registry) for the *-table and *-count generators. Parsing is deferred so a
+  // repo without these files only fails when such a block is actually used;
+  // parse failures memoize and rethrow per block.
+  const sourceCache = {};
+  const lazy = (key, parse) => () => {
+    if (!(key in sourceCache)) {
+      try {
+        sourceCache[key] = { value: parse() };
+      } catch (error) {
+        sourceCache[key] = { error };
+      }
+    }
+    const entry = sourceCache[key];
+    if (entry.error) throw entry.error;
+    return entry.value;
+  };
+  ctx.source = {
+    commands: lazy('commands', () => cliCommands(root)),
+    tools: lazy('tools', () => mcpTools(root)),
+    providers: lazy('providers', () => providerRegistry(root)),
+  };
+
   return { ctx, errors };
+}
+
+// Strip quotes and resolve simple escapes in a string literal.
+function unquote(raw) {
+  return raw.slice(1, -1).replace(/\\(.)/g, (_all, ch) => ESCAPES[ch] ?? ch);
+}
+
+// Collapse a source description to one markdown-table cell.
+function tableCell(text) {
+  return text.replace(/\s+/g, ' ').trim().replace(/\|/g, '\\|');
+}
+
+function markdownTable(headers, rows) {
+  return [
+    `| ${headers.join(' | ')} |`,
+    `| ${headers.map(() => '---').join(' | ')} |`,
+    ...rows.map((r) => `| ${r.join(' | ')} |`),
+  ].join('\n');
+}
+
+// Advance past a // or /* */ comment starting at i; returns i when not one.
+function skipComment(text, i) {
+  if (text.startsWith('//', i)) {
+    const nl = text.indexOf('\n', i + 2);
+    return nl === -1 ? text.length : nl + 1;
+  }
+  if (text.startsWith('/*', i)) {
+    const end = text.indexOf('*/', i + 2);
+    return end === -1 ? text.length : end + 2;
+  }
+  return i;
+}
+
+// First occurrence of `ch` at or after `from`, skipping comments.
+function firstCharIndex(text, from, ch) {
+  for (let i = from; i < text.length; i += 1) {
+    const skipped = skipComment(text, i);
+    if (skipped !== i) {
+      i = skipped - 1;
+      continue;
+    }
+    if (text[i] === ch) return i;
+  }
+  return -1;
+}
+
+// Leading run of string literals in the array starting at text[i] === '['.
+// Stops at a flag-like literal ("--json"), a spread or any non-literal element,
+// so `["remove", String(input.service), "--json"]` yields ["remove"].
+function leadingLiterals(text, i) {
+  const route = [];
+  let p = i + 1;
+  for (;;) {
+    while (p < text.length && /\s|,/.test(text[p])) p += 1;
+    const skipped = skipComment(text, p);
+    if (skipped !== p) {
+      p = skipped;
+      continue;
+    }
+    const q = text[p];
+    if (q !== '"' && q !== "'" && q !== '`') break;
+    let j = p + 1;
+    let value = '';
+    while (j < text.length && text[j] !== q) {
+      if (text[j] === '\\') j += 1;
+      value += text[j];
+      j += 1;
+    }
+    if (value.startsWith('-')) break;
+    route.push(value);
+    p = j + 1;
+  }
+  return route;
+}
+
+// The CLI registry: subCommands keys in declaration order, each with the
+// `meta { name, description }` of its commands/<name>.ts file. The parse is
+// convention-based: entries must be lazy `import("./commands/<file>.ts")`
+// loaders and the file's meta block must name the command.
+function cliCommands(root) {
+  const source = readFileSync(join(root, CLI_INDEX), 'utf8');
+  const block = source.match(/subCommands\s*:\s*\{([\s\S]*?)\n[ \t]*\}/);
+  if (!block) throw new Error(`${CLI_INDEX}: no subCommands object found`);
+  const commands = [];
+  const entry = /(\w+)\s*:\s*\(\)\s*=>\s*import\(\s*["']\.\/commands\/([\w-]+)\.ts["']\s*\)/g;
+  for (const m of block[1].matchAll(entry)) commands.push({ name: m[1], file: `${m[2]}.ts` });
+  if (commands.length === 0) throw new Error(`${CLI_INDEX}: subCommands has no lazy import() entries`);
+  for (const command of commands) {
+    const file = `${CLI_COMMANDS_DIR}/${command.file}`;
+    const src = readFileSync(join(root, file), 'utf8');
+    const meta = src.match(
+      new RegExp(
+        `meta\\s*:\\s*\\{[^{}]*?name\\s*:\\s*["'\`]${escapeRe(command.name)}["'\`][^{}]*?description\\s*:\\s*${STRING_LITERAL.source}`,
+      ),
+    );
+    if (!meta) throw new Error(`${file}: no meta { name: "${command.name}", description } block`);
+    command.description = unquote(meta[1]);
+  }
+  return commands;
+}
+
+// The MCP tool catalog: `{ name: "stack_*" }` entries in order, each with the
+// leading literal argv words of its `cliArgs` (the CLI route, before flags or
+// interpolated values). Convention-based like cliCommands.
+function mcpTools(root) {
+  const source = readFileSync(join(root, MCP_TOOLS), 'utf8');
+  const hits = [...source.matchAll(/\{\s*name\s*:\s*"(stack_[a-z_]+)"/g)];
+  const tools = hits.map((hit, i) => {
+    const end = i + 1 < hits.length ? hits[i + 1].index : source.length;
+    const span = source.slice(hit.index, end);
+    const cli = span.match(/cliArgs\s*:/);
+    if (!cli) throw new Error(`${MCP_TOOLS}: ${hit[1]} has no cliArgs`);
+    const arrow = span.indexOf('=>', cli.index + cli[0].length);
+    if (arrow === -1) throw new Error(`${MCP_TOOLS}: ${hit[1]} cliArgs is not an arrow function`);
+    const bracket = firstCharIndex(span, arrow + 2, '[');
+    if (bracket === -1) throw new Error(`${MCP_TOOLS}: ${hit[1]} cliArgs builds no argv array`);
+    const route = leadingLiterals(span, bracket);
+    if (route.length === 0) throw new Error(`${MCP_TOOLS}: ${hit[1]} cliArgs has no leading literal route`);
+    return { name: hit[1], route };
+  });
+  if (tools.length === 0) throw new Error(`${MCP_TOOLS}: no { name: "stack_*" } tool entries found`);
+  return tools;
+}
+
+// The provider registry: `name: async () => (await import("./<file>.ts"))`
+// entries plus the distinct `category: "<name>"` literal of each registered
+// provider file.
+function providerRegistry(root) {
+  const source = readFileSync(join(root, PROVIDER_INDEX), 'utf8');
+  const providers = [];
+  const entry = /(\w+)\s*:\s*(?:async\s*)?\(\)\s*=>\s*\(?\s*await\s+import\(\s*["']\.\/([\w-]+)\.ts["']\s*\)/g;
+  for (const m of source.matchAll(entry)) providers.push({ name: m[1], file: `${m[2]}.ts` });
+  if (providers.length === 0) throw new Error(`${PROVIDER_INDEX}: no registry import() entries found`);
+  const categories = new Set();
+  for (const provider of providers) {
+    const file = `${PROVIDERS_DIR}/${provider.file}`;
+    const src = readFileSync(join(root, file), 'utf8');
+    const m = src.match(/category\s*:\s*"([a-zA-Z]+)"/);
+    if (!m) throw new Error(`${file}: no category: "<name>" literal found`);
+    categories.add(m[1]);
+  }
+  return { providers, categories };
 }
 
 // All markdown files under the scan targets, sorted, relative to root.
@@ -194,29 +375,43 @@ export function parseBlocks(text, file) {
       if (END_INLINE.test(line)) errors.push(`${file}:${lineNo}: fresh:end without a matching fresh:begin`);
       return;
     }
-    const afterBegin = line.slice(beginInline.index + beginInline[0].length);
-    const endInline = afterBegin.match(END_INLINE);
-    if (!endInline) {
-      errors.push(`${file}:${lineNo}: inline fresh:begin '${beginInline[1]}' must close on the same line`);
-      return;
+    // One line may carry several inline pairs ("N providers across M categories").
+    let cursor = beginInline.index + beginInline[0].length;
+    let name = beginInline[1];
+    for (;;) {
+      const rest = line.slice(cursor);
+      const endInline = rest.match(END_INLINE);
+      if (!endInline) {
+        errors.push(`${file}:${lineNo}: inline fresh:begin '${name}' must close on the same line`);
+        return;
+      }
+      const innerStart = lineStart + cursor;
+      const innerEnd = innerStart + endInline.index;
+      if (BEGIN_INLINE.test(rest.slice(0, endInline.index))) {
+        errors.push(`${file}:${lineNo}: nested fresh:begin inside inline '${name}'`);
+        return;
+      }
+      blocks.push({
+        name,
+        inline: true,
+        file,
+        line: lineNo,
+        inner: text.slice(innerStart, innerEnd),
+        contentStart: innerStart,
+        contentEnd: innerEnd,
+      });
+      const tail = rest.slice(endInline.index + endInline[0].length);
+      const nextBegin = tail.match(BEGIN_INLINE);
+      if (!nextBegin) {
+        if (END_INLINE.test(tail)) errors.push(`${file}:${lineNo}: extra fresh:end after inline block`);
+        return;
+      }
+      if (END_INLINE.test(tail.slice(0, nextBegin.index))) {
+        errors.push(`${file}:${lineNo}: fresh:end without a matching fresh:begin`);
+      }
+      cursor += endInline.index + endInline[0].length + nextBegin.index + nextBegin[0].length;
+      name = nextBegin[1];
     }
-    if (BEGIN_INLINE.test(afterBegin.slice(endInline.index + endInline[0].length))) {
-      errors.push(`${file}:${lineNo}: second fresh:begin on one line; keep one block per line`);
-      return;
-    }
-    const innerStart = lineStart + beginInline.index + beginInline[0].length;
-    const innerEnd = lineStart + beginInline.index + beginInline[0].length + endInline.index;
-    blocks.push({
-      name: beginInline[1],
-      inline: true,
-      file,
-      line: lineNo,
-      inner: text.slice(innerStart, innerEnd),
-      contentStart: innerStart,
-      contentEnd: innerEnd,
-    });
-    const rest = afterBegin.slice(endInline.index + endInline[0].length);
-    if (END_INLINE.test(rest)) errors.push(`${file}:${lineNo}: extra fresh:end after inline block`);
   });
   if (open) errors.push(`${file}:${open.line}: fresh:begin '${open.name}' never closed with fresh:end`);
   return { blocks, errors };
@@ -271,6 +466,44 @@ export const GENERATORS = {
       ].join('\n');
     },
   },
+  'commands-table': {
+    inline: false,
+    description: 'markdown table of every registered `stack` command, in source order, with its meta description',
+    generate: (ctx) =>
+      markdownTable(
+        ['Command', 'Purpose'],
+        ctx.source.commands().map((c) => [`\`stack ${c.name}\``, tableCell(c.description)]),
+      ),
+  },
+  'tools-table': {
+    inline: false,
+    description: 'markdown table of every MCP tool and the CLI route it dispatches to',
+    generate: (ctx) =>
+      markdownTable(
+        ['Tool', 'CLI route'],
+        ctx.source.tools().map((t) => [`\`${t.name}\``, `\`stack ${t.route.join(' ')}\``]),
+      ),
+  },
+  'command-count': {
+    inline: true,
+    description: 'number of registered `stack` subcommands',
+    generate: (ctx) => String(ctx.source.commands().length),
+  },
+  'tool-count': {
+    inline: true,
+    description: 'number of declared MCP tools',
+    generate: (ctx) => String(ctx.source.tools().length),
+  },
+  'provider-count': {
+    inline: true,
+    description: 'number of providers in the source registry',
+    generate: (ctx) => String(ctx.source.providers().providers.length),
+  },
+  'category-count': {
+    inline: true,
+    description: 'number of distinct categories across registered providers',
+    generate: (ctx) => String(ctx.source.providers().categories.size),
+  },
 };
 
 function renderBlock(block, ctx) {
@@ -310,7 +543,13 @@ export function check(root) {
           errors.push(`${rel}:${block.line}: '${block.name}' needs begin/end markers on their own lines`);
           continue;
         }
-        const expected = renderBlock(block, ctx);
+        let expected;
+        try {
+          expected = renderBlock(block, ctx);
+        } catch (err) {
+          errors.push(`${rel}:${block.line}: '${block.name}' failed to generate: ${err.message}`);
+          continue;
+        }
         if (block.inline ? block.inner !== expected : block.inner.trimEnd() !== expected.trimEnd()) {
           drifts.push({ file: rel, line: block.line, name: block.name, actual: block.inner, expected });
         }
@@ -343,7 +582,13 @@ export function sync(root) {
           errors.push(`${rel}:${block.line}: '${block.name}' needs begin/end markers on their own lines`);
           continue;
         }
-        const expected = renderBlock(block, ctx);
+        let expected;
+        try {
+          expected = renderBlock(block, ctx);
+        } catch (err) {
+          errors.push(`${rel}:${block.line}: '${block.name}' failed to generate: ${err.message}`);
+          continue;
+        }
         const stale = block.inline ? block.inner !== expected : block.inner.trimEnd() !== expected.trimEnd();
         if (stale) {
           next = next.slice(0, block.contentStart) + expected + next.slice(block.contentEnd);

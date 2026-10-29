@@ -194,3 +194,167 @@ test('scan targets cover README, STACK, CHANGELOG, docs and templates', () => {
   assert.ok(!targets.some((t) => t.startsWith('scripts/')), 'scripts must not be scanned');
   rmSync(root, { recursive: true });
 });
+
+// Minimal CLI/MCP/provider sources exercising the table and count generators.
+const SRC = {
+  'packages/cli/src/index.ts': [
+    `const VERSION = "${V}";`,
+    'const main = defineCommand({',
+    '  subCommands: {',
+    '    alpha: () => import("./commands/alpha.ts").then((m) => m.alphaCommand),',
+    '    beta: () => import("./commands/beta.ts").then((m) => m.betaCommand),',
+    '  },',
+    '});',
+    '',
+  ].join('\n'),
+  'packages/cli/src/commands/alpha.ts':
+    'export const alphaCommand = defineCommand({\n  meta: { name: "alpha", description: "Do the alpha thing." },\n});\n',
+  'packages/cli/src/commands/beta.ts': [
+    'export const betaCommand = defineCommand({',
+    '  meta: {',
+    '    name: "beta",',
+    '    description: "Beta | pipe and | bars.",',
+    '  },',
+    '});',
+    '',
+  ].join('\n'),
+  'packages/mcp/src/tools.ts': [
+    'export const TOOLS = [',
+    '  {',
+    '    name: "stack_alpha",',
+    '    cliArgs: (input) => ["alpha", "--json"],',
+    '  },',
+    '  {',
+    '    name: "stack_env_show",',
+    '    cliArgs: (input) => (input.json ? ["env", "show", "--json"] : ["env", "show"]),',
+    '  },',
+    '  {',
+    '    name: "stack_beta",',
+    '    cliArgs: (input) => {',
+    '      const args = ["beta", String(input.name)];',
+    '      if (input.json) args.push("--json");',
+    '      return args;',
+    '    },',
+    '  },',
+    '];',
+    '',
+  ].join('\n'),
+  'packages/core/src/providers/index.ts': [
+    'const registry = {',
+    '  supabase: async () => (await import("./supabase.ts")).default,',
+    '  stripe: async () => (await import("./stripe.ts")).default,',
+    '};',
+    '',
+  ].join('\n'),
+  'packages/core/src/providers/supabase.ts':
+    'export default { name: "supabase", category: "database" };\n',
+  'packages/core/src/providers/stripe.ts': 'export default { name: "stripe", category: "payments" };\n',
+};
+
+test('commands-table lists registered commands in source order with meta descriptions', () => {
+  const root = repo(SRC);
+  const { ctx, errors } = buildContext(root);
+  assert.deepEqual(errors, []);
+  const out = GENERATORS['commands-table'].generate(ctx, 'README.md');
+  const lines = out.split('\n');
+  assert.equal(lines[0], '| Command | Purpose |');
+  assert.equal(lines[1], '| --- | --- |');
+  assert.equal(lines[2], '| `stack alpha` | Do the alpha thing. |');
+  // A | in the description is escaped so the cell stays intact.
+  assert.equal(lines[3], '| `stack beta` | Beta \\| pipe and \\| bars. |');
+  assert.equal(lines.length, 4);
+  rmSync(root, { recursive: true });
+});
+
+test('tools-table lists tools with their leading literal CLI routes', () => {
+  const root = repo(SRC);
+  const { ctx, errors } = buildContext(root);
+  assert.deepEqual(errors, []);
+  const out = GENERATORS['tools-table'].generate(ctx, 'README.md');
+  const lines = out.split('\n');
+  assert.equal(lines[0], '| Tool | CLI route |');
+  // Route stops at flags and interpolated values.
+  assert.deepEqual(lines.slice(2), [
+    '| `stack_alpha` | `stack alpha` |',
+    '| `stack_env_show` | `stack env show` |',
+    '| `stack_beta` | `stack beta` |',
+  ]);
+  rmSync(root, { recursive: true });
+});
+
+test('count generators produce bare inline numbers', () => {
+  const root = repo(SRC);
+  const { ctx, errors } = buildContext(root);
+  assert.deepEqual(errors, []);
+  assert.equal(GENERATORS['command-count'].generate(ctx, 'README.md'), '2');
+  assert.equal(GENERATORS['tool-count'].generate(ctx, 'README.md'), '3');
+  assert.equal(GENERATORS['provider-count'].generate(ctx, 'README.md'), '2');
+  assert.equal(GENERATORS['category-count'].generate(ctx, 'README.md'), '2');
+  rmSync(root, { recursive: true });
+});
+
+test('several inline blocks may share one line', () => {
+  const { blocks, errors } = parseBlocks(
+    `sees ${begin('provider-count')}39${END} providers across ${begin('category-count')}13${END} categories\n`,
+    'README.md',
+  );
+  assert.deepEqual(errors, []);
+  assert.deepEqual(
+    blocks.map((b) => [b.name, b.inner]),
+    [
+      ['provider-count', '39'],
+      ['category-count', '13'],
+    ],
+  );
+});
+
+test('a stray fresh:end between inline pairs is still an error', () => {
+  const { blocks, errors } = parseBlocks(
+    `${begin('provider-count')}39${END} stray ${END} ${begin('category-count')}13${END}\n`,
+    'README.md',
+  );
+  assert.equal(blocks.length, 2);
+  assert.ok(errors.some((e) => e.includes('fresh:end without a matching fresh:begin')), errors.join(';'));
+});
+
+test('a fresh:begin nested inside an inline block is an error', () => {
+  const { errors } = parseBlocks(`${begin('a')}x ${begin('b')}y${END}\n`, 'README.md');
+  assert.ok(errors.some((e) => e.includes("nested fresh:begin inside inline 'a'")), errors.join(';'));
+});
+
+test('sync regenerates table and count blocks from source, inline pairs included', () => {
+  const root = repo({
+    ...SRC,
+    'README.md': [
+      begin('commands-table'),
+      'stale content',
+      END,
+      `counts: ${begin('command-count')}0${END} commands, ${begin('tool-count')}0${END} tools`,
+      '',
+    ].join('\n'),
+  });
+  const res = run('sync.mjs', root);
+  assert.equal(res.status, 0, res.stderr);
+  const text = readFileSync(join(root, 'README.md'), 'utf8');
+  assert.ok(text.includes('| `stack alpha` | Do the alpha thing. |'));
+  assert.ok(text.includes(`counts: ${begin('command-count')}2${END} commands, ${begin('tool-count')}3${END} tools`));
+  const clean = run('check.mjs', root);
+  assert.equal(clean.status, 0, clean.stderr);
+  rmSync(root, { recursive: true });
+});
+
+test('a broken source convention fails the block, not the run', () => {
+  const root = repo({
+    'README.md': `${begin('commands-table')}\nstale\n${END}\n`,
+    'packages/cli/src/index.ts': `const VERSION = "${V}";\n// registry moved elsewhere\n`,
+  });
+  const { drifts, errors } = check(root);
+  assert.ok(
+    errors.some((e) => e.includes("'commands-table' failed to generate") && e.includes('subCommands')),
+    errors.join(';'),
+  );
+  assert.deepEqual(drifts, []);
+  const res = run('check.mjs', root);
+  assert.equal(res.status, 1);
+  rmSync(root, { recursive: true });
+});

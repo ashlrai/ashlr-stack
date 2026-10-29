@@ -48,15 +48,17 @@ function pluginCommands(): string[] {
 /**
  * Every match of `pattern` (first capture group = the stated number) in `file`
  * must equal `actual`. Fails if the phrase is gone, so a reworded doc updates
- * this test instead of silently dropping the check.
+ * this test instead of silently dropping the check. `fresh:` markers wrap some
+ * generated counts; they are stripped so the rendered number is what matches.
  */
 function expectCount(file: string, pattern: RegExp, actual: number, what: string) {
+  const markers = /<!--\s*fresh:begin\s+[\w-]+\s*-->|<!--\s*fresh:end\s*-->/g;
   const lines = read(file).split("\n");
   const flags = pattern.flags.includes("g") ? pattern.flags : `${pattern.flags}g`;
   const re = new RegExp(pattern.source, flags);
   let found = 0;
   lines.forEach((line, i) => {
-    for (const m of line.matchAll(re)) {
+    for (const m of line.replace(markers, "").matchAll(re)) {
       found++;
       const stated = toNumber(m[1]);
       if (stated !== actual) {
