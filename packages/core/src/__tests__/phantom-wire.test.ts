@@ -81,6 +81,9 @@ describe("ai/phantom-wire", () => {
     );
     const example = stub.match(/^\/\/ export async function [\s\S]*?^\/\/ }$/m)?.[0];
     if (!example) throw new Error(`Missing ${provider} webhook example`);
+    expect(example).toContain(
+      "//   // TODO: verify this webhook request body using the provider's signature scheme.",
+    );
     const examplePath = join(harness.dir, `${provider}-example.ts`);
     writeFileSync(examplePath, example.replace(/^\/\/ ?/gm, ""));
     const handler: unknown = (await import(examplePath))[name];
