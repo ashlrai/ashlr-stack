@@ -61,6 +61,30 @@ describe("Stack Builder copyable output", () => {
     expect(planStackAddCommands([], canonical)).toEqual({ commands: "", unsupported: [] });
   });
 
+  test("clearing a selection removes its service from generated output", () => {
+    const supabase = PROVIDERS.find(({ name }) => name === "Supabase")!;
+    const supported = new Set(PROVIDERS_REF.map(({ name }) => name));
+    const selected = [supabase];
+    const generate = () => {
+      const joined = joinProviderReferences(selected, PROVIDERS_REF);
+      return {
+        plan: planJoinedProviderCommands(joined, supported),
+        mcp: formatOptionalStackMcp(joined.some(({ ref }) => Boolean(ref?.mcp))),
+      };
+    };
+
+    const before = generate();
+    expect(before.plan).toEqual({ commands: "stack add supabase", unsupported: [] });
+    expect(JSON.parse(before.mcp)).toEqual({
+      mcpServers: { "ashlr-stack": { command: "ashlr-stack-mcp" } },
+    });
+
+    selected.pop();
+    const after = generate();
+    expect(after).toEqual({ plan: { commands: "", unsupported: [] }, mcp: "" });
+    expect(JSON.stringify(after)).not.toContain("supabase");
+  });
+
   test("preview catalog metadata cannot turn into claimed provider config", () => {
     const text = formatOptionalStackMcp(true);
     expect(JSON.parse(text)).toEqual({
