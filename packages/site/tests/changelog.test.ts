@@ -38,10 +38,15 @@ test("site changelog mirrors the source and explains apply's placeholder behavio
     .split("\n")
     .find((line) => line.startsWith("- **`stack apply [recipe-id]`**"));
   expect(applyEntry).toContain(
+    "Originally, wiring attempted to add `TODO_STACK_APPLY` placeholder values for declared secrets; the attempts later failed against Phantom Secrets.",
+  );
+  expect(applyEntry).toContain("This changed in 0.2.1.");
+  expect(applyEntry).toContain(
     "The wiring step no longer attempts to write the former `TODO_STACK_APPLY` placeholder value; it does not write placeholder secrets.",
   );
 
   const fixEntry = published.split("\n").find((line) => line.startsWith("- **`stack apply` stops writing"));
+  expect(fixEntry).toContain("`stack apply` no longer writes placeholder values.");
   expect(fixEntry).toContain("The wiring step never writes to the vault or fills in missing values.");
   expect(fixEntry).toContain("Provider setup may already store real values");
   expect(fixEntry).toContain("users must supply each required missing value themselves");
