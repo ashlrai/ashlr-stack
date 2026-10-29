@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -33,8 +33,11 @@ describe("import pipeline", () => {
   afterEach(() => {
     process.chdir(originalCwd);
     h.cleanup();
+    rmSync(cwd, { recursive: true, force: true });
   });
 
+  // Eight sequential vault writes launch real subprocesses. Coverage and
+  // loaded CI runners can exceed Bun's default five-second unit-test budget.
   test("typical Next.js .env gets parsed, stored, and mapped to services", async () => {
     const envContent = `
 # mixed real-world contents
@@ -70,7 +73,11 @@ PORT=3000
     const vault = await readVault(h.dir);
     expect(vault.OPENAI_API_KEY).toBe("sk-fake");
     expect(vault.NODE_ENV).toBe("development");
-    expect((await listSecrets()).length).toBeGreaterThanOrEqual(8);
+    expect(vault).toEqual(Object.fromEntries(parsed.map(({ key, value }) => [key, value])));
+    expect((await listSecrets()).length).toBe(parsed.length);
+    expect(h.callsTo("add").map(({ args }) => args)).toEqual(
+      parsed.map(({ key }) => [key, "--stdin"]),
+    );
 
     // Build a .stack.toml from the detected groups.
     const config = emptyConfig("import-test");
@@ -83,5 +90,5 @@ PORT=3000
     expect(roundTripped.services.supabase).toBeDefined();
     expect(roundTripped.services.openai).toBeDefined();
     expect(roundTripped.services.sentry.mcp).toBe("sentry");
-  });
+  }, 30_000);
 });
