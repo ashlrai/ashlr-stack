@@ -43,6 +43,21 @@ function stack(args: string[]) {
 }
 
 describe("unknown options are refused", () => {
+  test("a value-taking option without a value fails before the command runs", () => {
+    const r = stack(["sync", "--platform"]);
+    expect(r.code).toBe(1);
+    expect(r.stdout).toBe("");
+    expect(r.stderr).toContain("Option --platform for `stack sync` requires a value");
+    expect(r.stderr).toContain("stack sync --help");
+  });
+
+  test("a following option is not consumed as the missing value", () => {
+    const r = stack(["env", "--env", "--json"]);
+    expect(r.code).toBe(1);
+    expect(JSON.parse(r.stdout).error).toContain("Option --env for `stack env` requires a value");
+    expect(r.stderr).toContain("requires a value");
+  });
+
   test("an unknown option with an attached value exits unsuccessfully and names the option", () => {
     const r = stack(["templates", "list", "--bogus=value"]);
     expect(r.code).toBe(1);
@@ -137,6 +152,17 @@ describe("extra positional arguments are refused", () => {
 });
 
 describe("findUnknownFlag accepts every declared spelling", () => {
+  test("recognizes missing short-option values and the end-of-options marker", async () => {
+    const cmd = defineCommand({ args: { output: { type: "string", alias: "o" } } });
+    expect(await findUnknownFlag(cmd, ["-o"])).toMatchObject({ flag: "-o", missingValue: true });
+    expect(await findUnknownFlag(cmd, ["--output", "--"])).toMatchObject({
+      flag: "--output",
+      missingValue: true,
+    });
+    expect(await findUnknownFlag(cmd, ["-o", "-1"])).toBeNull();
+    expect(await findUnknownFlag(cmd, ["--output=-file"])).toBeNull();
+  });
+
   test.each([
     [["add", "openai", "--dry-run", "--use=res_1", "--region", "us-east-1"]],
     [["add", "openai", "--dryRun", "--install=never"]],
