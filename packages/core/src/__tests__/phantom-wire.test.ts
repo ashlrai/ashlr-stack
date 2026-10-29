@@ -112,6 +112,29 @@ describe("ai/phantom-wire", () => {
     expect(response.status).toBe(200);
   });
 
+  it.each(["stripe", "clerk", "supabase", "github"])(
+    "places the signature verification TODO before trusting the %s webhook body",
+    async (provider) => {
+      const recipe: Recipe = { ...STRIPE_RECIPE, providers: [{ name: provider }] };
+      const result = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
+      expect(result.webhooks).toHaveLength(1);
+      const stub = readFileSync(result.webhooks[0], "utf-8");
+      const example = stub.match(/^\/\/ export async function [\s\S]*?^\/\/ }$/m)?.[0];
+      if (!example) throw new Error(`Missing ${provider} webhook example`);
+
+      // Reading the raw body supplies an input to verification; no executable
+      // handling of it should appear before the verification reminder.
+      expect(example).toContain(
+        "//   const body = await req.text();\n" +
+          "//   // TODO: verify this webhook request body using the provider's signature scheme.",
+      );
+      const todo = example.indexOf("TODO: verify this webhook request body");
+      const success = example.indexOf('return new Response("ok", { status: 200 })');
+      expect(todo).toBeGreaterThanOrEqual(0);
+      expect(success).toBeGreaterThan(todo);
+    },
+  );
+
   it("noWire: true skips the vault check and webhooks entirely", async () => {
     const result = await wirePhantomForRecipe(STRIPE_RECIPE, {
       cwd: harness.dir,
