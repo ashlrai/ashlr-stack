@@ -61,6 +61,18 @@ describe("Stack Builder copyable output", () => {
     expect(planStackAddCommands([], canonical)).toEqual({ commands: "", unsupported: [] });
   });
 
+  test("an empty stack generates empty provider output", () => {
+    const selected = joinProviderReferences([], PROVIDERS_REF);
+    const supported = new Set(PROVIDERS_REF.map(({ name }) => name));
+    const output = {
+      plan: planJoinedProviderCommands(selected, supported),
+      mcp: formatOptionalStackMcp(selected.some(({ ref }) => Boolean(ref?.mcp))),
+    };
+
+    expect(selected).toEqual([]);
+    expect(output).toEqual({ plan: { commands: "", unsupported: [] }, mcp: "" });
+  });
+
   test("clearing a selection removes its service from generated output", () => {
     const supabase = PROVIDERS.find(({ name }) => name === "Supabase")!;
     const supported = new Set(PROVIDERS_REF.map(({ name }) => name));
