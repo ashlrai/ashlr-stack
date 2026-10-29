@@ -82,6 +82,18 @@ describe("stack import --json", () => {
     expect(code).toBe(1);
     expect(JSON.parse(stdout).error).toContain("nope.env not found");
   });
+
+  it("reports malformed JSON input without creating a stack file or storing secrets", () => {
+    writeFileSync(join(dir, "broken.json"), `{"RESEND_API_KEY": "${NEW_VALUE}"`);
+
+    const { code, stdout, stderr } = stack(["import", "--json", "--from", "broken.json"]);
+    expect(code).toBe(1);
+    expect(JSON.parse(stdout).error).toContain("line 1: expected a valid KEY=VALUE assignment");
+    expect(stdout + stderr).not.toContain(NEW_VALUE);
+    expect(existsSync(join(dir, ".stack.toml"))).toBe(false);
+    expect(vault()).toEqual({ OPENAI_API_KEY: STORED_VALUE });
+    expect(h.callsTo("add")).toEqual([]);
+  });
 });
 
 describe("stack import malformed input", () => {
