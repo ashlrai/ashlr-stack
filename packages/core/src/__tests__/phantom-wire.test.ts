@@ -41,6 +41,26 @@ describe("ai/phantom-wire", () => {
     expect(result.webhooks).toHaveLength(1);
   });
 
+  it("reads the request body before the verification placeholder in every webhook example", async () => {
+    const providers = ["stripe", "clerk", "supabase", "github"];
+    const recipe: Recipe = {
+      id: "webhooks",
+      query: "webhooks",
+      createdAt: "2026-04-18T00:00:00.000Z",
+      providers: providers.map((name) => ({ name })),
+    };
+
+    const result = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
+    expect(result.webhooks).toHaveLength(providers.length);
+    for (const provider of providers) {
+      const stub = readFileSync(join(harness.dir, `.stack/webhooks/${provider}.ts`), "utf-8");
+      const bodyRead = stub.indexOf("//   const body = await req.text();");
+      const verification = stub.indexOf("//   // TODO: verify(signature, body) before trusting.");
+      expect(bodyRead).toBeGreaterThanOrEqual(0);
+      expect(verification).toBeGreaterThan(bodyRead);
+    }
+  });
+
   it("noWire: true skips the vault check and webhooks entirely", async () => {
     const result = await wirePhantomForRecipe(STRIPE_RECIPE, {
       cwd: harness.dir,
