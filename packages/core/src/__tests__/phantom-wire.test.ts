@@ -55,6 +55,29 @@ describe("ai/phantom-wire", () => {
     expect(result.webhooks).toEqual([join(harness.dir, ".stack/webhooks/github.ts")]);
   });
 
+  it("generates a commented request handler and response for every webhook provider", async () => {
+    const providers = ["stripe", "clerk", "supabase", "github"];
+    const recipe: Recipe = {
+      ...STRIPE_RECIPE,
+      providers: providers.map((name) => ({ name })),
+    };
+    const result = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
+    expect(result.webhooks).toEqual(
+      providers.map((provider) => join(harness.dir, ".stack/webhooks", `${provider}.ts`)),
+    );
+
+    for (const [index, provider] of providers.entries()) {
+      const stub = readFileSync(result.webhooks[index], "utf-8");
+      const handlerName = `handle${provider[0].toUpperCase()}${provider.slice(1)}Webhook`;
+      const example = stub.match(/^\/\/ export async function [\s\S]*?^\/\/ }$/m)?.[0];
+      expect(example).toBeDefined();
+      expect(example).toContain(
+        `// export async function ${handlerName}(req: Request): Promise<Response> {`,
+      );
+      expect(example).toContain('//   return new Response("ok", { status: 200 });');
+    }
+  });
+
   it.each([
     ["stripe", "stripe-signature", "handleStripeWebhook"],
     ["clerk", "svix-signature", "handleClerkWebhook"],
