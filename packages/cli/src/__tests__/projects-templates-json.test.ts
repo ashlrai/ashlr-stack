@@ -86,6 +86,48 @@ describe("stack projects list --json", () => {
     expect(JSON.parse(bare.stdout)).toEqual(report);
   });
 
+  test("lists multiple registered projects in one JSON document", () => {
+    const root = tmp();
+    const registry = join(root, "reg");
+    const projects = [
+      { name: "shop", id: "stk_shop001", provider: "openai" },
+      { name: "studio", id: "stk_studio01", provider: "supabase" },
+    ];
+    for (const { name, id, provider } of projects) {
+      const path = join(root, name);
+      mkdirSync(path);
+      writeFileSync(
+        join(path, ".stack.toml"),
+        `[stack]\nversion = "1"\n\n[services.${provider}]\nprovider = "${provider}"\n`,
+      );
+      writeFileSync(join(path, ".stack.local.toml"), `[stack]\nproject_id = "${id}"\n`);
+      expect(stack(["projects", "register"], path, registry).code).toBe(0);
+    }
+
+    for (const args of [
+      ["projects", "list", "--json"],
+      ["projects", "--json"],
+    ]) {
+      const r = stack(args, root, registry);
+      expect(r.code).toBe(0);
+      expect(r.stdout).not.toContain(ESC);
+      const report = JSON.parse(r.stdout);
+      expect(report.schema).toBe("ashlr.stack.projects/v1");
+      expect(report.total).toBe(2);
+      expect(report.projects).toHaveLength(2);
+      for (const { name, id, provider } of projects) {
+        expect(report.projects).toContainEqual({
+          name,
+          path: join(root, name),
+          project_id: id,
+          template: null,
+          services: [provider],
+          last_seen: expect.any(String),
+        });
+      }
+    }
+  }, 30_000);
+
   test("human output is unchanged without --json", () => {
     const root = tmp();
     const r = stack(["projects", "list"], root, join(root, "reg"));
