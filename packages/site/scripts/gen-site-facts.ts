@@ -154,7 +154,7 @@ function cliCommands(): string[] {
   const src = read("packages/cli/src/index.ts");
   const block = src.match(/\n {2}subCommands: \{\n([\s\S]*?)\n {2}\},/);
   if (!block) throw new Error("no subCommands block in packages/cli/src/index.ts");
-  return [...block[1].matchAll(/^\s+(\w+):/gm)].map((m) => m[1]);
+  return [...block[1].matchAll(/^\s+["']?([\w-]+)["']?:/gm)].map((m) => m[1]);
 }
 
 /** Resource objects the MCP server can advertise (server.ts resources.push). */

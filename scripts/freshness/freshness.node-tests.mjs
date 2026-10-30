@@ -202,7 +202,7 @@ const SRC = {
     'const main = defineCommand({',
     '  subCommands: {',
     '    alpha: () => import("./commands/alpha.ts").then((m) => m.alphaCommand),',
-    '    beta: () => import("./commands/beta.ts").then((m) => m.betaCommand),',
+    '    "beta": () => import("./commands/beta.ts").then((m) => m.betaCommand),',
     '  },',
     '});',
     '',

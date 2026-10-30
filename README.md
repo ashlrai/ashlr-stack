@@ -170,7 +170,7 @@ stack exec --as acme -- bun dev  # same, but refuse (exit 1, nothing starts) unl
 
 ### Source command reference
 
-This checkout registers <!-- fresh:begin command-count -->28<!-- fresh:end --> top-level commands. Run `stack <command> --help`
+This checkout registers <!-- fresh:begin command-count -->29<!-- fresh:end --> top-level commands. Run `stack <command> --help`
 for arguments and subcommands supported by your installed version.
 
 <!-- fresh:begin commands-table -->
@@ -188,6 +188,7 @@ for arguments and subcommands supported by your installed version.
 | `stack env` | Inspect the effective env-var map for this stack. |
 | `stack deps` | Show the service dependency graph for this stack. |
 | `stack doctor` | Verify every service is reachable and credentials are valid. |
+| `stack fleet-latency` | Report per-repo median and p90 open-to-merge seconds for PRs merged in the last six hours. |
 | `stack fleet` | Show repository CI, open PR counts, and dispatcher lane status. |
 | `stack exec` | Run a command with Phantom's secret proxy active. |
 | `stack swap` | Migrate a project from one provider to an equivalent in the same category. |

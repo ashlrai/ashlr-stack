@@ -85,6 +85,7 @@ const CMD_META: Record<string, CmdMeta> = {
     subcommands: ["show", "diff", "export"],
   },
   deps: {},
+  "fleet-latency": { flags: [{ name: "json" }] },
   fleet: { flags: [{ name: "json" }, { name: "queue" }, { name: "log" }] },
   doctor: {
     flags: [
