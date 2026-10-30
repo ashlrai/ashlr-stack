@@ -162,6 +162,10 @@ interface CommandExtra {
 }
 
 const EXTRAS: Record<string, CommandExtra> = {
+  "fleet-waste": {
+    examples: [{ command: "stack fleet-waste --metrics ~/.ashlr-runs/metrics/jobs.jsonl --hours 6" }],
+    notes: "Read-only JSON, including empty files. Inclusive trailing window, default one hour. Events use ISO ts (or timestamp), event, lane and job; finish.empty must be true to count as empty. Launches and empties count events; precheckSkip groups skips by code (unknown if absent/invalid). neverFinished counts unique jobs launched in the window without a finish at or after their latest launch, as of windowEnd; unfinishedJobs lists their ids. File order does not matter. Malformed rows are skipped and counted; unrelated events and out-of-window rows are ignored. Missing/unreadable files fail without exposing raw input.",
+  },
   "fleet-lag": {
     examples: [{ command: "stack fleet-lag --json" }],
     notes: "Read-only via Locus. Latest tag is ordered by underlying commit date; age uses the annotated tagger date or lightweight commit date. Compares that tag to the default branch. Median seconds use the latest 20 merge timestamps across all base branches, or all merged PRs if fewer. No tags and unavailable repositories remain in the report; unknown metrics are null.",
@@ -497,6 +501,7 @@ const COMMAND_ORDER = [
   "fleet-supply",
   "fleet-latency",
   "fleet-lag",
+  "fleet-waste",
   "fleet-stuck",
   "fleet-slo",
   "fleet-act",

@@ -620,6 +620,39 @@ export const CLI_COMMANDS: CliCommand[] = [
       "Read-only via Locus. Latest tag is ordered by underlying commit date; age uses the annotated tagger date or lightweight commit date. Compares that tag to the default branch. Median seconds use the latest 20 merge timestamps across all base branches, or all merged PRs if fewer. No tags and unavailable repositories remain in the report; unknown metrics are null.",
   },
   {
+    name: "stack fleet-waste",
+    description:
+      "Report per-lane launches, empty finishes, precheck skips by code and unfinished jobs.",
+    synopsis: "stack fleet-waste --metrics <metrics> [--hours <hours>] [--json]",
+    flags: [
+      {
+        name: "metrics",
+        synopsis: "--metrics <metrics>",
+        type: "string",
+        required: true,
+        description: "Path to job event metrics JSONL (ts, event, lane, job).",
+      },
+      {
+        name: "hours",
+        synopsis: "--hours <hours>",
+        type: "string",
+        default: "1",
+        description: "Positive trailing window in hours; fractional hours accepted.",
+      },
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        description: "Emit schemaVersion 1 JSON (also the default).",
+      },
+    ],
+    examples: [
+      { command: "stack fleet-waste --metrics ~/.ashlr-runs/metrics/jobs.jsonl --hours 6" },
+    ],
+    notes:
+      "Read-only JSON, including empty files. Inclusive trailing window, default one hour. Events use ISO ts (or timestamp), event, lane and job; finish.empty must be true to count as empty. Launches and empties count events; precheckSkip groups skips by code (unknown if absent/invalid). neverFinished counts unique jobs launched in the window without a finish at or after their latest launch, as of windowEnd; unfinishedJobs lists their ids. File order does not matter. Malformed rows are skipped and counted; unrelated events and out-of-window rows are ignored. Missing/unreadable files fail without exposing raw input.",
+  },
+  {
     name: "stack fleet-stuck",
     description:
       "List open PRs by merge state, age and auto-merge status with server/ and lockfile path hints.",
