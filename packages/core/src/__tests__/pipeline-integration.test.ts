@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { wirePhantomForRecipe } from "../ai/phantom-wire.ts";
+import { type Recipe, readRecipe, writeRecipe } from "../ai/recipe.ts";
 import { emptyConfig, writeConfig } from "../config.ts";
 import { addService } from "../pipeline.ts";
 import type { Provider } from "../providers/_base.ts";
@@ -91,5 +93,29 @@ describe("addService full loop", () => {
     expect(mcp.mcpServers.stubsvc).toBeDefined();
 
     Reflect.deleteProperty(providers, "stubsvc");
+  });
+
+  test("stack apply reports every missing value without writing placeholders", async () => {
+    const vault = { NEON_API_KEY: "existing-value", UNRELATED_KEY: "keep-me" };
+    writeFileSync(h.vaultPath, JSON.stringify(vault));
+    const recipe: Recipe = {
+      id: "missing-values",
+      query: "database and ai",
+      createdAt: "2026-04-18T00:00:00.000Z",
+      providers: [{ name: "neon" }, { name: "openai" }, { name: "anthropic" }],
+    };
+    await writeRecipe(recipe, cwd);
+
+    // Apply reads the saved recipe and uses this wiring result for its report.
+    const result = await wirePhantomForRecipe(await readRecipe(recipe.id, cwd), { cwd });
+    expect(result).toEqual({
+      present: ["neon:NEON_API_KEY"],
+      missing: ["neon:DATABASE_URL", "openai:OPENAI_API_KEY", "anthropic:ANTHROPIC_API_KEY"],
+      webhooks: [],
+      skipped: [],
+    });
+    expect(h.callsTo("list").length).toBeGreaterThan(0);
+    expect(h.callsTo("add")).toEqual([]);
+    expect(await readVault(h.dir)).toEqual(vault);
   });
 });
