@@ -31,6 +31,7 @@ import {
   runDoctorFix,
 } from "../lib/doctor-fix.ts";
 import { InstallUsageError, formatInstallReport, runDoctorInstall } from "../lib/doctor-install.ts";
+import { checkRepos } from "../lib/doctor-repos.ts";
 import { checkEcosystem, ecosystemNextSteps, formatEcosystem } from "../lib/ecosystem.ts";
 import { requirePhantom } from "../lib/phantom-preflight.ts";
 import { colors, intro, logEvent, outro, outroError, prompts, spinnerBridge } from "../ui.ts";
@@ -104,6 +105,11 @@ export const doctorCommand = defineCommand({
         "With --ecosystem --fix or --install: run the step for these tools only (comma list, e.g. lexicon). Required per tool.",
       valueHint: "tools",
     },
+    repos: {
+      type: "boolean",
+      default: false,
+      description: "Check default-branch CI and open PR counts across seven Ashlr repos via gh.",
+    },
     reconcile: {
       type: "boolean",
       default: false,
@@ -120,6 +126,27 @@ export const doctorCommand = defineCommand({
       else process.stderr.write(`${colors.red(`[stack doctor] ${message}`)}\n`);
       process.exitCode = 1;
     };
+
+    if (args.repos) {
+      if (
+        args.ecosystem ||
+        args.fix ||
+        args.all ||
+        reconcile ||
+        install !== undefined ||
+        apply !== undefined
+      ) {
+        usage("--repos may only be combined with --json");
+        return;
+      }
+      const report = await checkRepos();
+      if (json) process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
+      else
+        for (const repo of report.repos)
+          console.log(`${repo.repo}: ${repo.detail}; open PRs: ${repo.open_pr_count ?? "unknown"}`);
+      process.exitCode = report.status === "fail" ? 1 : 0;
+      return;
+    }
 
     // --ecosystem --install: print install commands (product call (a));
     // --apply <tools> runs them for the named tools only.
