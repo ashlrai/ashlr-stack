@@ -65,9 +65,9 @@ describe("MCP structured list tools", () => {
     return (res.content as Array<{ type: string; text: string }>)[0]?.text ?? "";
   }
 
-  function expectCliContract(report: unknown, command: string[]) {
+  function expectCliContract(report: unknown, command: string[], project = join(dir, "proj")) {
     const cli = spawnSync(process.execPath, [CLI_SRC, ...command, "--json"], {
-      cwd: join(dir, "proj"),
+      cwd: project,
       env: {
         PATH: [dirname(process.execPath), "/usr/bin", "/bin"].join(":"),
         HOME: join(dir, "home"),
@@ -91,6 +91,24 @@ describe("MCP structured list tools", () => {
     expect(report.schema).toBe("ashlr.stack.list/v1");
     expect(report.project_id).toBe("stk_mcp00001");
     expect(report.services.map((s: { name: string }) => s.name)).toEqual(["openai"]);
+  }, 15_000);
+
+  test("stack_list json: true returns an empty services array for an empty stack", async () => {
+    const project = join(dir, "empty-proj");
+    mkdirSync(project);
+    writeFileSync(join(project, ".stack.toml"), '[stack]\nversion = "1"\ntemplate = "starter"\n');
+    writeFileSync(join(project, ".stack.local.toml"), '[stack]\nproject_id = "stk_empty001"\n');
+    const res = await client.callTool({ name: "stack_list", arguments: { json: true, cwd: project } });
+    expect(res.isError).toBe(false);
+    const report = JSON.parse(text(res));
+    expect(report).toEqual({
+      schema: "ashlr.stack.list/v1",
+      project_id: "stk_empty001",
+      template: "starter",
+      services: [],
+    });
+    expect(text(res)).toBe(JSON.stringify(report));
+    expectCliContract(report, ["list"], project);
   }, 15_000);
 
   test("stack_deps json: true returns the stack deps --json contract", async () => {
