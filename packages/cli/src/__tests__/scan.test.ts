@@ -167,6 +167,82 @@ describe("stack scan --confidence", () => {
   });
 });
 
+// ── nested project discovery ───────────────────────────────────────────────
+
+describe("stack scan nested project discovery", () => {
+  // Documented behavior: `--path` is the "Directory to scan" and the detected
+  // signal set is that directory's own package.json / requirements.txt /
+  // pyproject.toml / go.mod / Cargo.toml, framework configs (vercel.json,
+  // fly.toml, railway.json, supabase/config.toml, sentry.*.config,
+  // .github/workflows/) and .env.example. Discovery is per-directory: reaching
+  // a project nested inside another means pointing --path at it — scanning the
+  // parent never reports the child's evidence.
+  const files = {
+    "package.json": JSON.stringify({ dependencies: { openai: "^4.0.0" } }),
+    "apps/api/package.json": JSON.stringify({
+      dependencies: { "@supabase/supabase-js": "^2.45.0" },
+    }),
+    "apps/api/.env.example": "STRIPE_SECRET_KEY=\n",
+    "apps/api/fly.toml": "app = 'api'",
+    "apps/api/supabase/config.toml": "[api]\nport = 54321",
+    "apps/api/.github/workflows/ci.yml": "name: CI\non: push",
+  };
+
+  function hits(stdout: string) {
+    return (
+      JSON.parse(stdout) as {
+        hits: Array<{ provider: string; confidence: string; sources: string[] }>;
+      }
+    ).hits;
+  }
+
+  test("discovers the nested project's signals when --path points at it", () => {
+    const cwd = tmp(files);
+    const nested = join(cwd, "apps", "api");
+    const { stdout, stderr, code } = runCli(
+      ["scan", "--json", "--confidence", "low", "--path", nested],
+      undefined,
+      { CI: "1" },
+    );
+    expect(code).toBe(0);
+    expect(stderr).toBe("");
+    const found = hits(stdout);
+    expect(found.map((h) => h.provider)).toEqual(["fly", "github", "supabase", "stripe"]);
+    // Documented nested signal paths resolve inside the scanned directory.
+    const supabase = found.find((h) => h.provider === "supabase");
+    expect(supabase?.confidence).toBe("high");
+    expect(supabase?.sources).toContain("package.json:@supabase/supabase-js");
+    expect(supabase?.sources).toContain("supabase/config.toml");
+    const github = found.find((h) => h.provider === "github");
+    expect(github?.sources).toContain(".github/workflows/ci.yml");
+  });
+
+  test("--path accepts a nested directory relative to cwd", () => {
+    const cwd = tmp(files);
+    const { stdout, code } = runCli(
+      ["scan", "--json", "--confidence", "low", "--path", join("apps", "api")],
+      cwd,
+      { CI: "1" },
+    );
+    expect(code).toBe(0);
+    expect(hits(stdout).map((h) => h.provider)).toEqual(["fly", "github", "supabase", "stripe"]);
+  }, 30_000);
+
+  test("scanning the parent reports only the parent's own signals", () => {
+    const cwd = tmp(files);
+    const { stdout, stderr, code } = runCli(
+      ["scan", "--json", "--confidence", "low", "--path", cwd],
+      undefined,
+      { CI: "1" },
+    );
+    expect(code).toBe(0);
+    expect(stderr).toBe("");
+    // The nested project's manifest, .env.example, config files and
+    // .github/workflows/ are not signals of the parent directory.
+    expect(hits(stdout).map((h) => h.provider)).toEqual(["openai"]);
+  });
+});
+
 // ── Non-TTY without flags ──────────────────────────────────────────────────
 
 describe("stack scan non-TTY without flags", () => {
