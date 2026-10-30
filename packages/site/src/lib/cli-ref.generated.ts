@@ -544,6 +544,20 @@ export const CLI_COMMANDS: CliCommand[] = [
     ],
   },
   {
+    name: "stack fleet-latency",
+    description:
+      "Report per-repo median and p90 open-to-merge seconds for PRs merged in the last six hours.",
+    synopsis: "stack fleet-latency [--json]",
+    flags: [
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        description: "Emit schemaVersion 1 JSON; missing percentiles are null.",
+      },
+    ],
+  },
+  {
     name: "stack fleet",
     description: "Show repository CI, open PR counts, and dispatcher lane status.",
     synopsis: "stack fleet [--json] [--log <log>] [--queue <queue>]",

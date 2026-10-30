@@ -229,7 +229,7 @@ function cliCommands(root) {
   const block = source.match(/subCommands\s*:\s*\{([\s\S]*?)\n[ \t]*\}/);
   if (!block) throw new Error(`${CLI_INDEX}: no subCommands object found`);
   const commands = [];
-  const entry = /(\w+)\s*:\s*\(\)\s*=>\s*import\(\s*["']\.\/commands\/([\w-]+)\.ts["']\s*\)/g;
+  const entry = /["']?([\w-]+)["']?\s*:\s*\(\)\s*=>\s*import\(\s*["']\.\/commands\/([\w-]+)\.ts["']\s*\)/g;
   for (const m of block[1].matchAll(entry)) commands.push({ name: m[1], file: `${m[2]}.ts` });
   if (commands.length === 0) throw new Error(`${CLI_INDEX}: subCommands has no lazy import() entries`);
   for (const command of commands) {
