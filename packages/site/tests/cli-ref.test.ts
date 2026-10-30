@@ -55,4 +55,54 @@ describe("site CLI reference", () => {
   test("contains no duplicate command names", () => {
     expect(duplicateNames(CLI_COMMANDS)).toEqual([]);
   });
+
+  test("rendered command links resolve to their documentation headings", async () => {
+    const site = join(import.meta.dir, "..");
+    const reservation = Bun.serve({ port: 0, hostname: "127.0.0.1", fetch: () => new Response() });
+    const port = reservation.port;
+    reservation.stop(true);
+    const server = Bun.spawn([process.execPath, "./node_modules/astro/astro.js", "dev", "--host", "127.0.0.1", "--port", String(port), "--strictPort"], {
+      cwd: site,
+      stdout: "ignore",
+      stderr: "ignore",
+    });
+
+    try {
+      let response: Response | undefined;
+      for (let attempt = 0; attempt < 600; attempt++) {
+        try {
+          response = await fetch(`http://127.0.0.1:${port}/docs/cli`);
+          break;
+        } catch {
+          if (server.exitCode !== null) throw new Error("Astro server exited before becoming ready");
+          await Bun.sleep(100);
+        }
+      }
+      if (!response) throw new Error("Astro server did not become ready");
+      expect(response.status).toBe(200);
+      const html = await response.text();
+      const links: string[] = [];
+      const ids: string[] = [];
+      const headings: Array<{ id: string; text: string }> = [];
+      await new HTMLRewriter()
+        .on(".not-prose a", { element(element) { links.push(element.getAttribute("href") ?? ""); } })
+        .on("[id]", { element(element) { ids.push(element.getAttribute("id") ?? ""); } })
+        .on("h2[id]", {
+          element(element) { headings.push({ id: element.getAttribute("id") ?? "", text: "" }); },
+          text(chunk) { headings[headings.length - 1].text += chunk.text; },
+        })
+        .transform(new Response(html)).text();
+
+      expect(links.length).toBe(CLI_COMMANDS.length);
+      for (const [index, href] of links.entries()) {
+        expect(href, CLI_COMMANDS[index].name).toMatch(/^#[^#]+$/);
+        const id = decodeURIComponent(href.slice(1));
+        expect(ids.filter((candidate) => candidate === id), href).toHaveLength(1);
+        expect(headings.find((heading) => heading.id === id)?.text.trim(), href).toBe(CLI_COMMANDS[index].name);
+      }
+    } finally {
+      server.kill();
+      await server.exited;
+    }
+  }, 120_000);
 });
