@@ -247,6 +247,34 @@ describe("ai/phantom-wire", () => {
     expect(existsSync(result.webhooks[0])).toBe(true);
   });
 
+  it.each(["0", "-1.5e2"])(
+    "skips every provider when vault inventory is JSON number %s",
+    async (inventory) => {
+      writeFileSync(
+        join(harness.dir, "phantom"),
+        `#!/usr/bin/env bash\ncase "$1" in\n  --version) echo "phantom fake 0.0.1" ;;\n  list) printf '%s' '${inventory}' ;;\n  *) exit 1 ;;\nesac\n`,
+      );
+      const recipe: Recipe = {
+        ...STRIPE_RECIPE,
+        providers: [{ name: "stripe" }, { name: "supabase" }, { name: "neon" }],
+      };
+
+      await expect(listSecrets(harness.dir)).rejects.toMatchObject({
+        code: "PHANTOM_OUTPUT_UNRECOGNIZED",
+      });
+      expect(await wirePhantomForRecipe(recipe, { cwd: harness.dir })).toEqual({
+        present: [],
+        missing: [],
+        skipped: ["stripe", "supabase", "neon"],
+        webhooks: [
+          join(harness.dir, ".stack/webhooks/stripe.ts"),
+          join(harness.dir, ".stack/webhooks/supabase.ts"),
+        ],
+      });
+      expect(JSON.parse(readFileSync(harness.vaultPath, "utf-8"))).toEqual({});
+    },
+  );
+
   it("skips providers with no webhook stub without crashing", async () => {
     const recipe: Recipe = {
       id: "neon",
