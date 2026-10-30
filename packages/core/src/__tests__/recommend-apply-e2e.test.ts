@@ -105,6 +105,17 @@ describe("recommend → apply e2e", () => {
     expect(harness.callsTo("add")).toEqual([]);
     const vault = JSON.parse(readFileSync(harness.vaultPath, "utf-8")) as Record<string, string>;
     expect(vault).toEqual({ NEON_API_KEY: "neon_real" });
+
+    // Simulate a user adding one missing value, then check again.
+    const updatedVault = { ...vault, OPENAI_API_KEY: "openai_real" };
+    writeFileSync(harness.vaultPath, JSON.stringify(updatedVault));
+    const rechecked = await wirePhantomForRecipe(loaded, { cwd: projectDir });
+    expect(rechecked.present).toEqual(["neon:NEON_API_KEY", "openai:OPENAI_API_KEY"]);
+    expect(rechecked.missing).toEqual(
+      result.missing.filter((name) => name !== "openai:OPENAI_API_KEY"),
+    );
+    expect(harness.callsTo("add")).toEqual([]);
+    expect(JSON.parse(readFileSync(harness.vaultPath, "utf-8"))).toEqual(updatedVault);
   });
 
   it("noWire: true performs zero phantom vault calls and writes no webhook stubs", async () => {
