@@ -162,6 +162,10 @@ interface CommandExtra {
 }
 
 const EXTRAS: Record<string, CommandExtra> = {
+  "fleet-waste": {
+    examples: [{ command: "stack fleet waste --json" }, { command: "stack fleet-waste --metrics ~/.ashlr-runs/metrics/jobs.jsonl --hours 6" }],
+    notes: "Read-only JSON, including empty files. Defaults to ~/.ashlr-runs/metrics/jobs.jsonl. Inclusive trailing window, default one hour. Events use ISO ts (or timestamp), event, lane and job; finish.empty must be true to count as empty. Launches and empties count events; precheckSkip groups skips by code (unknown if absent/invalid). neverFinished counts unique jobs launched in the window without a finish at or after their latest launch, as of windowEnd; unfinishedJobs lists their ids. File order does not matter. Malformed rows are skipped and counted; unrelated events and out-of-window rows are ignored. Missing/unreadable files fail without exposing raw input.",
+  },
   "fleet-silent": {
     examples: [{ command: "stack fleet-silent --runs /path/to/runs --json" }],
     notes: "Read-only JSON. Reads top-level *author*.log files, dispatchd.log, dispatch-events.log and metrics/jobs.jsonl; missing/invalid sources are reported, never treated as healthy. Inputs are JSONL or timestamped key=value lines (naive timestamps are local). Fully dated logs use event order; legacy undated logs use append order. Author summaries use status=ok to clear older failures; lane summaries use lane (or pool), need and picked. Reports the latest positive need with zero picks per lane, ten explicit empty:true finish events per lane, and no fleet-wide launch for at least 20 minutes of observed dispatch/job history. Launch/tick timestamps are required; ticks use a nonnegative launched count. Malformed inputs suppress latest/absence claims. FIXUP reuse means the same job id launched on distinct UTC days; finishes crossing midnight do not count. Metrics use event, job, lane, empty and timestamp (or ts). Reads are capped at 16 MiB per regular file; symlink files and raw log bodies are excluded.",
@@ -192,6 +196,10 @@ const EXTRAS: Record<string, CommandExtra> = {
   },
   fleet: {
     subcommandExtras: {
+      waste: {
+        examples: [{ command: "stack fleet waste --json" }],
+        notes: "Read-only JSON. Same report, metrics path and window as stack fleet-waste.",
+      },
       slo: {
         examples: [{ command: "stack fleet slo --json" }],
         notes: "Read-only via Locus. Same report as stack fleet-slo, nested under the fleet namespace.",
@@ -509,6 +517,7 @@ const COMMAND_ORDER = [
   "fleet-supply",
   "fleet-latency",
   "fleet-lag",
+  "fleet-waste",
   "fleet-reds",
   "fleet-silent",
   "fleet-collisions",

@@ -6,6 +6,7 @@ import { defineCommand } from "citty";
 import { type GhRunner, checkRepos } from "../lib/doctor-repos.ts";
 import { fleetCollisionsSubcommand } from "./fleet-collisions.ts";
 import { fleetSloSubcommand } from "./fleet-slo.ts";
+import { fleetWasteSubcommand } from "./fleet-waste.ts";
 
 const unknown = "unknown" as const;
 const count = (value: unknown): number | "unknown" =>
@@ -132,6 +133,7 @@ export const fleetCommand = defineCommand({
   subCommands: {
     slo: fleetSloSubcommand,
     collisions: fleetCollisionsSubcommand,
+    waste: fleetWasteSubcommand,
   },
   // citty 0.1.6 also calls this parent `run` after a matched subcommand, so
   // only act when none was given (the env command does the same). Option
