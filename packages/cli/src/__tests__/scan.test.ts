@@ -204,6 +204,27 @@ describe("stack scan non-TTY without flags", () => {
   });
 });
 
+describe("stack scan without recognized project files", () => {
+  test.each([[[]], [["--yes"]]])("reports no providers without creating a stack (%j)", (flags) => {
+    const cwd = tmp({
+      "notes.txt": '{"dependencies":{"@supabase/supabase-js":"^2.45.0"}}\nOPENAI_API_KEY=example',
+    });
+    const { stdout, stderr, code } = runCli(
+      ["scan", ...flags, "--confidence", "low", "--path", cwd],
+      undefined,
+      { CI: "1" },
+    );
+
+    expect(code).toBe(0);
+    expect(stderr).toBe("");
+    expect(stdout).toContain("No providers detected");
+    expect(stdout).not.toContain("stack add");
+    expect(stdout).not.toContain("supabase");
+    expect(stdout).not.toContain("openai");
+    expect(existsSync(join(cwd, ".stack.toml"))).toBe(false);
+  });
+});
+
 // ── --yes headless (decision logic, mock addService not needed) ──────────
 
 describe("stack scan --yes", () => {
