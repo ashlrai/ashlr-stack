@@ -46,6 +46,7 @@ test("site changelog mirrors the source and explains apply's placeholder behavio
   );
   expect(applyEntry).toContain("Provider setup may already store real values");
   expect(applyEntry).toContain("wiring reports how many secret names are present and missing and lists missing names");
+  expect(applyEntry).toContain("Missing names alone do not make apply fail; provider failures still do.");
   expect(applyEntry).toContain("wiring reports providers as skipped instead of identifying missing names");
   expect(applyEntry).toContain("creates webhook stubs (Stripe, Clerk, Supabase, GitHub)");
   expect(applyEntry).toContain("Wiring is on by default; `--noWire` opts out");
