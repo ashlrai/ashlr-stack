@@ -211,19 +211,21 @@ await applyCommand.run({ args: { recipeId: "example", noWire: false, noRollback:
       timeout: 20_000,
     });
     expect(result.status).toBe(0);
-    const changelog = readFileSync(join(cliDir, "../../../CHANGELOG.md"), "utf8");
-    const example = changelog.match(
-      /For example, with `OPENAI_API_KEY` missing[^\n]*\n\n {2}```text\n([\s\S]*?)\n {2}```/,
-    );
-    expect(example).not.toBeNull();
-    // Markdown strips the list indentation, leaving the CLI's two spaces.
-    const output = example?.[1]
-      .split("\n")
-      .map((line) => line.slice(2))
-      .join("\n");
-    expect(output).toContain("OPENAI_API_KEY");
-    expect(output).toContain("phantom add <NAME>");
-    expect(result.stdout).toContain(output ?? "example missing");
+    for (const path of ["../../../CHANGELOG.md", "../../site/src/data/CHANGELOG.md"]) {
+      const changelog = readFileSync(join(cliDir, path), "utf8");
+      const example = changelog.match(
+        /For example, with `OPENAI_API_KEY` missing[^\n]*\n\n {2}```text\n([\s\S]*?)\n {2}```/,
+      );
+      expect(example).not.toBeNull();
+      // Markdown strips the list indentation, leaving the CLI's two spaces.
+      const output = example?.[1]
+        .split("\n")
+        .map((line) => line.slice(2))
+        .join("\n");
+      expect(output).toContain("OPENAI_API_KEY");
+      expect(output).toContain("phantom add <NAME>");
+      expect(result.stdout).toContain(output ?? "example missing");
+    }
     const phantomCalls = readFileSync(calls, "utf8").trim().split("\n");
     expect(phantomCalls).toContain("list");
     expect(phantomCalls.every((call) => ["--version", "list"].includes(call))).toBe(true);
