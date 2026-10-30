@@ -85,6 +85,7 @@ const main = defineCommand({
     "fleet-supply": () => import("./commands/fleet-supply.ts").then((m) => m.fleetSupplyCommand),
     "fleet-latency": () => import("./commands/fleet-latency.ts").then((m) => m.fleetLatencyCommand),
     "fleet-lag": () => import("./commands/fleet-lag.ts").then((m) => m.fleetLagCommand),
+    "fleet-waste": () => import("./commands/fleet-waste.ts").then((m) => m.fleetWasteCommand),
     "fleet-reds": () => import("./commands/fleet-reds.ts").then((m) => m.fleetRedsCommand),
     "fleet-silent": () => import("./commands/fleet-silent.ts").then((m) => m.fleetSilentCommand),
     "fleet-collisions": () =>
