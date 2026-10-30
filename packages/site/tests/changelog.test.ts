@@ -42,15 +42,20 @@ test("site changelog mirrors the source and explains apply's placeholder behavio
   );
   expect(applyEntry).toContain("Provider setup may already store real values");
   expect(applyEntry).toContain("wiring reports providers as skipped instead of identifying missing names");
+  expect(applyEntry).toContain("When the vault is readable, wiring reports missing names");
+  expect(applyEntry).toContain("Wiring runs only if at least one provider succeeded; `--noWire` opts out.");
 
   const fixEntry = published.split("\n").find((line) => line.startsWith("- **`stack apply` stops writing"));
   expect(fixEntry).toContain("The wiring step never writes to the vault or fills in missing values.");
   expect(fixEntry).toContain("Provider setup may already store real values");
   expect(fixEntry).toContain("users must supply each required missing value themselves");
   expect(fixEntry).toContain("it reports providers as skipped instead of identifying missing names");
+  expect(fixEntry).toContain("Wiring runs only if at least one provider succeeded and `--noWire` was not used.");
   expect(fixEntry).toContain("Previously, wiring ran `phantom add <KEY> TODO_STACK_APPLY --rotate`");
   expect(fixEntry).toContain("every call failed and the printed `envelopes` count was always 0");
   expect(applyEntry).toContain("Users must supply each required missing value");
-  for (const entry of [applyEntry, fixEntry])
+  for (const entry of [applyEntry, fixEntry]) {
     expect(entry).toContain("run `phantom add <NAME>` from a trusted terminal and enter the real value");
+    expect(entry?.toLowerCase()).toContain("a name reported missing by wiring does not itself make apply fail; provider setup can still fail");
+  }
 });
