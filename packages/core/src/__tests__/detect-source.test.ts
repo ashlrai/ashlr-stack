@@ -218,6 +218,25 @@ test("deduplicates dependency evidence and upgrades confidence without losing si
   ]);
 });
 
+test("scans a project directory containing spaces and reports relative file paths", async () => {
+  const root = makeProject({
+    "project with spaces/package.json": JSON.stringify({ dependencies: { openai: "1" } }),
+    "project with spaces/supabase/config.toml": "[api]",
+    "project with spaces/.env.example": "OPENAI_API_KEY=",
+    "project with spaces/vercel.json": "{}",
+  });
+
+  expect(await scanSource(join(root, "project with spaces"))).toEqual([
+    {
+      provider: "openai",
+      confidence: "high",
+      signals: ["package.json:openai", ".env.example:OPENAI_API_KEY"],
+    },
+    { provider: "supabase", confidence: "high", signals: ["supabase/config.toml"] },
+    { provider: "vercel", confidence: "high", signals: ["vercel.json"] },
+  ]);
+});
+
 test("empty project has no detections", async () => {
   expect(await scanSource(makeProject({}))).toEqual([]);
 });
