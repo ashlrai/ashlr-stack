@@ -92,13 +92,16 @@ export const doctorCommand = defineCommand({
         "List installed Ashlr tools (phantom, locus, lexicon, ...) via --ashlr-handshake. Informational; never fails.",
     },
     install: {
-      // Citty has no optional string values. Parse tool lists from rawArgs below.
+      // Citty has no optional string values. Parse tool lists from rawArgs below;
+      // valueOptional keeps findUnknownFlag from refusing the following names.
       type: "boolean",
+      valueOptional: true,
       description:
         "With --ecosystem: print install commands for missing or outdated companions (optional comma list: phantom, locus, lexicon, ashlr-md). Runs nothing without --apply.",
     },
     apply: {
       type: "boolean",
+      valueOptional: true,
       description:
         "With --ecosystem --fix or --install: run the step for these tools only (comma list, e.g. lexicon). Required per tool.",
     },

@@ -166,6 +166,18 @@ const EXTRAS: Record<string, CommandExtra> = {
     examples: [{ command: "stack fleet-lag --json" }],
     notes: "Read-only via Locus. Latest tag is ordered by underlying commit date; age uses the annotated tagger date or lightweight commit date. Compares that tag to the default branch. Median seconds use the latest 20 merge timestamps across all base branches, or all merged PRs if fewer. No tags and unavailable repositories remain in the report; unknown metrics are null.",
   },
+  "fleet-slo": {
+    examples: [{ command: "stack fleet-slo --json" }, { command: "stack fleet slo --json" }],
+    notes: "Read-only via Locus. The window is the last six hours. Merge volume, median and p90 open-to-merge seconds come from the same source as stack fleet-latency; open and conflicting PR counts come from a paginated open-PR scan that counts only GitHub-reported CONFLICTING nodes. Targets: 20 merges per window in ashlrai/phantom and a median open-to-merge of 300 seconds; unavailable metrics and inapplicable targets are null.",
+  },
+  fleet: {
+    subcommandExtras: {
+      slo: {
+        examples: [{ command: "stack fleet slo --json" }],
+        notes: "Read-only via Locus. Same report as stack fleet-slo, nested under the fleet namespace.",
+      },
+    },
+  },
   init: {
     examples: [
       { command: "stack init" },
@@ -477,6 +489,7 @@ const COMMAND_ORDER = [
   "fleet-supply",
   "fleet-latency",
   "fleet-lag",
+  "fleet-slo",
   "fleet-act",
   "fleet-stream",
   "fleet-graph",

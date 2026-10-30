@@ -4,6 +4,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { defineCommand } from "citty";
 import { type GhRunner, checkRepos } from "../lib/doctor-repos.ts";
+import { fleetSloSubcommand } from "./fleet-slo.ts";
 
 const unknown = "unknown" as const;
 const count = (value: unknown): number | "unknown" =>
@@ -127,7 +128,14 @@ export const fleetCommand = defineCommand({
       description: "Dispatcher queue directory (default: ~/.ashlr-runs/queue).",
     },
   },
-  async run({ args }) {
+  subCommands: {
+    slo: fleetSloSubcommand,
+  },
+  // citty 0.1.6 also calls this parent `run` after a matched subcommand, so
+  // only act when none was given (the env command does the same). Option
+  // values arrive joined by bindParentOptionValues (`--queue=/path`).
+  async run({ args, rawArgs }) {
+    if (rawArgs.some((a) => !a.startsWith("-"))) return;
     const report = await collectFleet(
       args.queue ?? join(homedir(), ".ashlr-runs", "queue"),
       locusGh,

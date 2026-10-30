@@ -94,9 +94,14 @@ function check(tokens: string[], args: ArgsDef, command: string, leaf = false): 
     for (const alias of aliases) (alias.length === 1 ? short : long).add(alias);
     if (def.type !== "boolean") for (const name of [key, ...aliases]) valued.add(name);
     // Some commands parse a bare string option themselves to offer a preview
-    // or a more specific refusal. Keep consuming explicit values as usual.
+    // or a more specific refusal. Keep consuming explicit values as usual,
+    // including on boolean args whose following value goes to rawArgs (e.g.
+    // `stack doctor --install locus,lexicon`).
     if ("valueOptional" in def && def.valueOptional === true) {
-      for (const name of [key, ...aliases]) optionalValue.add(name);
+      for (const name of [key, ...aliases]) {
+        valued.add(name);
+        optionalValue.add(name);
+      }
     }
   }
   let seen = 0;
