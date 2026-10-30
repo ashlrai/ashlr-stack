@@ -86,6 +86,7 @@ const main = defineCommand({
     "fleet-latency": () => import("./commands/fleet-latency.ts").then((m) => m.fleetLatencyCommand),
     "fleet-lag": () => import("./commands/fleet-lag.ts").then((m) => m.fleetLagCommand),
     "fleet-reds": () => import("./commands/fleet-reds.ts").then((m) => m.fleetRedsCommand),
+    "fleet-silent": () => import("./commands/fleet-silent.ts").then((m) => m.fleetSilentCommand),
     "fleet-delivery-lag": () =>
       import("./commands/fleet-delivery-lag.ts").then((m) => m.fleetDeliveryLagCommand),
     "fleet-stuck": () => import("./commands/fleet-stuck.ts").then((m) => m.fleetStuckCommand),

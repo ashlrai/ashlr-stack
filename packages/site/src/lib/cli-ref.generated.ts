@@ -637,6 +637,28 @@ export const CLI_COMMANDS: CliCommand[] = [
       "Read-only via Locus. JSON is the default. For each of the seven fleet repositories, selects the latest completed workflow named CI on its default branch for each event (schedule and push), then lists failed jobs only when that run failed. A newer successful run clears older failures. no-runs means no completed run; unavailable and partial mean incomplete reads. firstFailingTest is null for unrecognized output or expired logs; logStatus distinguishes these cases. Parses Vitest, node:test TAP/spec and nextest text output. Raw logs and API errors are omitted.",
   },
   {
+    name: "stack fleet-silent",
+    description: "Name silent fleet failures in author, dispatch and job logs (read-only JSON).",
+    synopsis: "stack fleet-silent [--runs <runs>] [--json]",
+    flags: [
+      {
+        name: "runs",
+        synopsis: "--runs <runs>",
+        type: "string",
+        description: "Runs directory (default: ~/.ashlr-runs).",
+      },
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        description: "Emit schemaVersion 1 JSON (also the default).",
+      },
+    ],
+    examples: [{ command: "stack fleet-silent --runs /path/to/runs --json" }],
+    notes:
+      "Read-only JSON. Reads top-level *author*.log files, dispatchd.log, dispatch-events.log and metrics/jobs.jsonl; missing/invalid sources are reported, never treated as healthy. Inputs are JSONL or timestamped key=value lines (naive timestamps are local). Fully dated logs use event order; legacy undated logs use append order. Author summaries use status=ok to clear older failures; lane summaries use lane (or pool), need and picked. Reports the latest positive need with zero picks per lane, ten explicit empty:true finish events per lane, and no fleet-wide launch for at least 20 minutes of observed dispatch/job history. Launch/tick timestamps are required; ticks use a nonnegative launched count. Malformed inputs suppress latest/absence claims. FIXUP reuse means the same job id launched on distinct UTC days; finishes crossing midnight do not count. Metrics use event, job, lane, empty and timestamp (or ts). Reads are capped at 16 MiB per regular file; symlink files and raw log bodies are excluded.",
+  },
+  {
     name: "stack fleet-delivery-lag",
     description: "Report undeployed merged commits and merge wait from a read-only JSON fixture.",
     synopsis: "stack fleet-delivery-lag --fixture <fixture> [--json]",
