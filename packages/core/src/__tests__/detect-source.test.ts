@@ -1,8 +1,9 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { scanSource } from "../detect-source.ts";
+import { ScanDirectoryNotFoundError } from "../errors.ts";
 
 const projects: string[] = [];
 afterEach(() => {
@@ -220,4 +221,24 @@ test("deduplicates dependency evidence and upgrades confidence without losing si
 
 test("empty project has no detections", async () => {
   expect(await scanSource(makeProject({}))).toEqual([]);
+});
+
+describe("source scanner — missing project directory", () => {
+  test("fails clearly and does not create the directory", async () => {
+    const parent = makeProject({});
+    const missing = join(parent, "no-such-project");
+    const err = await scanSource(missing).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ScanDirectoryNotFoundError);
+    expect(err).toMatchObject({ code: "SCAN_DIR_NOT_FOUND" });
+    expect((err as Error).message).toContain(missing);
+    expect((err as Error).message).toMatch(/does not exist or is not a directory/);
+    expect(existsSync(missing)).toBe(false);
+  });
+
+  test("rejects a path that exists but is not a directory", async () => {
+    const cwd = makeProject({ "package.json": "{}" });
+    const file = join(cwd, "package.json");
+    await expect(scanSource(file)).rejects.toThrow(ScanDirectoryNotFoundError);
+    expect(existsSync(file)).toBe(true);
+  });
 });

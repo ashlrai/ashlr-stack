@@ -27,3 +27,12 @@ export class ConfigNotFoundError extends StackError {
     super("CONFIG_NOT_FOUND", `No .stack.toml at ${path}. Run \`stack init\` first.`);
   }
 }
+
+export class ScanDirectoryNotFoundError extends StackError {
+  constructor(path: string) {
+    super(
+      "SCAN_DIR_NOT_FOUND",
+      `Cannot scan "${path}": path does not exist or is not a directory.`,
+    );
+  }
+}
