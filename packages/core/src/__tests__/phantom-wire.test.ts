@@ -247,6 +247,30 @@ describe("ai/phantom-wire", () => {
     expect(existsSync(result.webhooks[0])).toBe(true);
   });
 
+  it("does not report a partially malformed JSON array inventory as verified", async () => {
+    // A matching name before invalid metadata must not become a partial result.
+    writeFileSync(
+      join(harness.dir, "phantom"),
+      `#!/usr/bin/env bash\ncase "$1" in\n  --version) echo "phantom fake 0.0.1" ;;\n  list) echo '[{"name":"STRIPE_SECRET_KEY"},[]]' ;;\n  *) exit 1 ;;\nesac\n`,
+    );
+
+    await expect(listSecrets(harness.dir)).rejects.toMatchObject({
+      code: "PHANTOM_OUTPUT_UNRECOGNIZED",
+      message: "phantom list --json contains unrecognized secret-name metadata.",
+    });
+    const result = await wirePhantomForRecipe(STRIPE_RECIPE, { cwd: harness.dir });
+    expect(result).toEqual({
+      present: [],
+      missing: [],
+      skipped: ["stripe"],
+      webhooks: [join(harness.dir, ".stack/webhooks/stripe.ts")],
+    });
+    expect(readFileSync(result.webhooks[0], "utf-8")).toContain(
+      "This entire example is commented out and does not verify signatures.",
+    );
+    expect(JSON.parse(readFileSync(harness.vaultPath, "utf-8"))).toEqual({});
+  });
+
   it("skips providers with no webhook stub without crashing", async () => {
     const recipe: Recipe = {
       id: "neon",
