@@ -124,6 +124,24 @@ describe("stack scan --json", () => {
     expect(JSON.parse(stdout)).toEqual({ hits: [] });
     expect(existsSync(join(cwd, ".stack.toml"))).toBe(false);
   });
+
+  test("does not mistake a backup of a provider config for the project config", () => {
+    const backup = tmp({ "vercel.json.bak": "{}" });
+    const project = tmp({ "vercel.json": "{}" });
+
+    const unrelated = runCli(["scan", "--json", "--confidence", "low", "--path", backup]);
+    expect(unrelated.code).toBe(0);
+    expect(unrelated.stderr).toBe("");
+    expect(JSON.parse(unrelated.stdout)).toEqual({ hits: [] });
+    expect(existsSync(join(backup, ".stack.toml"))).toBe(false);
+
+    const recognized = runCli(["scan", "--json", "--confidence", "low", "--path", project]);
+    expect(recognized.code).toBe(0);
+    expect(recognized.stderr).toBe("");
+    expect(JSON.parse(recognized.stdout)).toEqual({
+      hits: [{ provider: "vercel", confidence: "high", sources: ["vercel.json"] }],
+    });
+  });
 });
 
 // ── --confidence filter ────────────────────────────────────────────────────
