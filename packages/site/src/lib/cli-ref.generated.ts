@@ -620,6 +620,27 @@ export const CLI_COMMANDS: CliCommand[] = [
       "Read-only via Locus. Latest tag is ordered by underlying commit date; age uses the annotated tagger date or lightweight commit date. Compares that tag to the default branch. Median seconds use the latest 20 merge timestamps across all base branches, or all merged PRs if fewer. No tags and unavailable repositories remain in the report; unknown metrics are null.",
   },
   {
+    name: "stack fleet-delivery-lag",
+    description: "Report undeployed merged commits and merge wait from a read-only JSON fixture.",
+    synopsis: "stack fleet-delivery-lag --fixture <fixture> [--json]",
+    flags: [
+      {
+        name: "fixture",
+        synopsis: "--fixture <fixture>",
+        type: "string",
+        required: true,
+        description:
+          "JSON snapshot: latestDeployed {version, commits: SHA[]}, commits {sha, createdAt, mergedAt: UTC ISO|null}[].",
+      },
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        description: "Emit schemaVersion 1 JSON; unknown metrics are null.",
+      },
+    ],
+  },
+  {
     name: "stack fleet-stuck",
     description:
       "List open PRs by merge state, age and auto-merge status with server/ and lockfile path hints.",

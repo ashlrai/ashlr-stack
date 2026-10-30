@@ -497,6 +497,7 @@ const COMMAND_ORDER = [
   "fleet-supply",
   "fleet-latency",
   "fleet-lag",
+  "fleet-delivery-lag",
   "fleet-stuck",
   "fleet-slo",
   "fleet-act",
