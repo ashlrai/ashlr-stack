@@ -15,6 +15,15 @@
 
   Replace `<NAME>` with `OPENAI_API_KEY` when running the command; enter the real value in the trusted terminal. The wiring step does not store a placeholder.
 
+  If the vault cannot be read, the same recipe instead reports:
+
+  ```text
+    secrets in vault 0 · missing 0 · webhooks 0 · skipped 1
+    (phantom-wire skipped: openai)
+  ```
+
+  These zero counts cover only checked names; they do not establish that the vault is empty or that no values are missing. Unknown providers are also skipped. `--noWire` skips the vault check and webhook stubs and prints no wiring summary.
+
 - `stack status` runs its Phantom version and vault-count probes together with the config read (at most 3 at once). Each Phantom probe is capped at 2 s and killed on timeout; the config read has no timeout, as before. A timeout is now visible: human output shows `(timed out after 2s)`, and `--json` keeps `secret_count: null` but adds `secret_count_error: "timeout"` or `"error"` (and `installed_error: "timeout"` when `phantom --version` timed out). Additive only, and absent when everything answers. A timed out version probe is not cached as not installed. Normal output is unchanged. On a synthetic slow-phantom fixture the median dropped from 385.5 ms to 223.0 ms.
 - With no `.phantom.toml`, `stack status --json` still reports `secret_count: null` and now also reports `secret_count_error: "error"`.
 - A timed out Phantom probe now kills its whole process group, so a grandchild holding stdout or stderr can no longer stretch the 2 s cap.
