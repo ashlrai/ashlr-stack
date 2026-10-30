@@ -334,6 +334,53 @@ describe("stack scan without recognized project files", () => {
   });
 });
 
+describe("stack scan on an empty project directory (regression)", () => {
+  test("--yes exits 0 with an empty result without reaching the Phantom preflight", () => {
+    // With zero hits the command reports "No providers detected" and returns
+    // before requirePhantom() — reordering that would exit 1 wherever Phantom
+    // isn't installed, so this pins the short-circuit.
+    const cwd = tmp({});
+    const { stdout, stderr, code } = runCli(["scan", "--yes", "--path", cwd], undefined, {
+      CI: "1",
+    });
+    expect(code).toBe(0);
+    expect(stderr).toBe("");
+    expect(stdout).toContain("No providers detected");
+    expect(stdout).not.toContain("stack add");
+    expect(existsSync(join(cwd, ".stack.toml"))).toBe(false);
+  }, 15_000);
+
+  test("a directory holding only scaffold files reports no providers at any confidence", () => {
+    const cwd = tmp({ ".gitkeep": "", "src/.gitkeep": "" });
+    for (const confidence of ["low", "medium", "high"]) {
+      const { stdout, stderr, code } = runCli(
+        ["scan", "--json", "--confidence", confidence, "--path", cwd],
+        undefined,
+        { CI: "1" },
+      );
+      expect(code).toBe(0);
+      expect(stderr).toBe("");
+      expect(JSON.parse(stdout)).toEqual({ hits: [] });
+    }
+    expect(existsSync(join(cwd, ".stack.toml"))).toBe(false);
+  }, 20_000);
+
+  test("a manifest with no dependencies yields an empty result, not an error", () => {
+    // "{}" parses fine, so the manifest gate must not confuse "no deps" with
+    // "no manifest" — the scan completes with an empty hits array.
+    const cwd = tmp({ "package.json": "{}" });
+    const { stdout, stderr, code } = runCli(["scan", "--json", "--path", cwd], undefined, {
+      CI: "1",
+    });
+    expect(code).toBe(0);
+    expect(stderr).toBe("");
+    expect(JSON.parse(stdout)).toEqual({ hits: [] });
+    const report = runCli(["scan", "--path", cwd], undefined, { CI: "1" });
+    expect(report.code).toBe(0);
+    expect(report.stdout).toContain("No providers detected");
+  }, 15_000);
+});
+
 // ── --yes headless (decision logic, mock addService not needed) ──────────
 
 describe("stack scan --yes", () => {
