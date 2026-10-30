@@ -637,6 +637,34 @@ export const CLI_COMMANDS: CliCommand[] = [
       "Read-only via Locus. JSON is the default. For each of the seven fleet repositories, selects the latest completed workflow named CI on its default branch for each event (schedule and push), then lists failed jobs only when that run failed. A newer successful run clears older failures. no-runs means no completed run; unavailable and partial mean incomplete reads. firstFailingTest is null for unrecognized output or expired logs; logStatus distinguishes these cases. Parses Vitest, node:test TAP/spec and nextest text output. Raw logs and API errors are omitted.",
   },
   {
+    name: "stack fleet-collisions",
+    description: "Rank touched files by open conflicting PR count from one repository's gh JSON.",
+    synopsis: "stack fleet-collisions [--file <file>] [--json]",
+    flags: [
+      {
+        name: "file",
+        synopsis: "--file <file>",
+        type: "string",
+        description: "Input JSON file; omit or use - for stdin.",
+      },
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        description: "Emit schemaVersion 1 JSON (also the default).",
+      },
+    ],
+    examples: [
+      {
+        command:
+          "locus exec -- gh pr list --state open --limit 1000 --json number,state,mergeable,files | stack fleet-collisions",
+      },
+      { command: "stack fleet collisions --file prs.json" },
+    ],
+    notes:
+      "Read-only JSON for one repository per snapshot. Includes only OPEN, CONFLICTING PRs; UNKNOWN mergeability is excluded. Files rank by distinct PR count, then path. Paths are touched files, not confirmed conflict hunks. Counts cover only the supplied snapshot; ensure the gh limit covers all PRs. Empty input arrays yield files: []; invalid input exits nonzero.",
+  },
+  {
     name: "stack fleet-delivery-lag",
     description: "Report undeployed merged commits and merge wait from a read-only JSON fixture.",
     synopsis: "stack fleet-delivery-lag --fixture <fixture> [--json]",
@@ -872,7 +900,7 @@ export const CLI_COMMANDS: CliCommand[] = [
   {
     name: "stack fleet",
     description: "Show repository CI, open PR counts, and dispatcher lane status.",
-    synopsis: "stack fleet <slo>",
+    synopsis: "stack fleet <slo|collisions>",
     flags: [
       {
         name: "json",
@@ -911,6 +939,26 @@ export const CLI_COMMANDS: CliCommand[] = [
         examples: [{ command: "stack fleet slo --json" }],
         notes:
           "Read-only via Locus. Same report as stack fleet-slo, nested under the fleet namespace.",
+      },
+      {
+        name: "stack fleet collisions",
+        description:
+          "Rank touched files by open conflicting PR count from one repository's gh JSON.",
+        synopsis: "stack fleet collisions [--file <file>] [--json]",
+        flags: [
+          {
+            name: "file",
+            synopsis: "--file <file>",
+            type: "string",
+            description: "Input JSON file; omit or use - for stdin.",
+          },
+          {
+            name: "json",
+            synopsis: "--json",
+            type: "boolean",
+            description: "Emit schemaVersion 1 JSON (also the default).",
+          },
+        ],
       },
     ],
   },

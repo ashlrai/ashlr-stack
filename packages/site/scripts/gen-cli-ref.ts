@@ -162,6 +162,10 @@ interface CommandExtra {
 }
 
 const EXTRAS: Record<string, CommandExtra> = {
+  "fleet-collisions": {
+    examples: [{ command: "locus exec -- gh pr list --state open --limit 1000 --json number,state,mergeable,files | stack fleet-collisions" }, { command: "stack fleet collisions --file prs.json" }],
+    notes: "Read-only JSON for one repository per snapshot. Includes only OPEN, CONFLICTING PRs; UNKNOWN mergeability is excluded. Files rank by distinct PR count, then path. Paths are touched files, not confirmed conflict hunks. Counts cover only the supplied snapshot; ensure the gh limit covers all PRs. Empty input arrays yield files: []; invalid input exits nonzero.",
+  },
   "fleet-reds": {
     examples: [{ command: "stack fleet-reds --json" }],
     notes: "Read-only via Locus. JSON is the default. For each of the seven fleet repositories, selects the latest completed workflow named CI on its default branch for each event (schedule and push), then lists failed jobs only when that run failed. A newer successful run clears older failures. no-runs means no completed run; unavailable and partial mean incomplete reads. firstFailingTest is null for unrecognized output or expired logs; logStatus distinguishes these cases. Parses Vitest, node:test TAP/spec and nextest text output. Raw logs and API errors are omitted.",
@@ -502,6 +506,7 @@ const COMMAND_ORDER = [
   "fleet-latency",
   "fleet-lag",
   "fleet-reds",
+  "fleet-collisions",
   "fleet-delivery-lag",
   "fleet-stuck",
   "fleet-slo",
