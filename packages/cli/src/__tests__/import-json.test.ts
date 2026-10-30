@@ -88,8 +88,24 @@ describe("stack import --json", () => {
 
     const { code, stdout, stderr } = stack(["import", "--json", "--from", "broken.json"]);
     expect(code).toBe(1);
-    expect(JSON.parse(stdout).error).toContain("line 1: expected a valid KEY=VALUE assignment");
+    expect(JSON.parse(stdout)).toEqual({
+      error: "Invalid .env input on line 1: expected a valid KEY=VALUE assignment.",
+    });
     expect(stdout + stderr).not.toContain(NEW_VALUE);
+    expect(existsSync(join(dir, ".stack.toml"))).toBe(false);
+    expect(vault()).toEqual({ OPENAI_API_KEY: STORED_VALUE });
+    expect(h.callsTo("add")).toEqual([]);
+  });
+
+  it("reports malformed JSON input without a human-readable success message", () => {
+    writeFileSync(join(dir, "broken.json"), `{"RESEND_API_KEY": "${NEW_VALUE}"`);
+
+    const { code, stdout, stderr } = stack(["import", "--from", "broken.json"]);
+    const output = stdout + stderr;
+    expect(code).toBe(1);
+    expect(output).toContain("Invalid .env input on line 1: expected a valid KEY=VALUE assignment");
+    expect(output).not.toContain("Imported");
+    expect(output).not.toContain(NEW_VALUE);
     expect(existsSync(join(dir, ".stack.toml"))).toBe(false);
     expect(vault()).toEqual({ OPENAI_API_KEY: STORED_VALUE });
     expect(h.callsTo("add")).toEqual([]);
