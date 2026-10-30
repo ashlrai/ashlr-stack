@@ -5,6 +5,16 @@
 ### Changed
 
 - After at least one provider succeeds, `stack apply` wiring checks the recipe's secret names without creating placeholders or filling missing values. Provider setup may store real values separately. When the vault is readable, wiring reports missing secret names; each required missing value needs user action: run `phantom add <NAME>` in a trusted terminal and enter the real value. Missing names alone do not make apply fail, so an applied recipe is not proof that every required secret is present. If the vault cannot be read, providers are reported as skipped instead of being identified as missing.
+
+  For example, with `OPENAI_API_KEY` missing and no webhooks, the wiring output is:
+
+  ```text
+    secrets in vault 0 · missing 1 · webhooks 0
+    (not in Phantom: OPENAI_API_KEY — store with `phantom add <NAME>`)
+  ```
+
+  Replace `<NAME>` with `OPENAI_API_KEY` when running the command; enter the real value in the trusted terminal. The wiring step does not store a placeholder.
+
 - `stack status` runs its Phantom version and vault-count probes together with the config read (at most 3 at once). Each Phantom probe is capped at 2 s and killed on timeout; the config read has no timeout, as before. A timeout is now visible: human output shows `(timed out after 2s)`, and `--json` keeps `secret_count: null` but adds `secret_count_error: "timeout"` or `"error"` (and `installed_error: "timeout"` when `phantom --version` timed out). Additive only, and absent when everything answers. A timed out version probe is not cached as not installed. Normal output is unchanged. On a synthetic slow-phantom fixture the median dropped from 385.5 ms to 223.0 ms.
 - With no `.phantom.toml`, `stack status --json` still reports `secret_count: null` and now also reports `secret_count_error: "error"`.
 - A timed out Phantom probe now kills its whole process group, so a grandchild holding stdout or stderr can no longer stretch the 2 s cap.

@@ -5,6 +5,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   readdirSync,
   rmSync,
   writeFileSync,
@@ -150,6 +151,82 @@ esac
       expect(out).toContain("Some providers failed: openai:");
       expect(out).toContain("; anthropic:");
     }
+  });
+
+  it("prints the changelog example for a missing secret without writing to Phantom", () => {
+    const dir = mkTmp();
+    const home = mkTmp();
+    const bin = join(home, "bin");
+    const calls = join(home, "phantom-calls");
+    mkdirSync(bin);
+    writeFileSync(
+      join(bin, "phantom"),
+      `#!/bin/sh
+echo "$1" >> '${calls}'
+case "$1" in
+ --version) echo fixture;;
+ list) echo '[]';;
+ *) exit 1;;
+esac
+`,
+    );
+    chmodSync(join(bin, "phantom"), 0o700);
+    mkdirSync(join(dir, ".stack", "recipes"), { recursive: true });
+    writeFileSync(join(dir, ".stack.toml"), "");
+    writeFileSync(
+      join(dir, ".stack", "recipes", "example.toml"),
+      'id = "example"\nquery = "ai"\ncreatedAt = "2026-10-17T00:00:00.000Z"\n\n[[providers]]\nname = "openai"\n',
+    );
+
+    // Isolate provisioning and doctor; exercise the real apply command,
+    // recipe reader, wiring, and CLI formatting against the fake vault.
+    const cliDir = dirname(CLI_ENTRY);
+    const script = join(dir, "run-apply.ts");
+    writeFileSync(
+      script,
+      `import { mock } from "bun:test";
+mock.module(${JSON.stringify(join(cliDir, "lib/provision-loop.ts"))}, () => ({
+  provisionProviders: async () => ({ succeeded: ["openai"], failures: [] }),
+}));
+mock.module(${JSON.stringify(join(cliDir, "lib/phantom-preflight.ts"))}, () => ({
+  requirePhantom: async () => {},
+}));
+mock.module(${JSON.stringify(join(cliDir, "commands/doctor.ts"))}, () => ({
+  doctorCommand: { run: async () => {} },
+}));
+const { applyCommand } = await import(${JSON.stringify(join(cliDir, "commands/apply.ts"))});
+await applyCommand.run({ args: { recipeId: "example", noWire: false, noRollback: false } });
+`,
+    );
+    const result = spawnSync("bun", [script], {
+      cwd: dir,
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        HOME: home,
+        PATH: `${bin}:${process.env.PATH ?? ""}`,
+        NO_COLOR: "1",
+        CI: "1",
+      },
+      timeout: 20_000,
+    });
+    expect(result.status).toBe(0);
+    const changelog = readFileSync(join(cliDir, "../../../CHANGELOG.md"), "utf8");
+    const example = changelog.match(
+      /For example, with `OPENAI_API_KEY` missing[^\n]*\n\n {2}```text\n([\s\S]*?)\n {2}```/,
+    );
+    expect(example).not.toBeNull();
+    // Markdown strips the list indentation, leaving the CLI's two spaces.
+    const output = example?.[1]
+      .split("\n")
+      .map((line) => line.slice(2))
+      .join("\n");
+    expect(output).toContain("OPENAI_API_KEY");
+    expect(output).toContain("phantom add <NAME>");
+    expect(result.stdout).toContain(output ?? "example missing");
+    const phantomCalls = readFileSync(calls, "utf8").trim().split("\n");
+    expect(phantomCalls).toContain("list");
+    expect(phantomCalls.every((call) => ["--version", "list"].includes(call))).toBe(true);
   });
 
   it("writes nothing when the recipe id is missing or there are no recipes", () => {
