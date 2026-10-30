@@ -620,6 +620,34 @@ export const CLI_COMMANDS: CliCommand[] = [
       "Read-only via Locus. Latest tag is ordered by underlying commit date; age uses the annotated tagger date or lightweight commit date. Compares that tag to the default branch. Median seconds use the latest 20 merge timestamps across all base branches, or all merged PRs if fewer. No tags and unavailable repositories remain in the report; unknown metrics are null.",
   },
   {
+    name: "stack fleet-collisions",
+    description: "Rank touched files by open conflicting PR count from one repository's gh JSON.",
+    synopsis: "stack fleet-collisions [--file <file>] [--json]",
+    flags: [
+      {
+        name: "file",
+        synopsis: "--file <file>",
+        type: "string",
+        description: "Input JSON file; omit or use - for stdin.",
+      },
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        description: "Emit schemaVersion 1 JSON (also the default).",
+      },
+    ],
+    examples: [
+      {
+        command:
+          "locus exec -- gh pr list --state open --limit 1000 --json number,state,mergeable,files | stack fleet-collisions",
+      },
+      { command: "stack fleet-collisions --file prs.json" },
+    ],
+    notes:
+      "Read-only JSON for one repository per snapshot. Includes only OPEN, CONFLICTING PRs; UNKNOWN mergeability is excluded. Files rank by distinct PR count, then path. Paths are touched files, not confirmed conflict hunks. Counts cover only the supplied snapshot; ensure the gh limit covers all PRs. Empty input arrays yield files: []; invalid input exits nonzero.",
+  },
+  {
     name: "stack fleet-delivery-lag",
     description: "Report undeployed merged commits and merge wait from a read-only JSON fixture.",
     synopsis: "stack fleet-delivery-lag --fixture <fixture> [--json]",
