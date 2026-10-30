@@ -166,7 +166,21 @@ describe("stack remove --json", () => {
     const dir = project();
     const r = runRemove(dir, ["nope", "--json"], { removable: [] });
     expect(r.code).toBe(1);
-    expect(JSON.parse(r.stdout).error).toContain("Configured services: openai, supabase.");
+    expect(JSON.parse(r.stdout)).toEqual({
+      error: "nope is not in this stack. Configured services: openai, supabase.",
+    });
+    expect(readFileSync(join(dir, ".stack.toml"), "utf8")).toBe(STACK_TOML);
+  });
+
+  test("a case-mismatched service reports a suggestion without changing the stack", () => {
+    const dir = project();
+    const r = runRemove(dir, ["OpenAI", "--json"], false);
+
+    expect(r.code).toBe(1);
+    expect(JSON.parse(r.stdout)).toEqual({
+      error:
+        "OpenAI is not in this stack. Did you mean openai? Configured services: openai, supabase.",
+    });
     expect(readFileSync(join(dir, ".stack.toml"), "utf8")).toBe(STACK_TOML);
   });
 
