@@ -622,6 +622,70 @@ export const CLI_COMMANDS: CliCommand[] = [
     ],
   },
   {
+    name: "stack fleet-stream",
+    description: "Translate fleet logs to typed NDJSON or localhost SSE.",
+    synopsis:
+      "stack fleet-stream [--dispatch <dispatch>] [--jobs <jobs>] [--follow] [--sse] [--port <port>]",
+    flags: [
+      {
+        name: "dispatch",
+        synopsis: "--dispatch <dispatch>",
+        type: "string",
+        description: "Path to dispatch-events.log.",
+      },
+      {
+        name: "jobs",
+        synopsis: "--jobs <jobs>",
+        type: "string",
+        description: "Path to metrics/jobs.jsonl.",
+      },
+      {
+        name: "follow",
+        synopsis: "--follow",
+        type: "boolean",
+        description: "Follow appended records (NDJSON).",
+      },
+      {
+        name: "sse",
+        synopsis: "--sse",
+        type: "boolean",
+        description: "Serve a live stream at http://127.0.0.1:8788/events.",
+      },
+      {
+        name: "port",
+        synopsis: "--port <port>",
+        type: "string",
+        default: "8788",
+        description: "Local SSE port (0 selects a free port).",
+      },
+    ],
+  },
+  {
+    name: "stack fleet-graph",
+    description: "Emit schema-versioned fleet pool, job, and repository nodes and edges.",
+    synopsis: "stack fleet-graph [--json] [--queue <queue>] [--router <router>]",
+    flags: [
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        description: "Emit schemaVersion 1 JSON (also the default).",
+      },
+      {
+        name: "queue",
+        synopsis: "--queue <queue>",
+        type: "string",
+        description: "Fleet state directory (default: ~/.ashlr-runs/queue).",
+      },
+      {
+        name: "router",
+        synopsis: "--router <router>",
+        type: "string",
+        description: "Router JSON array or JSONL path (default: <queue>/queue.jsonl).",
+      },
+    ],
+  },
+  {
     name: "stack fleet",
     description: "Show repository CI, open PR counts, and dispatcher lane status.",
     synopsis: "stack fleet [--json] [--log <log>] [--queue <queue>]",

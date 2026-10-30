@@ -91,6 +91,10 @@ const CMD_META: Record<string, CmdMeta> = {
       name,
     })),
   },
+  "fleet-stream": {
+    flags: ["dispatch", "jobs", "follow", "sse", "port"].map((name) => ({ name })),
+  },
+  "fleet-graph": { flags: ["json", "queue", "router"].map((name) => ({ name })) },
   fleet: { flags: [{ name: "json" }, { name: "queue" }, { name: "log" }] },
   doctor: {
     flags: [
@@ -162,6 +166,11 @@ const COMMANDS = [
   "env",
   "deps",
   "doctor",
+  "fleet-latency",
+  "fleet-act",
+  "fleet-stream",
+  "fleet-graph",
+  "fleet",
   "exec",
   "sync",
   "onboard",
