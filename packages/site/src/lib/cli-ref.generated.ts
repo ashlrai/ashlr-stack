@@ -476,7 +476,7 @@ export const CLI_COMMANDS: CliCommand[] = [
     name: "stack doctor",
     description: "Verify every service is reachable and credentials are valid.",
     synopsis:
-      "stack doctor [--fix] [--all] [--json] [--ecosystem] [--install <mode>] [--apply <apply>] [--repos] [--reconcile]",
+      "stack doctor [--fix] [--all] [--json] [--ecosystem] [--install] [--apply] [--repos] [--reconcile]",
     flags: [
       {
         name: "fix",
@@ -509,15 +509,15 @@ export const CLI_COMMANDS: CliCommand[] = [
       },
       {
         name: "install",
-        synopsis: "--install <mode>",
-        type: "string",
+        synopsis: "--install",
+        type: "boolean",
         description:
           "With --ecosystem: print install commands for missing or outdated companions (optional comma list: phantom, locus, lexicon, ashlr-md). Runs nothing without --apply.",
       },
       {
         name: "apply",
-        synopsis: "--apply <apply>",
-        type: "string",
+        synopsis: "--apply",
+        type: "boolean",
         description:
           "With --ecosystem --fix or --install: run the step for these tools only (comma list, e.g. lexicon). Required per tool.",
       },
@@ -618,6 +618,24 @@ export const CLI_COMMANDS: CliCommand[] = [
     examples: [{ command: "stack fleet-lag --json" }],
     notes:
       "Read-only via Locus. Latest tag is ordered by underlying commit date; age uses the annotated tagger date or lightweight commit date. Compares that tag to the default branch. Median seconds use the latest 20 merge timestamps across all base branches, or all merged PRs if fewer. No tags and unavailable repositories remain in the report; unknown metrics are null.",
+  },
+  {
+    name: "stack fleet-slo",
+    description:
+      "Compare per-repo six-hour merges, open-to-merge latency and conflicting PRs with fleet SLO targets.",
+    synopsis: "stack fleet-slo [--json]",
+    flags: [
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        description:
+          "Emit schemaVersion 1 JSON; unavailable metrics and inapplicable targets are null.",
+      },
+    ],
+    examples: [{ command: "stack fleet-slo --json" }, { command: "stack fleet slo --json" }],
+    notes:
+      "Read-only via Locus. The window is the last six hours. Merge volume, median and p90 open-to-merge seconds come from the same source as stack fleet-latency; open and conflicting PR counts come from a paginated open-PR scan that counts only GitHub-reported CONFLICTING nodes. Targets: 20 merges per window in ashlrai/phantom and a median open-to-merge of 300 seconds; unavailable metrics and inapplicable targets are null.",
   },
   {
     name: "stack fleet-act",
@@ -750,7 +768,7 @@ export const CLI_COMMANDS: CliCommand[] = [
   {
     name: "stack fleet",
     description: "Show repository CI, open PR counts, and dispatcher lane status.",
-    synopsis: "stack fleet [--json] [--log <log>] [--queue <queue>]",
+    synopsis: "stack fleet <slo>",
     flags: [
       {
         name: "json",
@@ -769,6 +787,26 @@ export const CLI_COMMANDS: CliCommand[] = [
         synopsis: "--queue <queue>",
         type: "string",
         description: "Dispatcher queue directory (default: ~/.ashlr-runs/queue).",
+      },
+    ],
+    subcommands: [
+      {
+        name: "stack fleet slo",
+        description:
+          "Compare per-repo six-hour merges, open-to-merge latency and conflicting PRs with fleet SLO targets.",
+        synopsis: "stack fleet slo [--json]",
+        flags: [
+          {
+            name: "json",
+            synopsis: "--json",
+            type: "boolean",
+            description:
+              "Emit schemaVersion 1 JSON; unavailable metrics and inapplicable targets are null.",
+          },
+        ],
+        examples: [{ command: "stack fleet slo --json" }],
+        notes:
+          "Read-only via Locus. Same report as stack fleet-slo, nested under the fleet namespace.",
       },
     ],
   },
