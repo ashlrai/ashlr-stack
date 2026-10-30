@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "bun:test";
+import { afterEach, describe, expect, it, setDefaultTimeout } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
   chmodSync,
@@ -55,6 +55,10 @@ function mkTmp(): string {
   createdDirs.push(dir);
   return dir;
 }
+
+// Each test spawns one or two full `bun` CLI processes; on loaded machines a
+// single spawn can take several seconds — well past the 5s default.
+setDefaultTimeout(30_000);
 
 describe("stack apply", () => {
   it("auto-inits .stack.toml when none exists, then runs against the recipe", () => {
