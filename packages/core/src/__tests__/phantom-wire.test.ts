@@ -363,6 +363,29 @@ describe("ai/phantom-wire", () => {
     expect(await wirePhantomForRecipe(STRIPE_RECIPE, { cwd: harness.dir })).toEqual(compact);
   });
 
+  it("rejects malformed vault inventory JSON and keeps the provider's secrets unknown", async () => {
+    // A successful command may still return a truncated inventory containing a plausible name.
+    writeFileSync(
+      join(harness.dir, "phantom"),
+      `#!/usr/bin/env bash\ncase "$1" in\n  --version) echo "phantom fake 0.0.1" ;;\n  list) printf '%s' '[{"name":"STRIPE_SECRET_KEY"}' ;;\n  *) exit 1 ;;\nesac\n`,
+    );
+
+    await expect(listSecrets(harness.dir)).rejects.toMatchObject({
+      code: "PHANTOM_OUTPUT_UNRECOGNIZED",
+      message:
+        "phantom list --json did not return JSON; upgrade Phantom Secrets to 0.7.9 or newer.",
+    });
+    const result = await wirePhantomForRecipe(STRIPE_RECIPE, { cwd: harness.dir });
+    expect(result).toEqual({
+      present: [],
+      missing: [],
+      skipped: ["stripe"],
+      webhooks: [join(harness.dir, ".stack/webhooks/stripe.ts")],
+    });
+    expect(existsSync(result.webhooks[0])).toBe(true);
+    expect(JSON.parse(readFileSync(harness.vaultPath, "utf-8"))).toEqual({});
+  });
+
   it("rejects a JSON number from the vault inventory and skips the provider", async () => {
     // Return valid JSON from a successful list command, but not the required array.
     writeFileSync(
