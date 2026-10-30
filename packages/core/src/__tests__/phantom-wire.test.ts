@@ -290,6 +290,30 @@ describe("ai/phantom-wire", () => {
     expect(existsSync(result.webhooks[0])).toBe(true);
   });
 
+  it.each(["true", "false"])(
+    "rejects JSON boolean %s from the vault inventory and skips the provider",
+    async (output) => {
+      writeFileSync(
+        join(harness.dir, "phantom"),
+        `#!/usr/bin/env bash\ncase "$1" in\n  --version) echo "phantom fake 0.0.1" ;;\n  list) echo ${output} ;;\n  *) exit 1 ;;\nesac\n`,
+      );
+
+      await expect(listSecrets(harness.dir)).rejects.toMatchObject({
+        code: "PHANTOM_OUTPUT_UNRECOGNIZED",
+        message: "phantom list --json did not return an array.",
+      });
+      const result = await wirePhantomForRecipe(STRIPE_RECIPE, { cwd: harness.dir });
+      expect(result).toEqual({
+        present: [],
+        missing: [],
+        skipped: ["stripe"],
+        webhooks: [join(harness.dir, ".stack/webhooks/stripe.ts")],
+      });
+      expect(existsSync(result.webhooks[0])).toBe(true);
+      expect(harness.callsTo("add")).toEqual([]);
+    },
+  );
+
   it("does not report a JSON string vault response as a verified secret", async () => {
     // A successful command returning the expected name as a scalar is not an inventory.
     writeFileSync(
