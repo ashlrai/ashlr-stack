@@ -82,6 +82,7 @@ const main = defineCommand({
     deps: () => import("./commands/deps.ts").then((m) => m.depsCommand),
     doctor: () => import("./commands/doctor.ts").then((m) => m.doctorCommand),
     "fleet-latency": () => import("./commands/fleet-latency.ts").then((m) => m.fleetLatencyCommand),
+    "fleet-stream": () => import("./commands/fleet-stream.ts").then((m) => m.fleetStreamCommand),
     fleet: () => import("./commands/fleet.ts").then((m) => m.fleetCommand),
     exec: () => import("./commands/exec.ts").then((m) => m.execCommand),
     swap: () => import("./commands/swap.ts").then((m) => m.swapCommand),
