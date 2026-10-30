@@ -470,6 +470,7 @@ const COMMAND_ORDER = [
   "deps",
   "doctor",
   "fleet-lanes",
+  "fleet-supply",
   "fleet-latency",
   "fleet-act",
   "fleet-stream",
