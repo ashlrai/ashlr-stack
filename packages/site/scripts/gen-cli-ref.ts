@@ -162,6 +162,10 @@ interface CommandExtra {
 }
 
 const EXTRAS: Record<string, CommandExtra> = {
+  "fleet-reds": {
+    examples: [{ command: "stack fleet-reds --json" }],
+    notes: "Read-only via Locus. JSON is the default. For each of the seven fleet repositories, selects the latest completed workflow named CI on its default branch for each event (schedule and push), then lists failed jobs only when that run failed. A newer successful run clears older failures. no-runs means no completed run; unavailable and partial mean incomplete reads. firstFailingTest is null for unrecognized output or expired logs; logStatus distinguishes these cases. Parses Vitest, node:test TAP/spec and nextest text output. Raw logs and API errors are omitted.",
+  },
   "fleet-lag": {
     examples: [{ command: "stack fleet-lag --json" }],
     notes: "Read-only via Locus. Latest tag is ordered by underlying commit date; age uses the annotated tagger date or lightweight commit date. Compares that tag to the default branch. Median seconds use the latest 20 merge timestamps across all base branches, or all merged PRs if fewer. No tags and unavailable repositories remain in the report; unknown metrics are null.",
@@ -497,6 +501,7 @@ const COMMAND_ORDER = [
   "fleet-supply",
   "fleet-latency",
   "fleet-lag",
+  "fleet-reds",
   "fleet-delivery-lag",
   "fleet-stuck",
   "fleet-slo",
