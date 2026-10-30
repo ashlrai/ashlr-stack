@@ -9,8 +9,10 @@
  *      fail or block the real value from landing later.
  *   2. For webhook-capable providers (Stripe, Clerk, Supabase, GitHub),
  *      scaffold a commented-out handler stub in `.stack/webhooks/<provider>.ts`
- *      as an example only. It does not verify signatures; the user must
- *      implement provider-specific verification before deploying a handler.
+ *      as an example only. Signature verification is not implemented: the
+ *      stub's TODO states the trust limitation — a present signature header
+ *      authenticates nothing and the body is untrusted input — and points at
+ *      the provider-specific verification to add before deploying a handler.
  *
  * An opt-out (`--no-wire`) skips both steps.
  *
@@ -126,17 +128,40 @@ function webhookStubFor(provider: string): string {
 //   const signature = req.headers.get("${signatureHeaderFor(provider)}");
 //   if (!signature) return new Response("Missing signature", { status: 400 });
 //   const body = await req.text();
-//   // TODO: verify this webhook request body using the provider's signature scheme.
-//   // Verification inputs include the body, signature, webhook secret, and any
-//   // additional inputs required by the provider's scheme.
-//   // The body is unverified; a present signature header does not authenticate it.
-//   // Verify the unmodified body before parsing, trusting, or acting on its contents.
-//   // Reject requests whose signatures are missing or invalid; only process the
-//   // body after successful provider-specific verification.
+//   // TODO(security): signature verification is NOT implemented here. The
+//   // header check above proves only that a signature header arrived; its
+//   // value is never compared to anything. Until this TODO is done, \`body\`
+//   // is unauthenticated, attacker-controlled input — anyone who can POST
+//   // to this endpoint can forge a ${provider} webhook.
+//   // ${verificationHintFor(provider)}
+//   // Verify over the exact raw body bytes with the webhook secret
+//   // (\`phantom reveal ${webhookSecretKeyFor(provider)}\`) and compare in
+//   // constant time; reject missing or invalid signatures, and only then
+//   // parse, trust, or act on the body.
 //   return new Response("ok", { status: 200 });
 // }
 `;
   return base;
+}
+
+/**
+ * One-line pointer to the provider's documented signature scheme, inlined into
+ * the stub's TODO so the implementer starts at the right verification API.
+ * Falls back to a generic instruction for providers added later.
+ */
+function verificationHintFor(provider: string): string {
+  switch (provider) {
+    case "stripe":
+      return "Stripe: `stripe.webhooks.constructEvent` — HMAC-SHA256 with timestamp tolerance.";
+    case "clerk":
+      return "Clerk (svix): `new Webhook(secret).verify(body, headers)`.";
+    case "supabase":
+      return "Supabase: `x-supabase-signature` per Supabase's documented webhook scheme.";
+    case "github":
+      return "GitHub: `x-hub-signature-256` is `sha256=` + HMAC-SHA256 of the raw body.";
+    default:
+      return "Verify per the provider's documented signature scheme.";
+  }
 }
 
 function webhookSecretKeyFor(provider: string): string {

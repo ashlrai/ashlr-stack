@@ -18,7 +18,7 @@
  * hitting the user's actual vault. We assert on its call log.
  */
 
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, setDefaultTimeout } from "bun:test";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -32,6 +32,10 @@ import {
   writeRecipe,
 } from "../ai/recipe.ts";
 import { type Harness, setupFakePhantom } from "./_harness.ts";
+
+// `wirePhantomForRecipe` spawns the fake `phantom` shim (bash + several
+// python3 calls), which takes multiple seconds on loaded machines.
+setDefaultTimeout(30_000);
 
 describe("recommend → apply e2e", () => {
   let harness: Harness;

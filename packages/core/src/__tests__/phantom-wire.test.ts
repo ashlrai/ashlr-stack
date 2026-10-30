@@ -1,10 +1,14 @@
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, setDefaultTimeout } from "bun:test";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { wirePhantomForRecipe } from "../ai/phantom-wire.ts";
 import { type Recipe, readRecipe, writeRecipe } from "../ai/recipe.ts";
 import { listSecrets } from "../phantom.ts";
 import { type Harness, setupFakePhantom } from "./_harness.ts";
+
+// Every test spawns the fake `phantom` shim (bash + several python3 calls),
+// which takes multiple seconds on loaded machines — well past the 5s default.
+setDefaultTimeout(30_000);
 
 describe("ai/phantom-wire", () => {
   let harness: Harness;
@@ -95,22 +99,19 @@ describe("ai/phantom-wire", () => {
       "If uncommented as-is, it accepts any non-empty signature header and returns\n" +
         "// 200 without authenticating the request. Implement verification first.",
     );
-    expect(stub).toContain(
-      "Verification inputs include the body, signature, webhook secret, and any\n" +
-        "//   // additional inputs required by the provider's scheme.",
-    );
-    expect(stub).toContain(
-      "The body is unverified; a present signature header does not authenticate it.",
-    );
     const example = stub.match(/^\/\/ export async function [\s\S]*?^\/\/ }$/m)?.[0];
     if (!example) throw new Error(`Missing ${provider} webhook example`);
     expect(example).toContain(
-      "//   // TODO: verify this webhook request body using the provider's signature scheme.",
+      "//   // TODO(security): signature verification is NOT implemented here. The\n" +
+        "//   // header check above proves only that a signature header arrived; its\n" +
+        "//   // value is never compared to anything.",
     );
     expect(example).toContain(
-      "//   // Verify the unmodified body before parsing, trusting, or acting on its contents.\n" +
-        "//   // Reject requests whose signatures are missing or invalid; only process the\n" +
-        "//   // body after successful provider-specific verification.",
+      `//   // is unauthenticated, attacker-controlled input — anyone who can POST\n//   // to this endpoint can forge a ${provider} webhook.`,
+    );
+    expect(example).toContain(
+      "//   // constant time; reject missing or invalid signatures, and only then\n" +
+        "//   // parse, trust, or act on the body.",
     );
     const examplePath = join(harness.dir, `${provider}-example.ts`);
     writeFileSync(examplePath, example.replace(/^\/\/ ?/gm, ""));
@@ -197,12 +198,45 @@ describe("ai/phantom-wire", () => {
       // handling of it should appear before the verification reminder.
       expect(example).toContain(
         "//   const body = await req.text();\n" +
-          "//   // TODO: verify this webhook request body using the provider's signature scheme.",
+          "//   // TODO(security): signature verification is NOT implemented here.",
       );
-      const todo = example.indexOf("TODO: verify this webhook request body");
+      const todo = example.indexOf("TODO(security): signature verification is NOT implemented");
       const success = example.indexOf('return new Response("ok", { status: 200 })');
       expect(todo).toBeGreaterThanOrEqual(0);
       expect(success).toBeGreaterThan(todo);
+    },
+  );
+
+  it.each([
+    ["stripe", "stripe.webhooks.constructEvent"],
+    ["clerk", "new Webhook(secret).verify(body, headers)"],
+    ["supabase", "`x-supabase-signature` per Supabase's documented webhook scheme"],
+    ["github", "`sha256=` + HMAC-SHA256"],
+  ])(
+    "points the %s stub at the provider's verification scheme without claiming it ran",
+    async (provider, hint) => {
+      const recipe: Recipe = { ...STRIPE_RECIPE, providers: [{ name: provider }] };
+      const result = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
+      const example = readFileSync(result.webhooks[0], "utf-8").match(
+        /^\/\/ export async function [\s\S]*?^\/\/ }$/m,
+      )?.[0];
+      if (!example) throw new Error(`Missing ${provider} webhook example`);
+
+      // The TODO names where verification belongs and how the provider does it.
+      expect(example).toContain(hint);
+
+      // No comment may describe the request as already verified, and the
+      // uncommented handler must contain no verification code — the TODO's
+      // "NOT implemented" claim has to be true, not aspirational.
+      expect(example).not.toMatch(
+        /signature verified|verified signature|request is authenticated/i,
+      );
+      const runnable = example
+        .replace(/^\/\/ ?/gm, "")
+        .split("\n")
+        .filter((line) => !line.trimStart().startsWith("//"))
+        .join("\n");
+      expect(runnable).not.toMatch(/createHmac|timingSafeEqual|\.verify\(/);
     },
   );
 
