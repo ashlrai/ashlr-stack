@@ -166,6 +166,10 @@ const EXTRAS: Record<string, CommandExtra> = {
     examples: [{ command: "stack fleet-lag --json" }],
     notes: "Read-only via Locus. Latest tag is ordered by underlying commit date; age uses the annotated tagger date or lightweight commit date. Compares that tag to the default branch. Median seconds use the latest 20 merge timestamps across all base branches, or all merged PRs if fewer. No tags and unavailable repositories remain in the report; unknown metrics are null.",
   },
+  "fleet-stuck": {
+    examples: [{ command: "stack fleet-stuck --json" }],
+    notes: "Read-only via Locus. JSON is the default. Lists every open PR, sorted by merge state then descending age in days since creation. Auto-merge-off path reasons identify server/ directories and common lockfiles, including renamed paths; these are hints, not GitHub's explanation. Empty repositories have prs: []; unavailable or incomplete reads have prs: null.",
+  },
   "fleet-slo": {
     examples: [{ command: "stack fleet-slo --json" }, { command: "stack fleet slo --json" }],
     notes: "Read-only via Locus. The window is the last six hours. Merge volume, median and p90 open-to-merge seconds come from the same source as stack fleet-latency; open and conflicting PR counts come from a paginated open-PR scan that counts only GitHub-reported CONFLICTING nodes. Targets: 20 merges per window in ashlrai/phantom and a median open-to-merge of 300 seconds; unavailable metrics and inapplicable targets are null.",
@@ -493,6 +497,7 @@ const COMMAND_ORDER = [
   "fleet-supply",
   "fleet-latency",
   "fleet-lag",
+  "fleet-stuck",
   "fleet-slo",
   "fleet-act",
   "fleet-stream",

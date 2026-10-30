@@ -620,6 +620,23 @@ export const CLI_COMMANDS: CliCommand[] = [
       "Read-only via Locus. Latest tag is ordered by underlying commit date; age uses the annotated tagger date or lightweight commit date. Compares that tag to the default branch. Median seconds use the latest 20 merge timestamps across all base branches, or all merged PRs if fewer. No tags and unavailable repositories remain in the report; unknown metrics are null.",
   },
   {
+    name: "stack fleet-stuck",
+    description:
+      "List open PRs by merge state, age and auto-merge status with server/ and lockfile path hints.",
+    synopsis: "stack fleet-stuck [--json]",
+    flags: [
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        description: "Emit schemaVersion 1 JSON (also the default).",
+      },
+    ],
+    examples: [{ command: "stack fleet-stuck --json" }],
+    notes:
+      "Read-only via Locus. JSON is the default. Lists every open PR, sorted by merge state then descending age in days since creation. Auto-merge-off path reasons identify server/ directories and common lockfiles, including renamed paths; these are hints, not GitHub's explanation. Empty repositories have prs: []; unavailable or incomplete reads have prs: null.",
+  },
+  {
     name: "stack fleet-slo",
     description:
       "Compare per-repo six-hour merges, open-to-merge latency and conflicting PRs with fleet SLO targets.",

@@ -170,7 +170,7 @@ stack exec --as acme -- bun dev  # same, but refuse (exit 1, nothing starts) unl
 
 ### Source command reference
 
-This checkout registers <!-- fresh:begin command-count -->37<!-- fresh:end --> top-level commands. Run `stack <command> --help`
+This checkout registers <!-- fresh:begin command-count -->38<!-- fresh:end --> top-level commands. Run `stack <command> --help`
 for arguments and subcommands supported by your installed version.
 
 <!-- fresh:begin commands-table -->
@@ -192,6 +192,7 @@ for arguments and subcommands supported by your installed version.
 | `stack fleet-supply` | Report hourly launches, observed lane idle minutes, restock errors and UTF-8 queue splits. |
 | `stack fleet-latency` | Report per-repo median and p90 open-to-merge seconds for PRs merged in the last six hours. |
 | `stack fleet-lag` | Report per-repo commits since latest tag, tag age and median time for the last 20 merged PRs. |
+| `stack fleet-stuck` | List open PRs by merge state, age and auto-merge status with server/ and lockfile path hints. |
 | `stack fleet-slo` | Compare per-repo six-hour merges, open-to-merge latency and conflicting PRs with fleet SLO targets. |
 | `stack fleet-act` | Preview fleet requests; --apply appends a v1 audit request for a dispatcher consumer. |
 | `stack fleet-stream` | Translate fleet logs to typed NDJSON or localhost SSE. |
