@@ -470,6 +470,7 @@ const COMMAND_ORDER = [
   "deps",
   "doctor",
   "fleet-latency",
+  "fleet-act",
   "fleet",
   "exec",
   "swap",
