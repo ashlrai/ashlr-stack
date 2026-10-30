@@ -81,6 +81,7 @@ const main = defineCommand({
     env: () => import("./commands/env.ts").then((m) => m.envCommand),
     deps: () => import("./commands/deps.ts").then((m) => m.depsCommand),
     doctor: () => import("./commands/doctor.ts").then((m) => m.doctorCommand),
+    fleet: () => import("./commands/fleet.ts").then((m) => m.fleetCommand),
     exec: () => import("./commands/exec.ts").then((m) => m.execCommand),
     swap: () => import("./commands/swap.ts").then((m) => m.swapCommand),
     sync: () => import("./commands/sync.ts").then((m) => m.syncCommand),
