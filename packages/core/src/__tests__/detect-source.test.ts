@@ -237,6 +237,44 @@ test("scans a project directory containing spaces and reports relative file path
   ]);
 });
 
+test("finds the same source markers in equivalent paths with and without spaces", async () => {
+  const files: Record<string, string> = {
+    "package.json": JSON.stringify({ dependencies: { openai: "1" } }),
+    "requirements.txt": "modal==1",
+    "pyproject.toml": '[project]\ndependencies = ["resend"]',
+    "go.mod": "module example.com/app\nrequire github.com/stripe/stripe-go/v76 v76.0.0",
+    "Cargo.toml": '[dependencies]\nsentry = "1"',
+    "supabase/config.toml": "[api]",
+    ".github/workflows/ci.yml": "name: CI",
+    ".env.example": "ANTHROPIC_API_KEY=",
+  };
+  const root = makeProject(
+    Object.fromEntries(
+      ["project", "parent with spaces/project with spaces"].flatMap((dir) =>
+        Object.entries(files).map(([path, content]) => [join(dir, path), content]),
+      ),
+    ),
+  );
+
+  const plain = await scanSource(join(root, "project"));
+  const spaced = await scanSource(join(root, "parent with spaces", "project with spaces"));
+  expect(plain).toEqual([
+    {
+      provider: "github",
+      confidence: "high",
+      signals: [".github/workflows", ".github/workflows/ci.yml"],
+    },
+    { provider: "modal", confidence: "high", signals: ["requirements.txt:modal"] },
+    { provider: "openai", confidence: "high", signals: ["package.json:openai"] },
+    { provider: "resend", confidence: "high", signals: ["pyproject.toml:resend"] },
+    { provider: "sentry", confidence: "high", signals: ["Cargo.toml:sentry"] },
+    { provider: "stripe", confidence: "high", signals: ["go.mod:github.com/stripe/stripe-go/v76"] },
+    { provider: "supabase", confidence: "high", signals: ["supabase/config.toml"] },
+    { provider: "anthropic", confidence: "medium", signals: [".env.example:ANTHROPIC_API_KEY"] },
+  ]);
+  expect(spaced).toEqual(plain);
+});
+
 test("empty project has no detections", async () => {
   expect(await scanSource(makeProject({}))).toEqual([]);
 });
