@@ -558,6 +558,70 @@ export const CLI_COMMANDS: CliCommand[] = [
     ],
   },
   {
+    name: "stack fleet-act",
+    description:
+      "Preview fleet requests; --apply appends a v1 audit request for a dispatcher consumer.",
+    synopsis:
+      "stack fleet-act <verb> [--lane <lane>] [--job <job>] [--slots <slots>] [--message <message>] [--queue <queue>] [--apply] [--dryRun] [--json]",
+    flags: [
+      {
+        name: "verb",
+        synopsis: "<verb>",
+        type: "positional",
+        required: true,
+        description: "pause, resume, kill, reassign, slots or steer.",
+      },
+      {
+        name: "lane",
+        synopsis: "--lane <lane>",
+        type: "string",
+        description: "Lane identifier (pause/resume/reassign/slots).",
+      },
+      {
+        name: "job",
+        synopsis: "--job <job>",
+        type: "string",
+        description: "Job identifier (kill/reassign/steer).",
+      },
+      {
+        name: "slots",
+        synopsis: "--slots <slots>",
+        type: "string",
+        description: "Nonnegative integer target (slots).",
+      },
+      {
+        name: "message",
+        synopsis: "--message <message>",
+        type: "string",
+        description: "Steering text; never include secrets (steer).",
+      },
+      {
+        name: "queue",
+        synopsis: "--queue <queue>",
+        type: "string",
+        description: "Queue directory (default: ~/.ashlr-runs/queue).",
+      },
+      {
+        name: "apply",
+        synopsis: "--apply",
+        type: "boolean",
+        description: "Append request to fleet-act.audit.jsonl; does not execute it.",
+      },
+      {
+        name: "dryRun",
+        synopsis: "--dryRun",
+        type: "boolean",
+        description: "Preview without writing (default).",
+      },
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        description: "Emit schemaVersion 1 JSON.",
+      },
+    ],
+  },
+  {
     name: "stack fleet",
     description: "Show repository CI, open PR counts, and dispatcher lane status.",
     synopsis: "stack fleet [--json] [--log <log>] [--queue <queue>]",
