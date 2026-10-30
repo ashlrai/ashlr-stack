@@ -125,6 +125,31 @@ describe("callers read the variables at call time", () => {
     expect(urls).toEqual(["http://127.0.0.1:4000/v1/models", "http://127.0.0.1:4000/v1/models"]);
   });
 
+  test.each(["", "/", "///"])(
+    "equivalent base URLs with trailing %j hit the same endpoints",
+    async (suffix) => {
+      process.env.ANTHROPIC_BASE_URL = `https://gw.example/anthropic${suffix}`;
+      process.env.OPENAI_BASE_URL = `https://gw.example/openai/v1${suffix}`;
+      process.env.OLLAMA_HOST = `https://gw.example/ollama${suffix}`;
+
+      expect(
+        (await anthropic.healthcheck!(ctx, entry("anthropic", "ANTHROPIC_API_KEY"))).kind,
+      ).toBe("ok");
+      expect((await openai.healthcheck!(ctx, entry("openai", "OPENAI_API_KEY"))).kind).toBe("ok");
+      expect(
+        await new LocalSLMBackend({
+          endpoints: [defaultOllamaEndpoint()],
+          fetchImpl: globalThis.fetch,
+        }).healthy(),
+      ).toBe(true);
+      expect(urls).toEqual([
+        "https://gw.example/anthropic/v1/models",
+        "https://gw.example/openai/v1/models",
+        "https://gw.example/ollama/v1/models",
+      ]);
+    },
+  );
+
   test("the local SLM backend picks up OLLAMA_HOST when constructed", async () => {
     process.env.OLLAMA_HOST = "gpu-box:11435/";
     const seen: string[] = [];
