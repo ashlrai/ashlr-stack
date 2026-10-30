@@ -83,7 +83,7 @@ describe("ai/phantom-wire", () => {
     ["clerk", "svix-signature", "handleClerkWebhook"],
     ["supabase", "x-supabase-signature", "handleSupabaseWebhook"],
     ["github", "x-hub-signature-256", "handleGithubWebhook"],
-  ])("rejects a missing signature in the generated %s example", async (provider, header, name) => {
+  ])("rejects missing signatures and interrupted %s requests", async (provider, header, name) => {
     const recipe: Recipe = { ...STRIPE_RECIPE, providers: [{ name: provider }] };
     const result = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
     expect(result.webhooks).toHaveLength(1);
@@ -138,6 +138,19 @@ describe("ai/phantom-wire", () => {
       }),
     );
     expect(response.status).toBe(200);
+
+    const networkError = new Error("request body connection lost");
+    const interruptedBody = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        controller.error(networkError);
+      },
+    });
+    const interruptedRequest = new Request("https://example.com", {
+      method: "POST",
+      headers: { [header]: "placeholder" },
+      body: interruptedBody,
+    });
+    await expect(handler(interruptedRequest)).rejects.toBe(networkError);
   });
 
   it.each(["stripe", "clerk", "supabase", "github"])(
