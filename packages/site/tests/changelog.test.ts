@@ -43,12 +43,16 @@ test("site changelog mirrors the source and explains apply's placeholder behavio
   );
   expect(applyEntry).toContain("Provider setup may already store real values");
   expect(applyEntry).toContain("wiring reports providers as skipped instead of identifying missing names");
+  expect(applyEntry).toContain("but still creates webhook stubs");
+  expect(applyEntry).toContain("commented-out webhook examples");
+  expect(applyEntry).toContain("These stubs do not verify signatures; implement provider-specific verification before deploying a handler.");
 
   const fixEntry = published.split("\n").find((line) => line.startsWith(placeholderRemovalHeading));
   expect(fixEntry).toContain("The wiring step never writes to the vault or fills in missing values.");
   expect(fixEntry).toContain("Provider setup may already store real values");
   expect(fixEntry).toContain("users must supply each required missing value themselves");
   expect(fixEntry).toContain("it reports providers as skipped instead of identifying missing names");
+  expect(fixEntry).toContain("webhook stubs are still generated");
   expect(fixEntry).toContain("Previously, wiring ran `phantom add <KEY> TODO_STACK_APPLY --rotate`");
   expect(fixEntry).toContain("every call failed and the printed `envelopes` count was always 0");
   expect(applyEntry).toContain("Users must supply each required missing value");
