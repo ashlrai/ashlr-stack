@@ -134,7 +134,7 @@ describe("source documentation freshness", () => {
     expect(rows.map(([name]) => name)).toEqual(commands.map(({ name }) => `stack ${name}`));
     // A new command file also needs registration and documentation.
     const files = readdirSync(resolve(root, "packages/cli/src/commands"))
-      .filter((name) => name.endsWith(".ts"))
+      .filter((name) => name.endsWith(".ts") && !name.endsWith(".test.ts"))
       .sort();
     expect(files).toEqual(commands.map(({ file }) => file).sort());
   });

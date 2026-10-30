@@ -563,6 +563,32 @@ export const CLI_COMMANDS: CliCommand[] = [
     ],
   },
   {
+    name: "stack fleet-supply",
+    description:
+      "Report hourly launches, observed lane idle minutes, restock errors and UTF-8 queue splits.",
+    synopsis: "stack fleet-supply [--json] [--queue <queue>] [--log <log>]",
+    flags: [
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        description: "Emit schemaVersion 1 JSON; unavailable metrics are null.",
+      },
+      {
+        name: "queue",
+        synopsis: "--queue <queue>",
+        type: "string",
+        description: "Queue directory (default: ~/.ashlr-runs/queue).",
+      },
+      {
+        name: "log",
+        synopsis: "--log <log>",
+        type: "string",
+        description: "Dispatcher log (default: dispatchd.log beside queue directory).",
+      },
+    ],
+  },
+  {
     name: "stack fleet-latency",
     description:
       "Report per-repo median and p90 open-to-merge seconds for PRs merged in the last six hours.",
