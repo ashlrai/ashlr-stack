@@ -1,9 +1,40 @@
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { CLI_COMMANDS } from "../src/lib/cli-ref.generated";
 
 const CLI_ENTRY = join(import.meta.dir, "..", "..", "cli", "src", "index.ts");
+const SITE = join(import.meta.dir, "..");
+// Bun 1.2 hoists Astro to the root; newer installs may keep it site-local.
+const ASTRO_ENTRY = join(dirname(require.resolve("astro/package.json")), "astro.js");
+
+async function fetchServerPage(command: string[], url: string, attempts = 600): Promise<Response> {
+  const server = Bun.spawn(command, { cwd: SITE, stdout: "ignore", stderr: "pipe" });
+  // Drain immediately so a full stderr pipe cannot stall server startup.
+  const stderr = new Response(server.stderr).text();
+  let reason = "Astro server did not become ready";
+  try {
+    for (let attempt = 0; attempt < attempts; attempt++) {
+      let response: Response;
+      try {
+        response = await fetch(url);
+      } catch {
+        if (server.exitCode !== null) {
+          reason = "Astro server exited before becoming ready";
+          break;
+        }
+        await Bun.sleep(100);
+        continue;
+      }
+      // Finish reading before cleanup shuts down the server connection.
+      return new Response(await response.arrayBuffer(), response);
+    }
+  } finally {
+    server.kill();
+    await server.exited;
+  }
+  throw new Error(`${reason} (exit code ${server.exitCode}):\n${await stderr}`);
+}
 
 /** Top-level command names from `stack --help`'s USAGE line (citty's subCommands, in order). */
 function cliSubCommands(): string[] {
@@ -56,53 +87,61 @@ describe("site CLI reference", () => {
     expect(duplicateNames(CLI_COMMANDS)).toEqual([]);
   });
 
+  test("startup failures include the exit code and drained stderr", async () => {
+    // More than a pipe buffer: waiting for exit before draining would deadlock.
+    const diagnostic = `startup failure: ${"x".repeat(128 * 1024)}`;
+    const command = [
+      process.execPath, "-e",
+      'console.error("startup failure: " + "x".repeat(128 * 1024)); process.exit(23)',
+    ];
+    await expect(fetchServerPage(command, "http://127.0.0.1:0")).rejects.toThrow(
+      `Astro server exited before becoming ready (exit code 23):\n${diagnostic}`,
+    );
+  });
+
+  test("startup timeouts stop the server and include stderr", async () => {
+    const command = [
+      process.execPath, "-e",
+      'console.error("startup stalled"); setInterval(() => {}, 1000)',
+    ];
+    await expect(fetchServerPage(command, "http://127.0.0.1:0", 20)).rejects.toThrow(
+      /Astro server did not become ready \(exit code .*\):\nstartup stalled/,
+    );
+  }, 10_000);
+
   test("rendered command links resolve to their documentation headings", async () => {
-    const site = join(import.meta.dir, "..");
-    const reservation = Bun.serve({ port: 0, hostname: "127.0.0.1", fetch: () => new Response() });
+    // The temporary listener must never satisfy readiness with an empty HTTP 200.
+    const reservation = Bun.listen({
+      port: 0,
+      hostname: "127.0.0.1",
+      socket: { data(socket) { socket.end(); } },
+    });
     const port = reservation.port;
     reservation.stop(true);
-    const server = Bun.spawn([process.execPath, "./node_modules/astro/astro.js", "dev", "--host", "127.0.0.1", "--port", String(port), "--strictPort"], {
-      cwd: site,
-      stdout: "ignore",
-      stderr: "ignore",
-    });
+    const response = await fetchServerPage(
+      [process.execPath, ASTRO_ENTRY, "dev", "--host", "127.0.0.1", "--port", String(port), "--strictPort"],
+      `http://127.0.0.1:${port}/docs/cli`,
+    );
+    expect(response.status).toBe(200);
+    const html = await response.text();
+    const links: string[] = [];
+    const ids: string[] = [];
+    const headings: Array<{ id: string; text: string }> = [];
+    await new HTMLRewriter()
+      .on(".not-prose a", { element(element) { links.push(element.getAttribute("href") ?? ""); } })
+      .on("[id]", { element(element) { ids.push(element.getAttribute("id") ?? ""); } })
+      .on("h2[id]", {
+        element(element) { headings.push({ id: element.getAttribute("id") ?? "", text: "" }); },
+        text(chunk) { headings[headings.length - 1].text += chunk.text; },
+      })
+      .transform(new Response(html)).text();
 
-    try {
-      let response: Response | undefined;
-      for (let attempt = 0; attempt < 600; attempt++) {
-        try {
-          response = await fetch(`http://127.0.0.1:${port}/docs/cli`);
-          break;
-        } catch {
-          if (server.exitCode !== null) throw new Error("Astro server exited before becoming ready");
-          await Bun.sleep(100);
-        }
-      }
-      if (!response) throw new Error("Astro server did not become ready");
-      expect(response.status).toBe(200);
-      const html = await response.text();
-      const links: string[] = [];
-      const ids: string[] = [];
-      const headings: Array<{ id: string; text: string }> = [];
-      await new HTMLRewriter()
-        .on(".not-prose a", { element(element) { links.push(element.getAttribute("href") ?? ""); } })
-        .on("[id]", { element(element) { ids.push(element.getAttribute("id") ?? ""); } })
-        .on("h2[id]", {
-          element(element) { headings.push({ id: element.getAttribute("id") ?? "", text: "" }); },
-          text(chunk) { headings[headings.length - 1].text += chunk.text; },
-        })
-        .transform(new Response(html)).text();
-
-      expect(links.length).toBe(CLI_COMMANDS.length);
-      for (const [index, href] of links.entries()) {
-        expect(href, CLI_COMMANDS[index].name).toMatch(/^#[^#]+$/);
-        const id = decodeURIComponent(href.slice(1));
-        expect(ids.filter((candidate) => candidate === id), href).toHaveLength(1);
-        expect(headings.find((heading) => heading.id === id)?.text.trim(), href).toBe(CLI_COMMANDS[index].name);
-      }
-    } finally {
-      server.kill();
-      await server.exited;
+    expect(links.length, `CLI reference response: ${html.length} HTML bytes`).toBe(CLI_COMMANDS.length);
+    for (const [index, href] of links.entries()) {
+      expect(href, CLI_COMMANDS[index].name).toMatch(/^#[^#]+$/);
+      const id = decodeURIComponent(href.slice(1));
+      expect(ids.filter((candidate) => candidate === id), href).toHaveLength(1);
+      expect(headings.find((heading) => heading.id === id)?.text.trim(), href).toBe(CLI_COMMANDS[index].name);
     }
   }, 120_000);
 });
