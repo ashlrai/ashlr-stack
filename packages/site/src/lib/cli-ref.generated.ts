@@ -603,6 +603,23 @@ export const CLI_COMMANDS: CliCommand[] = [
     ],
   },
   {
+    name: "stack fleet-lag",
+    description:
+      "Report per-repo commits since latest tag, tag age and median time for the last 20 merged PRs.",
+    synopsis: "stack fleet-lag [--json]",
+    flags: [
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        description: "Emit schemaVersion 1 JSON; unavailable metrics are null.",
+      },
+    ],
+    examples: [{ command: "stack fleet-lag --json" }],
+    notes:
+      "Read-only via Locus. Latest tag is ordered by underlying commit date; age uses the annotated tagger date or lightweight commit date. Compares that tag to the default branch. Median seconds use the latest 20 merge timestamps across all base branches, or all merged PRs if fewer. No tags and unavailable repositories remain in the report; unknown metrics are null.",
+  },
+  {
     name: "stack fleet-act",
     description:
       "Preview fleet requests; --apply appends a v1 audit request for a dispatcher consumer.",
