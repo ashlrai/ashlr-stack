@@ -4,6 +4,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { defineCommand } from "citty";
 import { type GhRunner, checkRepos } from "../lib/doctor-repos.ts";
+import { fleetCollisionsSubcommand } from "./fleet-collisions.ts";
 import { fleetSloSubcommand } from "./fleet-slo.ts";
 
 const unknown = "unknown" as const;
@@ -130,6 +131,7 @@ export const fleetCommand = defineCommand({
   },
   subCommands: {
     slo: fleetSloSubcommand,
+    collisions: fleetCollisionsSubcommand,
   },
   // citty 0.1.6 also calls this parent `run` after a matched subcommand, so
   // only act when none was given (the env command does the same). Option
