@@ -45,7 +45,9 @@ test("site changelog mirrors the source and explains apply's placeholder behavio
     "Wiring no longer attempts to write placeholder values; it does not write to the vault or fill in missing values.",
   );
   expect(applyEntry).toContain("Provider setup may already store real values");
+  expect(applyEntry).toContain("If at least one provider succeeds, wiring checks declared secret names");
   expect(applyEntry).toContain("wiring reports how many secret names are present and missing and lists missing names");
+  expect(applyEntry).toContain("Missing names alone do not make apply fail, so success does not prove every required secret is present");
   expect(applyEntry).toContain("wiring reports providers as skipped instead of identifying missing names");
   expect(applyEntry).toContain("creates webhook stubs (Stripe, Clerk, Supabase, GitHub)");
   expect(applyEntry).toContain("Wiring is on by default; `--noWire` opts out");
@@ -67,6 +69,7 @@ test("unreleased apply note explains the action required even after success", ()
   const unreleased = published.split("## Unreleased\n")[1]?.split("\n## ")[0];
   const entry = unreleased?.split("\n").find((line) => line.startsWith("- After at least one provider succeeds, `stack apply`"));
   expect(entry).toContain("without creating placeholders or filling missing values");
+  expect(entry).toContain("unless `--noWire` is set");
   expect(entry).toContain("Provider setup may store real values separately");
   expect(entry).toContain("each required missing value needs user action");
   expect(entry).toContain("run `phantom add <NAME>` in a trusted terminal and enter the real value");
