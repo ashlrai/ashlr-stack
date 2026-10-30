@@ -170,7 +170,7 @@ stack exec --as acme -- bun dev  # same, but refuse (exit 1, nothing starts) unl
 
 ### Source command reference
 
-This checkout registers <!-- fresh:begin command-count -->32<!-- fresh:end --> top-level commands. Run `stack <command> --help`
+This checkout registers <!-- fresh:begin command-count -->33<!-- fresh:end --> top-level commands. Run `stack <command> --help`
 for arguments and subcommands supported by your installed version.
 
 <!-- fresh:begin commands-table -->
@@ -188,6 +188,7 @@ for arguments and subcommands supported by your installed version.
 | `stack env` | Inspect the effective env-var map for this stack. |
 | `stack deps` | Show the service dependency graph for this stack. |
 | `stack doctor` | Verify every service is reachable and credentials are valid. |
+| `stack fleet-lanes` | Report lane targets, running and queued work, and dispatch idle reasons. |
 | `stack fleet-latency` | Report per-repo median and p90 open-to-merge seconds for PRs merged in the last six hours. |
 | `stack fleet-act` | Preview fleet requests; --apply appends a v1 audit request for a dispatcher consumer. |
 | `stack fleet-stream` | Translate fleet logs to typed NDJSON or localhost SSE. |

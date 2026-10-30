@@ -3,7 +3,7 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const entry = fileURLToPath(new URL("../index.ts", import.meta.url));
-const commands = ["fleet-act", "fleet-stream", "fleet-graph"];
+const commands = ["fleet-act", "fleet-stream", "fleet-graph", "fleet-lanes"];
 
 function cli(...args: string[]) {
   const result = spawnSync(process.execPath, [entry, ...args], {
@@ -22,7 +22,7 @@ function cli(...args: string[]) {
   return result.stdout;
 }
 
-test("root help registers act, stream and graph together", () => {
+test("root help registers every fleet command", () => {
   const help = cli("--help");
   for (const command of commands) expect(help).toMatch(new RegExp(`\\b${command}\\b`));
 });
@@ -35,7 +35,9 @@ for (const command of commands) {
       ? ["--apply", "--lane", "--job"]
       : command === "fleet-stream"
         ? ["--dispatch", "--jobs", "--follow", "--sse", "--port"]
-        : ["--json", "--queue", "--router"])
+        : command === "fleet-lanes"
+          ? ["--json", "--queue"]
+          : ["--json", "--queue", "--router"])
       expect(help).toContain(flag);
   });
 }
