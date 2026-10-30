@@ -4,6 +4,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import packageManifest from "../../package.json";
 
 const CLI_ENTRY = join(dirname(fileURLToPath(import.meta.url)), "..", "index.ts");
 
@@ -79,6 +80,21 @@ describe("command errors", () => {
 });
 
 describe("cold startup", () => {
+  test("version options report the CLI package version", () => {
+    for (const args of [["--version"], ["-v"], ["--version", "--json"]]) {
+      const r = stack(args);
+      expect(r.code).toBe(0);
+      expect(r.stderr).toBe("");
+      if (args.includes("--json")) {
+        expect(JSON.parse(r.stdout).version).toBe(packageManifest.version);
+      } else if (args.includes("-v")) {
+        expect(r.stdout.split("\n")[0]).toBe(`stack ${packageManifest.version}`);
+      } else {
+        expect(r.stdout.trim()).toBe(packageManifest.version);
+      }
+    }
+  }, 65_000);
+
   test("version forms never load command modules", () => {
     const preload = join(emptyDir(), "reject-commands.ts");
     writeFileSync(
