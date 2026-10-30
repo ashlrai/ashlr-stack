@@ -81,6 +81,7 @@ const main = defineCommand({
     env: () => import("./commands/env.ts").then((m) => m.envCommand),
     deps: () => import("./commands/deps.ts").then((m) => m.depsCommand),
     doctor: () => import("./commands/doctor.ts").then((m) => m.doctorCommand),
+    "fleet-lanes": () => import("./commands/fleet-lanes.ts").then((m) => m.fleetLanesCommand),
     "fleet-latency": () => import("./commands/fleet-latency.ts").then((m) => m.fleetLatencyCommand),
     "fleet-act": () => import("./commands/fleet-act.ts").then((m) => m.fleetActCommand),
     "fleet-stream": () => import("./commands/fleet-stream.ts").then((m) => m.fleetStreamCommand),

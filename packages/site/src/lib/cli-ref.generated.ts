@@ -544,6 +544,25 @@ export const CLI_COMMANDS: CliCommand[] = [
     ],
   },
   {
+    name: "stack fleet-lanes",
+    description: "Report lane targets, running and queued work, and dispatch idle reasons.",
+    synopsis: "stack fleet-lanes [--json] [--queue <queue>]",
+    flags: [
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        description: "Emit schemaVersion 1 JSON; null idleReason means ready to dispatch.",
+      },
+      {
+        name: "queue",
+        synopsis: "--queue <queue>",
+        type: "string",
+        description: "Fleet state directory (default: ~/.ashlr-runs/queue).",
+      },
+    ],
+  },
+  {
     name: "stack fleet-latency",
     description:
       "Report per-repo median and p90 open-to-merge seconds for PRs merged in the last six hours.",
