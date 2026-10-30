@@ -162,6 +162,10 @@ interface CommandExtra {
 }
 
 const EXTRAS: Record<string, CommandExtra> = {
+  "fleet-silent": {
+    examples: [{ command: "stack fleet-silent --runs /path/to/runs --json" }],
+    notes: "Read-only JSON. Reads top-level *author*.log files, dispatchd.log, dispatch-events.log and metrics/jobs.jsonl; missing/invalid sources are reported, never treated as healthy. Inputs are JSONL or timestamped key=value lines (naive timestamps are local). Fully dated logs use event order; legacy undated logs use append order. Author summaries use status=ok to clear older failures; lane summaries use lane (or pool), need and picked. Reports the latest positive need with zero picks per lane, ten explicit empty:true finish events per lane, and no fleet-wide launch for at least 20 minutes of observed dispatch/job history. Launch/tick timestamps are required; ticks use a nonnegative launched count. Malformed inputs suppress latest/absence claims. FIXUP reuse means the same job id launched on distinct UTC days; finishes crossing midnight do not count. Metrics use event, job, lane, empty and timestamp (or ts). Reads are capped at 16 MiB per regular file; symlink files and raw log bodies are excluded.",
+  },
   "fleet-collisions": {
     examples: [{ command: "locus exec -- gh pr list --state open --limit 1000 --json number,state,mergeable,files | stack fleet-collisions" }, { command: "stack fleet collisions --file prs.json" }],
     notes: "Read-only JSON for one repository per snapshot. Includes only OPEN, CONFLICTING PRs; UNKNOWN mergeability is excluded. Files rank by distinct PR count, then path. Paths are touched files, not confirmed conflict hunks. Counts cover only the supplied snapshot; ensure the gh limit covers all PRs. Empty input arrays yield files: []; invalid input exits nonzero.",
@@ -506,6 +510,7 @@ const COMMAND_ORDER = [
   "fleet-latency",
   "fleet-lag",
   "fleet-reds",
+  "fleet-silent",
   "fleet-collisions",
   "fleet-delivery-lag",
   "fleet-stuck",

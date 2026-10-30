@@ -170,7 +170,7 @@ stack exec --as acme -- bun dev  # same, but refuse (exit 1, nothing starts) unl
 
 ### Source command reference
 
-This checkout registers <!-- fresh:begin command-count -->41<!-- fresh:end --> top-level commands. Run `stack <command> --help`
+This checkout registers <!-- fresh:begin command-count -->42<!-- fresh:end --> top-level commands. Run `stack <command> --help`
 for arguments and subcommands supported by your installed version.
 
 <!-- fresh:begin commands-table -->
@@ -193,6 +193,7 @@ for arguments and subcommands supported by your installed version.
 | `stack fleet-latency` | Report per-repo median and p90 open-to-merge seconds for PRs merged in the last six hours. |
 | `stack fleet-lag` | Report per-repo commits since latest tag, tag age and median time for the last 20 merged PRs. |
 | `stack fleet-reds` | List failed jobs and first failing tests in the latest completed schedule/push CI runs. |
+| `stack fleet-silent` | Name silent fleet failures in author, dispatch and job logs (read-only JSON). |
 | `stack fleet-collisions` | Rank touched files by open conflicting PR count from one repository's gh JSON. |
 | `stack fleet-delivery-lag` | Report undeployed merged commits and merge wait from a read-only JSON fixture. |
 | `stack fleet-stuck` | List open PRs by merge state, age and auto-merge status with server/ and lockfile path hints. |
