@@ -41,7 +41,9 @@ test("site changelog mirrors the source and explains apply's placeholder behavio
   expect(applyEntry).toContain(
     "Historically, wiring attempted to write a `TODO_STACK_APPLY` placeholder for each declared secret, but those calls failed; the 0.2.1 fix above removed the attempts.",
   );
-  expect(applyEntry).toContain("Wiring does not write to the vault or fill in missing values.");
+  expect(applyEntry).toContain(
+    "Wiring no longer attempts to write placeholder values; it does not write to the vault or fill in missing values.",
+  );
   expect(applyEntry).toContain("Provider setup may already store real values");
   expect(applyEntry).toContain("wiring reports how many secret names are present and missing and lists missing names");
   expect(applyEntry).toContain("wiring reports providers as skipped instead of identifying missing names");
