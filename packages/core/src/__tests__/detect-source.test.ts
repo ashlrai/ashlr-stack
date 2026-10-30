@@ -221,3 +221,13 @@ test("deduplicates dependency evidence and upgrades confidence without losing si
 test("empty project has no detections", async () => {
   expect(await scanSource(makeProject({}))).toEqual([]);
 });
+
+test.each([
+  ["package.json", JSON.stringify({ name: "openai", dependencies: {}, devDependencies: {} })],
+  ["requirements.txt", ""],
+  ["pyproject.toml", "[project]\ndependencies = []\n"],
+  ["go.mod", "module example.com/app\n\ngo 1.22\n"],
+  ["Cargo.toml", '[package]\nname = "app"\nversion = "0.1.0"\n\n[dependencies]\n'],
+] as const)("empty dependency manifest %s produces no detections", async (file, content) => {
+  expect(await scanSource(makeProject({ [file]: content }))).toEqual([]);
+});
