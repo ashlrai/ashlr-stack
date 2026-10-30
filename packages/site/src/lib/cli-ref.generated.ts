@@ -558,6 +558,31 @@ export const CLI_COMMANDS: CliCommand[] = [
     ],
   },
   {
+    name: "stack fleet-graph",
+    description: "Emit schema-versioned fleet pool, job, and repository nodes and edges.",
+    synopsis: "stack fleet-graph [--json] [--queue <queue>] [--router <router>]",
+    flags: [
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        description: "Emit schemaVersion 1 JSON (also the default).",
+      },
+      {
+        name: "queue",
+        synopsis: "--queue <queue>",
+        type: "string",
+        description: "Fleet state directory (default: ~/.ashlr-runs/queue).",
+      },
+      {
+        name: "router",
+        synopsis: "--router <router>",
+        type: "string",
+        description: "Router JSON array or JSONL path (default: <queue>/queue.jsonl).",
+      },
+    ],
+  },
+  {
     name: "stack fleet",
     description: "Show repository CI, open PR counts, and dispatcher lane status.",
     synopsis: "stack fleet [--json] [--log <log>] [--queue <queue>]",
