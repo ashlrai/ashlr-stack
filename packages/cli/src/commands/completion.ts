@@ -99,6 +99,9 @@ const CMD_META: Record<string, CmdMeta> = {
     flags: ["dispatch", "jobs", "follow", "sse", "port"].map((name) => ({ name })),
   },
   "fleet-graph": { flags: ["json", "queue", "router"].map((name) => ({ name })) },
+  "fleet-bets": {
+    flags: ["json", "queue", "router", "ready", "metrics", "src"].map((name) => ({ name })),
+  },
   fleet: {
     subcommands: ["slo"],
     flags: [{ name: "json" }, { name: "queue" }, { name: "log" }],
@@ -181,6 +184,7 @@ const COMMANDS = [
   "fleet-act",
   "fleet-stream",
   "fleet-graph",
+  "fleet-bets",
   "fleet",
   "exec",
   "sync",

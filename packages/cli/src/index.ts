@@ -89,6 +89,7 @@ const main = defineCommand({
     "fleet-act": () => import("./commands/fleet-act.ts").then((m) => m.fleetActCommand),
     "fleet-stream": () => import("./commands/fleet-stream.ts").then((m) => m.fleetStreamCommand),
     "fleet-graph": () => import("./commands/fleet-graph.ts").then((m) => m.fleetGraphCommand),
+    "fleet-bets": () => import("./commands/fleet-bets.ts").then((m) => m.fleetBetsCommand),
     fleet: () => import("./commands/fleet.ts").then((m) => m.fleetCommand),
     exec: () => import("./commands/exec.ts").then((m) => m.execCommand),
     swap: () => import("./commands/swap.ts").then((m) => m.swapCommand),

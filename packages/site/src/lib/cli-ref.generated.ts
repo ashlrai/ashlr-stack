@@ -766,6 +766,55 @@ export const CLI_COMMANDS: CliCommand[] = [
     ],
   },
   {
+    name: "stack fleet-bets",
+    description:
+      "Score leader bets: join queue ledger ids with dispatch state and job outcomes for per-bet status and per-lane merged rate.",
+    synopsis:
+      "stack fleet-bets [--json] [--queue <queue>] [--router <router>] [--ready <ready>] [--metrics <metrics>] [--src <src>]",
+    flags: [
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        description:
+          "Emit schemaVersion 1 JSON; open covers unresolved work, mergedRate uses resolved bets.",
+      },
+      {
+        name: "queue",
+        synopsis: "--queue <queue>",
+        type: "string",
+        description: "Fleet state directory (default: ~/.ashlr-runs/queue).",
+      },
+      {
+        name: "router",
+        synopsis: "--router <router>",
+        type: "string",
+        description: "Leader queue ledger path (default: <queue>/router-queue.md).",
+      },
+      {
+        name: "ready",
+        synopsis: "--ready <ready>",
+        type: "string",
+        description: "Dispatch queue TSV (default: <queue>/ready.tsv).",
+      },
+      {
+        name: "metrics",
+        synopsis: "--metrics <metrics>",
+        type: "string",
+        description: "Job outcomes JSONL (default: <runs>/metrics/jobs.jsonl).",
+      },
+      {
+        name: "src",
+        synopsis: "--src <src>",
+        type: "string",
+        description: "Source marker selecting bets (default: leader).",
+      },
+    ],
+    examples: [{ command: "stack fleet-bets --json" }],
+    notes:
+      "Read-only. Bets are job ids on `- STATUS <id> (attrs)` lines of the leader queue ledger whose attrs carry src=leader (`--src` selects another marker). Queue state comes from ready.tsv; launch, finish, publish and outcome events come from metrics/jobs.jsonl (tail-read at 32 MiB). Statuses: vanished (no trace), waiting (queued), running (launched), empty (resolved with no merge: empty finish, empty publish, precheck skip or a terminal non-merge outcome), open (PR open or unresolved non-empty work) and merged (outcome state MERGED). Ledger MERGED/LANDED/DONE/PR-OPEN statuses are fallbacks when local evidence is absent. mergedRate is merged over resolved (merged + empty) bets per lane; null when nothing resolved.",
+  },
+  {
     name: "stack fleet",
     description: "Show repository CI, open PR counts, and dispatcher lane status.",
     synopsis: "stack fleet <slo>",
