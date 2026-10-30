@@ -89,6 +89,7 @@ const CMD_META: Record<string, CmdMeta> = {
   "fleet-supply": { flags: ["json", "queue", "log"].map((name) => ({ name })) },
   "fleet-latency": { flags: [{ name: "json" }] },
   "fleet-lag": { flags: [{ name: "json" }] },
+  "fleet-waste": { flags: ["json", "metrics", "hours"].map((name) => ({ name })) },
   "fleet-reds": { flags: [{ name: "json" }] },
   "fleet-silent": { flags: [{ name: "json" }, { name: "runs" }] },
   "fleet-collisions": { flags: [{ name: "json" }, { name: "file" }] },
@@ -108,8 +109,8 @@ const CMD_META: Record<string, CmdMeta> = {
     flags: ["json", "queue", "router", "ready", "metrics", "src"].map((name) => ({ name })),
   },
   fleet: {
-    subcommands: ["slo", "collisions"],
-    flags: [{ name: "json" }, { name: "queue" }, { name: "log" }, { name: "file" }],
+    subcommands: ["slo", "collisions", "waste"],
+    flags: ["json", "queue", "log", "file", "metrics", "hours"].map((name) => ({ name })),
   },
   doctor: {
     flags: [
@@ -185,6 +186,7 @@ const COMMANDS = [
   "fleet-supply",
   "fleet-latency",
   "fleet-lag",
+  "fleet-waste",
   "fleet-reds",
   "fleet-silent",
   "fleet-collisions",
