@@ -284,6 +284,26 @@ describe("stack scan --yes", () => {
 // ── argument validation ────────────────────────────────────────────────────
 
 describe("stack scan rejects bad arguments", () => {
+  test.each([[["--json"]], [[]], [["--yes"]]])(
+    "rejects a malformed dependency manifest without reporting a partial scan (%j)",
+    (flags) => {
+      const cwd = tmp({ "package.json": '{"dependencies": {', "fly.toml": "" });
+      const { stdout, stderr, code } = runCli(["scan", ...flags, "--path", cwd], undefined, {
+        CI: "1",
+      });
+      expect(code).toBe(1);
+      expect(stdout + stderr).toContain("Invalid JSON in dependency manifest");
+      expect(stdout + stderr).toContain(join(cwd, "package.json"));
+      expect(stdout + stderr).toContain("Fix it and retry");
+      expect(stdout).not.toContain('"hits"');
+      expect(stdout).not.toContain("provider(s) detected");
+      expect(stdout).not.toContain("No providers detected");
+      expect(stdout).not.toContain("scan complete");
+      expect(stdout).not.toContain("fly");
+      expect(existsSync(join(cwd, ".stack.toml"))).toBe(false);
+    },
+  );
+
   test("nonexistent --path exits 1 naming the path (--json)", () => {
     const missing = join(tmp({}), "missing");
     const { stdout, stderr, code } = runCli(["scan", "--json", "--path", missing], undefined, {
