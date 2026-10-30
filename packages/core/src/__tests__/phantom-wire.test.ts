@@ -153,6 +153,36 @@ describe("ai/phantom-wire", () => {
     await expect(handler(interruptedRequest)).rejects.toBe(networkError);
   });
 
+  it.each([
+    ["stripe", "stripe-signature", "handleStripeWebhook"],
+    ["clerk", "svix-signature", "handleClerkWebhook"],
+    ["supabase", "x-supabase-signature", "handleSupabaseWebhook"],
+    ["github", "x-hub-signature-256", "handleGithubWebhook"],
+  ])(
+    "returns the successful %s webhook response after reading the body",
+    async (provider, header, name) => {
+      const recipe: Recipe = { ...STRIPE_RECIPE, providers: [{ name: provider }] };
+      const result = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
+      const stub = readFileSync(result.webhooks[0], "utf-8");
+      const example = stub.match(/^\/\/ export async function [\s\S]*?^\/\/ }$/m)?.[0];
+      if (!example) throw new Error(`Missing ${provider} webhook example`);
+      const examplePath = join(harness.dir, `${provider}-success-example.ts`);
+      writeFileSync(examplePath, example.replace(/^\/\/ ?/gm, ""));
+      const handler: unknown = (await import(examplePath))[name];
+      if (typeof handler !== "function") throw new Error(`Missing ${name}`);
+
+      const request = new Request("https://example.com", {
+        method: "POST",
+        headers: { [header]: "placeholder" },
+        body: "unverified webhook payload",
+      });
+      const response: Response = await handler(request);
+      expect(request.bodyUsed).toBe(true);
+      expect(response.status).toBe(200);
+      expect(await response.text()).toBe("ok");
+    },
+  );
+
   it.each(["stripe", "clerk", "supabase", "github"])(
     "places the signature verification TODO before trusting the %s webhook body",
     async (provider) => {
