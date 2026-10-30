@@ -86,6 +86,15 @@ const CMD_META: Record<string, CmdMeta> = {
   },
   deps: {},
   "fleet-latency": { flags: [{ name: "json" }] },
+  "fleet-stream": {
+    flags: [
+      { name: "dispatch" },
+      { name: "jobs" },
+      { name: "follow" },
+      { name: "sse" },
+      { name: "port" },
+    ],
+  },
   fleet: { flags: [{ name: "json" }, { name: "queue" }, { name: "log" }] },
   doctor: {
     flags: [
