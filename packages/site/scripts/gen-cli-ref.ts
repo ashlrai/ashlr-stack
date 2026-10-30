@@ -162,6 +162,10 @@ interface CommandExtra {
 }
 
 const EXTRAS: Record<string, CommandExtra> = {
+  "fleet-lag": {
+    examples: [{ command: "stack fleet-lag --json" }],
+    notes: "Read-only via Locus. Latest tag is ordered by underlying commit date; age uses the annotated tagger date or lightweight commit date. Compares that tag to the default branch. Median seconds use the latest 20 merge timestamps across all base branches, or all merged PRs if fewer. No tags and unavailable repositories remain in the report; unknown metrics are null.",
+  },
   init: {
     examples: [
       { command: "stack init" },
@@ -472,6 +476,7 @@ const COMMAND_ORDER = [
   "fleet-lanes",
   "fleet-supply",
   "fleet-latency",
+  "fleet-lag",
   "fleet-act",
   "fleet-stream",
   "fleet-graph",
