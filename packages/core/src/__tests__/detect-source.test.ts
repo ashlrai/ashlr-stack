@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { delimiter, dirname, join } from "node:path";
 import { scanSource } from "../detect-source.ts";
 
 const projects: string[] = [];
@@ -240,6 +240,42 @@ test("scans a project directory containing spaces and reports relative file path
 test("empty project has no detections", async () => {
   expect(await scanSource(makeProject({}))).toEqual([]);
 });
+
+test.each([["--json"], ["--yes"]])(
+  "scan %s rejects a nonexistent project without creating files",
+  async (flag) => {
+    const root = makeProject({});
+    const home = makeProject({});
+    const missing = join(root, "missing", "project");
+    const cli = join(import.meta.dir, "..", "..", "..", "cli", "src", "index.ts");
+    const proc = Bun.spawn([process.execPath, cli, "scan", flag, "--path", missing], {
+      cwd: root,
+      env: {
+        PATH: [dirname(process.execPath), "/usr/bin", "/bin"].join(delimiter),
+        HOME: home,
+        CI: "1",
+        NO_COLOR: "1",
+        STACK_TELEMETRY: "0",
+        STACK_NO_UPDATE_CHECK: "1",
+      },
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [code, stdout, stderr] = await Promise.all([
+      proc.exited,
+      new Response(proc.stdout).text(),
+      new Response(proc.stderr).text(),
+    ]);
+
+    expect(code).toBe(1);
+    expect(stdout + stderr).toContain(`Path "${missing}" does not exist or is not a directory.`);
+    expect(stdout).not.toContain('"hits"');
+    expect(stdout).not.toContain("No providers detected");
+    expect(existsSync(missing)).toBe(false);
+    expect(readdirSync(root)).toEqual([]);
+  },
+  30_000,
+);
 
 test.each([
   ["package.json", JSON.stringify({ name: "openai", dependencies: {}, devDependencies: {} })],
