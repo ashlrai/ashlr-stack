@@ -307,6 +307,40 @@ describe("ai/phantom-wire", () => {
     expect(harness.callsTo("add")).toEqual([]);
   });
 
+  it("surfaces a failed inventory command as unavailable and skips providers", async () => {
+    const phantomPath = join(harness.dir, "phantom");
+    const shim = readFileSync(phantomPath, "utf-8");
+    // Even plausible inventory on stdout is not evidence when the command fails.
+    expect(shim).toContain("  list)\n");
+    writeFileSync(
+      phantomPath,
+      shim.replace(
+        "  list)\n",
+        `  list)\n    echo '[{"name":"STRIPE_SECRET_KEY"}]'\n    echo 'inventory unavailable' >&2\n    exit 1\n`,
+      ),
+    );
+
+    await expect(listSecrets(harness.dir)).rejects.toMatchObject({
+      code: "PHANTOM_METADATA_UNAVAILABLE",
+      message: "Phantom secret inventory is unavailable; stored names are unknown.",
+    });
+    const recipe: Recipe = { ...STRIPE_RECIPE, providers: [{ name: "stripe" }, { name: "neon" }] };
+    const stubPath = join(harness.dir, ".stack/webhooks/stripe.ts");
+    expect(await wirePhantomForRecipe(recipe, { cwd: harness.dir })).toEqual({
+      present: [],
+      missing: [],
+      webhooks: [stubPath],
+      skipped: ["stripe", "neon"],
+    });
+    expect(existsSync(stubPath)).toBe(true);
+    expect(harness.callsTo("list")).toEqual([
+      { cmd: "list", args: ["--json"] },
+      { cmd: "list", args: ["--json"] },
+    ]);
+    expect(harness.callsTo("add")).toEqual([]);
+    expect(JSON.parse(readFileSync(harness.vaultPath, "utf-8"))).toEqual({});
+  });
+
   it("treats surrounding whitespace in vault inventory JSON the same as compact JSON", async () => {
     const inventory = '[{"name":"STRIPE_SECRET_KEY"}]';
     const setListOutput = (output: string) => {
