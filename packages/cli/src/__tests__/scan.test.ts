@@ -205,6 +205,21 @@ describe("stack scan non-TTY without flags", () => {
 });
 
 describe("stack scan without recognized project files", () => {
+  test("scans an empty working directory using the default path", () => {
+    const cwd = tmp({});
+    const json = runCli(["scan", "--json"], cwd, { CI: "1" });
+    expect(json.code).toBe(0);
+    expect(json.stderr).toBe("");
+    expect(JSON.parse(json.stdout)).toEqual({ hits: [] });
+
+    const report = runCli(["scan"], cwd, { CI: "1" });
+    expect(report.code).toBe(0);
+    expect(report.stderr).toBe("");
+    expect(report.stdout).toContain("No providers detected");
+    expect(report.stdout).not.toContain("stack add");
+    expect(existsSync(join(cwd, ".stack.toml"))).toBe(false);
+  }, 15_000);
+
   test.each([[[]], [["--yes"]]])("reports no providers without creating a stack (%j)", (flags) => {
     const cwd = tmp({
       "notes.txt": '{"dependencies":{"@supabase/supabase-js":"^2.45.0"}}\nOPENAI_API_KEY=example',
