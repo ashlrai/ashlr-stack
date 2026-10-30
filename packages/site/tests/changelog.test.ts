@@ -38,10 +38,14 @@ test("site changelog mirrors the source and explains apply's placeholder behavio
     .split("\n")
     .find((line) => line.startsWith("- **`stack apply [recipe-id]`**"));
   expect(applyEntry).toContain(
-    "The wiring step no longer attempts to write the former `TODO_STACK_APPLY` placeholder value; it does not write to the vault or fill in missing values.",
+    "Historically, wiring attempted to write a `TODO_STACK_APPLY` placeholder for each declared secret, but those calls failed; the 0.2.1 fix above removed the attempts.",
   );
+  expect(applyEntry).toContain("Wiring does not write to the vault or fill in missing values.");
   expect(applyEntry).toContain("Provider setup may already store real values");
+  expect(applyEntry).toContain("wiring reports how many secret names are present and missing and lists missing names");
   expect(applyEntry).toContain("wiring reports providers as skipped instead of identifying missing names");
+  expect(applyEntry).toContain("creates webhook stubs (Stripe, Clerk, Supabase, GitHub)");
+  expect(applyEntry).toContain("Wiring is on by default; `--noWire` opts out");
 
   const fixEntry = published.split("\n").find((line) => line.startsWith("- **`stack apply` stops writing"));
   expect(fixEntry).toContain("The wiring step never writes to the vault or fills in missing values.");
