@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const root = join(import.meta.dir, "../../..");
-const placeholderRemovalHeading = "- **`stack apply` stops writing placeholder secrets.**";
+const placeholderRemovalHeading = "- **`stack apply` stops attempting to write placeholder secrets.**";
 
 function missingPlaceholderRemovalEntries(source: string, published: string): string[] {
   return [
@@ -33,6 +33,7 @@ test("site changelog mirrors the source and explains apply's placeholder behavio
   const source = readFileSync(join(root, "CHANGELOG.md"), "utf8");
   const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
   expect(published).toBe(source);
+  expect(published).not.toContain("`stack apply` stops writing placeholder secrets");
 
   const applyEntry = published
     .split("\n")
@@ -43,7 +44,7 @@ test("site changelog mirrors the source and explains apply's placeholder behavio
   expect(applyEntry).toContain("Provider setup may already store real values");
   expect(applyEntry).toContain("wiring reports providers as skipped instead of identifying missing names");
 
-  const fixEntry = published.split("\n").find((line) => line.startsWith("- **`stack apply` stops writing"));
+  const fixEntry = published.split("\n").find((line) => line.startsWith(placeholderRemovalHeading));
   expect(fixEntry).toContain("The wiring step never writes to the vault or fills in missing values.");
   expect(fixEntry).toContain("Provider setup may already store real values");
   expect(fixEntry).toContain("users must supply each required missing value themselves");
