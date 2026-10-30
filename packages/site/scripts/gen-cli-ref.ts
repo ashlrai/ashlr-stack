@@ -471,6 +471,8 @@ const COMMAND_ORDER = [
   "doctor",
   "fleet-latency",
   "fleet-act",
+  "fleet-stream",
+  "fleet-graph",
   "fleet",
   "exec",
   "swap",
