@@ -476,7 +476,7 @@ export const CLI_COMMANDS: CliCommand[] = [
     name: "stack doctor",
     description: "Verify every service is reachable and credentials are valid.",
     synopsis:
-      "stack doctor [--fix] [--all] [--json] [--ecosystem] [--install <mode>] [--apply <apply>] [--reconcile]",
+      "stack doctor [--fix] [--all] [--json] [--ecosystem] [--install <mode>] [--apply <apply>] [--repos] [--reconcile]",
     flags: [
       {
         name: "fix",
@@ -522,6 +522,13 @@ export const CLI_COMMANDS: CliCommand[] = [
           "With --ecosystem --fix or --install: run the step for these tools only (comma list, e.g. lexicon). Required per tool.",
       },
       {
+        name: "repos",
+        synopsis: "--repos",
+        type: "boolean",
+        default: false,
+        description: "Check default-branch CI and open PR counts across seven Ashlr repos via gh.",
+      },
+      {
         name: "reconcile",
         synopsis: "--reconcile",
         type: "boolean",
@@ -534,6 +541,31 @@ export const CLI_COMMANDS: CliCommand[] = [
       { command: "stack doctor --fix" },
       { command: "stack doctor --json > report.json", comment: "# CI-friendly" },
       { command: "stack doctor --all", comment: "# every Stack project on this box" },
+    ],
+  },
+  {
+    name: "stack fleet",
+    description: "Show repository CI, open PR counts, and dispatcher lane status.",
+    synopsis: "stack fleet [--json] [--log <log>] [--queue <queue>]",
+    flags: [
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        description: "Emit schemaVersion 1 JSON.",
+      },
+      {
+        name: "log",
+        synopsis: "--log <log>",
+        type: "string",
+        description: "Dispatcher log path (default: ~/.ashlr-runs/dispatchd.log).",
+      },
+      {
+        name: "queue",
+        synopsis: "--queue <queue>",
+        type: "string",
+        description: "Dispatcher queue directory (default: ~/.ashlr-runs/queue).",
+      },
     ],
   },
   {
