@@ -170,6 +170,10 @@ const EXTRAS: Record<string, CommandExtra> = {
     examples: [{ command: "stack fleet-slo --json" }, { command: "stack fleet slo --json" }],
     notes: "Read-only via Locus. The window is the last six hours. Merge volume, median and p90 open-to-merge seconds come from the same source as stack fleet-latency; open and conflicting PR counts come from a paginated open-PR scan that counts only GitHub-reported CONFLICTING nodes. Targets: 20 merges per window in ashlrai/phantom and a median open-to-merge of 300 seconds; unavailable metrics and inapplicable targets are null.",
   },
+  "fleet-bets": {
+    examples: [{ command: "stack fleet-bets --json" }],
+    notes: "Read-only. Bets are job ids on `- STATUS <id> (attrs)` lines of the leader queue ledger whose attrs carry src=leader (`--src` selects another marker). Queue state comes from ready.tsv; launch, finish, publish and outcome events come from metrics/jobs.jsonl (tail-read at 32 MiB). Statuses: vanished (no trace), waiting (queued), running (launched), empty (resolved with no merge: empty finish, empty publish, precheck skip or a terminal non-merge outcome), open (PR open or unresolved non-empty work) and merged (outcome state MERGED). Ledger MERGED/LANDED/DONE/PR-OPEN statuses are fallbacks when local evidence is absent. mergedRate is merged over resolved (merged + empty) bets per lane; null when nothing resolved.",
+  },
   fleet: {
     subcommandExtras: {
       slo: {
@@ -493,6 +497,7 @@ const COMMAND_ORDER = [
   "fleet-act",
   "fleet-stream",
   "fleet-graph",
+  "fleet-bets",
   "fleet",
   "exec",
   "swap",
