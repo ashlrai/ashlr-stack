@@ -89,6 +89,7 @@ const CMD_META: Record<string, CmdMeta> = {
   "fleet-supply": { flags: ["json", "queue", "log"].map((name) => ({ name })) },
   "fleet-latency": { flags: [{ name: "json" }] },
   "fleet-lag": { flags: [{ name: "json" }] },
+  "fleet-waste": { flags: ["json", "metrics", "hours"].map((name) => ({ name })) },
   "fleet-stuck": { flags: [{ name: "json" }] },
   "fleet-slo": { flags: [{ name: "json" }] },
   "fleet-act": {
@@ -181,6 +182,7 @@ const COMMANDS = [
   "fleet-supply",
   "fleet-latency",
   "fleet-lag",
+  "fleet-waste",
   "fleet-stuck",
   "fleet-slo",
   "fleet-act",
