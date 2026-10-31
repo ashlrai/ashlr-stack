@@ -72,6 +72,8 @@ await applyCommand.run({ args: { recipeId: "example", noWire: false, noRollback:
     expect(guide).toContain(`\`\`\`text\n${output}\n\`\`\``);
     const faq = readFileSync(join(root, "docs/apply-placeholder-faq.md"), "utf8");
     expect(faq).toContain(`\`\`\`text\n${output}\n\`\`\``);
+    const migration = readFileSync(join(root, "docs/apply-placeholder-migration.md"), "utf8");
+    expect(migration).toContain(`\`\`\`text\n${output}\n\`\`\``);
     expect(result.stdout).not.toContain("not in Phantom:");
     const history = readFileSync(join(root, "docs/apply-placeholder-history.md"), "utf8");
     const historyExample = history.match(/```text\n([\s\S]*?)\n```/);
@@ -98,6 +100,7 @@ await applyCommand.run({ args: { recipeId: "example", noWire: false, noRollback:
     expect(missingExample).not.toBeNull();
     expect(missingExample?.[1]).toContain("not in Phantom: OPENAI_API_KEY");
     expect(missing.stdout).toContain(missingExample?.[1] ?? "example missing");
+    expect(migration).toContain(`\`\`\`text\n${missingExample?.[1]}\n\`\`\``);
     expect(readFileSync(join(dir, "phantom-calls"), "utf8").trim().split("\n")).toEqual([
       "--version",
       "list --json",
@@ -153,7 +156,7 @@ mock.module(${JSON.stringify(join(cli, "lib/provision-loop.ts"))}, () => ({
 mock.module(${JSON.stringify(join(cli, "lib/phantom-preflight.ts"))}, () => ({ requirePhantom: async () => {} }));
 mock.module(${JSON.stringify(join(cli, "commands/doctor.ts"))}, () => ({ doctorCommand: { run: async () => {} } }));
 const { applyCommand } = await import(${JSON.stringify(join(cli, "commands/apply.ts"))});
-await applyCommand.run({ args: { recipeId: "example", noWire: false, noRollback: false } });
+await applyCommand.run({ args: { recipeId: "example", noWire: process.argv.includes("--noWire"), noRollback: false } });
 `,
     );
     const result = spawnSync("bun", [script], {
@@ -172,6 +175,22 @@ await applyCommand.run({ args: { recipeId: "example", noWire: false, noRollback:
       "--version",
       "list --json",
     ]);
+
+    // Opting out skips both the inventory and the webhook file, even after a
+    // partial provider failure. Provider failure still determines the exit.
+    rmSync(join(dir, ".stack/webhooks/stripe.ts"));
+    rmSync(join(dir, "phantom-calls"));
+    const noWire = spawnSync("bun", [script, "--noWire"], {
+      cwd: dir,
+      encoding: "utf8",
+      env: { ...process.env, HOME: dir, PATH: `${bin}:${process.env.PATH ?? ""}`, NO_COLOR: "1", CI: "1" },
+      timeout: 20_000,
+    });
+    expect(noWire.status).toBe(1);
+    expect(noWire.stdout + noWire.stderr).toContain("Some providers failed: stripe: fixture failure");
+    expect(noWire.stdout).not.toContain("secrets in vault");
+    expect(() => readFileSync(join(dir, ".stack/webhooks/stripe.ts"))).toThrow();
+    expect(() => readFileSync(join(dir, "phantom-calls"))).toThrow();
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
