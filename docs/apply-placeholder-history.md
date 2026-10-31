@@ -52,5 +52,7 @@ with `present` and `missing`. Do not add placeholder values yourself: they
 are not credentials and can prevent a real value from being stored under the
 same name.
 
+For the exact changelog entry that removed the attempts, see the
+[placeholder-secret changelog timeline](changelog-placeholder-timeline.md).
 For prerequisites, rollback, and recovery, see
 [Troubleshooting `stack apply`](apply-troubleshooting.md).
