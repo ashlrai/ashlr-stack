@@ -63,19 +63,26 @@ test("offline, missing gh, invalid JSON and GraphQL errors are safe warnings", a
 });
 
 test("a timed out repo preserves metadata and does not hide healthy peers", async () => {
-  const report = await checkRepos(async (args, signal) => {
-    if (args[0] === "run" && args.includes("ashlrai/phantom"))
-      return new Promise((_, reject) =>
-        signal.addEventListener("abort", () => reject(new Error()), { once: true }),
-      );
-    return mockGh()(args, signal);
-  }, 20);
-  expect(report.repos.filter((r) => r.status === "ok")).toHaveLength(6);
-  expect(report.repos[1]).toMatchObject({
-    open_pr_count: 123,
-    ci_conclusion: null,
-    detail: "repository check timed out",
-  });
+  // Bun 1.2 does not keep its test loop alive for AbortSignal.timeout alone.
+  // Real gh subprocesses provide an active handle; this pending mock needs one.
+  const keepAlive = setInterval(() => {}, 1000);
+  try {
+    const report = await checkRepos(async (args, signal) => {
+      if (args[0] === "run" && args.includes("ashlrai/phantom"))
+        return new Promise((_, reject) =>
+          signal.addEventListener("abort", () => reject(new Error()), { once: true }),
+        );
+      return mockGh()(args, signal);
+    }, 20);
+    expect(report.repos.filter((r) => r.status === "ok")).toHaveLength(6);
+    expect(report.repos[1]).toMatchObject({
+      open_pr_count: 123,
+      ci_conclusion: null,
+      detail: "repository check timed out",
+    });
+  } finally {
+    clearInterval(keepAlive);
+  }
 });
 
 test("CLI emits one JSON envelope without project config; real runner kills hanging gh", async () => {
