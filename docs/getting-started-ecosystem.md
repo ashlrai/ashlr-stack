@@ -56,7 +56,7 @@ The published 0.1.1 lacks the flags below, so use a source checkout:
 git clone https://github.com/ashlrai/ashlr-stack && cd ashlr-stack
 bun install
 alias stack="bun run $(pwd)/packages/cli/src/index.ts"
-stack --version                  # 0.2.2
+stack --version                  # 0.3.0 from this source checkout
 stack doctor --ecosystem         # which Ashlr tools are installed, via --ashlr-handshake; informational, never fails
 stack exec --as personal -- bun dev   # needs a .stack.toml (run `stack init` first); see `stack exec --help` for --as
 ```
@@ -90,7 +90,7 @@ The order follows the first-run measurements: Node 22.15+ is checked first, then
 One command previews the repairs every installed tool offers. It runs each tool's own `doctor --fix --json` (only for tools whose handshake advertises the `doctor-fix` capability) and changes nothing:
 
 ```bash
-stack doctor --ecosystem --fix   # source 0.2.2 on main; not in the published 0.1.1
+stack doctor --ecosystem --fix   # available in this 0.3.0 source checkout; absent from the historical 0.1.1 build
 ```
 
 Then make the repairs with each tool's own command. Run them yourself, directly in your shell:

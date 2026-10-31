@@ -77,6 +77,8 @@ irm https://stack.ashlr.ai/install.ps1 | iex
 
 npm / bun registry:
 
+> **Release candidate:** the generated 0.3.0 install command below is for use only after both packages are published. First verify `npm view @ashlr/stack@0.3.0 version` and `npm view ashlr-stack-mcp@0.3.0 version` each return `0.3.0`. If either version is unavailable, use the **Dev install** instructions below to build from source instead; the version pin is not evidence of publication.
+
 <!-- fresh:begin install-snippet -->
 ```bash
 bun add -g @ashlr/stack@0.3.0 ashlr-stack-mcp@0.3.0     # or: npm i -g
