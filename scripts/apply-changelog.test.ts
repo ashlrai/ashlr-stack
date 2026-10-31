@@ -70,6 +70,8 @@ await applyCommand.run({ args: { recipeId: "example", noWire: false, noRollback:
     expect(result.stdout).toContain(output ?? "example missing");
     const guide = readFileSync(join(root, "docs/apply-observation.md"), "utf8");
     expect(guide).toContain(`\`\`\`text\n${output}\n\`\`\``);
+    const faq = readFileSync(join(root, "docs/apply-placeholder-faq.md"), "utf8");
+    expect(faq).toContain(`\`\`\`text\n${output}\n\`\`\``);
     expect(result.stdout).not.toContain("not in Phantom:");
     const history = readFileSync(join(root, "docs/apply-placeholder-history.md"), "utf8");
     const historyExample = history.match(/```text\n([\s\S]*?)\n```/);
@@ -78,6 +80,28 @@ await applyCommand.run({ args: { recipeId: "example", noWire: false, noRollback:
     expect(changelog).toContain(
       "they do not establish that the vault is empty or that no values are missing",
     );
+
+    // A readable, empty inventory should produce the FAQ's missing-name example
+    // and must not invoke Phantom to add a placeholder.
+    writeFileSync(
+      phantom,
+      '#!/bin/sh\nprintf "%s\\n" "$*" >> phantom-calls\ncase "$1" in\n --version) echo fixture;;\n list) echo "[]";;\n *) exit 1;;\nesac\n',
+    );
+    const missing = spawnSync("bun", [script], {
+      cwd: dir,
+      encoding: "utf8",
+      env: { ...process.env, HOME: dir, PATH: `${bin}:${process.env.PATH ?? ""}`, NO_COLOR: "1", CI: "1" },
+      timeout: 20_000,
+    });
+    expect(missing.status).toBe(0);
+    const missingExample = faq.match(/```text\n([\s\S]*?)\n```/);
+    expect(missingExample).not.toBeNull();
+    expect(missingExample?.[1]).toContain("not in Phantom: OPENAI_API_KEY");
+    expect(missing.stdout).toContain(missingExample?.[1] ?? "example missing");
+    expect(readFileSync(join(dir, "phantom-calls"), "utf8").trim().split("\n")).toEqual([
+      "--version",
+      "list --json",
+    ]);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

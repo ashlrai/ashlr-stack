@@ -277,7 +277,7 @@ stack apply <recipe-id>
 #   (add --noWire to skip the optional wiring layer)
 ```
 
-See [observing an apply](docs/apply-observation.md) to inspect the result, and the [apply troubleshooting guide](docs/apply-troubleshooting.md) for prerequisite checks and recovery.
+See [observing an apply](docs/apply-observation.md) to inspect the result, the [placeholder FAQ](docs/apply-placeholder-faq.md) for missing secrets, and the [apply troubleshooting guide](docs/apply-troubleshooting.md) for prerequisite checks and recovery.
 
 Inside Claude Code, the same flow is one tool call:
 
