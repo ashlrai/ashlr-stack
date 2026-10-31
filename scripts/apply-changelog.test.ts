@@ -74,6 +74,8 @@ await applyCommand.run({ args: { recipeId: "example", noWire: false, noRollback:
     expect(faq).toContain(`\`\`\`text\n${output}\n\`\`\``);
     const migration = readFileSync(join(root, "docs/apply-placeholder-migration.md"), "utf8");
     expect(migration).toContain(`\`\`\`text\n${output}\n\`\`\``);
+    const upgradeQuestions = readFileSync(join(root, "docs/apply-placeholder-upgrade-questions.md"), "utf8");
+    expect(upgradeQuestions).toContain(`\`\`\`text\n${output}\n\`\`\``);
     expect(result.stdout).not.toContain("not in Phantom:");
     const history = readFileSync(join(root, "docs/apply-placeholder-history.md"), "utf8");
     const historyExample = history.match(/```text\n([\s\S]*?)\n```/);
@@ -101,6 +103,7 @@ await applyCommand.run({ args: { recipeId: "example", noWire: false, noRollback:
     expect(missingExample?.[1]).toContain("not in Phantom: OPENAI_API_KEY");
     expect(missing.stdout).toContain(missingExample?.[1] ?? "example missing");
     expect(migration).toContain(`\`\`\`text\n${missingExample?.[1]}\n\`\`\``);
+    expect(upgradeQuestions).toContain(`\`\`\`text\n${missingExample?.[1]}\n\`\`\``);
     expect(readFileSync(join(dir, "phantom-calls"), "utf8").trim().split("\n")).toEqual([
       "--version",
       "list --json",
