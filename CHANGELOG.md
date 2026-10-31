@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Changed
+
+- `stack apply` does not create placeholder secrets. After at least one provider succeeds, wiring checks secret names for every provider in the recipe, including providers that failed; a missing name does not itself fail apply, while provider failures do. Wiring can also create webhook stubs for those recipe providers, even if the vault is unreadable. Supply required missing secrets as real values through Phantom; `--noWire` skips both checks and stubs.
+
 ## 0.3.0 (2026-10-31)
 
 ### Added
