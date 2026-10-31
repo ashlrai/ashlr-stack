@@ -279,6 +279,24 @@ test("empty project has no detections", async () => {
   expect(await scanSource(makeProject({}))).toEqual([]);
 });
 
+test("an empty scan root ignores provider markers in its parent and stays empty", async () => {
+  const parent = makeProject({
+    "package.json": JSON.stringify({ dependencies: { openai: "1" } }),
+    "vercel.json": "{}",
+    ".env.example": "ANTHROPIC_API_KEY=",
+  });
+  const root = join(parent, "empty project");
+  mkdirSync(root);
+
+  expect((await scanSource(parent)).map((hit) => hit.provider)).toEqual([
+    "openai",
+    "vercel",
+    "anthropic",
+  ]);
+  expect(await scanSource(root)).toEqual([]);
+  expect(readdirSync(root)).toEqual([]);
+});
+
 test.each([["--json"], ["--yes"]])(
   "scan %s rejects a nonexistent project without creating files",
   async (flag) => {
