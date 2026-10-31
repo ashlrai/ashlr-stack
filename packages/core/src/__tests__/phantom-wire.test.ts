@@ -46,6 +46,22 @@ describe("ai/phantom-wire", () => {
     expect(result.webhooks).toHaveLength(1);
   });
 
+  it("ignores an unexpected field on a recipe provider", async () => {
+    const provider = { name: "stripe", unexpected: "extra value" };
+    const recipe: Recipe = { ...STRIPE_RECIPE, providers: [provider] };
+    const stubPath = join(harness.dir, ".stack/webhooks/stripe.ts");
+
+    expect(await wirePhantomForRecipe(recipe, { cwd: harness.dir })).toEqual({
+      present: [],
+      missing: ["stripe:STRIPE_SECRET_KEY"],
+      webhooks: [stubPath],
+      skipped: [],
+    });
+    expect(readFileSync(stubPath, "utf-8")).toContain("stripe-signature");
+    expect(harness.callsTo("list")).toEqual([{ cmd: "list", args: ["--json"] }]);
+    expect(harness.callsTo("add")).toEqual([]);
+  });
+
   it("replaces an existing webhook stub when wiring is repeated", async () => {
     const first = await wirePhantomForRecipe(STRIPE_RECIPE, { cwd: harness.dir });
     const stubPath = first.webhooks[0];
