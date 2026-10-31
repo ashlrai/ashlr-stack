@@ -5,28 +5,61 @@ import { join } from "node:path";
 const root = join(import.meta.dir, "../../..");
 const placeholderRemovalHeading = "- **`stack apply` stops attempting to write placeholder secrets.**";
 
-function missingPlaceholderRemovalEntries(source: string, published: string): string[] {
+// Pin the historical entry so matching edits to both copies cannot silently reverse
+// its meaning. Deliberate changes to this contract require updating this check.
+const placeholderRemovalEntry = [
+  placeholderRemovalHeading,
+  "The wiring step never writes to the vault or fills in missing values.",
+  "Provider setup may already store real values; users must supply each required missing value themselves: run `phantom add <NAME>` from a trusted terminal and enter the real value.",
+  "When the vault is readable, wiring checks names using `phantom list --json` and prints `secrets in vault N · missing M · webhooks K`, plus a `not in Phantom:` line for missing names.",
+  "If it cannot read the vault, it reports providers as skipped instead of identifying missing names.",
+  "Previously, wiring ran `phantom add <KEY> TODO_STACK_APPLY --rotate` (then without `--rotate`) for every declared secret.",
+  "Phantom Secrets refuses values in argv and has no `--rotate`, so every call failed and the printed `envelopes` count was always 0.",
+  "`WireResult.envelopes` is replaced by `present` and `missing`.",
+  "(Successor to #33.)",
+].join(" ");
+
+function invalidPlaceholderRemovalEntries(source: string, published: string): string[] {
   return [
     ["CHANGELOG.md", source],
     ["packages/site/src/data/CHANGELOG.md", published],
   ]
-    .filter(([, changelog]) => !changelog.split("\n").some((line) => line.startsWith(placeholderRemovalHeading)))
+    .filter(([, changelog]) => {
+      const entries = changelog.split("\n").filter((line) => line.startsWith(placeholderRemovalHeading));
+      return entries.length !== 1 || entries[0] !== placeholderRemovalEntry;
+    })
     .map(([path]) => path);
 }
 
 test("both changelogs include the apply placeholder-removal entry", () => {
   const source = readFileSync(join(root, "CHANGELOG.md"), "utf8");
   const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
-  expect(missingPlaceholderRemovalEntries(source, published)).toEqual([]);
+  expect(invalidPlaceholderRemovalEntries(source, published)).toEqual([]);
 });
 
 test.each([
-  [placeholderRemovalHeading, "", ["packages/site/src/data/CHANGELOG.md"]],
-  ["", placeholderRemovalHeading, ["CHANGELOG.md"]],
+  [placeholderRemovalEntry, "", ["packages/site/src/data/CHANGELOG.md"]],
+  ["", placeholderRemovalEntry, ["CHANGELOG.md"]],
   ["", "", ["CHANGELOG.md", "packages/site/src/data/CHANGELOG.md"]],
-  [placeholderRemovalHeading, placeholderRemovalHeading, []],
-])("placeholder-removal check reports each missing copy", (source, published, missing) => {
-  expect(missingPlaceholderRemovalEntries(source, published)).toEqual(missing);
+  [placeholderRemovalEntry, placeholderRemovalEntry, []],
+])("placeholder-removal check reports each missing copy", (source, published, invalid) => {
+  expect(invalidPlaceholderRemovalEntries(source, published)).toEqual(invalid);
+});
+
+test("placeholder-removal check rejects changed or duplicated behavior in either copy", () => {
+  const contradictory = placeholderRemovalEntry.replace(
+    "The wiring step never writes to the vault or fills in missing values.",
+    "The wiring step writes placeholder values to the vault.",
+  );
+  const appendedContradiction = `${placeholderRemovalEntry} Wiring now creates placeholders.`;
+  const duplicated = `${placeholderRemovalEntry}\n${placeholderRemovalEntry}`;
+  const paths = ["CHANGELOG.md", "packages/site/src/data/CHANGELOG.md"];
+
+  for (const invalid of [placeholderRemovalHeading, contradictory, appendedContradiction, duplicated]) {
+    expect(invalidPlaceholderRemovalEntries(invalid, placeholderRemovalEntry)).toEqual([paths[0]]);
+    expect(invalidPlaceholderRemovalEntries(placeholderRemovalEntry, invalid)).toEqual([paths[1]]);
+    expect(invalidPlaceholderRemovalEntries(invalid, invalid)).toEqual(paths);
+  }
 });
 
 test("site changelog mirrors the source and explains apply's placeholder behavior", () => {
