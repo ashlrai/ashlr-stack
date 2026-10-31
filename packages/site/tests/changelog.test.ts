@@ -63,14 +63,24 @@ test("site changelog mirrors the source and explains apply's placeholder behavio
     expect(entry).toContain("run `phantom add <NAME>` from a trusted terminal and enter the real value");
 });
 
-test("unreleased apply note explains the action required even after success", () => {
+test("apply note explains the action required even after success", () => {
   const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
-  const unreleased = published.split("## Unreleased\n")[1]?.split("\n## ")[0];
-  const entry = unreleased?.split("\n").find((line) => line.startsWith("- After at least one provider succeeds, `stack apply`"));
+  const release = published.split("## 0.3.0 (2026-10-31)\n")[1]?.split("\n## ")[0];
+  const entry = release?.split("\n").find((line) => line.startsWith("- After at least one provider succeeds, `stack apply`"));
   expect(entry).toContain("without creating placeholders or filling missing values");
   expect(entry).toContain("Provider setup may store real values separately");
   expect(entry).toContain("each required missing value needs user action");
   expect(entry).toContain("run `phantom add <NAME>` in a trusted terminal and enter the real value");
   expect(entry).toContain("Missing names alone do not make apply fail");
   expect(entry).toContain("If the vault cannot be read, providers are reported as skipped");
+});
+
+test("unreleased apply note describes wiring after a partial failure", () => {
+  const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
+  const unreleased = published.split("## Unreleased\n")[1]?.split("\n## ")[0];
+  expect(unreleased).toContain("`stack apply` does not create placeholder secrets");
+  expect(unreleased).toContain("every provider in the recipe, including providers that failed");
+  expect(unreleased).toContain("a missing name does not itself fail apply, while provider failures do");
+  expect(unreleased).toContain("even if the vault is unreadable");
+  expect(unreleased).toContain("`--noWire` skips both checks and stubs");
 });
