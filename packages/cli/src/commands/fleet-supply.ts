@@ -1,27 +1,7 @@
-import { constants } from "node:fs";
-import { open } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { defineCommand } from "citty";
-
-/** Public status files only; refuse links and bound each read to 16 MiB. */
-async function source(path: string) {
-  try {
-    const file = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
-    try {
-      const stat = await file.stat();
-      if (!stat.isFile() || stat.size > 16 * 1024 * 1024) throw new Error();
-      return { status: "ok", text: await file.readFile("utf8") };
-    } finally {
-      await file.close();
-    }
-  } catch (error) {
-    return {
-      status: (error as NodeJS.ErrnoException).code === "ENOENT" ? "missing" : "invalid",
-      text: "",
-    };
-  }
-}
+import { readFleetJson, readFleetText } from "../lib/fleet-jsonl.ts";
 
 /** Byte 160 is exclusive: a continuation byte at offset 160 means a split. */
 export function splitQueueLines(text: string) {
@@ -45,10 +25,10 @@ export async function collectFleetSupply(
   now = Date.now(),
 ) {
   const [dispatch, pending, restock, slots] = await Promise.all([
-    source(log),
-    source(join(queue, "queue.jsonl")),
-    source(join(dirname(queue), "restock-author.log")),
-    source(join(queue, "slots.json")),
+    readFleetText(log),
+    readFleetText(join(queue, "queue.jsonl")),
+    readFleetText(join(dirname(queue), "restock-author.log")),
+    readFleetJson(join(queue, "slots.json"), { object: true }),
   ]);
   const start = now - 3600000;
   const ticks = dispatch.text
@@ -74,14 +54,7 @@ export async function collectFleetSupply(
       }
     })
     .sort((a, b) => a.time - b.time);
-  let targets: Record<string, { target?: number }> = {};
-  try {
-    targets = JSON.parse(slots.text);
-    if (!targets || typeof targets !== "object" || Array.isArray(targets)) throw new Error();
-  } catch {
-    slots.status = slots.status === "missing" ? "missing" : "invalid";
-    targets = {};
-  }
+  const targets = (slots.data ?? {}) as Record<string, { target?: number }>;
   const lanes = Object.entries(targets)
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([lane, slot]) => {

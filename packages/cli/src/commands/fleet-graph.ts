@@ -1,52 +1,10 @@
-import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { defineCommand } from "citty";
+import { type FleetRow, isFleetRow, readFleetJson, readFleetJsonl } from "../lib/fleet-jsonl.ts";
 
-type Row = Record<string, unknown>;
-const record = (value: unknown): value is Row =>
-  value !== null && typeof value === "object" && !Array.isArray(value);
 const identifier = (value: unknown): value is string =>
   typeof value === "string" && /^[\w./-]{1,200}$/.test(value);
-
-async function source(
-  path: string,
-  slots = false,
-): Promise<{ status: "ok" | "missing" | "unavailable" | "invalid"; rows: Row[] }> {
-  let text: string;
-  try {
-    text = await readFile(path, "utf8");
-  } catch (error) {
-    return {
-      status: record(error) && error.code === "ENOENT" ? "missing" : "unavailable",
-      rows: [],
-    };
-  }
-  try {
-    if (slots) {
-      const data: unknown = JSON.parse(text);
-      if (!record(data)) throw new Error();
-      return {
-        status: "ok",
-        rows: Object.entries(data).map(([pool, value]) => ({
-          pool,
-          target: record(value) ? value.target : undefined,
-        })),
-      };
-    }
-    // Queue snapshots may be a JSON array; append-only journals use JSONL.
-    const data: unknown = text.trim().startsWith("[")
-      ? JSON.parse(text)
-      : text
-          .split(/\r?\n/)
-          .filter((line) => line.trim())
-          .map((line) => JSON.parse(line));
-    if (!Array.isArray(data) || !data.every(record)) throw new Error();
-    return { status: "ok", rows: data };
-  } catch {
-    return { status: "invalid", rows: [] };
-  }
-}
 
 /** Stable IDs and ordering; journal records override queue fields, last record wins.
  * Only public identifiers, status, and slot counts enter the graph.
@@ -55,14 +13,23 @@ export async function collectFleetGraph(
   directory: string,
   router = join(directory, "queue.jsonl"),
 ) {
-  const [slots, queue, jobs] = await Promise.all([
-    source(join(directory, "slots.json"), true),
-    source(router),
-    source(join(directory, "jobs.jsonl")),
+  const [slotFile, queue, jobs] = await Promise.all([
+    readFleetJson(join(directory, "slots.json"), { object: true, ioStatus: "unavailable" }),
+    readFleetJsonl(router, { allowArray: true, ioStatus: "unavailable" }),
+    readFleetJsonl(join(directory, "jobs.jsonl"), { allowArray: true, ioStatus: "unavailable" }),
   ]);
-  const nodes = new Map<string, Row>();
+  const slots = {
+    status: slotFile.status,
+    rows: isFleetRow(slotFile.data)
+      ? Object.entries(slotFile.data).map(([pool, value]) => ({
+          pool,
+          target: isFleetRow(value) ? value.target : undefined,
+        }))
+      : [],
+  };
+  const nodes = new Map<string, FleetRow>();
   const edges = new Map<string, { source: string; target: string; type: string }>();
-  function node(type: string, name: string, fields: Row = {}) {
+  function node(type: string, name: string, fields: FleetRow = {}) {
     const id = `${type}:${name}`;
     nodes.set(id, { ...nodes.get(id), id, type, name, ...fields });
     return id;
@@ -76,7 +43,7 @@ export async function collectFleetGraph(
           : null,
     });
   }
-  const latest = new Map<string, Row>();
+  const latest = new Map<string, FleetRow>();
   for (const row of [...queue.rows, ...jobs.rows]) {
     const id = row.id ?? row.job_id;
     if (identifier(id)) latest.set(id, { ...latest.get(id), ...row });

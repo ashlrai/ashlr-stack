@@ -1,11 +1,8 @@
-import { constants } from "node:fs";
-import { open } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { defineCommand } from "citty";
+import { readFleetJsonl, readFleetText } from "../lib/fleet-jsonl.ts";
 
-type Row = Record<string, unknown>;
-const record = (v: unknown): v is Row => !!v && typeof v === "object" && !Array.isArray(v);
 const ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,199}$/;
 const URL = /^https:\/\/[\w./%+-]{1,300}$/;
 /** `- STATUS [hh:mm] [lane] JOBID [r<n>] (attrs): text` — the same shape restock.py reads. */
@@ -15,33 +12,6 @@ const LANDED = new Set(["MERGED", "LANDED", "DONE"]);
 const CAP = 32 * 1024 * 1024;
 export const BET_STATUSES = ["merged", "open", "empty", "running", "waiting", "vanished"] as const;
 export type BetStatus = (typeof BET_STATUSES)[number];
-
-/** Fixed public state files only; refuse links. Metrics tail-reads, others cap out. */
-async function source(path: string, tail = false) {
-  try {
-    const file = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
-    try {
-      const stat = await file.stat();
-      if (!stat.isFile() || (!tail && stat.size > CAP)) throw new Error();
-      let text: string;
-      if (tail && stat.size > CAP) {
-        const buffer = Buffer.alloc(CAP);
-        const { bytesRead } = await file.read(buffer, 0, CAP, stat.size - CAP);
-        const chunk = buffer.subarray(0, bytesRead).toString("utf8");
-        const nl = chunk.indexOf("\n");
-        text = nl < 0 ? "" : chunk.slice(nl + 1); // drop the split first line
-      } else text = await file.readFile("utf8");
-      return { status: "ok", text };
-    } finally {
-      await file.close();
-    }
-  } catch (error) {
-    return {
-      status: (error as NodeJS.ErrnoException).code === "ENOENT" ? "missing" : "invalid",
-      text: "",
-    };
-  }
-}
 
 /** Latest leader ledger line wins; a bet is a job id whose attrs carry `src=<src>`. */
 export function leaderBets(ledger: string, src: string) {
@@ -97,22 +67,19 @@ export async function collectFleetBets(
 ) {
   const runs = dirname(queue);
   const [router, ready, metrics] = await Promise.all([
-    source(options.router ?? join(queue, "router-queue.md")),
-    source(options.ready ?? join(queue, "ready.tsv")),
-    source(options.metrics ?? join(runs, "metrics", "jobs.jsonl"), true),
+    readFleetText(options.router ?? join(queue, "router-queue.md"), { maxBytes: CAP }),
+    readFleetText(options.ready ?? join(queue, "ready.tsv"), { maxBytes: CAP }),
+    readFleetJsonl(options.metrics ?? join(runs, "metrics", "jobs.jsonl"), {
+      maxBytes: CAP,
+      tail: true,
+      malformedLines: "ignore",
+    }),
   ]);
   const src = options.src ?? "leader";
   const ledger = router.status === "ok" ? leaderBets(router.text, src) : new Map();
   const outcomeByUrl = new Map<string, string>();
   const evidence = new Map<string, Evidence>();
-  for (const line of metrics.text.split("\n")) {
-    let row: Row;
-    try {
-      row = JSON.parse(line);
-    } catch {
-      continue;
-    }
-    if (!record(row)) continue;
+  for (const row of metrics.rows) {
     if (row.event === "outcome" && typeof row.url === "string")
       outcomeByUrl.set(row.url, typeof row.state === "string" ? row.state : "");
     const job = typeof row.job === "string" && ID.test(row.job) ? row.job : null;

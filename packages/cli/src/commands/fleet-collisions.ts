@@ -1,5 +1,5 @@
-import { readFile } from "node:fs/promises";
 import { defineCommand } from "citty";
+import { readFleetText } from "../lib/fleet-jsonl.ts";
 
 /** One repository per snapshot; duplicate PR/file rows must not inflate heat. */
 export function collectFleetCollisions(input: unknown) {
@@ -51,7 +51,7 @@ export const fleetCollisionsCommand = defineCommand({
   async run({ args }) {
     try {
       let text: string;
-      if (args.file && args.file !== "-") text = await readFile(args.file, "utf8");
+      if (args.file && args.file !== "-") text = (await readFleetText(args.file)).text;
       else {
         const chunks: Buffer[] = [];
         for await (const chunk of process.stdin) chunks.push(Buffer.from(chunk));
