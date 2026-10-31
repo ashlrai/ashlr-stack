@@ -49,3 +49,36 @@ test("documented comparison locates the shared entry and exposes unrelated diffe
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test("the apply checklist locates and compares only the 0.2.1 fix", () => {
+  const checklist = readFileSync(join(root, "docs/changelog-mirror-checklist.md"), "utf8");
+  const command = checklist.match(/```sh\n\s*(rg [^\n]+)\n\s*```/)?.[1];
+  expect(command).toBeDefined();
+  const dir = mkdtempSync(join(tmpdir(), "apply-checklist-"));
+  try {
+    const siteDir = join(dir, "packages/site/src/data");
+    mkdirSync(siteDir, { recursive: true });
+    const source = readFileSync(join(root, "CHANGELOG.md"), "utf8");
+    const site = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
+    const entry = (text: string) =>
+      text
+        .split("## 0.2.1 (2026-10-16)\n")[1]
+        ?.split("\n## ")[0]
+        ?.split("### Bug fixes\n")[1]
+        ?.match(/^- \*\*`stack apply` stops attempting to write placeholder secrets\.[\s\S]*?(?=\n- |\n### |$)/m)?.[0];
+    expect(entry(source)).toBeDefined();
+    expect(entry(site)).toBe(entry(source));
+
+    writeFileSync(join(dir, "CHANGELOG.md"), source);
+    writeFileSync(join(siteDir, "CHANGELOG.md"), `${site}\nUnrelated site note.\n`);
+    const search = spawnSync("sh", ["-c", command ?? ""], { cwd: dir, encoding: "utf8" });
+    expect(search.status).toBe(0);
+    expect(search.stdout.split("\n").filter(Boolean)).toHaveLength(2);
+    expect(entry(`${site}\nUnrelated site note.\n`)).toBe(entry(source));
+    expect(entry(site.replace("The wiring step never writes", "The wiring step writes"))).not.toBe(
+      entry(source),
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
