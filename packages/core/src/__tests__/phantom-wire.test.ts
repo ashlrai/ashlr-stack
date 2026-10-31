@@ -27,6 +27,20 @@ describe("ai/phantom-wire", () => {
     providers: [{ name: "stripe" }],
   };
 
+  it("returns empty results for a recipe with no providers", async () => {
+    const recipe: Recipe = { ...STRIPE_RECIPE, providers: [] };
+
+    expect(await wirePhantomForRecipe(recipe, { cwd: harness.dir })).toEqual({
+      present: [],
+      missing: [],
+      webhooks: [],
+      skipped: [],
+    });
+    expect(harness.callsTo("list")).toEqual([{ cmd: "list", args: ["--json"] }]);
+    expect(harness.callsTo("add")).toEqual([]);
+    expect(existsSync(join(harness.dir, ".stack/webhooks"))).toBe(false);
+  });
+
   it("never writes to the vault, reports the missing secret, and writes a webhook stub", async () => {
     const result = await wirePhantomForRecipe(STRIPE_RECIPE, { cwd: harness.dir });
 
