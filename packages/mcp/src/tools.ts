@@ -426,7 +426,8 @@ export function validateToolInput(tool: ToolDef, input: Record<string, unknown>)
         known.length ? `Accepted: ${known.join(", ")}.` : "This tool takes no arguments."
       }`;
     }
-    if (value === undefined || value === null) continue;
+    // Optional means omitted, not null: JSON null does not match any declared type.
+    if (value === undefined) continue;
     const actual = typeof value;
     if (spec.type === "number" ? !Number.isFinite(value) : actual !== spec.type) {
       return `${tool.name}: argument "${key}" must be a ${spec.type}.`;
