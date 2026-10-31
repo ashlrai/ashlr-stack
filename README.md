@@ -277,6 +277,8 @@ stack apply <recipe-id>
 #   (add --noWire to skip the optional wiring layer)
 ```
 
+For prerequisite checks and recovery after a failed apply, see the [apply troubleshooting guide](docs/apply-troubleshooting.md).
+
 Inside Claude Code, the same flow is one tool call:
 
 ```

@@ -231,6 +231,27 @@ await applyCommand.run({ args: { recipeId: "example", noWire: false, noRollback:
     expect(phantomCalls.every((call) => ["--version", "list"].includes(call))).toBe(true);
   });
 
+  it("reports valid recipe ids headlessly and surfaces an invalid recipe by id before init", () => {
+    const dir = mkTmp();
+    const home = mkTmp();
+    mkdirSync(join(dir, ".stack", "recipes"), { recursive: true });
+    writeFileSync(
+      join(dir, ".stack", "recipes", "valid.toml"),
+      'id = "valid"\nquery = "ai"\ncreatedAt = "2026-10-17T00:00:00.000Z"\n\n[[providers]]\nname = "openai"\n',
+    );
+    writeFileSync(join(dir, ".stack", "recipes", "broken.toml"), "id = [");
+    const env = { HOME: home, STACK_REGISTRY_DIR: join(home, "registry") };
+    const picker = runCli(["apply"], dir, env);
+    expect(picker.code).toBe(1);
+    expect(picker.stdout + picker.stderr).toContain("No recipe id given. Available: valid.");
+    expect(picker.stdout + picker.stderr).not.toContain("broken");
+    const invalid = runCli(["apply", "broken"], dir, env);
+    expect(invalid.code).toBe(1);
+    expect(invalid.stdout + invalid.stderr).toContain("Available: valid.");
+    expect(existsSync(join(dir, ".stack.toml"))).toBe(false);
+    expect(existsSync(join(home, "registry"))).toBe(false);
+  });
+
   it("writes nothing when the recipe id is missing or there are no recipes", () => {
     for (const args of [["apply", "does-not-exist"], ["apply"]]) {
       const dir = mkTmp();
