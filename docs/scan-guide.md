@@ -45,6 +45,9 @@ JSON includes all of them.
 
 ## Results and adding providers
 
+See [scan output examples](scan-output-examples.md) for reproducible empty and
+populated reports.
+
 `--json` writes an object with a `hits` array. Each hit has `provider`,
 `confidence`, and `sources` fields. It exits without prompting or adding, even
 when combined with `--auto` or `--yes`.
