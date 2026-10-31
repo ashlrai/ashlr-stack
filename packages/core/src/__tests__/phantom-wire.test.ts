@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, setDefaultTimeout } from "bun:test";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { wirePhantomForRecipe } from "../ai/phantom-wire.ts";
 import { type Recipe, readRecipe, writeRecipe } from "../ai/recipe.ts";
@@ -289,6 +289,50 @@ describe("ai/phantom-wire", () => {
     expect(existsSync(stubPath)).toBe(false);
     expect(harness.callsTo("add")).toEqual([]);
     expect(harness.callsTo("list")).toEqual([]);
+  });
+
+  it("reports every provider as skipped when Phantom is unavailable, while writing stubs", async () => {
+    writeFileSync(join(harness.dir, "phantom"), "#!/usr/bin/env bash\nexit 1\n");
+    const recipe: Recipe = {
+      ...STRIPE_RECIPE,
+      providers: [{ name: "stripe" }, { name: "unknown" }, { name: "stripe" }],
+    };
+    const stubPath = join(harness.dir, ".stack/webhooks/stripe.ts");
+
+    expect(await wirePhantomForRecipe(recipe, { cwd: harness.dir })).toEqual({
+      present: [],
+      missing: [],
+      webhooks: [stubPath, stubPath],
+      skipped: ["stripe", "unknown", "stripe"],
+    });
+    expect(existsSync(stubPath)).toBe(true);
+    expect(harness.callsTo("list")).toEqual([]);
+  });
+
+  it("rejects a stub write failure after leaving earlier stubs in place", async () => {
+    const webhookDir = join(harness.dir, ".stack/webhooks");
+    mkdirSync(join(webhookDir, "github.ts"), { recursive: true });
+    const recipe: Recipe = {
+      ...STRIPE_RECIPE,
+      providers: [{ name: "stripe" }, { name: "github" }],
+    };
+
+    await expect(wirePhantomForRecipe(recipe, { cwd: harness.dir })).rejects.toBeDefined();
+    expect(readFileSync(join(webhookDir, "stripe.ts"), "utf-8")).toContain("stripe-signature");
+    expect(harness.callsTo("add")).toEqual([]);
+  });
+
+  it("skips an unknown provider without suppressing known provider results", async () => {
+    const recipe: Recipe = {
+      ...STRIPE_RECIPE,
+      providers: [{ name: "unknown" }, { name: "stripe" }],
+    };
+    expect(await wirePhantomForRecipe(recipe, { cwd: harness.dir })).toEqual({
+      present: [],
+      missing: ["stripe:STRIPE_SECRET_KEY"],
+      webhooks: [join(harness.dir, ".stack/webhooks/stripe.ts")],
+      skipped: ["unknown"],
+    });
   });
 
   it("splits a multi-secret provider into present and missing", async () => {
