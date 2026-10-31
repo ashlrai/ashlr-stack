@@ -1,60 +1,33 @@
-import { constants } from "node:fs";
-import { lstat, open } from "node:fs/promises";
+import { lstat } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { defineCommand } from "citty";
+import { type FleetRow, isFleetRow, readFleetJson, readFleetJsonl } from "../lib/fleet-jsonl.ts";
 
-type Row = Record<string, unknown>;
-const record = (v: unknown): v is Row => !!v && typeof v === "object" && !Array.isArray(v);
 const count = (v: unknown): number | null =>
   typeof v === "number" && Number.isSafeInteger(v) && v >= 0 ? v : null;
-
-/** Fixed public state files only; never follow links into credential files. */
-async function source(path: string, slots = false) {
-  try {
-    const file = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
-    let text: string;
-    try {
-      if (!(await file.stat()).isFile()) throw new Error();
-      text = await file.readFile("utf8");
-    } finally {
-      await file.close();
-    }
-    const data: unknown =
-      slots || text.trim().startsWith("[")
-        ? JSON.parse(text)
-        : text
-            .split(/\r?\n/)
-            .filter((line) => line.trim())
-            .map((line) => JSON.parse(line));
-    if (slots ? !record(data) : !Array.isArray(data) || !data.every(record)) throw new Error();
-    return { status: "ok", data };
-  } catch (error) {
-    return { status: record(error) && error.code === "ENOENT" ? "missing" : "invalid", data: null };
-  }
-}
 
 /** HOLD contents are never read; only public lane status fields are emitted. */
 export async function collectFleetLanes(directory: string) {
   const [slots, queue, jobs, hold] = await Promise.all([
-    source(join(directory, "slots.json"), true),
-    source(join(directory, "queue.jsonl")),
-    source(join(directory, "jobs.jsonl")),
+    readFleetJson(join(directory, "slots.json"), { object: true }),
+    readFleetJsonl(join(directory, "queue.jsonl"), { allowArray: true }),
+    readFleetJsonl(join(directory, "jobs.jsonl"), { allowArray: true }),
     lstat(join(directory, "HOLD")).then(
       () => true,
-      (error: unknown) => (record(error) && error.code === "ENOENT" ? false : null),
+      (error: unknown) => (isFleetRow(error) && error.code === "ENOENT" ? false : null),
     ),
   ]);
-  const latest = new Map<string, Row>();
-  for (const row of [...((queue.data as Row[]) ?? []), ...((jobs.data as Row[]) ?? [])]) {
+  const latest = new Map<string, FleetRow>();
+  for (const row of [...queue.rows, ...jobs.rows]) {
     const id = row.id ?? row.job_id;
     if (typeof id === "string") latest.set(id, { ...latest.get(id), ...row });
   }
   const known = queue.status === "ok" && jobs.status === "ok";
-  const lanes = Object.entries((slots.data as Row) ?? {})
+  const lanes = Object.entries(isFleetRow(slots.data) ? slots.data : {})
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([lane, value]) => {
-      const slot = record(value) ? value : {};
+      const slot = isFleetRow(value) ? value : {};
       const target = count(slot.target);
       const ceiling = slot.ceiling === undefined ? target : count(slot.ceiling);
       const running = known

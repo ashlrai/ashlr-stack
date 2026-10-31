@@ -1,9 +1,6 @@
-import { constants } from "node:fs";
-import { open } from "node:fs/promises";
 import { defineCommand } from "citty";
+import { isFleetRow, readFleetJson } from "../lib/fleet-jsonl.ts";
 
-const record = (v: unknown): v is Record<string, unknown> =>
-  v !== null && typeof v === "object" && !Array.isArray(v);
 const sha = (v: unknown): v is string => typeof v === "string" && /^[a-f0-9]{40}$/.test(v);
 function timestamp(v: unknown) {
   if (typeof v !== "string" || !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{3})?Z$/.test(v))
@@ -30,10 +27,10 @@ export function reportFleetDeliveryLag(input: unknown, now = Date.now()) {
     oldestPendingCommit: null,
     commits: [],
   };
-  if (!record(input) || !Array.isArray(input.commits)) return unavailable;
+  if (!isFleetRow(input) || !Array.isArray(input.commits)) return unavailable;
   const deployment = input.latestDeployed;
   if (
-    !record(deployment) ||
+    !isFleetRow(deployment) ||
     typeof deployment.version !== "string" ||
     !/^[A-Za-z0-9][A-Za-z0-9._/-]{0,127}$/.test(deployment.version) ||
     !Array.isArray(deployment.commits) ||
@@ -43,7 +40,7 @@ export function reportFleetDeliveryLag(input: unknown, now = Date.now()) {
   const deployed = new Set<string>(deployment.commits);
   const counts = new Map<string, number>();
   for (const row of input.commits)
-    if (record(row) && sha(row.sha)) counts.set(row.sha, (counts.get(row.sha) ?? 0) + 1);
+    if (isFleetRow(row) && sha(row.sha)) counts.set(row.sha, (counts.get(row.sha) ?? 0) + 1);
   const commits = input.commits.map((row: unknown, index: number) => {
     const invalid = {
       index,
@@ -53,7 +50,7 @@ export function reportFleetDeliveryLag(input: unknown, now = Date.now()) {
       awaitingDeploymentSeconds: null,
       mergedAt: null,
     };
-    if (!record(row) || !sha(row.sha) || counts.get(row.sha) !== 1) return invalid;
+    if (!isFleetRow(row) || !sha(row.sha) || counts.get(row.sha) !== 1) return invalid;
     const created = timestamp(row.createdAt);
     const merged = row.mergedAt === null ? null : timestamp(row.mergedAt);
     if (
@@ -106,23 +103,9 @@ export const fleetDeliveryLagCommand = defineCommand({
     json: { type: "boolean", description: "Emit schemaVersion 1 JSON; unknown metrics are null." },
   },
   async run({ args }) {
-    let input: unknown;
-    try {
-      const file = await open(
-        args.fixture,
-        constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK,
-      );
-      try {
-        const stat = await file.stat();
-        if (!stat.isFile() || stat.size > 4 * 1024 * 1024) throw new Error();
-        input = JSON.parse(await file.readFile("utf8"));
-      } finally {
-        await file.close();
-      }
-    } catch {
-      /* File errors and malformed JSON must not expose paths or content. */
-    }
-    const report = reportFleetDeliveryLag(input);
+    /* File errors and malformed JSON must not expose paths or content. */
+    const fixture = await readFleetJson(args.fixture, { maxBytes: 4 * 1024 * 1024 });
+    const report = reportFleetDeliveryLag(fixture.status === "ok" ? fixture.data : undefined);
     if (report.status !== "ok") process.exitCode = 1;
     if (args.json) console.log(JSON.stringify(report));
     else {

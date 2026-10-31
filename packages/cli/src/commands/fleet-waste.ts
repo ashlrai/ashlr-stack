@@ -1,9 +1,8 @@
-import { constants } from "node:fs";
-import { open } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { createInterface } from "node:readline";
 import { defineCommand } from "citty";
+import { type FleetRow, openFleetFile } from "../lib/fleet-jsonl.ts";
 
 const ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,199}$/;
 interface Lane {
@@ -27,13 +26,9 @@ export async function collectFleetWaste(metrics: string, hours = 1, now = Date.n
   const lanes = new Map<string, Lane>();
   let malformedLines = 0;
   try {
-    const file = await open(
-      metrics,
-      constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK,
-    );
+    const file = await openFleetFile(metrics);
     try {
       const stat = await file.stat();
-      if (!stat.isFile()) throw new Error();
       if (stat.size > 0) {
         // Read a fixed snapshot, never tail-truncate away completion evidence.
         const stream = file.createReadStream({ autoClose: false, end: stat.size - 1 });
@@ -41,7 +36,7 @@ export async function collectFleetWaste(metrics: string, hours = 1, now = Date.n
         try {
           for await (const line of lines) {
             if (!line.trim()) continue;
-            let row: Record<string, unknown>;
+            let row: FleetRow;
             try {
               row = JSON.parse(line);
               if (!row || typeof row !== "object" || Array.isArray(row)) throw new Error();
