@@ -76,6 +76,8 @@ test('version-table lists every manifest version plus the latest changelog secti
   const { ctx, errors } = buildContext(root);
   assert.deepEqual(errors, []);
   const out = GENERATORS['version-table'].generate(ctx, 'STACK.md');
+  assert.ok(out.includes('Latest dated CHANGELOG section:'));
+  assert.ok(!out.includes('Latest released CHANGELOG section:'));
   for (const pkg of ['@x/core', '@x/cli', 'x-mcp', 'mono']) assert.ok(out.includes(pkg), `missing ${pkg}`);
   for (const m of ['packages/core/package.json', 'packages/cli/package.json', 'packages/mcp/package.json']) {
     assert.ok(out.includes(m), `missing ${m}`);

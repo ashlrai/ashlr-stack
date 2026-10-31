@@ -25,7 +25,7 @@ third-party service in a developer's project with one command.
 | `ashlr-stack-mcp` | `packages/mcp/package.json` | 0.3.0 |
 | `ashlr-stack-monorepo` (private) | `package.json` | 0.1.0 |
 
-Latest released CHANGELOG section: `0.3.0 (2026-10-31)`.
+Latest dated CHANGELOG section: `0.3.0 (2026-10-31)`.
 <!-- fresh:end -->
 
 ## Quick orientation
