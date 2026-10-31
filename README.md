@@ -317,6 +317,9 @@ stack projects list           # everywhere you've used Stack
 stack doctor --all            # run health check across all registered projects
 ```
 
+See the [scan guide](docs/scan-guide.md) for supported inputs, confidence levels,
+and empty-result behavior.
+
 ### How git-sharing works
 
 Stack splits its config into two files so you can commit the shape of a stack without leaking per-developer resource IDs:
