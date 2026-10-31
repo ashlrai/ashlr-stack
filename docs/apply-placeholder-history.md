@@ -54,5 +54,7 @@ same name.
 
 For the exact changelog entry that removed the attempts, see the
 [placeholder-secret changelog timeline](changelog-placeholder-timeline.md).
+For definitions of the historical and current terms, see
+[placeholder terminology](apply-placeholder-terminology.md).
 For prerequisites, rollback, and recovery, see
 [Troubleshooting `stack apply`](apply-troubleshooting.md).
