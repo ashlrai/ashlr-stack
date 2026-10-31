@@ -1,8 +1,37 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { marked } from "marked";
 
 const root = join(import.meta.dir, "../../..");
+
+test("site changelog renders its release headings in descending version order", () => {
+  const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
+  const tokens = marked.lexer(published);
+  const headings = tokens.filter((token) => token.type === "heading");
+  expect(headings[0]).toMatchObject({ depth: 1, text: "Changelog" });
+  expect(headings[1]).toMatchObject({ depth: 2, text: "Unreleased" });
+  expect(headings.filter((heading) => heading.depth === 1)).toHaveLength(1);
+
+  const releases = headings.filter((heading) => heading.depth === 2).slice(1);
+  expect(releases.length).toBeGreaterThan(0);
+  const versions = releases.map((heading) => {
+    const match = heading.text.match(/^\[?(\d+)\.(\d+)\.(\d+)\]?/);
+    expect(match).not.toBeNull();
+    return match?.slice(1).map(Number) ?? [];
+  });
+  for (let i = 1; i < versions.length; i++) {
+    const previous = versions[i - 1];
+    const current = versions[i];
+    const firstDifference = previous.findIndex((part, index) => part !== current[index]);
+    expect(firstDifference).toBeGreaterThanOrEqual(0);
+    expect(previous[firstDifference]).toBeGreaterThan(current[firstDifference]);
+  }
+
+  for (let i = 1; i < headings.length; i++) {
+    expect(headings[i].depth).toBeLessThanOrEqual(headings[i - 1].depth + 1);
+  }
+}, 30_000);
 const placeholderRemovalHeading = "- **`stack apply` stops attempting to write placeholder secrets.**";
 
 // Pin the historical entry so matching edits to both copies cannot silently reverse
