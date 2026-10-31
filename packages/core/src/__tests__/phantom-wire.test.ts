@@ -94,6 +94,34 @@ describe("ai/phantom-wire", () => {
     }
   });
 
+  it("keeps the verification review aligned with the generated webhook examples", async () => {
+    const review = readFileSync(
+      new URL("../../../../docs/phantom-wire-review.md", import.meta.url),
+      "utf-8",
+    );
+    expect(review).toContain("Recipe signature verification is **not implemented**");
+    expect(review).toContain("Webhook signature verification is **not implemented**");
+    expect(review).toContain("any non-empty value");
+
+    const providers = ["stripe", "clerk", "supabase", "github"];
+    const result = await wirePhantomForRecipe(
+      { ...STRIPE_RECIPE, providers: providers.map((name) => ({ name })) },
+      { cwd: harness.dir },
+    );
+    for (const [index, provider] of providers.entries()) {
+      const stub = readFileSync(result.webhooks[index], "utf-8");
+      const header = stub.match(/req\.headers\.get\("([^"]+)"\)/)?.[1];
+      const secret = stub.match(/phantom reveal ([A-Z_]+)/)?.[1];
+      expect(header).toBeDefined();
+      expect(secret).toBeDefined();
+      const row = review
+        .split("\n")
+        .find((line) => line.toLowerCase().startsWith(`| ${provider} |`));
+      expect(row).toContain(`\`${header}\``);
+      expect(row).toContain(`\`${secret}\``);
+    }
+  });
+
   it.each([
     ["stripe", "handleStripeWebhook"],
     ["clerk", "handleClerkWebhook"],

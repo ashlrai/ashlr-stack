@@ -16,6 +16,8 @@ Wiring reads names and metadata, not values, and never writes placeholder or rea
 
 ## Webhook examples
 
+See the [verification review](phantom-wire-review.md) for the recipe and webhook trust limitations.
+
 Wiring writes fully commented examples for Stripe, Clerk, Supabase, and GitHub to `.stack/webhooks/<provider>.ts`. These are examples only: they do not retrieve a secret or verify a signature. If uncommented as generated, a request with any non-empty expected signature header receives a 200 after its body is read. The header's presence does not authenticate the sender or payload; anyone able to reach the endpoint can forge a request.
 
 Before deploying a handler, implement the provider's current documented verification scheme, including its required headers, exact raw request body, secret and any replay protection. Reject missing or invalid signatures before parsing, trusting, or acting on the payload. Use the provider's supported verification library where available and constant-time comparison where implementing a MAC comparison. The generated hints are starting points, not proof of a working integration; consult the provider's documentation for the actual webhook product and configuration.
