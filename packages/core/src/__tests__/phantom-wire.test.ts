@@ -122,6 +122,38 @@ describe("ai/phantom-wire", () => {
     }
   });
 
+  it("keeps the signature review aligned with the commented follow-up and active code", async () => {
+    const review = readFileSync(
+      new URL("../../../../docs/phantom-wire-signature-review.md", import.meta.url),
+      "utf-8",
+    );
+    // The review must quote the follow-up verbatim and classify it as comment
+    // text, distinct from the module's active behavior.
+    expect(review).toContain("TODO(security): signature verification is NOT implemented here.");
+    expect(review.toLowerCase()).toContain("commented signature-verification follow-up");
+    expect(review).toContain("## Active behavior");
+
+    const providers = ["stripe", "clerk", "supabase", "github"];
+    const result = await wirePhantomForRecipe(
+      { ...STRIPE_RECIPE, providers: providers.map((name) => ({ name })) },
+      { cwd: harness.dir },
+    );
+    for (const [index, provider] of providers.entries()) {
+      const stub = readFileSync(result.webhooks[index], "utf-8");
+      const header = stub.match(/req\.headers\.get\("([^"]+)"\)/)?.[1];
+      const secret = stub.match(/phantom reveal ([A-Z_]+)/)?.[1];
+      const hint = stub.match(/\/\/ {3}\/\/ (.+)\n\/\/ {3}\/\/ Verify over/)?.[1];
+      const hintTokens = [...(hint ?? "").matchAll(/`([^`]+)`/g)].map((m) => m[1]);
+      expect(hintTokens.length).toBeGreaterThan(0);
+      const row = review
+        .split("\n")
+        .find((line) => line.toLowerCase().startsWith(`| ${provider} |`));
+      expect(row).toContain(`\`${header}\``);
+      expect(row).toContain(`\`${secret}\``);
+      for (const token of hintTokens) expect(row).toContain(`\`${token}\``);
+    }
+  });
+
   it.each([
     ["stripe", "handleStripeWebhook"],
     ["clerk", "handleClerkWebhook"],
