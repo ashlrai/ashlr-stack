@@ -226,6 +226,10 @@ await applyCommand.run({ args: { recipeId: "example", noWire: false, noRollback:
       expect(output).toContain("phantom add <NAME>");
       expect(result.stdout).toContain(output ?? "example missing");
     }
+    const guide = readFileSync(join(cliDir, "../../../docs/apply-observation.md"), "utf8");
+    const example = guide.match(/```text\n([\s\S]*?)\n```/);
+    expect(example).not.toBeNull();
+    expect(result.stdout).toContain(example?.[1] ?? "example missing");
     const phantomCalls = readFileSync(calls, "utf8").trim().split("\n");
     expect(phantomCalls).toContain("list");
     expect(phantomCalls.every((call) => ["--version", "list"].includes(call))).toBe(true);
