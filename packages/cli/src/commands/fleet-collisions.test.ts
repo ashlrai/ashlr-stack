@@ -65,10 +65,12 @@ test("CLI reads stdin and files, fails safely, and appears in help and completio
   const cli = async (args: string[], input = "", code = 0) => {
     const child = Bun.spawn([process.execPath, "run", "packages/cli/src/index.ts", ...args], {
       env: { HOME: home, PATH: "", STACK_NO_UPDATE_CHECK: "1", STACK_TELEMETRY: "0" },
-      stdin: new Blob([input]),
+      stdin: "pipe",
       stdout: "pipe",
       stderr: "pipe",
     });
+    child.stdin.write(input);
+    child.stdin.end();
     const [stdout, stderr] = await Promise.all([
       new Response(child.stdout).text(),
       new Response(child.stderr).text(),

@@ -63,10 +63,11 @@ test("site changelog mirrors the source and explains apply's placeholder behavio
     expect(entry).toContain("run `phantom add <NAME>` from a trusted terminal and enter the real value");
 });
 
-test("unreleased apply note explains the action required even after success", () => {
+test("current release apply note explains the action required even after success", () => {
   const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
-  const unreleased = published.split("## Unreleased\n")[1]?.split("\n## ")[0];
-  const entry = unreleased?.split("\n").find((line) => line.startsWith("- After at least one provider succeeds, `stack apply`"));
+  const version = JSON.parse(readFileSync(join(root, "packages/cli/package.json"), "utf8")).version;
+  const section = published.split(`## ${version} (`)[1]?.split("\n## ")[0];
+  const entry = section?.split("\n").find((line) => line.startsWith("- After at least one provider succeeds, `stack apply`"));
   expect(entry).toContain("without creating placeholders or filling missing values");
   expect(entry).toContain("Provider setup may store real values separately");
   expect(entry).toContain("each required missing value needs user action");
