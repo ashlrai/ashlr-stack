@@ -52,7 +52,7 @@ test("documented comparison locates the shared entry and exposes unrelated diffe
 
 test("the apply checklist locates and compares only the 0.2.1 fix", () => {
   const checklist = readFileSync(join(root, "docs/changelog-mirror-checklist.md"), "utf8");
-  const command = checklist.match(/```sh\n\s*(rg [^\n]+)\n\s*```/)?.[1];
+  const command = checklist.match(/```sh\n\s*(grep [^\n]+)\n\s*```/)?.[1];
   expect(command).toBeDefined();
   const dir = mkdtempSync(join(tmpdir(), "apply-checklist-"));
   try {
