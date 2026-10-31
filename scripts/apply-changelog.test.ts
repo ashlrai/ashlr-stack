@@ -68,6 +68,8 @@ await applyCommand.run({ args: { recipeId: "example", noWire: false, noRollback:
     expect(output).toContain("missing 0");
     expect(output).toContain("phantom-wire skipped: openai");
     expect(result.stdout).toContain(output ?? "example missing");
+    const guide = readFileSync(join(root, "docs/apply-observation.md"), "utf8");
+    expect(guide).toContain(`\`\`\`text\n${output}\n\`\`\``);
     expect(result.stdout).not.toContain("not in Phantom:");
     expect(changelog).toContain(
       "they do not establish that the vault is empty or that no values are missing",
@@ -76,6 +78,24 @@ await applyCommand.run({ args: { recipeId: "example", noWire: false, noRollback:
     rmSync(dir, { recursive: true, force: true });
   }
 }, 30_000);
+
+test("observation guide inspection commands and apply options exist in the CLI", async () => {
+  const guide = readFileSync(join(root, "docs/apply-observation.md"), "utf8");
+  expect(guide).toContain(
+    "stack list --json\nstack status --json\nstack info <service> --json\nstack doctor --json",
+  );
+  const { listCommand } = await import("../packages/cli/src/commands/list.ts");
+  const { statusCommand } = await import("../packages/cli/src/commands/status.ts");
+  const { infoCommand } = await import("../packages/cli/src/commands/info.ts");
+  const { doctorCommand } = await import("../packages/cli/src/commands/doctor.ts");
+  const { applyCommand } = await import("../packages/cli/src/commands/apply.ts");
+  for (const command of [listCommand, statusCommand, infoCommand, doctorCommand]) {
+    expect(command.args).toHaveProperty("json");
+  }
+  expect(infoCommand.args).toHaveProperty("service");
+  expect(applyCommand.args).toHaveProperty("noWire");
+  expect(applyCommand.args).toHaveProperty("noRollback");
+});
 
 test("partial failure still checks the whole recipe without creating secrets", () => {
   const dir = mkdtempSync(join(tmpdir(), "stack-apply-partial-doc-"));
