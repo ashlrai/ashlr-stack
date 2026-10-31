@@ -7,9 +7,18 @@ const CLI_ENTRY = join(import.meta.dir, "..", "..", "cli", "src", "index.ts");
 const SITE = join(import.meta.dir, "..");
 // Bun 1.2 hoists Astro to the root; newer installs may keep it site-local.
 const ASTRO_ENTRY = join(dirname(require.resolve("astro/package.json")), "astro.js");
+// Astro's executable uses Node. process.execPath here is the Bun test runner,
+// which also varies across the daily CI matrix; do not force Astro onto it.
+const ASTRO_RUNTIME = Bun.which("node");
+if (!ASTRO_RUNTIME) throw new Error("Node is required to render the Astro CLI reference");
 
 async function fetchServerPage(command: string[], url: string, attempts = 600): Promise<Response> {
-  const server = Bun.spawn(command, { cwd: SITE, stdout: "ignore", stderr: "pipe" });
+  const server = Bun.spawn(command, {
+    cwd: SITE,
+    env: { ...process.env, ASTRO_TELEMETRY_DISABLED: "1" },
+    stdout: "ignore",
+    stderr: "pipe",
+  });
   // Drain immediately so a full stderr pipe cannot stall server startup.
   const stderr = new Response(server.stderr).text();
   let reason = "Astro server did not become ready";
@@ -87,6 +96,18 @@ describe("site CLI reference", () => {
     expect(duplicateNames(CLI_COMMANDS)).toEqual([]);
   });
 
+  test("Astro runs on Node independently of the Bun test runner", async () => {
+    const probe = Bun.spawn([
+      ASTRO_RUNTIME, "-p",
+      'JSON.stringify({ runtime: process.release.name, bun: !!process.versions.bun })',
+    ], { stdout: "pipe", stderr: "pipe" });
+    const [stdout, stderr, code] = await Promise.all([
+      new Response(probe.stdout).text(), new Response(probe.stderr).text(), probe.exited,
+    ]);
+    expect(code, stderr).toBe(0);
+    expect(JSON.parse(stdout)).toEqual({ runtime: "node", bun: false });
+  });
+
   test("startup failures include the exit code and drained stderr", async () => {
     // More than a pipe buffer: waiting for exit before draining would deadlock.
     const diagnostic = `startup failure: ${"x".repeat(128 * 1024)}`;
@@ -119,7 +140,7 @@ describe("site CLI reference", () => {
     const port = reservation.port;
     reservation.stop(true);
     const response = await fetchServerPage(
-      [process.execPath, ASTRO_ENTRY, "dev", "--host", "127.0.0.1", "--port", String(port), "--strictPort"],
+      [ASTRO_RUNTIME, ASTRO_ENTRY, "dev", "--host", "127.0.0.1", "--port", String(port), "--strictPort"],
       `http://127.0.0.1:${port}/docs/cli`,
     );
     expect(response.status).toBe(200);
