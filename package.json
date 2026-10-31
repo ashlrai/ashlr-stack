@@ -10,6 +10,8 @@
   ],
   "scripts": {
     "check:crypto": "node --test scripts/check-crypto.node-tests.mjs && node scripts/check-crypto.mjs",
+    "resolve:conflicts": "node scripts/resolve-conflicts.mjs",
+    "test:conflicts": "node --test scripts/resolve-conflicts.node-tests.mjs",
     "fresh:sync": "node scripts/freshness/sync.mjs",
     "fresh:check": "node scripts/freshness/check.mjs",
     "fresh:test": "node --test scripts/freshness/freshness.node-tests.mjs",
