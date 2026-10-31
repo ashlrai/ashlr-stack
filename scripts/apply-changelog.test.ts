@@ -69,6 +69,10 @@ await applyCommand.run({ args: { recipeId: "example", noWire: false, noRollback:
     expect(output).toContain("phantom-wire skipped: openai");
     expect(result.stdout).toContain(output ?? "example missing");
     expect(result.stdout).not.toContain("not in Phantom:");
+    const history = readFileSync(join(root, "docs/apply-placeholder-history.md"), "utf8");
+    const historyExample = history.match(/```text\n([\s\S]*?)\n```/);
+    expect(historyExample).not.toBeNull();
+    expect(result.stdout).toContain(historyExample?.[1] ?? "example missing");
     expect(changelog).toContain(
       "they do not establish that the vault is empty or that no values are missing",
     );
