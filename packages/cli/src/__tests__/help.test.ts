@@ -4,6 +4,7 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import ts from "typescript";
 
 const SRC_DIR = join(dirname(fileURLToPath(import.meta.url)), "..");
 const CLI_ENTRY = join(SRC_DIR, "index.ts");
@@ -48,27 +49,39 @@ function stack(args: string[]): Promise<CliResult> {
   });
 }
 
-// Registered top-level commands in declaration order. The parse mirrors
-// scripts/freshness/lib.mjs: index.ts registers each command as a lazy
-// `import("./commands/<file>.ts")` loader inside the `subCommands` object.
-// index.ts cannot be imported here — its top-level code runs the CLI.
+// index.ts cannot be imported here: its top-level code runs the CLI.
 interface RegisteredCommand {
   name: string;
   file: string;
 }
 
-function registeredCommands(): RegisteredCommand[] {
-  const source = readFileSync(CLI_ENTRY, "utf8");
-  const block = source.match(/subCommands\s*:\s*\{([\s\S]*?)\n[ \t]*\}/);
-  if (!block) throw new Error("packages/cli/src/index.ts: no subCommands object found");
-  const entry =
-    /["']?([\w-]+)["']?\s*:\s*\(\)\s*=>\s*import\(\s*["']\.\/commands\/([\w-]+)\.ts["']\s*\)/g;
-  const commands = [...block[1].matchAll(entry)].map((m) => ({
-    name: m[1],
-    file: `${m[2]}.ts`,
-  }));
-  if (commands.length === 0)
-    throw new Error("packages/cli/src/index.ts: subCommands has no lazy import() entries");
+function registeredCommands(text = readFileSync(CLI_ENTRY, "utf8")): RegisteredCommand[] {
+  const source = ts.createSourceFile(CLI_ENTRY, text, ts.ScriptTarget.Latest, true);
+  const registries: ts.ObjectLiteralExpression[] = [];
+  function visit(node: ts.Node) {
+    if (ts.isPropertyAssignment(node) && node.name.getText(source) === "subCommands") {
+      if (!ts.isObjectLiteralExpression(node.initializer))
+        throw new Error("Unsupported CLI subCommands registry");
+      registries.push(node.initializer);
+    }
+    ts.forEachChild(node, visit);
+  }
+  visit(source);
+  if (registries.length !== 1) throw new Error("Expected one CLI subCommands registry");
+  const commands = registries[0].properties.map((property) => {
+    if (
+      !ts.isPropertyAssignment(property) ||
+      !(ts.isIdentifier(property.name) || ts.isStringLiteral(property.name))
+    )
+      throw new Error("Unsupported CLI command registration");
+    const name = property.name.text;
+    const file = property.initializer
+      .getText(source)
+      .match(/import\(\s*["']\.\/commands\/([\w-]+)\.ts["']\s*\)/)?.[1];
+    if (!file) throw new Error(`Unsupported CLI command registration for ${name}`);
+    return { name, file: `${file}.ts` };
+  });
+  if (commands.length === 0) throw new Error("CLI subCommands registry is empty");
   return commands;
 }
 
@@ -124,6 +137,15 @@ function commandsSection(help: string): string[] {
 }
 
 describe("stack --help", () => {
+  test("registry parsing rejects entries it cannot account for", () => {
+    expect(() => registeredCommands("({ subCommands: { init: initCommand } })")).toThrow(
+      "Unsupported CLI command registration for init",
+    );
+    expect(() => registeredCommands("({ subCommands: { ...commands } })")).toThrow(
+      "Unsupported CLI command registration",
+    );
+  });
+
   test("exits 0 and lists exactly the registered top-level commands", async () => {
     const commands = registeredCommands();
     const names = commands.map((c) => c.name);
