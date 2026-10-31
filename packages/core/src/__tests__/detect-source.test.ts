@@ -218,6 +218,36 @@ test("deduplicates dependency evidence and upgrades confidence without losing si
   ]);
 });
 
+test("repeated scans of an unchanged project return the same unique detections", async () => {
+  const cwd = makeProject({
+    "package.json": JSON.stringify({
+      dependencies: { openai: "1", "@vercel/kv": "1" },
+      devDependencies: { openai: "1" },
+    }),
+    "requirements.txt": "openai==1\nopenai>=1\n",
+    "vercel.json": "{}",
+    ".env.example": "OPENAI_API_KEY=\nOPENAI_API_KEY=\nVERCEL_TOKEN=",
+  });
+  const expected: Awaited<ReturnType<typeof scanSource>> = [
+    {
+      provider: "openai",
+      confidence: "high",
+      signals: ["package.json:openai", "requirements.txt:openai", ".env.example:OPENAI_API_KEY"],
+    },
+    {
+      provider: "vercel",
+      confidence: "high",
+      signals: ["package.json:@vercel/kv", "vercel.json", ".env.example:VERCEL_TOKEN"],
+    },
+  ];
+
+  const first = await scanSource(cwd);
+  const second = await scanSource(cwd);
+
+  expect(first).toEqual(expected);
+  expect(second).toEqual(expected);
+});
+
 test("scans a project directory containing spaces and reports relative file paths", async () => {
   const root = makeProject({
     "project with spaces/package.json": JSON.stringify({ dependencies: { openai: "1" } }),
