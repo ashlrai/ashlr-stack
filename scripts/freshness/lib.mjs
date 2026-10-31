@@ -462,7 +462,7 @@ export const GENERATORS = {
         ...rows,
         root,
         '',
-        `Latest released CHANGELOG section: ${released}.`,
+        `Latest dated CHANGELOG section: ${released}.`,
       ].join('\n');
     },
   },

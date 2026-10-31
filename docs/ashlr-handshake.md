@@ -11,7 +11,7 @@ contract is implemented by `locus --ashlr-handshake` and
   "schema_version": 1,
   "name": "ashlr-stack",
   "command": "stack",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "protocols": { "ashlr.handshake": 1, "phantom.agent.preflight": 1 },
   "capabilities": ["provision-services", "store-credentials-in-phantom", "mcp-server", "agent-onboard", "agent-preflight", "doctor-json"],
   "health": { "status": "ok", "checks": [{ "id": "phantom-on-path", "status": "ok" }, { "id": "stack-config", "status": "absent" }] },
@@ -21,7 +21,7 @@ contract is implemented by `locus --ashlr-handshake` and
 ```
 
 The `version` value above tracks `packages/cli/package.json`
-(<!-- fresh:begin version-pin -->0.2.2<!-- fresh:end --> in this checkout);
+(<!-- fresh:begin version-pin -->0.3.0<!-- fresh:end --> in this checkout);
 `health` varies with the machine it runs on.
 
 Rules every implementation follows:

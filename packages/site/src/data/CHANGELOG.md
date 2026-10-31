@@ -2,6 +2,29 @@
 
 ## Unreleased
 
+## 0.3.0 (2026-10-31)
+
+### Added
+
+- Fleet diagnostics: lanes, supply, latency, lag, waste, reds, silent jobs, collisions, delivery lag, stuck jobs, SLOs, activity, stream, graph and bets, with grouped `stack fleet` routes. These inspect existing operational data; they do not establish automatic repair or fleet deployment.
+- `stack doctor --repos` reports default-branch CI and open PR counts through gh. Only --json may be combined with this mode.
+- Core exports a JSON-safe STACK_MANIFEST component/version descriptor. It describes source distributions, not installed or published versions.
+- `stack upgrade --apply` supports npm global upgrades with health checks and rollback; --dry-run remains non-installing. Review installer constraints before use.
+### Changed and fixed
+
+- CLI lazily loads the selected command rather than all commands at startup.
+- Status probes overlap at bounded concurrency and report timeout/error uncertainty instead of treating failed vault probes as zero secrets. Timed-out Phantom process groups are terminated.
+- Apply wiring checks existing secret names without storing placeholders; unreadable vaults are reported as skipped, not missing. Provider setup may still persist real credentials through its own workflow.
+- MCP compacts valid JSON formatting while preserving fields and number spelling; diagnostics remain readable.
+- MCP binary resolution ignores directory-valued package binaries and falls back to PATH (#306).
+### Compatibility notes
+
+- MCP scan/import paths must remain within selected cwd after symlink resolution. For another project, supply that project's absolute cwd rather than an escaping path.
+- MCP recipe IDs must be filename stems using letters, digits, underscores or hyphens.
+- .env import now rejects malformed assignments, duplicate names and unterminated quoted values before any import. Correct ambiguous files rather than relying on former partial parsing.
+- Scan refuses malformed package.json rather than presenting partial results as complete; nonexistent scan directories are errors.
+- Existing status consumers must tolerate additive error fields. Existing command names remain; new fleet names are additive.
+
 ### Changed
 
 - After at least one provider succeeds, `stack apply` wiring checks the recipe's secret names without creating placeholders or filling missing values. Provider setup may store real values separately. When the vault is readable, wiring reports missing secret names; each required missing value needs user action: run `phantom add <NAME>` in a trusted terminal and enter the real value. Missing names alone do not make apply fail, so an applied recipe is not proof that every required secret is present. If the vault cannot be read, providers are reported as skipped instead of being identified as missing.

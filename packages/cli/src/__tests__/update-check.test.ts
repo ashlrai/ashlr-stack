@@ -18,6 +18,7 @@ import { checkForUpdate, isNewer, shouldCheck } from "../lib/update-check.ts";
 let tmpDir: string;
 let cacheFilePath: string;
 let origWrite: typeof process.stderr.write;
+let origFetch: typeof global.fetch;
 
 beforeEach(() => {
   tmpDir = mkdtempSync(join(tmpdir(), "update-check-test-"));
@@ -26,6 +27,7 @@ beforeEach(() => {
   Reflect.deleteProperty(process.env, "STACK_NO_UPDATE_CHECK");
   Reflect.deleteProperty(process.env, "CI");
 
+  origFetch = global.fetch;
   origWrite = process.stderr.write.bind(process.stderr);
 });
 
@@ -33,6 +35,7 @@ afterEach(() => {
   rmSync(tmpDir, { recursive: true, force: true });
   process.stderr.write = origWrite;
   mock.restore();
+  global.fetch = origFetch;
 });
 
 // ── helpers ───────────────────────────────────────────────────────────────────
