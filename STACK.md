@@ -47,7 +47,7 @@ bun run packages/cli/src/index.ts --help   # the CLI from source
 
 Things that trip agents up:
 
-- **No TTY.** Agent shells have no TTY. `stack scan` without flags prints the human report; use `stack scan --json` to parse it. `stack scan --auto` without `--yes` exits 1, since it would ask before each add. `stack init` skips the template picker; pass `--template <name>` (see `stack templates list`).
+- **No TTY.** Agent shells have no TTY. `stack scan` without flags prints the human report; use `stack scan --json` to parse it. `stack scan --auto` without `--yes` exits 1, since it would ask before each add. See [scan troubleshooting](docs/scan-troubleshooting.md) for errors and recovery. `stack init` skips the template picker; pass `--template <name>` (see `stack templates list`).
 - **`stack init --dryRun` still writes.** It provisions nothing, but it writes `.stack.toml`, `.stack.local.toml` and `.gitignore` and registers the project in `~/.stack/projects.json`. Run it in a scratch directory, and set `STACK_REGISTRY_DIR` to a temp dir to keep `~/.stack` clean.
 - **MCP from source needs the CLI too.** Point the server at the source CLI with `STACK_BIN` (see `packages/mcp/README.md`), or build `packages/cli` so `dist/index.js` exists. Otherwise every tool call fails with "Could not run the 'stack' CLI".
 - **MCP tests run the built bundles.** `packages/mcp/__tests__/server.test.ts` drives `packages/mcp/dist/server.js` and `packages/cli/dist/index.js` and only builds them when they are missing. Run `bun run build` after changing CLI or MCP source before trusting an MCP test failure.
