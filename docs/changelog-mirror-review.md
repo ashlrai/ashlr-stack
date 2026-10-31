@@ -16,12 +16,12 @@ older recipe description add context; do not mistake them for this fix entry.
 From the repository root, locate the entry in both files:
 
 ```sh
-rg -n -F 'stops attempting to write placeholder secrets.' CHANGELOG.md packages/site/src/data/CHANGELOG.md
+grep -n -F 'stops attempting to write placeholder secrets.' CHANGELOG.md packages/site/src/data/CHANGELOG.md
 ```
 
 Check that there is exactly one result for each path and read the whole entry
 in its release section. A missing result in either file, duplicates, or a change
-in the behavior described needs investigation. `rg` can succeed when it finds
+in the behavior described needs investigation. `grep` can succeed when it finds
 only one of the two files, so its exit status alone does not establish parity.
 
 Then compare the complete files, without changing either one:

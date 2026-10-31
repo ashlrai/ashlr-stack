@@ -9,7 +9,7 @@ or the copy may hide a difference.
 - [ ] From the repository root, locate the fix in both files:
 
   ```sh
-  rg -n -F 'stops attempting to write placeholder secrets.' CHANGELOG.md packages/site/src/data/CHANGELOG.md
+  grep -n -F 'stops attempting to write placeholder secrets.' CHANGELOG.md packages/site/src/data/CHANGELOG.md
   ```
 
   Expect one result per file, under **0.2.1 (2026-10-16) → Bug fixes**.
