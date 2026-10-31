@@ -335,6 +335,30 @@ describe("stack scan without recognized project files", () => {
 });
 
 describe("stack scan on an empty project directory (regression)", () => {
+  test("a filtered result is empty without adding, while a lower threshold finds the signal", () => {
+    const cwd = tmp({ ".env.example": "OPENAI_API_KEY=\n" });
+    const report = runCli(["scan", "--yes", "--path", cwd], undefined, { CI: "1" });
+    expect(report.code).toBe(0);
+    expect(report.stderr).toBe("");
+    expect(report.stdout).toContain("No providers detected");
+    expect(existsSync(join(cwd, ".stack.toml"))).toBe(false);
+
+    const json = runCli(["scan", "--json", "--yes", "--path", cwd], undefined, { CI: "1" });
+    expect(json.code).toBe(0);
+    expect(JSON.parse(json.stdout)).toEqual({ hits: [] });
+
+    const lower = runCli(["scan", "--json", "--confidence", "low", "--path", cwd], undefined, {
+      CI: "1",
+    });
+    expect(lower.code).toBe(0);
+    expect(JSON.parse(lower.stdout)).toEqual({
+      hits: [
+        { provider: "openai", confidence: "medium", sources: [".env.example:OPENAI_API_KEY"] },
+      ],
+    });
+    expect(existsSync(join(cwd, ".stack.toml"))).toBe(false);
+  });
+
   test("--yes exits 0 with an empty result without reaching the Phantom preflight", () => {
     // With zero hits the command reports "No providers detected" and returns
     // before requirePhantom() — reordering that would exit 1 wherever Phantom
