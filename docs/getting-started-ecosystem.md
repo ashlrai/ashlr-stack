@@ -8,7 +8,7 @@ This guide sets up four tools side by side: Phantom (`phm`), Locus (`locus`), St
 |---|---|---|---|
 | Phantom `@ashlr/phantom` | 3.29.15 | 3.29.15 | `npm view @ashlr/phantom version` |
 | Locus `locus-cli` | 0.5.0 | 0.5.1 | `npm view locus-cli version` |
-| Stack `@ashlr/stack` | 0.1.1 | <!-- fresh:begin version-pin -->0.2.2<!-- fresh:end --> | `npm view @ashlr/stack version` |
+| Stack `@ashlr/stack` | 0.1.1 | <!-- fresh:begin version-pin -->0.3.0<!-- fresh:end --> | `npm view @ashlr/stack version` |
 
 Features that are in source but not in these published builds: `phm fleet receipt` (the published 3.29.15 answers `unknown fleet subcommand: receipt`), `--ashlr-handshake` on `phm`, `stack doctor --ecosystem` and `stack exec --as`. The locus 0.5.0 npm build has a known `locus --version` loop; see the locus README. To try the newer features, build from source as shown below.
 

@@ -2,9 +2,9 @@
   "schema_version": 1,
   "kind": "ashlr-stack-manifest",
   "components": [
-    { "id": "core", "name": "@ashlr/stack-core", "version": "0.2.2", "distribution": "npm" },
-    { "id": "cli", "name": "@ashlr/stack", "version": "0.2.2", "distribution": "npm" },
-    { "id": "mcp", "name": "ashlr-stack-mcp", "version": "0.2.2", "distribution": "npm" },
+    { "id": "core", "name": "@ashlr/stack-core", "version": "0.3.0", "distribution": "npm" },
+    { "id": "cli", "name": "@ashlr/stack", "version": "0.3.0", "distribution": "npm" },
+    { "id": "mcp", "name": "ashlr-stack-mcp", "version": "0.3.0", "distribution": "npm" },
     { "id": "plugin", "name": "stack", "version": "0.1.0", "distribution": "claude-code-plugin" }
   ]
 }

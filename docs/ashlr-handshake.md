@@ -21,7 +21,7 @@ contract is implemented by `locus --ashlr-handshake` and
 ```
 
 The `version` value above tracks `packages/cli/package.json`
-(<!-- fresh:begin version-pin -->0.2.2<!-- fresh:end --> in this checkout);
+(<!-- fresh:begin version-pin -->0.3.0<!-- fresh:end --> in this checkout);
 `health` varies with the machine it runs on.
 
 Rules every implementation follows:

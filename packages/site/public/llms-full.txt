@@ -4,7 +4,7 @@
 
 This file is the long-form LLM-friendly reference. For a quick overview, see /llms.txt.
 
-Source reference: 0.2.2 checkout · Reviewed: October 14, 2026
+Source reference: 0.3.0 checkout · Reviewed: October 14, 2026
 Registry metadata checked on that date reported CLI/MCP version 0.1.1. Commands below describe this source; check your installed `stack --version` and command `--help`. Source qualification is separate from publication, deployment and provider acceptance.
 Domain: https://stack.ashlr.ai
 Source: https://github.com/ashlrai/ashlr-stack
