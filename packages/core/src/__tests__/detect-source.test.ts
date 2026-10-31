@@ -309,6 +309,14 @@ test("empty project has no detections", async () => {
   expect(await scanSource(makeProject({}))).toEqual([]);
 });
 
+test("unrelated text file with provider-like content has no detections", async () => {
+  const cwd = makeProject({
+    "notes.txt": 'openai\nOPENAI_API_KEY=\n{"dependencies":{"@supabase/supabase-js":"1"}}',
+  });
+
+  expect(await scanSource(cwd)).toEqual([]);
+});
+
 test.each([["--json"], ["--yes"]])(
   "scan %s rejects a nonexistent project without creating files",
   async (flag) => {
