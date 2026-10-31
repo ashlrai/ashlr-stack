@@ -46,6 +46,18 @@ describe("ai/phantom-wire", () => {
     expect(result.webhooks).toHaveLength(1);
   });
 
+  it("replaces an existing webhook stub when wiring is repeated", async () => {
+    const first = await wirePhantomForRecipe(STRIPE_RECIPE, { cwd: harness.dir });
+    const stubPath = first.webhooks[0];
+    const generated = readFileSync(stubPath, "utf-8");
+    writeFileSync(stubPath, "custom handler");
+
+    const second = await wirePhantomForRecipe(STRIPE_RECIPE, { cwd: harness.dir });
+    expect(second.webhooks).toEqual([stubPath]);
+    expect(readFileSync(stubPath, "utf-8")).toBe(generated);
+    expect(harness.callsTo("add")).toEqual([]);
+  });
+
   it("wires an altered local recipe without authenticating its contents", async () => {
     const path = await writeRecipe(STRIPE_RECIPE, harness.dir);
     const original = readFileSync(path, "utf-8");
