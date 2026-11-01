@@ -3,6 +3,8 @@ name: MCP Registry
 # Publishes server.json to the official MCP Registry (registry.modelcontextprotocol.io).
 # Auth: GitHub OIDC, no stored secrets. The npm version named in server.json must
 # already be published with a matching "mcpName", or the registry rejects it.
+# Public release evidence uses unauthenticated API reads: rate limits or API
+# outages fail closed. Retry the exact-tag manual dispatch when available.
 on:
   release:
     types: [published]

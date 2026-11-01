@@ -1,6 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { devNull, tmpdir } from 'node:os';
+import { join } from 'node:path';
 import {
   checkAssets,
   checkNpm,
@@ -11,6 +14,7 @@ import {
   readiness,
   registryDecision,
   validateContext,
+  verifyRemoteTagOutput,
 } from './mcp-registry-gate.mjs';
 
 const tag = 'v0.3.1';
@@ -101,6 +105,71 @@ test('context binds exact tag, commit, descriptor and local npm manifest', () =>
     const c = context();
     mutation(c);
     assert.throws(() => validateContext(c));
+  }
+});
+
+test('remote tag verification prefers a peeled annotated commit and fails closed on missing or moved tags', () => {
+  const ref = `refs/tags/${tag}`;
+  const object = 'b'.repeat(40);
+  const moved = 'c'.repeat(40);
+  assert.doesNotThrow(() => verifyRemoteTagOutput(`${sha}\t${ref}\n`, tag, sha));
+  for (const out of [
+    `${object}\t${ref}\n${sha}\t${ref}^{}\n`,
+    `${sha}\t${ref}^{}\n${object}\t${ref}\n`,
+  ])
+    assert.doesNotThrow(() => verifyRemoteTagOutput(out, tag, sha));
+  for (const out of [
+    '',
+    `${sha}\trefs/tags/v9.9.9\n`,
+    `${moved}\t${ref}\n`,
+    `${sha}\t${ref}\n${moved}\t${ref}^{}\n`,
+  ])
+    assert.throws(() => verifyRemoteTagOutput(out, tag, sha), /remote tag moved or is missing/);
+});
+
+test('remote tag parser accepts real local lightweight and annotated git outputs', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'stack-gate-git-'));
+  const env = {
+    ...process.env,
+    HOME: dir,
+    GIT_CONFIG_NOSYSTEM: '1',
+    GIT_CONFIG_GLOBAL: devNull,
+  };
+  const git = (...args) => execFileSync('git', ['-C', dir, ...args], { encoding: 'utf8', env });
+  try {
+    git('init', '-q');
+    git(
+      '-c',
+      'user.name=Fixture',
+      '-c',
+      'user.email=fixture@example.invalid',
+      'commit',
+      '--allow-empty',
+      '-q',
+      '-m',
+      'fixture',
+    );
+    const commit = git('rev-parse', 'HEAD').trim();
+    git('tag', 'v0.3.1');
+    git(
+      '-c',
+      'user.name=Fixture',
+      '-c',
+      'user.email=fixture@example.invalid',
+      'tag',
+      '-a',
+      'v0.3.2',
+      '-m',
+      'fixture',
+    );
+    for (const name of ['v0.3.1', 'v0.3.2']) {
+      const out = git('ls-remote', '--tags', dir, `refs/tags/${name}`, `refs/tags/${name}^{}`);
+      assert.doesNotThrow(() => verifyRemoteTagOutput(out, name, commit));
+      assert.throws(() => verifyRemoteTagOutput(out, name, 'f'.repeat(40)));
+      if (name === 'v0.3.2') assert.match(out, /\^\{\}/);
+    }
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
   }
 });
 
@@ -344,6 +413,122 @@ test('readiness checks terminal exact run once; pending and failed runs fail imm
       /no completed successful exact-tag/,
     );
     assert.equal(count, 1);
+  }
+});
+
+test('readiness falls back only from a well-formed incomplete run to a later successful run', async () => {
+  const names = [
+    'Full suite green on release sha',
+    'Build stack-linux-x64',
+    'Build stack-linux-arm64',
+    'Build stack-darwin-x64',
+    'Build stack-darwin-arm64',
+    'Publish to npm',
+    'Smoke stack-darwin-arm64 natively',
+    'Create GitHub Release',
+  ];
+  const complete = () => ({
+    total_count: names.length,
+    jobs: names.map((name) => ({ name, status: 'completed', conclusion: 'success' })),
+  });
+  const requests = [];
+  const get = async (url) => {
+    requests.push(url);
+    if (url.includes('/workflows/'))
+      return {
+        status: 200,
+        body: runs(run({ id: 11, run_attempt: 1 }), run({ id: 12, run_attempt: 2 })),
+      };
+    if (url.includes('/runs/11/')) {
+      const first = complete();
+      first.jobs[0].conclusion = 'skipped';
+      return { status: 200, body: first };
+    }
+    if (url.includes('/runs/12/')) return { status: 200, body: complete() };
+    if (url.includes('/releases/tags/')) return { status: 200, body: release() };
+    if (url.startsWith('https://registry.npmjs.org/')) return { status: 200, body: manifest };
+    throw new Error(`unexpected URL ${url}`);
+  };
+  await readiness({ tag, sha, descriptor, manifest, repo: 'ashlrai/ashlr-stack' }, { get });
+  assert.equal(requests.filter((url) => url.includes('/jobs?')).length, 2);
+  assert.ok(
+    requests.findIndex((url) => url.includes('/runs/11/')) <
+      requests.findIndex((url) => url.includes('/runs/12/')),
+  );
+});
+
+test('readiness rejects invalid run identities and unavailable job evidence before later requests', async () => {
+  const ctx = { tag, sha, descriptor, manifest, repo: 'ashlrai/ashlr-stack' };
+  for (const invalid of [
+    { id: undefined, run_attempt: 1 },
+    { id: '12', run_attempt: 1 },
+    { id: 1.5, run_attempt: 1 },
+    { id: Number.MAX_SAFE_INTEGER + 1, run_attempt: 1 },
+    { id: 12, run_attempt: undefined },
+    { id: 12, run_attempt: 0 },
+    { id: 12, run_attempt: -1 },
+    { id: 12, run_attempt: 1.5 },
+    { id: 12, run_attempt: '1' },
+    { id: 12, run_attempt: Number.MAX_SAFE_INTEGER + 1 },
+  ]) {
+    const requests = [];
+    await assert.rejects(
+      () =>
+        readiness(ctx, {
+          get: async (url) => {
+            requests.push(url);
+            return { status: 200, body: runs(run(invalid)) };
+          },
+        }),
+      /invalid successful run identity/,
+    );
+    assert.equal(requests.length, 1);
+  }
+  for (const status of [403, 429, 500]) {
+    const requests = [];
+    await assert.rejects(
+      () =>
+        readiness(ctx, {
+          get: async (url) => {
+            requests.push(url);
+            if (url.includes('/workflows/'))
+              return {
+                status: 200,
+                body: runs(run({ id: 11, run_attempt: 1 }), run({ id: 12, run_attempt: 1 })),
+              };
+            if (url.includes('/runs/11/')) return { status, body: null };
+            throw new Error('unexpected request after failed jobs lookup');
+          },
+        }),
+      /release job evidence unavailable/,
+    );
+    assert.equal(requests.length, 2);
+  }
+});
+
+test('readiness rejects truncated job evidence and all-incomplete producer runs', async () => {
+  const ctx = { tag, sha, descriptor, manifest, repo: 'ashlrai/ashlr-stack' };
+  for (const body of [
+    { total_count: 2, jobs: [] },
+    { total_count: 0, jobs: [] },
+  ]) {
+    const requests = [];
+    await assert.rejects(
+      () =>
+        readiness(ctx, {
+          get: async (url) => {
+            requests.push(url);
+            if (url.includes('/workflows/'))
+              return { status: 200, body: runs(run({ id: 11, run_attempt: 1 })) };
+            if (url.includes('/runs/11/')) return { status: 200, body };
+            throw new Error('unexpected request after invalid or incomplete jobs');
+          },
+        }),
+      body.total_count
+        ? /invalid or truncated release jobs response/
+        : /lacks required successful producer jobs/,
+    );
+    assert.equal(requests.length, 2);
   }
 });
 

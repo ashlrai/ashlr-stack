@@ -60,6 +60,16 @@ export function validateContext({ ref, tag, sha, descriptor, manifest }) {
     fail('invalid descriptor npm package');
 }
 
+function matchesReleaseRun(run, tag, sha) {
+  return (
+    run.event === 'push' &&
+    run.head_branch === tag &&
+    run.head_sha === sha &&
+    run.status === 'completed' &&
+    run.conclusion === 'success'
+  );
+}
+
 export function checkReleaseRuns(result, tag, sha) {
   if (
     !result ||
@@ -68,14 +78,7 @@ export function checkReleaseRuns(result, tag, sha) {
     result.total_count !== result.workflow_runs.length
   )
     fail('invalid or truncated release run response');
-  return result.workflow_runs.some(
-    (r) =>
-      r.event === 'push' &&
-      r.head_branch === tag &&
-      r.head_sha === sha &&
-      r.status === 'completed' &&
-      r.conclusion === 'success',
-  );
+  return result.workflow_runs.some((run) => matchesReleaseRun(run, tag, sha));
 }
 export function checkReleaseJobs(result) {
   if (
@@ -164,12 +167,7 @@ async function json(url, { registry404 = false } = {}) {
   if (!response.ok) fail(`GET ${new URL(url).host} returned ${response.status}`);
   return { status: response.status, body: await response.json() };
 }
-function verifyRemoteTag(tag, sha) {
-  const out = execFileSync(
-    'git',
-    ['ls-remote', '--tags', 'origin', `refs/tags/${tag}`, `refs/tags/${tag}^{}`],
-    { encoding: 'utf8', timeout: 30000 },
-  );
+export function verifyRemoteTagOutput(out, tag, sha) {
   const refs = new Map(
     out
       .trim()
@@ -179,6 +177,14 @@ function verifyRemoteTag(tag, sha) {
   );
   if ((refs.get(`refs/tags/${tag}^{}`) || refs.get(`refs/tags/${tag}`)) !== sha)
     fail('remote tag moved or is missing');
+}
+function verifyRemoteTag(tag, sha) {
+  const out = execFileSync(
+    'git',
+    ['ls-remote', '--tags', 'origin', `refs/tags/${tag}`, `refs/tags/${tag}^{}`],
+    { encoding: 'utf8', timeout: 30000 },
+  );
+  verifyRemoteTagOutput(out, tag, sha);
 }
 async function registry(descriptor) {
   const url = `https://registry.modelcontextprotocol.io/v0.1/servers/${encodeURIComponent(descriptor.name)}/versions/${encodeURIComponent(descriptor.version)}?include_deleted=true`;
@@ -192,14 +198,7 @@ export async function readiness({ tag, sha, descriptor, manifest, repo }, { get 
   if (runs.status !== 200) fail('release workflow runs unavailable');
   if (!checkReleaseRuns(runs.body, tag, sha))
     fail('no completed successful exact-tag release workflow; retry after it completes');
-  const successful = runs.body.workflow_runs.filter(
-    (r) =>
-      r.event === 'push' &&
-      r.head_branch === tag &&
-      r.head_sha === sha &&
-      r.status === 'completed' &&
-      r.conclusion === 'success',
-  );
+  const successful = runs.body.workflow_runs.filter((run) => matchesReleaseRun(run, tag, sha));
   let producersReady = false;
   for (const run of successful) {
     if (
