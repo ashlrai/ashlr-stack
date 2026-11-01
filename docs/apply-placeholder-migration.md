@@ -35,6 +35,10 @@ existing webhook files before deciding to rerun it.
   interpreting the counts. Unknown providers are also skipped. Zero present
   and missing counts describe checked names only; they do not prove the vault
   is empty or complete. See [troubleshooting](apply-troubleshooting.md).
+- [ ] If apply reports `phantom-wire failed`, the wiring operation did not
+  complete. Investigate the reported error and check both the inventory and
+  webhook files; the warning alone does not make apply fail, and files may
+  have been written before the error.
 - [ ] Confirm required names are present in Phantom, then verify the actual
   credentials and services separately. A present name does not prove that its
   value works, and an applied recipe does not prove that all secrets exist.
@@ -45,6 +49,23 @@ existing webhook files before deciding to rerun it.
 - [ ] If `--noWire` was used, account for both the skipped inventory check
   and skipped webhook stubs. No wiring summary is printed; provider setup
   still runs and may store real credentials.
+
+## Updating core consumers
+
+Code consuming `wirePhantomForRecipe` should replace `envelopes` with the
+`present` and `missing` arrays, and inspect `skipped` before treating an
+inventory as complete. Entries in `present` and `missing` have the form
+`provider:SECRET_NAME`; their lengths count declared provider-secret entries,
+not unique vault names. Repeated providers can produce repeated entries.
+`webhooks` contains paths to generated stubs. With `noWire: true`, all four
+arrays are empty: that result means wiring was disabled, not that the vault
+was checked. A thrown error means wiring did not complete and may already
+have written some stubs.
+
+For example, an OpenAI recipe checked against a readable vault without its key
+returns `missing: ["openai:OPENAI_API_KEY"]`, with empty `present`, `skipped`
+and `webhooks` arrays. These arrays contain names and paths, never secret
+values. Neither `present` nor `missing` is a count of values written.
 
 For a readable vault with `OPENAI_API_KEY` missing and no webhooks, the
 changelog shows:
