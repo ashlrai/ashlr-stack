@@ -1,9 +1,19 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
-import { execFileSync } from 'node:child_process';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
+import { execFileSync, spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { devNull, tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, relative } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   checkAssets,
   checkNpm,
@@ -16,6 +26,19 @@ import {
   validateContext,
   verifyRemoteTagOutput,
 } from './mcp-registry-gate.mjs';
+
+// Git -C does not override inherited repository or config selectors.
+// Keep every Git fixture isolated from the caller's repository and config.
+function isolatedGitEnv(parent, home) {
+  const env = Object.fromEntries(Object.entries(parent).filter(([name]) => !/^GIT_/i.test(name)));
+  return {
+    ...env,
+    HOME: home,
+    XDG_CONFIG_HOME: join(home, 'xdg-config'),
+    GIT_CONFIG_NOSYSTEM: '1',
+    GIT_CONFIG_GLOBAL: devNull,
+  };
+}
 
 const tag = 'v0.3.1';
 const sha = 'a'.repeat(40);
@@ -129,12 +152,7 @@ test('remote tag verification prefers a peeled annotated commit and fails closed
 
 test('remote tag parser accepts real local lightweight and annotated git outputs', () => {
   const dir = mkdtempSync(join(tmpdir(), 'stack-gate-git-'));
-  const env = {
-    ...process.env,
-    HOME: dir,
-    GIT_CONFIG_NOSYSTEM: '1',
-    GIT_CONFIG_GLOBAL: devNull,
-  };
+  const env = isolatedGitEnv(process.env, dir);
   const git = (...args) => execFileSync('git', ['-C', dir, ...args], { encoding: 'utf8', env });
   try {
     git('init', '-q');
@@ -170,6 +188,109 @@ test('remote tag parser accepts real local lightweight and annotated git outputs
     }
   } finally {
     rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('git fixture leaves an injected caller repository and object store untouched', () => {
+  const root = mkdtempSync(join(tmpdir(), 'stack-gate-sentinel-'));
+  const repo = join(root, 'sentinel');
+  const home = join(root, 'home');
+  mkdirSync(repo);
+  mkdirSync(home);
+  const clean = isolatedGitEnv(process.env, home);
+  const git = (...args) =>
+    execFileSync('git', ['-C', repo, ...args], { encoding: 'utf8', env: clean });
+  try {
+    git('init', '-q');
+    writeFileSync(join(repo, 'tracked.txt'), 'sentinel\n');
+    git('add', 'tracked.txt');
+    git(
+      '-c',
+      'user.name=Fixture',
+      '-c',
+      'user.email=fixture@example.invalid',
+      'commit',
+      '-q',
+      '-m',
+      'sentinel',
+    );
+    git('tag', 'sentinel-original');
+    const snapshot = () => {
+      const files = [];
+      const walk = (path) => {
+        if (!existsSync(path)) return;
+        for (const entry of readdirSync(path, { withFileTypes: true })) {
+          const child = join(path, entry.name);
+          if (entry.isDirectory()) walk(child);
+          else if (entry.isFile()) files.push(child);
+        }
+      };
+      for (const part of ['refs', 'objects']) walk(join(repo, '.git', part));
+      for (const path of [
+        '.git/HEAD',
+        '.git/index',
+        '.git/config',
+        '.git/packed-refs',
+        'tracked.txt',
+      ]) {
+        const full = join(repo, path);
+        if (existsSync(full)) files.push(full);
+      }
+      return files
+        .sort()
+        .map((path) => [
+          relative(repo, path),
+          createHash('sha256').update(readFileSync(path)).digest('hex'),
+        ]);
+    };
+    const before = snapshot();
+    const repositoryEnv = {
+      ...clean,
+      GIT_DIR: join(repo, '.git'),
+      GIT_WORK_TREE: repo,
+      GIT_INDEX_FILE: join(repo, '.git', 'index'),
+      GIT_OBJECT_DIRECTORY: join(repo, '.git', 'objects'),
+      GIT_COMMON_DIR: join(repo, '.git'),
+    };
+    const moreGitEnv = {
+      ...repositoryEnv,
+      GIT_ALTERNATE_OBJECT_DIRECTORIES: join(repo, '.git', 'objects'),
+      GIT_EXEC_PATH: join(root, 'invalid-git-exec-path'),
+      GIT_TEMPLATE_DIR: join(root, 'invalid-template'),
+      GIT_CONFIG_COUNT: '1',
+      GIT_CONFIG_KEY_0: 'core.hooksPath',
+      GIT_CONFIG_VALUE_0: join(root, 'invalid-hooks'),
+    };
+    for (const inherited of [repositoryEnv, moreGitEnv]) {
+      // The nested Node runner must use its own test protocol and reporter.
+      delete inherited.NODE_TEST_CONTEXT;
+      const sanitized = isolatedGitEnv(inherited, home);
+      assert.deepEqual(
+        Object.keys(sanitized)
+          .filter((name) => /^GIT_/i.test(name))
+          .sort(),
+        ['GIT_CONFIG_GLOBAL', 'GIT_CONFIG_NOSYSTEM'],
+      );
+      const child = spawnSync(
+        process.execPath,
+        [
+          '--test',
+          '--test-reporter=tap',
+          '--test-name-pattern=^remote tag parser accepts real local lightweight and annotated git outputs$',
+          fileURLToPath(import.meta.url),
+        ],
+        { env: inherited, encoding: 'utf8', timeout: 30000 },
+      );
+      assert.deepEqual(snapshot(), before);
+      assert.equal(child.status, 0, `${child.stdout}\n${child.stderr}`);
+      assert.match(
+        child.stdout,
+        /^ok \d+ - remote tag parser accepts real local lightweight and annotated git outputs$/m,
+      );
+      assert.match(child.stdout, /^# pass 1$/m);
+    }
+  } finally {
+    rmSync(root, { recursive: true, force: true });
   }
 });
 
