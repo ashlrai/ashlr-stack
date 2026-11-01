@@ -77,13 +77,12 @@ irm https://stack.ashlr.ai/install.ps1 | iex
 
 npm / bun registry:
 
-> The command below is generated from this checkout’s source version; a future source version may not be published yet. On November 1, 2026, npm reported 0.3.0 for all three Stack packages. Check `npm view @ashlr/stack-core version`, `npm view @ashlr/stack version` and `npm view ashlr-stack-mcp version` before relying on a newer pin. The 0.3.0 CLI and MCP packages declare Node.js 20 or newer; source development uses Bun.
+> On November 1, 2026, npm reported 0.3.1 for all three Stack packages; the 0.3.1 CLI and MCP packages declare Node.js 20 or newer. Check `npm view @ashlr/stack-core version`, `npm view @ashlr/stack version` and `npm view ashlr-stack-mcp version` for current versions. This checkout declares the source version shown above and contains changes not in the v0.3.1 release tag; its version does not establish what is published. Source development uses Bun.
 
-<!-- fresh:begin install-snippet -->
 ```bash
-bun add -g @ashlr/stack@0.3.0 ashlr-stack-mcp@0.3.0     # or: npm i -g
+npm i -g @ashlr/stack ashlr-stack-mcp
+# or: bun add -g @ashlr/stack ashlr-stack-mcp
 ```
-<!-- fresh:end -->
 
 > Check the published versions with `npm view @ashlr/stack version` and `npm view ashlr-stack-mcp version`. Older releases may require [Bun](https://bun.sh) and lack commands such as `stack doctor --ecosystem` or `stack exec --as`. Use the dev install below to run this checkout's commands.
 

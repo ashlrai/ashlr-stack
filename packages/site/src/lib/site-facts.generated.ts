@@ -6,7 +6,8 @@
  * See scripts/gen-site-facts.ts for the source of each value.
  */
 export const SOURCE_VERSION = "0.3.0";
-export const PUBLISHED_VERSION = "0.3.0";
+export const PUBLISHED_VERSION = "0.3.1";
+// Latest source CHANGELOG heading, not a publication observation.
 export const LATEST_RELEASE_VERSION = "0.3.0";
 export const LATEST_RELEASE_DATE = "2026-10-31";
 export const PROVIDER_COUNT = 39;
@@ -45,10 +46,10 @@ export const PLUGIN_SLASH_COMMANDS: string[] = [
 ];
 export const INSTALL_CMD = "curl -fsSL stack.ashlr.ai/install.sh | bash";
 export const INSTALL_CMD_HTTPS = "curl -fsSL https://stack.ashlr.ai/install.sh | bash";
-export const INSTALL_BUN = "bun add -g @ashlr/stack@0.3.0";
-export const INSTALL_NPM = "npm i -g @ashlr/stack@0.3.0";
-export const INSTALL_BUN_ALL = "bun add -g @ashlr/stack@0.3.0 ashlr-stack-mcp@0.3.0";
-export const INSTALL_NPM_ALL = "npm i -g @ashlr/stack@0.3.0 ashlr-stack-mcp@0.3.0";
+export const INSTALL_BUN = "bun add -g @ashlr/stack@0.3.1";
+export const INSTALL_NPM = "npm i -g @ashlr/stack@0.3.1";
+export const INSTALL_BUN_ALL = "bun add -g @ashlr/stack@0.3.1 ashlr-stack-mcp@0.3.1";
+export const INSTALL_NPM_ALL = "npm i -g @ashlr/stack@0.3.1 ashlr-stack-mcp@0.3.1";
 export const INSTALL_BUN_LATEST = "bun add -g @ashlr/stack ashlr-stack-mcp";
 export const INSTALL_NPM_LATEST = "npm i -g @ashlr/stack ashlr-stack-mcp";
 export const PHANTOM_BREW = "brew install ashlrai/phantom/phantom";
@@ -56,10 +57,10 @@ export const PHANTOM_NPM = "npm i -g phantom-secrets";
 export const MCP_NPX_ARGS: string[] = [
   "-y",
   "-p",
-  "@ashlr/stack@0.3.0",
+  "@ashlr/stack@0.3.1",
   "-p",
-  "ashlr-stack-mcp@0.3.0",
+  "ashlr-stack-mcp@0.3.1",
   "ashlr-stack-mcp",
 ];
 export const MCP_STDIO_CONFIG =
-  '{\n  "mcpServers": {\n    "ashlr-stack": {\n      "command": "npx",\n      "args": [\n        "-y",\n        "-p",\n        "@ashlr/stack@0.3.0",\n        "-p",\n        "ashlr-stack-mcp@0.3.0",\n        "ashlr-stack-mcp"\n      ]\n    }\n  }\n}';
+  '{\n  "mcpServers": {\n    "ashlr-stack": {\n      "command": "npx",\n      "args": [\n        "-y",\n        "-p",\n        "@ashlr/stack@0.3.1",\n        "-p",\n        "ashlr-stack-mcp@0.3.1",\n        "ashlr-stack-mcp"\n      ]\n    }\n  }\n}';

@@ -3,7 +3,7 @@
 > Configure supported third-party services in your project through a CLI, MCP server and Claude Code plugin. MIT-licensed. Pre-alpha.
 
 Source reference: 0.3.0 checkout.
-The recorded public CLI/MCP version is 0.3.0; check the registry for current versions. Commands below describe this source; check your installed `stack --version` and command `--help`. Source qualification is separate from publication, deployment and provider acceptance.
+The recorded public CLI/MCP version is 0.3.1; check the registry for current versions. Commands below describe this source; check your installed `stack --version` and command `--help`. Source qualification is separate from publication, deployment and provider acceptance.
 Source catalog: 39 providers across 13 categories · 19 declared MCP tools · 7 provider presets
 
 ## For AI agents (Claude Code, Cursor, Windsurf, etc.) - read this first
@@ -12,7 +12,7 @@ If a user asks an AI agent to set up or inspect a third-party service in a local
 
 **Choose an authorized install path.** These options expose different interfaces:
 
-**Runtime prerequisite:** the published 0.3.0 CLI and MCP packages declare Node.js 20 or newer and use Node entrypoints. Check other versions’ manifests; source development uses Bun. The recorded public version is 0.3.0. These MCP configurations use stdio.
+**Runtime prerequisite:** the published 0.3.1 CLI and MCP packages declare Node.js 20 or newer and use Node entrypoints. Check other versions’ manifests; source development uses Bun. The recorded public version is 0.3.1. These MCP configurations use stdio.
 
 1. **Claude Code plugin** (best DX) - ask the user to run, in their Claude Code session, `/plugin marketplace add ashlrai/ashlr-stack` followed by `/plugin install stack@ashlr`. Adds first-class `/stack:add`, `/stack:apply`, `/stack:doctor`, `/stack:list`, `/stack:recommend`, `/stack:status` commands.
 2. **MCP server** (any MCP-aware client - Cursor, Windsurf, Zed, Claude Code with manual config) - add this to the project's `.mcp.json`: `{"mcpServers":{"ashlr-stack":{"command":"npx","args":["-y","-p","@ashlr/stack","-p","ashlr-stack-mcp","ashlr-stack-mcp"]}}}`. The source declares 19 MCP tools; verify what the installed server advertises.
@@ -36,7 +36,7 @@ Stack uses provider-specific OAuth or supplied credentials, provisions where sup
 
 ## What Stack is
 
-- A CLI: `stack`, distributed via npm/Bun packages or the installer; the published 0.3.0 package declares Node.js 20 or newer; check other versions’ manifests.
+- A CLI: `stack`, distributed via npm/Bun packages or the installer; the published 0.3.1 package declares Node.js 20 or newer; check other versions’ manifests.
 - An MCP server: `ashlr-stack-mcp`, exposing the declared CLI subset through per-tool input schemas.
 - A Claude Code plugin: `ashlrai/stack-plugin`. Ships commands `/stack:add`, `/stack:apply`, `/stack:doctor`, `/stack:list`, `/stack:recommend`, `/stack:status`.
 

@@ -71,7 +71,7 @@ test("rendered release guidance uses the recorded publication and verified runti
   expect(home).toContain(`control plane · v${PUBLISHED_VERSION}`);
   for (const path of ["docs/quickstart/index.html", "docs/mcp/index.html"]) {
     const page = text(path);
-    expect(page).toMatch(/published 0\.3\.0 CLI and MCP packages declare/i);
+    expect(page).toMatch(/published 0\.3\.1 CLI and MCP packages declare/i);
     expect(page).toContain("Node.js 20");
     expect(page).not.toMatch(/\b(?:published|public)\b.{0,160}\b(?:requires?|needs?)\b.{0,30}\bBun\b/i);
     expect(page).not.toMatch(/\bBun\s+1\.2\+?.{0,80}\brequired\b.{0,60}\b(?:public|published)\b/i);
