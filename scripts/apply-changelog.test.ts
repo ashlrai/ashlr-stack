@@ -70,6 +70,8 @@ await applyCommand.run({ args: { recipeId: "example", noWire: false, noRollback:
     expect(result.stdout).toContain(output ?? "example missing");
     const guide = readFileSync(join(root, "docs/apply-observation.md"), "utf8");
     expect(guide).toContain(`\`\`\`text\n${output}\n\`\`\``);
+    const userImpact = readFileSync(join(root, "docs/apply-user-impact.md"), "utf8");
+    expect(userImpact).toContain(`\`\`\`text\n${output}\n\`\`\``);
     const faq = readFileSync(join(root, "docs/apply-placeholder-faq.md"), "utf8");
     expect(faq).toContain(`\`\`\`text\n${output}\n\`\`\``);
     const migration = readFileSync(join(root, "docs/apply-placeholder-migration.md"), "utf8");
@@ -104,6 +106,8 @@ await applyCommand.run({ args: { recipeId: "example", noWire: false, noRollback:
     expect(missing.stdout).toContain(missingExample?.[1] ?? "example missing");
     expect(migration).toContain(`\`\`\`text\n${missingExample?.[1]}\n\`\`\``);
     expect(upgradeQuestions).toContain(`\`\`\`text\n${missingExample?.[1]}\n\`\`\``);
+    expect(userImpact).toContain(`\`\`\`text\n${missingExample?.[1]}\n\`\`\``);
+    expect(userImpact).toContain("`phantom add OPENAI_API_KEY`");
     expect(readFileSync(join(dir, "phantom-calls"), "utf8").trim().split("\n")).toEqual([
       "--version",
       "list --json",
