@@ -1,6 +1,7 @@
 # FAQ: `stack apply` and placeholder secrets
 
-This describes the behavior in the [apply changelog entry](../CHANGELOG.md).
+This describes the behavior in the [0.2.1 apply fix](../CHANGELOG.md#021-2026-10-16)
+and the [0.3.0 apply notes](../CHANGELOG.md#030-2026-10-31).
 Check `stack apply --help` and the changelog for the version you use.
 
 ## Does apply put placeholder values in Phantom?
@@ -10,10 +11,19 @@ recipe's declared secret names against `phantom list --json`. It does not
 write to the vault or fill missing values. Provider setup runs separately and
 may already have stored real credentials through its own workflow.
 
-Older wiring attempted to add a placeholder for each declared secret, but
-those calls failed: Phantom rejects values in command arguments and did not
-support the attempted `--rotate` option. The attempts were removed; they did
-not create usable credentials. See the [history](apply-placeholder-history.md).
+The 0.2.1 fix removed older attempts to add a placeholder for every declared
+secret. Those calls failed; the wiring step now checks names instead. The
+reported `WireResult.envelopes` field was replaced by `present` and `missing`.
+See the [history](apply-placeholder-history.md).
+
+## Did the historical command rotate secrets?
+
+It attempted `phantom add <KEY> TODO_STACK_APPLY --rotate`, then retried
+without `--rotate`. According to the [0.2.1 changelog](../CHANGELOG.md#021-2026-10-16),
+Phantom has no `--rotate` option and rejects values passed in command
+arguments, so every call failed. The attempted option did not rotate secrets;
+neither form should be run. The changelog does not establish the state of an
+individual vault or prescribe a migration of existing secrets.
 
 ## Why do I need to supply a real value?
 
