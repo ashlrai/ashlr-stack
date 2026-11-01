@@ -1,10 +1,10 @@
+import { test } from "bun:test";
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
 import { cpSync, mkdtempSync, mkdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { test } from "node:test";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -41,4 +41,4 @@ test("fast check detects package changes and reports type errors", () => {
   } finally {
     rmSync(temp, { recursive: true, force: true });
   }
-});
+}, 120_000);
