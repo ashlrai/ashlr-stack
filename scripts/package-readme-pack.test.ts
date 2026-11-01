@@ -23,7 +23,7 @@ test("current and simulated future npm archives carry neutral, runtime-consisten
       npm_config_update_notifier: "false",
     };
     for (const sourceVersion of ["current", "future"]) {
-      for (const pkg of ["cli", "mcp"]) {
+      for (const pkg of ["core", "cli", "mcp"]) {
         const copy = join(dir, sourceVersion, pkg);
         const output = join(dir, sourceVersion, `${pkg}-pack`);
         mkdirSync(output, { recursive: true });
@@ -65,15 +65,23 @@ test("current and simulated future npm archives carry neutral, runtime-consisten
         const readme = extract("package/README.md");
         const packaged = JSON.parse(extract("package/package.json"));
         expect(packaged.version).toBe(manifest.version);
-        expect(packaged.engines.node).toBe(">=20");
-        expect(packaged.scripts.build).toContain("--target node");
-        expect(packaged.scripts.build).toContain("#!/usr/bin/env node");
-        expect(readme).toContain("Node.js >= 20");
-        expect(readme).toContain(
-          pkg === "cli"
-            ? "npm i -g @ashlr/stack ashlr-stack-mcp"
-            : "npm i -g ashlr-stack-mcp @ashlr/stack",
-        );
+        if (pkg === "core") {
+          expect(packaged.main).toBe("./src/index.ts");
+          expect(readme).toContain("exports point at TypeScript source");
+          expect(readme).toContain("does not by itself establish Node-only execution support");
+          expect(readme).not.toContain("Source version `0.2.1`");
+          expect(readme).not.toContain("CLI/MCP `0.1.1`");
+        } else {
+          expect(packaged.engines.node).toBe(">=20");
+          expect(packaged.scripts.build).toContain("--target node");
+          expect(packaged.scripts.build).toContain("#!/usr/bin/env node");
+          expect(readme).toContain("Node.js >= 20");
+          expect(readme).toContain(
+            pkg === "cli"
+              ? "npm i -g @ashlr/stack ashlr-stack-mcp"
+              : "npm i -g ashlr-stack-mcp @ashlr/stack",
+          );
+        }
         expect(readme).not.toMatch(/(?:@ashlr\/stack|ashlr-stack-mcp)@\d+\.\d+\.\d+/);
         expect(readme).not.toMatch(/(?:published|public) 0\.(?:1\.1|3\.0)/i);
         expect(readme).not.toMatch(/(?:published|public).{0,60}(?:requires?|needs?).{0,30}Bun/i);
