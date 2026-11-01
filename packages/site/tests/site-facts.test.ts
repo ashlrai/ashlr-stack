@@ -157,6 +157,31 @@ describe("site facts: sources of truth agree", () => {
       );
     }
   });
+  test("a later public pointer does not extend the verified 0.3.1 runtime claim", async () => {
+    // The public pointer records a version, not that release's engines metadata.
+    const later = { ...facts, publishedVersion: "0.3.2" };
+    const mcp = JSON.parse(await renderMcpJson(later));
+    const plugin = JSON.parse(renderAiPluginJson(later));
+    const openapi = JSON.parse(renderOpenApiJson(later));
+    for (const description of [
+      mcp.description,
+      plugin.description_for_model,
+      openapi.info.description,
+    ]) {
+      expect(description).toContain(
+        "0.3.1 CLI and MCP packages declare Node.js 20 or newer; inspect other releases’ engines.",
+      );
+      expect(description).not.toContain("0.3.2 CLI and MCP packages declare Node.js");
+      expect(description).toContain("is 0.3.2.");
+    }
+    const expectedArgs = [
+      "-y", "-p", "@ashlr/stack@0.3.2", "-p", "ashlr-stack-mcp@0.3.2", "ashlr-stack-mcp",
+    ];
+    expect(mcp.install.args).toEqual(expectedArgs);
+    expect(mcp.install.mcpConfigSnippet.mcpServers.stack.args).toEqual(expectedArgs);
+    expect(mcp.version).toBe(facts.sourceVersion);
+    expect(openapi.info.version).toBe(facts.sourceVersion);
+  });
   test("counts match the registries", () => {
     expect(facts.providerCount).toBe(listProviderNames().length);
     expect(facts.categoryCount).toBe(new Set(PROVIDERS_REF.map((p) => p.category)).size);
