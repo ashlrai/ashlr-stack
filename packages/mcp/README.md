@@ -1,10 +1,10 @@
 # ashlr-stack-mcp
 
-> MCP server for [Ashlr Stack](https://stack.ashlr.ai). Exposes 19 tools and up to 3 resources so Claude Code / Cursor / Windsurf / Codex can provision every third-party service in a project with one call.
+> MCP server for [Ashlr Stack](https://stack.ashlr.ai). Exposes 19 tools and up to 3 resources for inspecting and configuring supported services from MCP clients.
 
 ## What it does
 
-`stack` is a CLI. `ashlr-stack-mcp` is the same capabilities as MCP tools so your coding agent can drive Stack directly. Ask Claude "add Supabase to this project" and it calls `stack_add`, which walks OAuth, provisions the project, writes secrets through Phantom, and updates `.mcp.json` — all without leaving the chat.
+`stack` is a CLI. `ashlr-stack-mcp` is the same capabilities as MCP tools so your coding agent can drive Stack directly. An agent can request `stack_add` for a supported provider; authentication, resource setup and configuration changes depend on the adapter and authorization. Inspect the result and any changes.
 
 ## Install
 
@@ -26,7 +26,7 @@ bun add -g ashlr-stack-mcp @ashlr/stack
 npm i -g ashlr-stack-mcp @ashlr/stack
 ```
 
-Every tool runs the `stack` CLI. The server resolves it in this order: the executable specified by `STACK_BIN`, the installed `@ashlr/stack` dependency's bin, then `stack` on PATH. If none is available, the server can still start and list tools, but calls fail with a CLI error. The npm 0.1.1 release runs on Bun, so Bun must be installed for that release.
+Every tool runs the `stack` CLI. The server resolves it in this order: the executable specified by `STACK_BIN`, the installed `@ashlr/stack` dependency's bin, then `stack` on PATH. If none is available, the server can still start and list tools, but calls fail with a CLI error. The npm CLI and MCP packages in this release declare Node.js >= 20 and use Node entrypoints. Check your installed package manifests; source development uses Bun.
 
 ## Run from a local clone
 

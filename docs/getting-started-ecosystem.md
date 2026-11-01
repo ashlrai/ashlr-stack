@@ -8,9 +8,10 @@ This guide sets up four tools side by side: Phantom (`phm`), Locus (`locus`), St
 |---|---|---|---|
 | Phantom `@ashlr/phantom` | 3.29.15 | 3.29.15 | `npm view @ashlr/phantom version` |
 | Locus `locus-cli` | 0.5.0 | 0.5.1 | `npm view locus-cli version` |
-| Stack `@ashlr/stack` | 0.1.1 | <!-- fresh:begin version-pin -->0.3.0<!-- fresh:end --> | `npm view @ashlr/stack version` |
+| Stack `@ashlr/stack` | <!-- fresh:begin published-pin -->0.3.0<!-- fresh:end --> | <!-- fresh:begin version-pin -->0.3.1<!-- fresh:end --> | `npm view @ashlr/stack version` |
+| Stack MCP `ashlr-stack-mcp` | <!-- fresh:begin published-pin -->0.3.0<!-- fresh:end --> | <!-- fresh:begin version-pin -->0.3.1<!-- fresh:end --> | `npm view ashlr-stack-mcp version` |
 
-Features that are in source but not in these published builds: `phm fleet receipt` (the published 3.29.15 answers `unknown fleet subcommand: receipt`), `--ashlr-handshake` on `phm`, `stack doctor --ecosystem` and `stack exec --as`. The locus 0.5.0 npm build has a known `locus --version` loop; see the locus README. To try the newer features, build from source as shown below.
+The Phantom observations below are from the October 25 run: `phm fleet receipt` (the published 3.29.15 answered `unknown fleet subcommand: receipt`) and `--ashlr-handshake` on `phm` were not in that build. The locus 0.5.0 npm build has a known `locus --version` loop; see the locus README. To try the newer features, build from source as shown below.
 
 ## 1. Phantom
 
@@ -50,13 +51,13 @@ Notes from the run:
 
 ## 3. Stack
 
-The published 0.1.1 lacks the flags below, so use a source checkout:
+The recorded published 0.3.0 CLI and MCP packages declare Node.js 20 or newer; check installed help and registry versions before relying on a particular release. To run the source checkout (which uses Bun):
 
 ```bash
 git clone https://github.com/ashlrai/ashlr-stack && cd ashlr-stack
 bun install
 alias stack="bun run $(pwd)/packages/cli/src/index.ts"
-stack --version                  # 0.3.0 from this source checkout
+stack --version                  # check the source checkout version
 stack doctor --ecosystem         # which Ashlr tools are installed, via --ashlr-handshake; informational, never fails
 stack exec --as personal -- bun dev   # needs a .stack.toml (run `stack init` first); see `stack exec --help` for --as
 ```
@@ -90,7 +91,7 @@ The order follows the first-run measurements: Node 22.15+ is checked first, then
 One command previews the repairs every installed tool offers. It runs each tool's own `doctor --fix --json` (only for tools whose handshake advertises the `doctor-fix` capability) and changes nothing:
 
 ```bash
-stack doctor --ecosystem --fix   # available in this 0.3.0 source checkout; absent from the historical 0.1.1 build
+stack doctor --ecosystem --fix   # check the source checkout help; absent from the historical 0.1.1 build
 ```
 
 Then make the repairs with each tool's own command. Run them yourself, directly in your shell:

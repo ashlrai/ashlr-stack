@@ -5,12 +5,12 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 [![npm version](https://img.shields.io/npm/v/@ashlr/stack.svg)](https://www.npmjs.com/package/@ashlr/stack)
 <!-- fresh:begin version-badge -->
-[![source v0.3.0](https://img.shields.io/badge/source-v0.3.0-blue.svg)](CHANGELOG.md)
+[![source v0.3.1](https://img.shields.io/badge/source-v0.3.1-blue.svg)](CHANGELOG.md)
 <!-- fresh:end -->
 
 **Configure supported services from your terminal or your AI agent.** Stack uses provider-specific OAuth or supplied credentials, provisions where the adapter supports it, and records selected credentials in [Phantom Secrets](https://phm.dev/secrets), Stack configuration and provider MCP entries. Vercel requires an existing personal access token; Stack does not create that token. Export an empty `.env.example` separately with `stack env export --example`.
 
-**Status:** pre-alpha, active development. This 0.3 release candidate adds fleet diagnostics and stricter input validation on top of the Node-compatible CLI and headless workflows; this checkout is version <!-- fresh:begin version-pin -->0.3.0<!-- fresh:end -->. See [CHANGELOG.md](./CHANGELOG.md) for compatibility notes and changes since 0.2.2. Source versions do not establish npm publication or provider readiness. Check `npm view @ashlr/stack version`, `npm view ashlr-stack-mcp version`, and your installed `stack --version` before relying on release-specific commands.
+**Status:** pre-alpha, active development. This 0.3 release candidate adds fleet diagnostics and stricter input validation on top of the Node-compatible CLI and headless workflows; this checkout is version <!-- fresh:begin version-pin -->0.3.1<!-- fresh:end -->. See [CHANGELOG.md](./CHANGELOG.md) for compatibility notes and changes since 0.2.2. Source versions do not establish npm publication or provider readiness. Check `npm view @ashlr/stack version`, `npm view ashlr-stack-mcp version`, and your installed `stack --version` before relying on release-specific commands.
 
 <!-- Demo GIF: record with vhs, see docs/ -->
 
@@ -77,11 +77,11 @@ irm https://stack.ashlr.ai/install.ps1 | iex
 
 npm / bun registry:
 
-> **Release candidate:** the generated 0.3.0 install command below is for use only after all three packages are published. First verify `npm view @ashlr/stack-core@0.3.0 version`, `npm view @ashlr/stack@0.3.0 version` and `npm view ashlr-stack-mcp@0.3.0 version` each return `0.3.0`. If any version is unavailable, use the **Dev install** instructions below to build from source instead; the version pin is not evidence of publication.
+> This install command uses the last separately verified published version, not the source candidate. Check current registry metadata before installing; package publication does not establish provider readiness. The 0.3.0 CLI and MCP packages declare Node.js 20 or newer; source development uses Bun.
 
-<!-- fresh:begin install-snippet -->
+<!-- fresh:begin published-install-snippet -->
 ```bash
-bun add -g @ashlr/stack@0.3.0 ashlr-stack-mcp@0.3.0     # or: npm i -g
+npm i -g @ashlr/stack@0.3.0 ashlr-stack-mcp@0.3.0
 ```
 <!-- fresh:end -->
 
@@ -341,7 +341,7 @@ docs/         auth matrix, schema reference
 
 ### Publishing
 
-Three packages ship to npm: `@ashlr/stack-core`, `ashlr-stack-mcp`, `@ashlr/stack`. For monorepo dev, `@ashlr/stack` depends on `@ashlr/stack-core` via `workspace:*`: that's what lets `bun install` link the local checkout. A plain `npm install @ashlr/stack` from outside the workspace **cannot resolve `workspace:*`**, so the publish flow has to rewrite those ranges to an actual version (e.g. ^<!-- fresh:begin version-pin -->0.3.0<!-- fresh:end -->) right before `npm publish`.
+Three packages ship to npm: `@ashlr/stack-core`, `ashlr-stack-mcp`, `@ashlr/stack`. For monorepo dev, `@ashlr/stack` depends on `@ashlr/stack-core` via `workspace:*`: that's what lets `bun install` link the local checkout. A plain `npm install @ashlr/stack` from outside the workspace **cannot resolve `workspace:*`**, so the publish flow has to rewrite those ranges to an actual version (e.g. ^<!-- fresh:begin version-pin -->0.3.1<!-- fresh:end -->) right before `npm publish`.
 
 Don't hand-edit the `workspace:*` entries in `packages/*/package.json`: dev needs them. Release owners should follow [docs/RELEASE.md](./docs/RELEASE.md), which describes the current script, its limitations and separate package, native and website acceptance gates.
 

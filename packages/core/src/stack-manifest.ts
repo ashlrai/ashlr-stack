@@ -26,9 +26,9 @@ export const STACK_MANIFEST = Object.freeze({
   schema_version: 1,
   kind: "ashlr-stack-manifest",
   components: Object.freeze([
-    Object.freeze({ id: "core", name: "@ashlr/stack-core", version: "0.3.0", distribution: "npm" }),
-    Object.freeze({ id: "cli", name: "@ashlr/stack", version: "0.3.0", distribution: "npm" }),
-    Object.freeze({ id: "mcp", name: "ashlr-stack-mcp", version: "0.3.0", distribution: "npm" }),
+    Object.freeze({ id: "core", name: "@ashlr/stack-core", version: "0.3.1", distribution: "npm" }),
+    Object.freeze({ id: "cli", name: "@ashlr/stack", version: "0.3.1", distribution: "npm" }),
+    Object.freeze({ id: "mcp", name: "ashlr-stack-mcp", version: "0.3.1", distribution: "npm" }),
     Object.freeze({
       id: "plugin",
       name: "stack",

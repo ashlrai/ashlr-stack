@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.3.1 (2026-11-01)
+
+### Fixed
+
+- Package READMEs describe their current runtime and use version-neutral installation commands, so immutable npm packages do not direct users to an older release. Source preparation alone does not establish publication.
+- The release workflow renders literal Homebrew formula placeholders correctly; release and tap results still require separate verification.
+
 ## 0.3.0 (2026-10-31)
 
 ### Added

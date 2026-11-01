@@ -10,6 +10,7 @@ drift. Plain `.mjs`, no dependencies, runs under Node 18+ or Bun.
   manifests `packages/{core,cli,mcp}/package.json` must agree, and
   `packages/mcp/server.json` plus `const VERSION` in
   `packages/cli/src/index.ts` must match).
+- Verified published version: `scripts/freshness/published.json`, updated only after all three npm packages and artifacts are verified. Root install commands and docs' published cells use it, independently of the source version.
 - Latest dated section (not proof of publication): first `## x.y.z (date)` heading in `CHANGELOG.md`
   (`## Unreleased` is skipped); it must equal the release version.
 - Monorepo version: root `package.json` `version` (private; shown in the
@@ -51,7 +52,9 @@ Known block names:
 
 | Name | Generates |
 | --- | --- |
-| `version-pin` | the bare release version (`0.2.2`); inline-capable |
+| `version-pin` | the bare source version (`0.2.2`); inline-capable |
+| `published-pin` | the last verified published version; inline-capable |
+| `published-install-snippet` | npm install with the verified published version |
 | `version-badge` | shields badge pinned to the source version, linking to `CHANGELOG.md` |
 | `install-snippet` | fenced `bun add -g` (or `npm i -g`) with both packages pinned |
 | `version-table` | markdown table of shipped manifests, versions and the latest changelog section |

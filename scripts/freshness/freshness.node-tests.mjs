@@ -14,6 +14,7 @@ function repo(files = {}) {
   const root = mkdtempSync(join(tmpdir(), 'fresh-'));
   const base = {
     'package.json': JSON.stringify({ name: 'mono', version: '1.2.3', private: true }),
+    'scripts/freshness/published.json': JSON.stringify({ version: '0.3.0' }),
     'packages/core/package.json': JSON.stringify({ name: '@x/core', version: V }),
     'packages/cli/package.json': JSON.stringify({ name: '@x/cli', version: V }),
     'packages/mcp/package.json': JSON.stringify({ name: 'x-mcp', version: V }),
@@ -68,6 +69,31 @@ test('install-snippet pins both shipped packages to the release version', () => 
   assert.ok(out.includes(`@x/cli@${V}`));
   assert.ok(out.includes(`x-mcp@${V}`));
   assert.match(out, /```$/);
+  rmSync(root, { recursive: true });
+});
+
+test('published install remains pinned independently of a future source version', () => {
+  const root = repo();
+  const { ctx, errors } = buildContext(root);
+  assert.deepEqual(errors, []);
+  assert.equal(ctx.release, V);
+  assert.equal(GENERATORS['published-pin'].generate(ctx), '0.3.0');
+  const out = GENERATORS['published-install-snippet'].generate(ctx);
+  assert.ok(out.includes('@x/cli@0.3.0'));
+  assert.ok(out.includes('x-mcp@0.3.0'));
+  assert.ok(!out.includes(V));
+  rmSync(root, { recursive: true });
+});
+
+test('invalid or missing publication pointers fail closed', () => {
+  for (const value of ['bad', '0.3', '00.3.0', null]) {
+    const root = repo({ 'scripts/freshness/published.json': JSON.stringify({ version: value }) });
+    assert.ok(buildContext(root).errors.some((e) => e.includes('invalid published version')));
+    rmSync(root, { recursive: true });
+  }
+  const root = repo();
+  rmSync(join(root, 'scripts/freshness/published.json'));
+  assert.ok(buildContext(root).errors.some((e) => e.includes('published.json')));
   rmSync(root, { recursive: true });
 });
 

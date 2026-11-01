@@ -71,10 +71,10 @@ const howTo = howToSchema({
       Real <code>stack add</code> needs its supported project setup.
     </li>
     <li>
-      <strong>Bun 1.2+</strong> — required by the recorded public CLI/MCP
-      packages <strong>{PUBLISHED_VERSION}</strong>. Reviewed source <strong>{SOURCE_VERSION}</strong>
-      and historical native <strong>0.2.0</strong> are separate artifacts.
-      Node/npm/npx alone do not prove the public binaries can run.
+      <strong>Node.js 20+</strong> — the published 0.3.0 CLI and MCP packages declare this
+      minimum. Check the manifests for other versions. Recorded public packages are
+      <strong>{PUBLISHED_VERSION}</strong>; reviewed source <strong>{SOURCE_VERSION}</strong>
+      and native release binaries are separate artifacts. Source development uses Bun.
     </li>
   </ul>
 
@@ -91,7 +91,7 @@ const howTo = howToSchema({
 
   <Code
     code={`bun add -g @ashlr/stack@${PUBLISHED_VERSION}
-# or (Bun 1.2+ still required)
+# or use npm as the package manager
 npm i -g @ashlr/stack@${PUBLISHED_VERSION}`}
     lang="bash"
     theme="github-dark-dimmed"

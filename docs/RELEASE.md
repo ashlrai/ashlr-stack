@@ -13,21 +13,24 @@ The manifests name three packages:
 - [`ashlr-stack-mcp`](../packages/mcp/package.json), unscoped
 - [`@ashlr/stack`](../packages/cli/package.json)
 
-Source versions do not establish publication. Retain the existing 0.1.1 install
-guidance until a new version has publication and consumer verification.
+Source versions do not establish publication. Registry observation on November 1,
+2026 verified 0.3.0 for all three npm packages. Keep published guidance at 0.3.0
+until a newer version has publication and consumer verification.
 
 ## Current script behavior
 
 `scripts/publish.sh` accepts `--version`, `--yes` (or `-y`), and `--help`.
-Even without `--yes`, it temporarily rewrites all three manifest versions and
-`workspace:*` ranges, then runs `npm publish --dry-run` for each package. CLI/MCP
-publication hooks can build output before the confirmation prompt. There is no
+It validates that source manifests, CLI version and MCP descriptor match the
+requested version, then temporarily rewrites `workspace:*` dependency ranges
+and runs `npm publish --dry-run` for each package, even without `--yes`.
+CLI/MCP publication hooks can build output before confirmation; there is no
 standalone read-only preview mode.
 
-Confirmation, or `--yes`, publishes core, CLI, then MCP (`ashlr-stack-mcp` depends on `@ashlr/stack`), creates a tag if absent,
-and attempts to push it. The exit trap restores the original manifests, including
-their versions; no source version commit is made. Existing tag targets are not
-checked against the publishing source. Tag push failure produces a warning.
+Confirmation, or `--yes`, publishes core, CLI, then MCP (`ashlr-stack-mcp`
+depends on `@ashlr/stack`), creates a tag if absent, and attempts to push it.
+The exit trap restores the original manifests. On a tag-triggered run the script
+checks the selected tag resolves to HEAD; outside that context an existing local
+tag is skipped without that check. Tag push failure produces a warning.
 
 The script selects no npm dist-tag. GitHub versions containing `-` are marked
 prereleases by the workflow, but npm's `next` tag is not selected.
@@ -39,9 +42,9 @@ the script and can create a public GitHub release with eight files.
 
 Acceptance gaps remain:
 
-- npm publication uses `continue-on-error`; GitHub release creation checks binary
-  build success without requiring verified npm acceptance.
-- Nonempty `npm_otp` becomes `--otp=...`, which the script rejects.
+- GitHub release creation requires the binary build, native smoke and npm
+  publish jobs to succeed, but that does not independently verify registry bytes.
+- A nonempty legacy `npm_otp` input is rejected before release producers run.
 - Native builds precede npm manifest rewrites and npm-only OAuth client ID
   injection. Version, source, and configuration agreement need verification.
 - Matching filenames establish neither public byte/checksum agreement nor npm
@@ -54,7 +57,7 @@ Actual publisher connections, permissions, and accepted publication remain
 unverified here; no credential creation or settings change is prescribed.
 
 After GitHub release success, a qualifying `refs/tags/v...` run can update the
-Homebrew formula and commit/push to the tap, including dispatch on a tag ref.
+Homebrew formula and commit/push to the tap on a qualifying tag push.
 It uses an existing referenced tap credential or skips when unavailable. Verify
 actual tap commissioning and the remote formula separately.
 
@@ -86,7 +89,7 @@ authorization first.
 
 ## Docs freshness
 
-After a version commit lands on the default branch, run `bun run fresh:sync`
-and verify with `bun run fresh:check`. Marked blocks (version badge, install
-snippet, version table, pins) regenerate from the manifests and the latest
-released CHANGELOG section; see [../scripts/freshness/README.md](../scripts/freshness/README.md).
+Run `bun run fresh:sync` and verify with `bun run fresh:check` on the reviewed
+candidate. Source-version blocks follow the manifests and newest dated source
+CHANGELOG section; published install pins follow the separately verified pointer.
+See [../scripts/freshness/README.md](../scripts/freshness/README.md).

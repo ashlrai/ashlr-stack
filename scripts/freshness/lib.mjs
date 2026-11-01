@@ -53,6 +53,14 @@ export function buildContext(root) {
   const rootManifest = readJson(join(root, 'package.json'));
   if (rootManifest.__error) errors.push(`package.json: ${rootManifest.__error}`);
 
+  // A source version bump is not evidence of publication. The reviewed
+  // pointer changes only after all package artifacts are verified.
+  const published = readJson(join(root, 'scripts/freshness/published.json'));
+  if (published.__error) errors.push(`scripts/freshness/published.json: ${published.__error}`);
+  else if (typeof published.version !== 'string' || !/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(published.version)) {
+    errors.push('scripts/freshness/published.json: invalid published version');
+  }
+
   const packages = [];
   for (const manifest of RELEASED_MANIFESTS) {
     const json = readJson(join(root, manifest));
@@ -116,6 +124,7 @@ export function buildContext(root) {
   const ctx = {
     root,
     release,
+    published: published.version,
     changelog,
     monorepo: { name: rootManifest.name, version: rootManifest.version, private: rootManifest.private === true },
     packages,
@@ -425,6 +434,23 @@ export const GENERATORS = {
     inline: true,
     description: 'bare release version, e.g. 0.2.2',
     generate: (ctx) => ctx.release,
+  },
+  'published-pin': {
+    inline: true,
+    description: 'last verified published version, independent of source',
+    generate: (ctx) => ctx.published,
+  },
+  'published-install-snippet': {
+    inline: false,
+    description: 'install commands pinned to the last verified published version',
+    generate: (ctx) => {
+      const name = (manifest) => ctx.packages.find((p) => p.manifest === manifest)?.name;
+      const pkgs = [name('packages/cli/package.json'), name('packages/mcp/package.json')]
+        .filter(Boolean)
+        .map((n) => `${n}@${ctx.published}`)
+        .join(' ');
+      return ['```bash', `npm i -g ${pkgs}`, '```'].join('\n');
+    },
   },
   'version-badge': {
     inline: false,
