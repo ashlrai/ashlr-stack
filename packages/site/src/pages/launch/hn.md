@@ -5,6 +5,8 @@ description: "Historical, unposted launch draft with illustrative source-defined
 noindex: true
 ---
 
+> **Historical draft — not current installation guidance.** Versions and runtime requirements below reflect an earlier snapshot and may no longer apply. For current setup, see the [Quickstart](/docs/quickstart/).
+
 # Show HN: Stack v0.2 — one command to provision, wire, and boot a full dev stack
 
 Historical, unposted Show HN draft, revised against source 0.2.1. Recorded public npm 0.1.1 and historical native 0.2.0 are separate artifacts. The setup below is illustrative, not a posted release or customer acceptance record.

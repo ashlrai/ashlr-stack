@@ -1,6 +1,7 @@
 import { existsSync, readdirSync } from "node:fs";
-import { readFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import { join } from "node:path";
+import { SourceDirectoryNotFoundError } from "./errors.ts";
 
 /**
  * Source-level provider detection. Reads package.json / requirements.txt /
@@ -98,6 +99,12 @@ const JS_RULES: DepRule[] = [
     matches: (d) => d === "braintrust" || d === "@braintrust/sdk",
     confidence: "high",
   },
+  {
+    provider: "modal",
+    // Modal is Python-first; the dep lives in requirements.txt.
+    matches: () => false,
+    confidence: "low",
+  },
 ];
 
 const PY_RULES: DepRule[] = [
@@ -159,6 +166,18 @@ export async function scanSource(
   cwd: string,
   _opts: SourceScanOptions = {},
 ): Promise<SourceDetection[]> {
+  let root: Awaited<ReturnType<typeof stat>>;
+  try {
+    root = await stat(cwd);
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code === "ENOENT" || code === "ENOTDIR") {
+      throw new SourceDirectoryNotFoundError(cwd, { cause: error });
+    }
+    throw error;
+  }
+  if (!root.isDirectory()) throw new SourceDirectoryNotFoundError(cwd);
+
   const hits = new Map<string, SourceDetection>();
 
   const add = (provider: string, signal: string, confidence: DetectionConfidence) => {
@@ -189,10 +208,6 @@ function rankUp(a: DetectionConfidence, b: DetectionConfidence): DetectionConfid
   return order[Math.max(order.indexOf(a), order.indexOf(b))];
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
 async function scanPackageJson(
   cwd: string,
   add: (p: string, s: string, c: DetectionConfidence) => void,
@@ -200,12 +215,11 @@ async function scanPackageJson(
   const pkgPath = join(cwd, "package.json");
   if (!existsSync(pkgPath)) return;
   try {
-    const pkg: unknown = JSON.parse(await readFile(pkgPath, "utf-8"));
-    if (!isRecord(pkg)) return;
-    const allDeps = {
-      ...(isRecord(pkg.dependencies) ? pkg.dependencies : {}),
-      ...(isRecord(pkg.devDependencies) ? pkg.devDependencies : {}),
+    const pkg = JSON.parse(await readFile(pkgPath, "utf-8")) as {
+      dependencies?: Record<string, string>;
+      devDependencies?: Record<string, string>;
     };
+    const allDeps = { ...(pkg.dependencies ?? {}), ...(pkg.devDependencies ?? {}) };
     for (const dep of Object.keys(allDeps)) {
       for (const rule of JS_RULES) {
         if (rule.matches(dep)) {

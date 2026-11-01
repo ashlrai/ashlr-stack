@@ -23,6 +23,11 @@ describe("Stack ecosystem manifest v1", () => {
     }
   });
 
+  test("component IDs are unique", () => {
+    const ids = STACK_MANIFEST.components.map(({ id }) => id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
   test("shared metadata cannot be mutated by consumers", () => {
     expect(Object.isFrozen(STACK_MANIFEST)).toBe(true);
     expect(Object.isFrozen(STACK_MANIFEST.components)).toBe(true);

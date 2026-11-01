@@ -60,6 +60,7 @@ const {
 } = Astro.props;
 
 const canonical = canonicalUrl(canonicalProp ?? Astro.url.pathname);
+const isHome = Astro.url.pathname === "/";
 
 const ogMeta = buildOgMeta({
   title,
@@ -183,11 +184,10 @@ const absoluteNext = nextLink ? toAbsoluteLink(nextLink) : undefined;
       Skip to content
     </a>
 
-    <!-- Lenis smooth scroll + GSAP ScrollTrigger registration. One mount. -->
-    <SmoothScroll client:load />
-
-    <!-- Persistent install bar — slides in after the hero scrolls out. -->
-    <StickyInstall client:idle />
+    <!-- Reading pages use native scrolling and the install link in DocsHeader.
+         Keep the animation runtime and hero-dependent bar on the home page. -->
+    {isHome && <SmoothScroll client:idle />}
+    {isHome && <StickyInstall client:idle />}
 
     <main id="main">
       <slot />

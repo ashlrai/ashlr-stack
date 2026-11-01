@@ -13,8 +13,10 @@ The manifests name three packages:
 - [`ashlr-stack-mcp`](../packages/mcp/package.json), unscoped
 - [`@ashlr/stack`](../packages/cli/package.json)
 
-Source versions do not establish publication. Retain the existing 0.1.1 install
-guidance until a new version has publication and consumer verification.
+Source versions do not establish publication. On November 1, 2026, npm reported
+0.3.0 for all three packages, and the v0.3.0 GitHub release had four native
+binaries and checksum sidecars. Check registry, consumer and artifact evidence
+again before updating guidance for any later version.
 
 ## Current script behavior
 
@@ -58,6 +60,18 @@ Homebrew formula and commit/push to the tap, including dispatch on a tag ref.
 It uses an existing referenced tap credential or skips when unavailable. Verify
 actual tap commissioning and the remote formula separately.
 
+## Auto-tagging (pending workflow wiring)
+
+[`scripts/auto-tag.mjs`](../scripts/auto-tag.mjs) is the fail-closed core of
+the auto-tag design: when the version in `packages/cli/package.json` changes on
+`main` and every required check for that exact commit is green, it creates
+`refs/tags/v<version>` so the tag-triggered release workflow runs. It is
+invoked as `evaluate` (read-only, writes `changed`/`version`/`green` to
+`$GITHUB_OUTPUT`) and `create --version X.Y.Z` (needs a `contents: write`
+token; the ashlr-release GitHub App mints it). `run` chains both for manual
+use. No workflow calls it yet — the `.github/workflows` wrapper is applied
+separately.
+
 ## Qualification and partial failures
 
 [CI](../.github/workflows/ci.yml) checks tests/typechecks on Bun 1.2.0 and latest,
@@ -71,3 +85,10 @@ Preserve logs and original artifacts after failure or uncertainty, then inspect
 completed effects. Publication can be partial. Never automatically rerun,
 republish, recreate, or move tags; review the exact follow-up target and release
 authorization first.
+
+## Docs freshness
+
+After a version commit lands on the default branch, run `bun run fresh:sync`
+and verify with `bun run fresh:check`. Marked blocks (version badge, install
+snippet, version table, pins) regenerate from the manifests and the latest
+released CHANGELOG section; see [../scripts/freshness/README.md](../scripts/freshness/README.md).

@@ -32,6 +32,32 @@ describe("Stack Builder copyable output", () => {
     expect((recipe.match(/"ashlr-stack"/g) ?? []).length).toBe(1);
   });
 
+  test("the same selection generates identical output text on repeated calls", () => {
+    const supabase = PROVIDERS.find(({ name }) => name === "Supabase")!;
+    const sentry = PROVIDERS.find(({ name }) => name === "Sentry")!;
+    const unknown = { ...supabase, name: "Unknown", slug: "unknown" };
+    const selected = [supabase, unknown, sentry];
+    const supported = new Set(PROVIDERS_REF.map(({ name }) => name));
+    const generate = () => {
+      const joined = joinProviderReferences(selected, PROVIDERS_REF);
+      const plan = planJoinedProviderCommands(joined, supported);
+      return {
+        commands: plan.commands,
+        unsupported: plan.unsupported,
+        mcp: formatOptionalStackMcp(joined.some(({ ref }) => Boolean(ref?.mcp))),
+      };
+    };
+
+    const first = generate();
+    const second = generate();
+    expect(first.commands).toBe("stack add supabase && stack add sentry");
+    expect(first.unsupported).toEqual(["Unknown"]);
+    expect(first.mcp).toBe(formatOptionalStackMcp(true));
+    expect(first.commands).toBe(second.commands);
+    expect(first.unsupported).toEqual(second.unsupported);
+    expect(first.mcp).toBe(second.mcp);
+  });
+
   test("planning is pure and returned lists are detached from later calls", () => {
     const selected = ["supabase", "unknownstub"];
     const supported = new Set(canonical);
@@ -59,6 +85,54 @@ describe("Stack Builder copyable output", () => {
   test("empty and no-MCP selections omit optional bootstrap", () => {
     expect(formatOptionalStackMcp(false)).toBe("");
     expect(planStackAddCommands([], canonical)).toEqual({ commands: "", unsupported: [] });
+  });
+
+  test("an empty stack generates empty provider output", () => {
+    const selected = joinProviderReferences([], PROVIDERS_REF);
+    const supported = new Set(PROVIDERS_REF.map(({ name }) => name));
+    const output = {
+      plan: planJoinedProviderCommands(selected, supported),
+      mcp: formatOptionalStackMcp(selected.some(({ ref }) => Boolean(ref?.mcp))),
+    };
+
+    expect(selected).toEqual([]);
+    expect(output).toEqual({ plan: { commands: "", unsupported: [] }, mcp: "" });
+  });
+
+  test("a single selection includes only the selected provider in generated commands", () => {
+    const supabase = PROVIDERS.find(({ name }) => name === "Supabase")!;
+    const sentry = PROVIDERS_REF.find(({ name }) => name === "sentry");
+    expect(sentry).toBeDefined();
+    const selected = joinProviderReferences([supabase], PROVIDERS_REF);
+    const supported = new Set(PROVIDERS_REF.map(({ name }) => name));
+    const output = planJoinedProviderCommands(selected, supported);
+
+    expect(output).toEqual({ commands: "stack add supabase", unsupported: [] });
+    expect(output.commands).not.toContain(sentry!.name);
+  });
+
+  test("clearing a selection removes its service from generated output", () => {
+    const supabase = PROVIDERS.find(({ name }) => name === "Supabase")!;
+    const supported = new Set(PROVIDERS_REF.map(({ name }) => name));
+    const selected = [supabase];
+    const generate = () => {
+      const joined = joinProviderReferences(selected, PROVIDERS_REF);
+      return {
+        plan: planJoinedProviderCommands(joined, supported),
+        mcp: formatOptionalStackMcp(joined.some(({ ref }) => Boolean(ref?.mcp))),
+      };
+    };
+
+    const before = generate();
+    expect(before.plan).toEqual({ commands: "stack add supabase", unsupported: [] });
+    expect(JSON.parse(before.mcp)).toEqual({
+      mcpServers: { "ashlr-stack": { command: "ashlr-stack-mcp" } },
+    });
+
+    selected.pop();
+    const after = generate();
+    expect(after).toEqual({ plan: { commands: "", unsupported: [] }, mcp: "" });
+    expect(JSON.stringify(after)).not.toContain("supabase");
   });
 
   test("preview catalog metadata cannot turn into claimed provider config", () => {

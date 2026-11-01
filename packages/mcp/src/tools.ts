@@ -22,8 +22,7 @@ export interface ToolDef {
  */
 export const CWD_INPUT = {
   type: "string",
-  description:
-    "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory.",
+  description: "Existing absolute project directory; defaults to server cwd.",
 } as const;
 
 export const TOOLS: ToolDef[] = [
@@ -34,7 +33,7 @@ export const TOOLS: ToolDef[] = [
     inputSchema: {
       type: "object",
       properties: {
-        template: { type: "string", description: "Optional starter template name." },
+        template: { type: "string", description: "Starter template name." },
         force: { type: "boolean", description: "Overwrite an existing .stack.toml." },
         cwd: CWD_INPUT,
       },
@@ -53,7 +52,10 @@ export const TOOLS: ToolDef[] = [
     inputSchema: {
       type: "object",
       properties: {
-        from: { type: "string", description: "Path to the .env file (default: .env)." },
+        from: {
+          type: "string",
+          description: "Path to the .env file inside the project (default: .env).",
+        },
         dryRun: { type: "boolean", description: "Preview without writing." },
         cwd: CWD_INPUT,
       },
@@ -74,7 +76,10 @@ export const TOOLS: ToolDef[] = [
     inputSchema: {
       type: "object",
       properties: {
-        path: { type: "string", description: "Directory to scan (default: cwd)." },
+        path: {
+          type: "string",
+          description: "Directory to scan inside the project (default: cwd).",
+        },
         confidence: {
           type: "string",
           description: "Minimum confidence: low, medium, or high (default: medium).",
@@ -139,7 +144,7 @@ export const TOOLS: ToolDef[] = [
       properties: {
         json: {
           type: "boolean",
-          description: "Machine-readable JSON (schema ashlr.stack.list/v1).",
+          description: "JSON: ashlr.stack.list/v1.",
         },
         cwd: CWD_INPUT,
       },
@@ -156,7 +161,7 @@ export const TOOLS: ToolDef[] = [
         service: { type: "string" },
         json: {
           type: "boolean",
-          description: "Machine-readable JSON (schema ashlr.stack.info/v1).",
+          description: "JSON: ashlr.stack.info/v1.",
         },
         cwd: CWD_INPUT,
       },
@@ -176,7 +181,7 @@ export const TOOLS: ToolDef[] = [
       properties: {
         json: {
           type: "boolean",
-          description: "Machine-readable JSON (schema ashlr.stack.status/v1).",
+          description: "JSON: ashlr.stack.status/v1.",
         },
         cwd: CWD_INPUT,
       },
@@ -191,7 +196,7 @@ export const TOOLS: ToolDef[] = [
       properties: {
         json: {
           type: "boolean",
-          description: "Machine-readable JSON (schema ashlr.stack.env/v1, names only).",
+          description: "JSON: ashlr.stack.env/v1; names only.",
         },
         cwd: CWD_INPUT,
       },
@@ -207,7 +212,7 @@ export const TOOLS: ToolDef[] = [
         json: {
           type: "boolean",
           description:
-            "Machine-readable JSON (schema ashlr.stack.env-diff/v1, names and declaring service only); still an error result when any are missing.",
+            "JSON: ashlr.stack.env-diff/v1; names and service only. Missing secrets remain an error.",
         },
         cwd: CWD_INPUT,
       },
@@ -223,7 +228,7 @@ export const TOOLS: ToolDef[] = [
       properties: {
         fix: { type: "boolean", description: "Attempt auto-remediation." },
         all: { type: "boolean", description: "Run across every registered project." },
-        json: { type: "boolean", description: "Machine-readable JSON output." },
+        json: { type: "boolean", description: "JSON output." },
         cwd: CWD_INPUT,
       },
     },
@@ -262,7 +267,7 @@ export const TOOLS: ToolDef[] = [
         },
         json: {
           type: "boolean",
-          description: "Machine-readable JSON (schema ashlr.stack.providers/v1).",
+          description: "JSON: ashlr.stack.providers/v1.",
         },
       },
     },
@@ -283,7 +288,7 @@ export const TOOLS: ToolDef[] = [
       properties: {
         json: {
           type: "boolean",
-          description: "Machine-readable JSON (schema ashlr.stack.projects/v1).",
+          description: "JSON: ashlr.stack.projects/v1.",
         },
       },
     },
@@ -297,7 +302,7 @@ export const TOOLS: ToolDef[] = [
       properties: {
         json: {
           type: "boolean",
-          description: "Machine-readable JSON (schema ashlr.stack.deps/v1).",
+          description: "JSON: ashlr.stack.deps/v1.",
         },
         cwd: CWD_INPUT,
       },
@@ -312,8 +317,7 @@ export const TOOLS: ToolDef[] = [
       properties: {
         json: {
           type: "boolean",
-          description:
-            "Machine-readable JSON (schema ashlr.stack.templates/v1): each template with its services, providers and secret names.",
+          description: "JSON: ashlr.stack.templates/v1; services, providers and secret names.",
         },
       },
     },
@@ -329,7 +333,7 @@ export const TOOLS: ToolDef[] = [
   {
     name: "stack_recommend",
     description:
-      "Retrieve scored curated-provider matches and per-category ranking for a query. save:true writes a Recipe for a later stack_apply request. The CLI JSON payload is forwarded as text; this tool does not request LLM inference.",
+      "Rank curated providers by query, returning JSON as text without LLM inference. save:true writes a Recipe for stack_apply.",
     inputSchema: {
       type: "object",
       properties: {
@@ -344,12 +348,11 @@ export const TOOLS: ToolDef[] = [
         category: {
           type: "string",
           description:
-            "Optional filter to a source catalog category: Database, Deploy, Cloud, AI, Analytics, Observability, Errors, Payments, Code, Tickets, Email, Auth, FeatureFlags. Matched case-insensitively; an unknown category is an error.",
+            "Category (case-insensitive): Database, Deploy, Cloud, AI, Analytics, Observability, Errors, Payments, Code, Tickets, Email, Auth, FeatureFlags. Unknown values error.",
         },
         save: {
           type: "boolean",
-          description:
-            "When true, also freeze the result to .stack/recipes/<id>.toml so you can run stack_apply. Returns the recipe id in the response.",
+          description: "Save .stack/recipes/<id>.toml for stack_apply; returns recipe id.",
         },
         cwd: CWD_INPUT,
       },
@@ -375,7 +378,8 @@ export const TOOLS: ToolDef[] = [
       properties: {
         recipe_id: {
           type: "string",
-          description: "Recipe id (filename stem in .stack/recipes/).",
+          description:
+            "Recipe id (filename stem in .stack/recipes/, letters, numbers, underscores or hyphens).",
         },
         no_wire: {
           type: "boolean",
@@ -422,7 +426,8 @@ export function validateToolInput(tool: ToolDef, input: Record<string, unknown>)
         known.length ? `Accepted: ${known.join(", ")}.` : "This tool takes no arguments."
       }`;
     }
-    if (value === undefined || value === null) continue;
+    // Optional means omitted, not null: JSON null does not match any declared type.
+    if (value === undefined) continue;
     const actual = typeof value;
     if (spec.type === "number" ? !Number.isFinite(value) : actual !== spec.type) {
       return `${tool.name}: argument "${key}" must be a ${spec.type}.`;

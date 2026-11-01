@@ -162,6 +162,50 @@ interface CommandExtra {
 }
 
 const EXTRAS: Record<string, CommandExtra> = {
+  "fleet-waste": {
+    examples: [{ command: "stack fleet waste --json" }, { command: "stack fleet-waste --metrics ~/.ashlr-runs/metrics/jobs.jsonl --hours 6" }],
+    notes: "Read-only JSON, including empty files. Defaults to ~/.ashlr-runs/metrics/jobs.jsonl. Inclusive trailing window, default one hour. Events use ISO ts (or timestamp), event, lane and job; finish.empty must be true to count as empty. Launches and empties count events; precheckSkip groups skips by code (unknown if absent/invalid). neverFinished counts unique jobs launched in the window without a finish at or after their latest launch, as of windowEnd; unfinishedJobs lists their ids. File order does not matter. Malformed rows are skipped and counted; unrelated events and out-of-window rows are ignored. Missing/unreadable files fail without exposing raw input.",
+  },
+  "fleet-silent": {
+    examples: [{ command: "stack fleet-silent --runs /path/to/runs --json" }],
+    notes: "Read-only JSON. Reads top-level *author*.log files, dispatchd.log, dispatch-events.log and metrics/jobs.jsonl; missing/invalid sources are reported, never treated as healthy. Inputs are JSONL or timestamped key=value lines (naive timestamps are local). Fully dated logs use event order; legacy undated logs use append order. Author summaries use status=ok to clear older failures; lane summaries use lane (or pool), need and picked. Reports the latest positive need with zero picks per lane, ten explicit empty:true finish events per lane, and no fleet-wide launch for at least 20 minutes of observed dispatch/job history. Launch/tick timestamps are required; ticks use a nonnegative launched count. Malformed inputs suppress latest/absence claims. FIXUP reuse means the same job id launched on distinct UTC days; finishes crossing midnight do not count. Metrics use event, job, lane, empty and timestamp (or ts). Reads are capped at 16 MiB per regular file; symlink files and raw log bodies are excluded.",
+  },
+  "fleet-collisions": {
+    examples: [{ command: "locus exec -- gh pr list --state open --limit 1000 --json number,state,mergeable,files | stack fleet-collisions" }, { command: "stack fleet collisions --file prs.json" }],
+    notes: "Read-only JSON for one repository per snapshot. Includes only OPEN, CONFLICTING PRs; UNKNOWN mergeability is excluded. Files rank by distinct PR count, then path. Paths are touched files, not confirmed conflict hunks. Counts cover only the supplied snapshot; ensure the gh limit covers all PRs. Empty input arrays yield files: []; invalid input exits nonzero.",
+  },
+  "fleet-reds": {
+    examples: [{ command: "stack fleet-reds --json" }],
+    notes: "Read-only via Locus. JSON is the default. For each of the seven fleet repositories, selects the latest completed workflow named CI on its default branch for each event (schedule and push), then lists failed jobs only when that run failed. A newer successful run clears older failures. no-runs means no completed run; unavailable and partial mean incomplete reads. firstFailingTest is null for unrecognized output or expired logs; logStatus distinguishes these cases. Parses Vitest, node:test TAP/spec and nextest text output. Raw logs and API errors are omitted.",
+  },
+  "fleet-lag": {
+    examples: [{ command: "stack fleet-lag --json" }],
+    notes: "Read-only via Locus. Latest tag is ordered by underlying commit date; age uses the annotated tagger date or lightweight commit date. Compares that tag to the default branch. Median seconds use the latest 20 merge timestamps across all base branches, or all merged PRs if fewer. No tags and unavailable repositories remain in the report; unknown metrics are null.",
+  },
+  "fleet-stuck": {
+    examples: [{ command: "stack fleet-stuck --json" }],
+    notes: "Read-only via Locus. JSON is the default. Lists every open PR, sorted by merge state then descending age in days since creation. Auto-merge-off path reasons identify server/ directories and common lockfiles, including renamed paths; these are hints, not GitHub's explanation. Empty repositories have prs: []; unavailable or incomplete reads have prs: null.",
+  },
+  "fleet-slo": {
+    examples: [{ command: "stack fleet-slo --json" }, { command: "stack fleet slo --json" }],
+    notes: "Read-only via Locus. The window is the last six hours. Merge volume, median and p90 open-to-merge seconds come from the same source as stack fleet-latency; open and conflicting PR counts come from a paginated open-PR scan that counts only GitHub-reported CONFLICTING nodes. Targets: 20 merges per window in ashlrai/phantom and a median open-to-merge of 300 seconds; unavailable metrics and inapplicable targets are null.",
+  },
+  "fleet-bets": {
+    examples: [{ command: "stack fleet-bets --json" }],
+    notes: "Read-only. Bets are job ids on `- STATUS <id> (attrs)` lines of the leader queue ledger whose attrs carry src=leader (`--src` selects another marker). Queue state comes from ready.tsv; launch, finish, publish and outcome events come from metrics/jobs.jsonl (tail-read at 32 MiB). Statuses: vanished (no trace), waiting (queued), running (launched), empty (resolved with no merge: empty finish, empty publish, precheck skip or a terminal non-merge outcome), open (PR open or unresolved non-empty work) and merged (outcome state MERGED). Ledger MERGED/LANDED/DONE/PR-OPEN statuses are fallbacks when local evidence is absent. mergedRate is merged over resolved (merged + empty) bets per lane; null when nothing resolved.",
+  },
+  fleet: {
+    subcommandExtras: {
+      waste: {
+        examples: [{ command: "stack fleet waste --json" }],
+        notes: "Read-only JSON. Same report, metrics path and window as stack fleet-waste.",
+      },
+      slo: {
+        examples: [{ command: "stack fleet slo --json" }],
+        notes: "Read-only via Locus. Same report as stack fleet-slo, nested under the fleet namespace.",
+      },
+    },
+  },
   init: {
     examples: [
       { command: "stack init" },
@@ -321,8 +365,8 @@ const EXTRAS: Record<string, CommandExtra> = {
     },
   },
   upgrade: {
-    examples: [{ command: "stack upgrade" }],
-    notes: "Checks the npm registry for a newer version, prints an install hint — does not auto-install.",
+    examples: [{ command: "stack upgrade" }, { command: "stack upgrade --apply" }],
+    notes: "Checks npm by default. --apply upgrades an npm global CLI install with local rollback on failed health checks; --dryRun never installs.",
   },
   completion: {
     examples: [
@@ -469,6 +513,22 @@ const COMMAND_ORDER = [
   "env",
   "deps",
   "doctor",
+  "fleet-lanes",
+  "fleet-supply",
+  "fleet-latency",
+  "fleet-lag",
+  "fleet-waste",
+  "fleet-reds",
+  "fleet-silent",
+  "fleet-collisions",
+  "fleet-delivery-lag",
+  "fleet-stuck",
+  "fleet-slo",
+  "fleet-act",
+  "fleet-stream",
+  "fleet-graph",
+  "fleet-bets",
+  "fleet",
   "exec",
   "swap",
   "sync",

@@ -38,4 +38,33 @@ describe("litellm-gateway template", () => {
     }
     expect(readme).not.toContain("\u2014");
   });
+
+  test("README prerequisites match the template and distinguish local checks from integration", async () => {
+    const cfg = await loadTemplate("litellm-gateway");
+    expect(cfg).toBeDefined();
+    const table = readme.match(
+      /\| Service \| Phantom secret name \|\n\| --- \| --- \|\n((?:\| `[^`]+` \| `[^`]+` \|\n)+)/,
+    );
+    expect(table).not.toBeNull();
+    const documentedSlots = [...(table?.[1] ?? "").matchAll(/\| `([^`]+)` \| `([^`]+)` \|/g)].map(
+      ([, service, secret]) => [service, secret],
+    );
+    const configuredSlots = Object.entries(cfg?.services ?? {}).flatMap(([service, entry]) =>
+      entry.secrets.map((secret) => [service, secret]),
+    );
+    expect(documentedSlots).toEqual(configuredSlots);
+    expect(cfg?.environments).toEqual([{ name: "dev", default: true }]);
+    expect(configuredSlots.flat()).not.toContain("LITELLM_MASTER_KEY");
+    for (const phrase of [
+      "stack init --template litellm-gateway --noProvision",
+      "service is already in the stack",
+      "does not set it",
+      "stack templates list --json",
+      "template-litellm-gateway.test.ts",
+      "local mock upstream and dummy credentials",
+      "does not establish those properties",
+    ]) {
+      expect(readme, phrase).toContain(phrase);
+    }
+  });
 });

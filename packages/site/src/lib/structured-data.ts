@@ -13,6 +13,7 @@ import { QUESTIONS } from "~/components/FAQ";
 import cliPackage from "../../../cli/package.json";
 import { SITE_NAME, SITE_URL } from "./og";
 import { PROVIDERS_REF } from "./providers-ref";
+import { PUBLISHED_VERSION } from "./site-facts.generated";
 
 export interface BreadcrumbItem {
   name: string;
@@ -62,7 +63,7 @@ export function softwareApplicationSchema(): Record<string, unknown> {
     operatingSystem: "macOS, Linux, Windows",
     url: SITE_URL,
     description: `The reviewed catalog lists ${PROVIDERS_REF.length} provider entries. Stack offers CLI workflows and a stdio MCP bridge for local project setup; authentication, resource and client results depend on each adapter.`,
-    softwareVersion: cliPackage.version,
+    softwareVersion: PUBLISHED_VERSION,
     codeRepository: "https://github.com/ashlrai/ashlr-stack",
     downloadUrl: `${SITE_URL}/docs/capabilities`,
     license: `https://spdx.org/licenses/${cliPackage.license}.html`,
@@ -158,16 +159,19 @@ export interface TechArticleInput {
   /** Full canonical URL of the page. */
   url: string;
   /** ISO-8601 date string. */
-  datePublished?: string;
+  datePublished?: string | null;
   /** ISO-8601 date string. */
-  dateModified?: string;
+  dateModified?: string | null;
   /** Section label (e.g. "Reference", "Getting started"). Optional. */
   section?: string;
 }
 
 export function techArticleSchema(input: TechArticleInput): Record<string, unknown> {
-  const datePublished = input.datePublished ?? "2026-04-17";
-  const dateModified = input.dateModified ?? datePublished;
+  // Explicit null omits unknown dates on new guides instead of backdating them.
+  const datePublished =
+    input.datePublished === null ? undefined : (input.datePublished ?? "2026-04-17");
+  const dateModified =
+    input.dateModified === null ? undefined : (input.dateModified ?? datePublished);
   const schema: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "TechArticle",

@@ -3,7 +3,7 @@
   "name": "io.github.ashlrai/ashlr-stack",
   "title": "Ashlr Stack",
   "description": "Provision and connect third-party dev services (Supabase, Vercel, and more) from your coding agent.",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "websiteUrl": "https://stack.ashlr.ai",
   "repository": {
     "url": "https://github.com/ashlrai/ashlr-stack",
@@ -15,7 +15,7 @@
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "ashlr-stack-mcp",
-      "version": "0.2.2",
+      "version": "0.3.0",
       "runtimeHint": "npx",
       "transport": {
         "type": "stdio"

@@ -2,7 +2,7 @@
 
 Ashlr Stack provisions services. It relies on two companions for the
 credential and identity layers, and works best inside the Phantom workbench.
-This guide covers the Stack 0.2 release line (this checkout: 0.2.2). Check
+This guide covers the Stack 0.3 release candidate (this checkout: <!-- fresh:begin version-pin -->0.3.0<!-- fresh:end -->). Check
 `stack --version` and command help when using an older installed release.
 
 | Layer | Tool | Question it answers |

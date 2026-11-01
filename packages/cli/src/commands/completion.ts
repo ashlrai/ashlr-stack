@@ -85,6 +85,33 @@ const CMD_META: Record<string, CmdMeta> = {
     subcommands: ["show", "diff", "export"],
   },
   deps: {},
+  "fleet-lanes": { flags: ["json", "queue"].map((name) => ({ name })) },
+  "fleet-supply": { flags: ["json", "queue", "log"].map((name) => ({ name })) },
+  "fleet-latency": { flags: [{ name: "json" }] },
+  "fleet-lag": { flags: [{ name: "json" }] },
+  "fleet-waste": { flags: ["json", "metrics", "hours"].map((name) => ({ name })) },
+  "fleet-reds": { flags: [{ name: "json" }] },
+  "fleet-silent": { flags: [{ name: "json" }, { name: "runs" }] },
+  "fleet-collisions": { flags: [{ name: "json" }, { name: "file" }] },
+  "fleet-delivery-lag": { flags: [{ name: "fixture" }, { name: "json" }] },
+  "fleet-stuck": { flags: [{ name: "json" }] },
+  "fleet-slo": { flags: [{ name: "json" }] },
+  "fleet-act": {
+    flags: ["lane", "job", "slots", "message", "queue", "apply", "dryRun", "json"].map((name) => ({
+      name,
+    })),
+  },
+  "fleet-stream": {
+    flags: ["dispatch", "jobs", "follow", "sse", "port"].map((name) => ({ name })),
+  },
+  "fleet-graph": { flags: ["json", "queue", "router"].map((name) => ({ name })) },
+  "fleet-bets": {
+    flags: ["json", "queue", "router", "ready", "metrics", "src"].map((name) => ({ name })),
+  },
+  fleet: {
+    subcommands: ["slo", "collisions", "waste"],
+    flags: ["json", "queue", "log", "file", "metrics", "hours"].map((name) => ({ name })),
+  },
   doctor: {
     flags: [
       { name: "fix" },
@@ -130,7 +157,9 @@ const CMD_META: Record<string, CmdMeta> = {
   projects: {
     subcommands: ["list", "register", "remove", "where"],
   },
-  upgrade: {},
+  upgrade: {
+    flags: [{ name: "apply" }, { name: "dryRun" }, { name: "json" }],
+  },
   ci: {
     subcommands: ["init"],
   },
@@ -153,6 +182,22 @@ const COMMANDS = [
   "env",
   "deps",
   "doctor",
+  "fleet-lanes",
+  "fleet-supply",
+  "fleet-latency",
+  "fleet-lag",
+  "fleet-waste",
+  "fleet-reds",
+  "fleet-silent",
+  "fleet-collisions",
+  "fleet-delivery-lag",
+  "fleet-stuck",
+  "fleet-slo",
+  "fleet-act",
+  "fleet-stream",
+  "fleet-graph",
+  "fleet-bets",
+  "fleet",
   "exec",
   "sync",
   "onboard",

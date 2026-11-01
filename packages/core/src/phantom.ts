@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import { PhantomNotInstalledError, StackError } from "./errors.ts";
+import { phantomEnv, resolvePhantomBinary } from "./phantom-process.ts";
 
 /**
  * Thin wrapper around the `phantom` CLI. Stack never stores secrets locally —
@@ -77,13 +78,18 @@ export interface ExecOptions {
 }
 
 export async function exec(args: string[], opts: ExecOptions = {}): Promise<PhantomExecResult> {
+  // Filter the inherited environment and resolve against the caller's PATH
+  // before applying the project cwd; see phantom-process.ts.
+  const env = phantomEnv(process.env);
+  const binary = resolvePhantomBinary(env);
   return new Promise((resolvePromise, reject) => {
     const hasTimeout = typeof opts.timeoutMs === "number" && Number.isFinite(opts.timeoutMs);
     // A timed probe gets its own process group (POSIX) so a timeout can kill
     // phantom and any grandchild holding its stdio. Interactive runs stay in
     // the foreground group so the TTY keeps working.
     const useGroup = hasTimeout && !opts.interactive && process.platform !== "win32";
-    const child = spawn("phantom", args, {
+    const child = spawn(binary, args, {
+      env,
       cwd: opts.cwd,
       stdio: opts.interactive ? "inherit" : ["pipe", "pipe", "pipe"],
       ...(useGroup ? { detached: true } : {}),

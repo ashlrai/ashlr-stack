@@ -131,11 +131,56 @@ describe("stack remove --json", () => {
     ]);
   });
 
+  test("--allOrphans reports only the removed service and preserves detected services", () => {
+    const dir = project();
+    writeFileSync(
+      join(dir, "package.json"),
+      JSON.stringify({ dependencies: { openai: "latest" } }),
+    );
+    const r = runRemove(dir, ["--allOrphans", "--keepRemote", "--json"], {
+      removable: ["SUPABASE_URL", "SUPABASE_ANON_KEY"],
+    });
+
+    expect(r.code).toBe(0);
+    expect(JSON.parse(r.stdout)).toEqual({
+      schema: "ashlr.stack.remove/v1",
+      mode: "orphans",
+      removed: [
+        {
+          service: "supabase",
+          secrets_removed: ["SUPABASE_URL", "SUPABASE_ANON_KEY"],
+          secrets_kept: [],
+          mcp_removed: null,
+        },
+      ],
+      secrets_kept: [],
+      upstream_kept: true,
+      keep_remote: true,
+    });
+    const toml = readFileSync(join(dir, ".stack.toml"), "utf8");
+    expect(toml).not.toContain("[services.supabase]");
+    expect(toml).toContain("[services.openai]");
+  });
+
   test("an unknown service is a JSON error naming the configured ones", () => {
     const dir = project();
     const r = runRemove(dir, ["nope", "--json"], { removable: [] });
     expect(r.code).toBe(1);
-    expect(JSON.parse(r.stdout).error).toContain("Configured services: openai, supabase.");
+    expect(JSON.parse(r.stdout)).toEqual({
+      error: "nope is not in this stack. Configured services: openai, supabase.",
+    });
+    expect(readFileSync(join(dir, ".stack.toml"), "utf8")).toBe(STACK_TOML);
+  });
+
+  test("a case-mismatched service reports a suggestion without changing the stack", () => {
+    const dir = project();
+    const r = runRemove(dir, ["OpenAI", "--json"], false);
+
+    expect(r.code).toBe(1);
+    expect(JSON.parse(r.stdout)).toEqual({
+      error:
+        "OpenAI is not in this stack. Did you mean openai? Configured services: openai, supabase.",
+    });
     expect(readFileSync(join(dir, ".stack.toml"), "utf8")).toBe(STACK_TOML);
   });
 

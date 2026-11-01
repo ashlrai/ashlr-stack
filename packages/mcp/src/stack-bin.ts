@@ -7,7 +7,7 @@
  * above this file, which holds for both layouts.
  */
 
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -42,7 +42,7 @@ export function cliBinFromPackageJson(pkgJsonPath: string): string | undefined {
     const rel = typeof pkg.bin === "string" ? pkg.bin : pkg.bin?.stack;
     if (!rel) return undefined;
     const abs = resolve(dirname(pkgJsonPath), rel);
-    return existsSync(abs) ? abs : undefined;
+    return statSync(abs).isFile() ? abs : undefined;
   } catch {
     return undefined;
   }

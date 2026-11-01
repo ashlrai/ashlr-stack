@@ -476,7 +476,7 @@ export const CLI_COMMANDS: CliCommand[] = [
     name: "stack doctor",
     description: "Verify every service is reachable and credentials are valid.",
     synopsis:
-      "stack doctor [--fix] [--all] [--json] [--ecosystem] [--install <mode>] [--apply <apply>] [--reconcile]",
+      "stack doctor [--fix] [--all] [--json] [--ecosystem] [--install] [--apply] [--repos] [--reconcile]",
     flags: [
       {
         name: "fix",
@@ -509,17 +509,24 @@ export const CLI_COMMANDS: CliCommand[] = [
       },
       {
         name: "install",
-        synopsis: "--install <mode>",
-        type: "string",
+        synopsis: "--install",
+        type: "boolean",
         description:
           "With --ecosystem: print install commands for missing or outdated companions (optional comma list: phantom, locus, lexicon, ashlr-md). Runs nothing without --apply.",
       },
       {
         name: "apply",
-        synopsis: "--apply <apply>",
-        type: "string",
+        synopsis: "--apply",
+        type: "boolean",
         description:
           "With --ecosystem --fix or --install: run the step for these tools only (comma list, e.g. lexicon). Required per tool.",
+      },
+      {
+        name: "repos",
+        synopsis: "--repos",
+        type: "boolean",
+        default: false,
+        description: "Check default-branch CI and open PR counts across seven Ashlr repos via gh.",
       },
       {
         name: "reconcile",
@@ -534,6 +541,509 @@ export const CLI_COMMANDS: CliCommand[] = [
       { command: "stack doctor --fix" },
       { command: "stack doctor --json > report.json", comment: "# CI-friendly" },
       { command: "stack doctor --all", comment: "# every Stack project on this box" },
+    ],
+  },
+  {
+    name: "stack fleet-lanes",
+    description: "Report lane targets, running and queued work, and dispatch idle reasons.",
+    synopsis: "stack fleet-lanes [--json] [--queue <queue>]",
+    flags: [
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        description: "Emit schemaVersion 1 JSON; null idleReason means ready to dispatch.",
+      },
+      {
+        name: "queue",
+        synopsis: "--queue <queue>",
+        type: "string",
+        description: "Fleet state directory (default: ~/.ashlr-runs/queue).",
+      },
+    ],
+  },
+  {
+    name: "stack fleet-supply",
+    description:
+      "Report hourly launches, observed lane idle minutes, restock errors and UTF-8 queue splits.",
+    synopsis: "stack fleet-supply [--json] [--queue <queue>] [--log <log>]",
+    flags: [
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        description: "Emit schemaVersion 1 JSON; unavailable metrics are null.",
+      },
+      {
+        name: "queue",
+        synopsis: "--queue <queue>",
+        type: "string",
+        description: "Queue directory (default: ~/.ashlr-runs/queue).",
+      },
+      {
+        name: "log",
+        synopsis: "--log <log>",
+        type: "string",
+        description: "Dispatcher log (default: dispatchd.log beside queue directory).",
+      },
+    ],
+  },
+  {
+    name: "stack fleet-latency",
+    description:
+      "Report per-repo median and p90 open-to-merge seconds for PRs merged in the last six hours.",
+    synopsis: "stack fleet-latency [--json]",
+    flags: [
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        description: "Emit schemaVersion 1 JSON; missing percentiles are null.",
+      },
+    ],
+  },
+  {
+    name: "stack fleet-lag",
+    description:
+      "Report per-repo commits since latest tag, tag age and median time for the last 20 merged PRs.",
+    synopsis: "stack fleet-lag [--json]",
+    flags: [
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        description: "Emit schemaVersion 1 JSON; unavailable metrics are null.",
+      },
+    ],
+    examples: [{ command: "stack fleet-lag --json" }],
+    notes:
+      "Read-only via Locus. Latest tag is ordered by underlying commit date; age uses the annotated tagger date or lightweight commit date. Compares that tag to the default branch. Median seconds use the latest 20 merge timestamps across all base branches, or all merged PRs if fewer. No tags and unavailable repositories remain in the report; unknown metrics are null.",
+  },
+  {
+    name: "stack fleet-waste",
+    description:
+      "Report per-lane launches, empty finishes, precheck skips by code and unfinished jobs.",
+    synopsis: "stack fleet-waste [--metrics <metrics>] [--hours <hours>] [--json]",
+    flags: [
+      {
+        name: "metrics",
+        synopsis: "--metrics <metrics>",
+        type: "string",
+        description: "Job event JSONL (default: ~/.ashlr-runs/metrics/jobs.jsonl).",
+      },
+      {
+        name: "hours",
+        synopsis: "--hours <hours>",
+        type: "string",
+        default: "1",
+        description: "Positive trailing window in hours; fractional hours accepted.",
+      },
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        description: "Emit schemaVersion 1 JSON (also the default).",
+      },
+    ],
+    examples: [
+      { command: "stack fleet waste --json" },
+      { command: "stack fleet-waste --metrics ~/.ashlr-runs/metrics/jobs.jsonl --hours 6" },
+    ],
+    notes:
+      "Read-only JSON, including empty files. Defaults to ~/.ashlr-runs/metrics/jobs.jsonl. Inclusive trailing window, default one hour. Events use ISO ts (or timestamp), event, lane and job; finish.empty must be true to count as empty. Launches and empties count events; precheckSkip groups skips by code (unknown if absent/invalid). neverFinished counts unique jobs launched in the window without a finish at or after their latest launch, as of windowEnd; unfinishedJobs lists their ids. File order does not matter. Malformed rows are skipped and counted; unrelated events and out-of-window rows are ignored. Missing/unreadable files fail without exposing raw input.",
+  },
+  {
+    name: "stack fleet-reds",
+    description:
+      "List failed jobs and first failing tests in the latest completed schedule/push CI runs.",
+    synopsis: "stack fleet-reds [--json]",
+    flags: [
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        description: "Emit schemaVersion 1 JSON (also the default).",
+      },
+    ],
+    examples: [{ command: "stack fleet-reds --json" }],
+    notes:
+      "Read-only via Locus. JSON is the default. For each of the seven fleet repositories, selects the latest completed workflow named CI on its default branch for each event (schedule and push), then lists failed jobs only when that run failed. A newer successful run clears older failures. no-runs means no completed run; unavailable and partial mean incomplete reads. firstFailingTest is null for unrecognized output or expired logs; logStatus distinguishes these cases. Parses Vitest, node:test TAP/spec and nextest text output. Raw logs and API errors are omitted.",
+  },
+  {
+    name: "stack fleet-silent",
+    description: "Name silent fleet failures in author, dispatch and job logs (read-only JSON).",
+    synopsis: "stack fleet-silent [--runs <runs>] [--json]",
+    flags: [
+      {
+        name: "runs",
+        synopsis: "--runs <runs>",
+        type: "string",
+        description: "Runs directory (default: ~/.ashlr-runs).",
+      },
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        description: "Emit schemaVersion 1 JSON (also the default).",
+      },
+    ],
+    examples: [{ command: "stack fleet-silent --runs /path/to/runs --json" }],
+    notes:
+      "Read-only JSON. Reads top-level *author*.log files, dispatchd.log, dispatch-events.log and metrics/jobs.jsonl; missing/invalid sources are reported, never treated as healthy. Inputs are JSONL or timestamped key=value lines (naive timestamps are local). Fully dated logs use event order; legacy undated logs use append order. Author summaries use status=ok to clear older failures; lane summaries use lane (or pool), need and picked. Reports the latest positive need with zero picks per lane, ten explicit empty:true finish events per lane, and no fleet-wide launch for at least 20 minutes of observed dispatch/job history. Launch/tick timestamps are required; ticks use a nonnegative launched count. Malformed inputs suppress latest/absence claims. FIXUP reuse means the same job id launched on distinct UTC days; finishes crossing midnight do not count. Metrics use event, job, lane, empty and timestamp (or ts). Reads are capped at 16 MiB per regular file; symlink files and raw log bodies are excluded.",
+  },
+  {
+    name: "stack fleet-collisions",
+    description: "Rank touched files by open conflicting PR count from one repository's gh JSON.",
+    synopsis: "stack fleet-collisions [--file <file>] [--json]",
+    flags: [
+      {
+        name: "file",
+        synopsis: "--file <file>",
+        type: "string",
+        description: "Input JSON file; omit or use - for stdin.",
+      },
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        description: "Emit schemaVersion 1 JSON (also the default).",
+      },
+    ],
+    examples: [
+      {
+        command:
+          "locus exec -- gh pr list --state open --limit 1000 --json number,state,mergeable,files | stack fleet-collisions",
+      },
+      { command: "stack fleet collisions --file prs.json" },
+    ],
+    notes:
+      "Read-only JSON for one repository per snapshot. Includes only OPEN, CONFLICTING PRs; UNKNOWN mergeability is excluded. Files rank by distinct PR count, then path. Paths are touched files, not confirmed conflict hunks. Counts cover only the supplied snapshot; ensure the gh limit covers all PRs. Empty input arrays yield files: []; invalid input exits nonzero.",
+  },
+  {
+    name: "stack fleet-delivery-lag",
+    description: "Report undeployed merged commits and merge wait from a read-only JSON fixture.",
+    synopsis: "stack fleet-delivery-lag --fixture <fixture> [--json]",
+    flags: [
+      {
+        name: "fixture",
+        synopsis: "--fixture <fixture>",
+        type: "string",
+        required: true,
+        description:
+          "JSON snapshot: latestDeployed {version, commits: SHA[]}, commits {sha, createdAt, mergedAt: UTC ISO|null}[].",
+      },
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        description: "Emit schemaVersion 1 JSON; unknown metrics are null.",
+      },
+    ],
+  },
+  {
+    name: "stack fleet-stuck",
+    description:
+      "List open PRs by merge state, age and auto-merge status with server/ and lockfile path hints.",
+    synopsis: "stack fleet-stuck [--json]",
+    flags: [
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        description: "Emit schemaVersion 1 JSON (also the default).",
+      },
+    ],
+    examples: [{ command: "stack fleet-stuck --json" }],
+    notes:
+      "Read-only via Locus. JSON is the default. Lists every open PR, sorted by merge state then descending age in days since creation. Auto-merge-off path reasons identify server/ directories and common lockfiles, including renamed paths; these are hints, not GitHub's explanation. Empty repositories have prs: []; unavailable or incomplete reads have prs: null.",
+  },
+  {
+    name: "stack fleet-slo",
+    description:
+      "Compare per-repo six-hour merges, open-to-merge latency and conflicting PRs with fleet SLO targets.",
+    synopsis: "stack fleet-slo [--json]",
+    flags: [
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        description:
+          "Emit schemaVersion 1 JSON; unavailable metrics and inapplicable targets are null.",
+      },
+    ],
+    examples: [{ command: "stack fleet-slo --json" }, { command: "stack fleet slo --json" }],
+    notes:
+      "Read-only via Locus. The window is the last six hours. Merge volume, median and p90 open-to-merge seconds come from the same source as stack fleet-latency; open and conflicting PR counts come from a paginated open-PR scan that counts only GitHub-reported CONFLICTING nodes. Targets: 20 merges per window in ashlrai/phantom and a median open-to-merge of 300 seconds; unavailable metrics and inapplicable targets are null.",
+  },
+  {
+    name: "stack fleet-act",
+    description:
+      "Preview fleet requests; --apply appends a v1 audit request for a dispatcher consumer.",
+    synopsis:
+      "stack fleet-act <verb> [--lane <lane>] [--job <job>] [--slots <slots>] [--message <message>] [--queue <queue>] [--apply] [--dryRun] [--json]",
+    flags: [
+      {
+        name: "verb",
+        synopsis: "<verb>",
+        type: "positional",
+        required: true,
+        description: "pause, resume, kill, reassign, slots or steer.",
+      },
+      {
+        name: "lane",
+        synopsis: "--lane <lane>",
+        type: "string",
+        description: "Lane identifier (pause/resume/reassign/slots).",
+      },
+      {
+        name: "job",
+        synopsis: "--job <job>",
+        type: "string",
+        description: "Job identifier (kill/reassign/steer).",
+      },
+      {
+        name: "slots",
+        synopsis: "--slots <slots>",
+        type: "string",
+        description: "Nonnegative integer target (slots).",
+      },
+      {
+        name: "message",
+        synopsis: "--message <message>",
+        type: "string",
+        description: "Steering text; never include secrets (steer).",
+      },
+      {
+        name: "queue",
+        synopsis: "--queue <queue>",
+        type: "string",
+        description: "Queue directory (default: ~/.ashlr-runs/queue).",
+      },
+      {
+        name: "apply",
+        synopsis: "--apply",
+        type: "boolean",
+        description: "Append request to fleet-act.audit.jsonl; does not execute it.",
+      },
+      {
+        name: "dryRun",
+        synopsis: "--dryRun",
+        type: "boolean",
+        description: "Preview without writing (default).",
+      },
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        description: "Emit schemaVersion 1 JSON.",
+      },
+    ],
+  },
+  {
+    name: "stack fleet-stream",
+    description: "Translate fleet logs to typed NDJSON or localhost SSE.",
+    synopsis:
+      "stack fleet-stream [--dispatch <dispatch>] [--jobs <jobs>] [--follow] [--sse] [--port <port>]",
+    flags: [
+      {
+        name: "dispatch",
+        synopsis: "--dispatch <dispatch>",
+        type: "string",
+        description: "Path to dispatch-events.log.",
+      },
+      {
+        name: "jobs",
+        synopsis: "--jobs <jobs>",
+        type: "string",
+        description: "Path to metrics/jobs.jsonl.",
+      },
+      {
+        name: "follow",
+        synopsis: "--follow",
+        type: "boolean",
+        description: "Follow appended records (NDJSON).",
+      },
+      {
+        name: "sse",
+        synopsis: "--sse",
+        type: "boolean",
+        description: "Serve a live stream at http://127.0.0.1:8788/events.",
+      },
+      {
+        name: "port",
+        synopsis: "--port <port>",
+        type: "string",
+        default: "8788",
+        description: "Local SSE port (0 selects a free port).",
+      },
+    ],
+  },
+  {
+    name: "stack fleet-graph",
+    description: "Emit schema-versioned fleet pool, job, and repository nodes and edges.",
+    synopsis: "stack fleet-graph [--json] [--queue <queue>] [--router <router>]",
+    flags: [
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        description: "Emit schemaVersion 1 JSON (also the default).",
+      },
+      {
+        name: "queue",
+        synopsis: "--queue <queue>",
+        type: "string",
+        description: "Fleet state directory (default: ~/.ashlr-runs/queue).",
+      },
+      {
+        name: "router",
+        synopsis: "--router <router>",
+        type: "string",
+        description: "Router JSON array or JSONL path (default: <queue>/queue.jsonl).",
+      },
+    ],
+  },
+  {
+    name: "stack fleet-bets",
+    description:
+      "Score leader bets: join queue ledger ids with dispatch state and job outcomes for per-bet status and per-lane merged rate.",
+    synopsis:
+      "stack fleet-bets [--json] [--queue <queue>] [--router <router>] [--ready <ready>] [--metrics <metrics>] [--src <src>]",
+    flags: [
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        description:
+          "Emit schemaVersion 1 JSON; open covers unresolved work, mergedRate uses resolved bets.",
+      },
+      {
+        name: "queue",
+        synopsis: "--queue <queue>",
+        type: "string",
+        description: "Fleet state directory (default: ~/.ashlr-runs/queue).",
+      },
+      {
+        name: "router",
+        synopsis: "--router <router>",
+        type: "string",
+        description: "Leader queue ledger path (default: <queue>/router-queue.md).",
+      },
+      {
+        name: "ready",
+        synopsis: "--ready <ready>",
+        type: "string",
+        description: "Dispatch queue TSV (default: <queue>/ready.tsv).",
+      },
+      {
+        name: "metrics",
+        synopsis: "--metrics <metrics>",
+        type: "string",
+        description: "Job outcomes JSONL (default: <runs>/metrics/jobs.jsonl).",
+      },
+      {
+        name: "src",
+        synopsis: "--src <src>",
+        type: "string",
+        description: "Source marker selecting bets (default: leader).",
+      },
+    ],
+    examples: [{ command: "stack fleet-bets --json" }],
+    notes:
+      "Read-only. Bets are job ids on `- STATUS <id> (attrs)` lines of the leader queue ledger whose attrs carry src=leader (`--src` selects another marker). Queue state comes from ready.tsv; launch, finish, publish and outcome events come from metrics/jobs.jsonl (tail-read at 32 MiB). Statuses: vanished (no trace), waiting (queued), running (launched), empty (resolved with no merge: empty finish, empty publish, precheck skip or a terminal non-merge outcome), open (PR open or unresolved non-empty work) and merged (outcome state MERGED). Ledger MERGED/LANDED/DONE/PR-OPEN statuses are fallbacks when local evidence is absent. mergedRate is merged over resolved (merged + empty) bets per lane; null when nothing resolved.",
+  },
+  {
+    name: "stack fleet",
+    description: "Show repository CI, open PR counts, and dispatcher lane status.",
+    synopsis: "stack fleet <slo|collisions|waste>",
+    flags: [
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        description: "Emit schemaVersion 1 JSON.",
+      },
+      {
+        name: "log",
+        synopsis: "--log <log>",
+        type: "string",
+        description: "Dispatcher log path (default: ~/.ashlr-runs/dispatchd.log).",
+      },
+      {
+        name: "queue",
+        synopsis: "--queue <queue>",
+        type: "string",
+        description: "Dispatcher queue directory (default: ~/.ashlr-runs/queue).",
+      },
+    ],
+    subcommands: [
+      {
+        name: "stack fleet slo",
+        description:
+          "Compare per-repo six-hour merges, open-to-merge latency and conflicting PRs with fleet SLO targets.",
+        synopsis: "stack fleet slo [--json]",
+        flags: [
+          {
+            name: "json",
+            synopsis: "--json",
+            type: "boolean",
+            description:
+              "Emit schemaVersion 1 JSON; unavailable metrics and inapplicable targets are null.",
+          },
+        ],
+        examples: [{ command: "stack fleet slo --json" }],
+        notes:
+          "Read-only via Locus. Same report as stack fleet-slo, nested under the fleet namespace.",
+      },
+      {
+        name: "stack fleet collisions",
+        description:
+          "Rank touched files by open conflicting PR count from one repository's gh JSON.",
+        synopsis: "stack fleet collisions [--file <file>] [--json]",
+        flags: [
+          {
+            name: "file",
+            synopsis: "--file <file>",
+            type: "string",
+            description: "Input JSON file; omit or use - for stdin.",
+          },
+          {
+            name: "json",
+            synopsis: "--json",
+            type: "boolean",
+            description: "Emit schemaVersion 1 JSON (also the default).",
+          },
+        ],
+      },
+      {
+        name: "stack fleet waste",
+        description:
+          "Report per-lane launches, empty finishes, precheck skips by code and unfinished jobs.",
+        synopsis: "stack fleet waste [--metrics <metrics>] [--hours <hours>] [--json]",
+        flags: [
+          {
+            name: "metrics",
+            synopsis: "--metrics <metrics>",
+            type: "string",
+            description: "Job event JSONL (default: ~/.ashlr-runs/metrics/jobs.jsonl).",
+          },
+          {
+            name: "hours",
+            synopsis: "--hours <hours>",
+            type: "string",
+            default: "1",
+            description: "Positive trailing window in hours; fractional hours accepted.",
+          },
+          {
+            name: "json",
+            synopsis: "--json",
+            type: "boolean",
+            description: "Emit schemaVersion 1 JSON (also the default).",
+          },
+        ],
+        examples: [{ command: "stack fleet waste --json" }],
+        notes: "Read-only JSON. Same report, metrics path and window as stack fleet-waste.",
+      },
     ],
   },
   {
@@ -1013,26 +1523,33 @@ export const CLI_COMMANDS: CliCommand[] = [
   },
   {
     name: "stack upgrade",
-    description: "Check npm for a newer @ashlr/stack release.",
-    synopsis: "stack upgrade [--dryRun] [--json]",
+    description: "Check for a release or safely upgrade an npm global CLI install.",
+    synopsis: "stack upgrade [--apply] [--dryRun] [--json]",
     flags: [
+      {
+        name: "apply",
+        synopsis: "--apply",
+        type: "boolean",
+        default: false,
+        description:
+          "Upgrade the npm global CLI, restoring the previous install on failed health checks.",
+      },
       {
         name: "dryRun",
         synopsis: "--dryRun",
         type: "boolean",
-        description: "Print what would be installed without running the install command.",
+        description: "Print what would be installed without changing the installation.",
       },
       {
         name: "json",
         synopsis: "--json",
         type: "boolean",
         default: false,
-        description:
-          "Emit machine-readable JSON (schema ashlr.stack.upgrade/v1): current, latest, status and the install command.",
+        description: "Emit a machine-readable upgrade report without a banner.",
       },
     ],
-    examples: [{ command: "stack upgrade" }],
+    examples: [{ command: "stack upgrade" }, { command: "stack upgrade --apply" }],
     notes:
-      "Checks the npm registry for a newer version, prints an install hint — does not auto-install.",
+      "Checks npm by default. --apply upgrades an npm global CLI install with local rollback on failed health checks; --dryRun never installs.",
   },
 ];

@@ -4,6 +4,53 @@
 
 ### Changed
 
+- `stack apply` does not create placeholder secrets. After at least one provider succeeds, wiring checks secret names for every provider in the recipe, including providers that failed; a missing name does not itself fail apply, while provider failures do. Wiring can also create webhook stubs for those recipe providers, even if the vault is unreadable. Supply required missing secrets as real values through Phantom; `--noWire` skips both checks and stubs.
+
+## 0.3.0 (2026-10-31)
+
+### Added
+
+- Fleet diagnostics: lanes, supply, latency, lag, waste, reds, silent jobs, collisions, delivery lag, stuck jobs, SLOs, activity, stream, graph and bets, with grouped `stack fleet` routes. These inspect existing operational data; they do not establish automatic repair or fleet deployment.
+- `stack doctor --repos` reports default-branch CI and open PR counts through gh. Only --json may be combined with this mode.
+- Core exports a JSON-safe STACK_MANIFEST component/version descriptor. It describes source distributions, not installed or published versions.
+- `stack upgrade --apply` supports npm global upgrades with health checks and rollback; --dry-run remains non-installing. Review installer constraints before use.
+### Changed and fixed
+
+- CLI lazily loads the selected command rather than all commands at startup.
+- Status probes overlap at bounded concurrency and report timeout/error uncertainty instead of treating failed vault probes as zero secrets. Timed-out Phantom process groups are terminated.
+- Apply wiring checks existing secret names without storing placeholders; unreadable vaults are reported as skipped, not missing. Provider setup may still persist real credentials through its own workflow.
+- MCP compacts valid JSON formatting while preserving fields and number spelling; diagnostics remain readable.
+- MCP binary resolution ignores directory-valued package binaries and falls back to PATH (#306).
+### Compatibility notes
+
+- MCP scan/import paths must remain within selected cwd after symlink resolution. For another project, supply that project's absolute cwd rather than an escaping path.
+- MCP recipe IDs must be filename stems using letters, digits, underscores or hyphens.
+- .env import now rejects malformed assignments, duplicate names and unterminated quoted values before any import. Correct ambiguous files rather than relying on former partial parsing.
+- Scan refuses malformed package.json rather than presenting partial results as complete; nonexistent scan directories are errors.
+- Existing status consumers must tolerate additive error fields. Existing command names remain; new fleet names are additive.
+
+### Changed
+
+- After at least one provider succeeds, `stack apply` wiring checks the recipe's secret names without creating placeholders or filling missing values. Provider setup may store real values separately. When the vault is readable, wiring reports missing secret names; each required missing value needs user action: run `phantom add <NAME>` in a trusted terminal and enter the real value. Missing names alone do not make apply fail, so an applied recipe is not proof that every required secret is present. If the vault cannot be read, providers are reported as skipped instead of being identified as missing.
+
+  For example, with `OPENAI_API_KEY` missing and no webhooks, the wiring output is:
+
+  ```text
+    secrets in vault 0 · missing 1 · webhooks 0
+    (not in Phantom: OPENAI_API_KEY — store with `phantom add <NAME>`)
+  ```
+
+  Replace `<NAME>` with `OPENAI_API_KEY` when running the command; enter the real value in the trusted terminal. The wiring step does not store a placeholder.
+
+  If the vault cannot be read, the same recipe instead reports:
+
+  ```text
+    secrets in vault 0 · missing 0 · webhooks 0 · skipped 1
+    (phantom-wire skipped: openai)
+  ```
+
+  These zero counts cover only checked names; they do not establish that the vault is empty or that no values are missing. Unknown providers are also skipped. `--noWire` skips the vault check and webhook stubs and prints no wiring summary.
+
 - `stack status` runs its Phantom version and vault-count probes together with the config read (at most 3 at once). Each Phantom probe is capped at 2 s and killed on timeout; the config read has no timeout, as before. A timeout is now visible: human output shows `(timed out after 2s)`, and `--json` keeps `secret_count: null` but adds `secret_count_error: "timeout"` or `"error"` (and `installed_error: "timeout"` when `phantom --version` timed out). Additive only, and absent when everything answers. A timed out version probe is not cached as not installed. Normal output is unchanged. On a synthetic slow-phantom fixture the median dropped from 385.5 ms to 223.0 ms.
 - With no `.phantom.toml`, `stack status --json` still reports `secret_count: null` and now also reports `secret_count_error: "error"`.
 - A timed out Phantom probe now kills its whole process group, so a grandchild holding stdout or stderr can no longer stretch the 2 s cap.
@@ -152,7 +199,7 @@ Covers #67, #68, #70, #73, #74, #75 and #76 together with the sections below.
 
 ### Bug fixes
 
-- **`stack apply` stops writing placeholder secrets.** Its wiring step ran `phantom add <KEY> TODO_STACK_APPLY --rotate` (then without `--rotate`) for every declared secret. Phantom Secrets refuses values in argv and has no `--rotate`, so every call failed and the printed `envelopes` count was always 0; on an older Phantom it could store `TODO_STACK_APPLY` and block the real value later. Apply now reads names from `phantom list --json` and prints `secrets in vault N · missing M · webhooks K`, plus a `not in Phantom:` line pointing at `phantom add <NAME>`. It never writes to the vault. `WireResult.envelopes` is replaced by `present` and `missing`. (Successor to #33.)
+- **`stack apply` stops attempting to write placeholder secrets.** The wiring step never writes to the vault or fills in missing values. Provider setup may already store real values; users must supply each required missing value themselves: run `phantom add <NAME>` from a trusted terminal and enter the real value. When the vault is readable, wiring checks names using `phantom list --json` and prints `secrets in vault N · missing M · webhooks K`, plus a `not in Phantom:` line for missing names. If it cannot read the vault, it reports providers as skipped instead of identifying missing names. Previously, wiring ran `phantom add <KEY> TODO_STACK_APPLY --rotate` (then without `--rotate`) for every declared secret. Phantom Secrets refuses values in argv and has no `--rotate`, so every call failed and the printed `envelopes` count was always 0. `WireResult.envelopes` is replaced by `present` and `missing`. (Successor to #33.)
 
 - **Command errors are one line.** A command that fails outside a Stack project (`stack list`, `deps`, `info`, `remove`, ...) now prints `✗ No .stack.toml at <path>. Run \`stack init\` first.` on stderr and exits 1, instead of a stack trace followed by the same message again. `STACK_DEBUG=1` adds the stack. Usage errors still print usage. (`packages/cli/src/lib/run-cli.ts`, #19)
 
@@ -265,7 +312,7 @@ Initial tag. Binaries for macOS (arm64 + x64) and Linux (arm64 + x64) on GitHub 
 Stack is now agent-native from day one. Describe what you're building; Stack picks the providers, drafts a reproducible Recipe, and hands it to either Claude Code (via MCP) or the local-SLM fallback for synthesis.
 
 - **`stack recommend [query]`** — free-text → top providers ranked by a zero-dep BM25 + IDF scorer over the curated catalog. Flags: `--json`, `--k`, `--category`, `--save`, `--synth`. `--save` freezes the result to `.stack/recipes/<id>.toml` so the user can follow up with `stack apply <id>`. `--synth` calls the local SLM for model-authored rationales and falls back silently when no endpoint is reachable.
-- **`stack apply [recipe-id]`** — re-runs the existing `stack add` pipeline for every provider in the Recipe, then wires [Phantom](https://phm.dev) rotating envelopes + webhook stubs (Stripe, Clerk, Supabase, GitHub). Default ON; `--noWire` opts out. Interactive `@clack/prompts` picker when no id is given.
+- **`stack apply [recipe-id]`** — re-runs the existing `stack add` pipeline for every provider in the Recipe, then checks declared secret names in [Phantom](https://phm.dev) and creates webhook stubs (Stripe, Clerk, Supabase, GitHub). Historically, wiring attempted to write a `TODO_STACK_APPLY` placeholder for each declared secret, but those calls failed; the 0.2.1 fix above removed the attempts. Wiring no longer attempts to write placeholder values; it does not write to the vault or fill in missing values. Provider setup may already store real values. When the vault is readable, wiring reports how many secret names are present and missing and lists missing names. Missing names alone do not make apply fail; provider failures still do. Users must supply each required missing value: run `phantom add <NAME>` from a trusted terminal and enter the real value. If the vault cannot be read, wiring reports providers as skipped instead of identifying missing names. Wiring is on by default; `--noWire` opts out. Interactive `@clack/prompts` picker when no id is given.
 - **MCP surface** — `stack_recommend` (with `save:true`) and `stack_apply` exposed so Claude can drive the full loop from a coding session. Retrieval-only on the MCP path by design — Claude owns the reasoning, Stack owns the catalog + execution.
 - **Canonical catalog** — moved from `packages/site/src/lib/providers-ref.ts` into `packages/core/src/catalog.ts`; site now re-exports the shim. One source of truth for CLI, MCP, AI, and docs.
 - **Local SLM backend** — `packages/core/src/ai/inference.ts` talks OpenAI-compatible HTTP to LM Studio (`localhost:1234`) with Ollama fallback (`localhost:11434`). Circuit breaker + cost tracker copied from the ashlrcode router pattern. Zero new npm deps, no OpenAI/Anthropic SDKs in the Stack repo — the user's LLM keys belong to Claude, not to us.

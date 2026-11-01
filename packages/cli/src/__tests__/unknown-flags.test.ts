@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { type CommandDef, defineCommand } from "citty";
 import { TOOLS } from "../../../mcp/src/tools.ts";
 import { addCommand } from "../commands/add.ts";
+import { doctorCommand } from "../commands/doctor.ts";
 import { envCommand } from "../commands/env.ts";
 import { execCommand } from "../commands/exec.ts";
 import { initCommand } from "../commands/init.ts";
@@ -43,6 +44,44 @@ function stack(args: string[]) {
 }
 
 describe("unknown options are refused", () => {
+  test("a value-taking option without a value fails before the command runs", () => {
+    const r = stack(["sync", "--platform"]);
+    expect(r.code).toBe(1);
+    expect(r.stdout).toBe("");
+    expect(r.stderr).toContain("Option --platform for `stack sync` requires a value");
+    expect(r.stderr).toContain("stack sync --help");
+  });
+
+  test("a following option is not consumed as the missing value", () => {
+    const r = stack(["env", "--env", "--json"]);
+    expect(r.code).toBe(1);
+    expect(JSON.parse(r.stdout).error).toContain("Option --env for `stack env` requires a value");
+    expect(r.stderr).toContain("requires a value");
+  });
+
+  test("an unknown long option exits unsuccessfully and points to usage", () => {
+    const r = stack(["templates", "list", "--bogus"]);
+    expect(r.code).toBe(1);
+    expect(r.stdout).toBe("");
+    expect(r.stderr).toContain("Unknown option --bogus for `stack templates list`");
+    expect(r.stderr).toContain("Run `stack templates list --help`");
+  });
+
+  test("an unknown option with an attached value exits unsuccessfully and names the option", () => {
+    const r = stack(["templates", "list", "--bogus=value"]);
+    expect(r.code).toBe(1);
+    expect(r.stdout).toBe("");
+    expect(r.stderr).toContain("Unknown option --bogus for `stack templates list`");
+  });
+
+  test("an unknown short option exits unsuccessfully and names the option", () => {
+    const r = stack(["templates", "list", "-z"]);
+    expect(r.code).toBe(1);
+    expect(r.stdout).toBe("");
+    expect(r.stderr).toContain("Unknown option -z for `stack templates list`");
+    expect(r.stderr).toContain("Run `stack templates list --help`");
+  });
+
   test("a typo exits 1, names the option and the closest real one", () => {
     const r = stack(["templates", "list", "--jsn"]);
     expect(r.code).toBe(1);
@@ -130,6 +169,37 @@ describe("extra positional arguments are refused", () => {
 });
 
 describe("findUnknownFlag accepts every declared spelling", () => {
+  test("doctor delegates bare install/apply values to its command-specific validation", async () => {
+    for (const flag of ["--install", "--apply"]) {
+      for (const suffix of [[], ["--json"], ["lexicon", "--json"], ["--typo"]]) {
+        const result = await findUnknownFlag(doctorCommand, ["--ecosystem", flag, ...suffix]);
+        if (suffix.includes("--typo")) expect(result).toMatchObject({ flag: "--typo" });
+        else expect(result).toBeNull();
+      }
+      expect(await findUnknownFlag(doctorCommand, [`${flag}=lexicon`, "--json"])).toBeNull();
+    }
+  });
+
+  test("optional string aliases accept bare values without swallowing following flags", async () => {
+    const cmd = defineCommand({
+      args: { tools: { type: "string", alias: "t", valueOptional: true } },
+    });
+    expect(await findUnknownFlag(cmd, ["-t"])).toBeNull();
+    expect(await findUnknownFlag(cmd, ["-t", "lexicon"])).toBeNull();
+    expect(await findUnknownFlag(cmd, ["-t", "--typo"])).toMatchObject({ flag: "--typo" });
+  });
+
+  test("recognizes missing short-option values and the end-of-options marker", async () => {
+    const cmd = defineCommand({ args: { output: { type: "string", alias: "o" } } });
+    expect(await findUnknownFlag(cmd, ["-o"])).toMatchObject({ flag: "-o", missingValue: true });
+    expect(await findUnknownFlag(cmd, ["--output", "--"])).toMatchObject({
+      flag: "--output",
+      missingValue: true,
+    });
+    expect(await findUnknownFlag(cmd, ["-o", "-1"])).toBeNull();
+    expect(await findUnknownFlag(cmd, ["--output=-file"])).toBeNull();
+  });
+
   test.each([
     [["add", "openai", "--dry-run", "--use=res_1", "--region", "us-east-1"]],
     [["add", "openai", "--dryRun", "--install=never"]],

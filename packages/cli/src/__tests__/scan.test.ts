@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -11,7 +11,7 @@ function runCli(
   args: string[],
   cwd?: string,
   extraEnv?: Record<string, string>,
-): { stdout: string; stderr: string; code: number } {
+): { stdout: string; stderr: string; code: number | null } {
   const result = spawnSync("bun", [CLI_ENTRY, ...args], {
     encoding: "utf8",
     cwd,
@@ -20,7 +20,7 @@ function runCli(
   return {
     stdout: result.stdout ?? "",
     stderr: result.stderr ?? "",
-    code: result.status ?? 0,
+    code: result.status,
   };
 }
 
@@ -63,18 +63,13 @@ describe("stack scan --json", () => {
     // CI=1 strips TTY; no prompts expected because --json bypasses all interactivity
     const { stdout, code } = runCli(["scan", "--json", "--path", cwd], undefined, { CI: "1" });
     expect(code).toBe(0);
-    let parsed: { hits: Array<{ provider: string; confidence: string; sources: string[] }> };
-    expect(() => {
-      parsed = JSON.parse(stdout);
-    }).not.toThrow();
-    // @ts-ignore — parsed assigned in expect block above
+    const parsed: { hits: Array<{ provider: string; confidence: string; sources: string[] }> } =
+      JSON.parse(stdout);
     expect(Array.isArray(parsed.hits)).toBe(true);
-    // @ts-ignore
-    const providers = parsed.hits.map((h: { provider: string }) => h.provider);
+    const providers = parsed.hits.map((h) => h.provider);
     expect(providers).toContain("supabase");
     expect(providers).toContain("sentry");
     // Each hit has required shape
-    // @ts-ignore
     for (const hit of parsed.hits) {
       expect(typeof hit.provider).toBe("string");
       expect(["high", "medium", "low"]).toContain(hit.confidence);
@@ -113,6 +108,39 @@ describe("stack scan --json", () => {
     expect(code).toBe(0);
     const parsed = JSON.parse(stdout) as { hits: unknown[] };
     expect(parsed.hits).toEqual([]);
+  });
+
+  test("ignores provider signals in an unrelated file at every confidence level", () => {
+    const cwd = tmp({
+      "notes.txt": '{"dependencies":{"@supabase/supabase-js":"^2.45.0"}}\nOPENAI_API_KEY=example',
+    });
+    const { stdout, stderr, code } = runCli(
+      ["scan", "--json", "--confidence", "low", "--path", cwd],
+      undefined,
+      { CI: "1" },
+    );
+    expect(code).toBe(0);
+    expect(stderr).toBe("");
+    expect(JSON.parse(stdout)).toEqual({ hits: [] });
+    expect(existsSync(join(cwd, ".stack.toml"))).toBe(false);
+  });
+
+  test("does not mistake a backup of a provider config for the project config", () => {
+    const backup = tmp({ "vercel.json.bak": "{}" });
+    const project = tmp({ "vercel.json": "{}" });
+
+    const unrelated = runCli(["scan", "--json", "--confidence", "low", "--path", backup]);
+    expect(unrelated.code).toBe(0);
+    expect(unrelated.stderr).toBe("");
+    expect(JSON.parse(unrelated.stdout)).toEqual({ hits: [] });
+    expect(existsSync(join(backup, ".stack.toml"))).toBe(false);
+
+    const recognized = runCli(["scan", "--json", "--confidence", "low", "--path", project]);
+    expect(recognized.code).toBe(0);
+    expect(recognized.stderr).toBe("");
+    expect(JSON.parse(recognized.stdout)).toEqual({
+      hits: [{ provider: "vercel", confidence: "high", sources: ["vercel.json"] }],
+    });
   });
 });
 
@@ -157,6 +185,82 @@ describe("stack scan --confidence", () => {
   });
 });
 
+// ── nested project discovery ───────────────────────────────────────────────
+
+describe("stack scan nested project discovery", () => {
+  // Documented behavior: `--path` is the "Directory to scan" and the detected
+  // signal set is that directory's own package.json / requirements.txt /
+  // pyproject.toml / go.mod / Cargo.toml, framework configs (vercel.json,
+  // fly.toml, railway.json, supabase/config.toml, sentry.*.config,
+  // .github/workflows/) and .env.example. Discovery is per-directory: reaching
+  // a project nested inside another means pointing --path at it — scanning the
+  // parent never reports the child's evidence.
+  const files = {
+    "package.json": JSON.stringify({ dependencies: { openai: "^4.0.0" } }),
+    "apps/api/package.json": JSON.stringify({
+      dependencies: { "@supabase/supabase-js": "^2.45.0" },
+    }),
+    "apps/api/.env.example": "STRIPE_SECRET_KEY=\n",
+    "apps/api/fly.toml": "app = 'api'",
+    "apps/api/supabase/config.toml": "[api]\nport = 54321",
+    "apps/api/.github/workflows/ci.yml": "name: CI\non: push",
+  };
+
+  function hits(stdout: string) {
+    return (
+      JSON.parse(stdout) as {
+        hits: Array<{ provider: string; confidence: string; sources: string[] }>;
+      }
+    ).hits;
+  }
+
+  test("discovers the nested project's signals when --path points at it", () => {
+    const cwd = tmp(files);
+    const nested = join(cwd, "apps", "api");
+    const { stdout, stderr, code } = runCli(
+      ["scan", "--json", "--confidence", "low", "--path", nested],
+      undefined,
+      { CI: "1" },
+    );
+    expect(code).toBe(0);
+    expect(stderr).toBe("");
+    const found = hits(stdout);
+    expect(found.map((h) => h.provider)).toEqual(["fly", "github", "supabase", "stripe"]);
+    // Documented nested signal paths resolve inside the scanned directory.
+    const supabase = found.find((h) => h.provider === "supabase");
+    expect(supabase?.confidence).toBe("high");
+    expect(supabase?.sources).toContain("package.json:@supabase/supabase-js");
+    expect(supabase?.sources).toContain("supabase/config.toml");
+    const github = found.find((h) => h.provider === "github");
+    expect(github?.sources).toContain(".github/workflows/ci.yml");
+  });
+
+  test("--path accepts a nested directory relative to cwd", () => {
+    const cwd = tmp(files);
+    const { stdout, code } = runCli(
+      ["scan", "--json", "--confidence", "low", "--path", join("apps", "api")],
+      cwd,
+      { CI: "1" },
+    );
+    expect(code).toBe(0);
+    expect(hits(stdout).map((h) => h.provider)).toEqual(["fly", "github", "supabase", "stripe"]);
+  }, 30_000);
+
+  test("scanning the parent reports only the parent's own signals", () => {
+    const cwd = tmp(files);
+    const { stdout, stderr, code } = runCli(
+      ["scan", "--json", "--confidence", "low", "--path", cwd],
+      undefined,
+      { CI: "1" },
+    );
+    expect(code).toBe(0);
+    expect(stderr).toBe("");
+    // The nested project's manifest, .env.example, config files and
+    // .github/workflows/ are not signals of the parent directory.
+    expect(hits(stdout).map((h) => h.provider)).toEqual(["openai"]);
+  });
+});
+
 // ── Non-TTY without flags ──────────────────────────────────────────────────
 
 describe("stack scan non-TTY without flags", () => {
@@ -192,6 +296,113 @@ describe("stack scan non-TTY without flags", () => {
     expect(r.stdout + r.stderr).toContain("--yes");
     expect(r.stdout + r.stderr).toContain("--json");
   });
+});
+
+describe("stack scan without recognized project files", () => {
+  test("scans an empty working directory using the default path", () => {
+    const cwd = tmp({});
+    const json = runCli(["scan", "--json"], cwd, { CI: "1" });
+    expect(json.code).toBe(0);
+    expect(json.stderr).toBe("");
+    expect(JSON.parse(json.stdout)).toEqual({ hits: [] });
+
+    const report = runCli(["scan"], cwd, { CI: "1" });
+    expect(report.code).toBe(0);
+    expect(report.stderr).toBe("");
+    expect(report.stdout).toContain("No providers detected");
+    expect(report.stdout).not.toContain("stack add");
+    expect(existsSync(join(cwd, ".stack.toml"))).toBe(false);
+  }, 15_000);
+
+  test.each([[[]], [["--yes"]]])("reports no providers without creating a stack (%j)", (flags) => {
+    const cwd = tmp({
+      "notes.txt": '{"dependencies":{"@supabase/supabase-js":"^2.45.0"}}\nOPENAI_API_KEY=example',
+    });
+    const { stdout, stderr, code } = runCli(
+      ["scan", ...flags, "--confidence", "low", "--path", cwd],
+      undefined,
+      { CI: "1" },
+    );
+
+    expect(code).toBe(0);
+    expect(stderr).toBe("");
+    expect(stdout).toContain("No providers detected");
+    expect(stdout).not.toContain("stack add");
+    expect(stdout).not.toContain("supabase");
+    expect(stdout).not.toContain("openai");
+    expect(existsSync(join(cwd, ".stack.toml"))).toBe(false);
+  });
+});
+
+describe("stack scan on an empty project directory (regression)", () => {
+  test("a filtered result is empty without adding, while a lower threshold finds the signal", () => {
+    const cwd = tmp({ ".env.example": "OPENAI_API_KEY=\n" });
+    const report = runCli(["scan", "--yes", "--path", cwd], undefined, { CI: "1" });
+    expect(report.code).toBe(0);
+    expect(report.stderr).toBe("");
+    expect(report.stdout).toContain("No providers detected");
+    expect(existsSync(join(cwd, ".stack.toml"))).toBe(false);
+
+    const json = runCli(["scan", "--json", "--yes", "--path", cwd], undefined, { CI: "1" });
+    expect(json.code).toBe(0);
+    expect(JSON.parse(json.stdout)).toEqual({ hits: [] });
+
+    const lower = runCli(["scan", "--json", "--confidence", "low", "--path", cwd], undefined, {
+      CI: "1",
+    });
+    expect(lower.code).toBe(0);
+    expect(JSON.parse(lower.stdout)).toEqual({
+      hits: [
+        { provider: "openai", confidence: "medium", sources: [".env.example:OPENAI_API_KEY"] },
+      ],
+    });
+    expect(existsSync(join(cwd, ".stack.toml"))).toBe(false);
+  });
+
+  test("--yes exits 0 with an empty result without reaching the Phantom preflight", () => {
+    // With zero hits the command reports "No providers detected" and returns
+    // before requirePhantom() — reordering that would exit 1 wherever Phantom
+    // isn't installed, so this pins the short-circuit.
+    const cwd = tmp({});
+    const { stdout, stderr, code } = runCli(["scan", "--yes", "--path", cwd], undefined, {
+      CI: "1",
+    });
+    expect(code).toBe(0);
+    expect(stderr).toBe("");
+    expect(stdout).toContain("No providers detected");
+    expect(stdout).not.toContain("stack add");
+    expect(existsSync(join(cwd, ".stack.toml"))).toBe(false);
+  }, 15_000);
+
+  test("a directory holding only scaffold files reports no providers at any confidence", () => {
+    const cwd = tmp({ ".gitkeep": "", "src/.gitkeep": "" });
+    for (const confidence of ["low", "medium", "high"]) {
+      const { stdout, stderr, code } = runCli(
+        ["scan", "--json", "--confidence", confidence, "--path", cwd],
+        undefined,
+        { CI: "1" },
+      );
+      expect(code).toBe(0);
+      expect(stderr).toBe("");
+      expect(JSON.parse(stdout)).toEqual({ hits: [] });
+    }
+    expect(existsSync(join(cwd, ".stack.toml"))).toBe(false);
+  }, 20_000);
+
+  test("a manifest with no dependencies yields an empty result, not an error", () => {
+    // "{}" parses fine, so the manifest gate must not confuse "no deps" with
+    // "no manifest" — the scan completes with an empty hits array.
+    const cwd = tmp({ "package.json": "{}" });
+    const { stdout, stderr, code } = runCli(["scan", "--json", "--path", cwd], undefined, {
+      CI: "1",
+    });
+    expect(code).toBe(0);
+    expect(stderr).toBe("");
+    expect(JSON.parse(stdout)).toEqual({ hits: [] });
+    const report = runCli(["scan", "--path", cwd], undefined, { CI: "1" });
+    expect(report.code).toBe(0);
+    expect(report.stdout).toContain("No providers detected");
+  }, 15_000);
 });
 
 // ── --yes headless (decision logic, mock addService not needed) ──────────
@@ -253,21 +464,55 @@ describe("stack scan --yes", () => {
 // ── argument validation ────────────────────────────────────────────────────
 
 describe("stack scan rejects bad arguments", () => {
+  test.each([[["--json"]], [[]], [["--yes"]]])(
+    "rejects a malformed dependency manifest without reporting a partial scan (%j)",
+    (flags) => {
+      const cwd = tmp({ "package.json": '{"dependencies": {', "fly.toml": "" });
+      const { stdout, stderr, code } = runCli(["scan", ...flags, "--path", cwd], undefined, {
+        CI: "1",
+      });
+      expect(code).toBe(1);
+      expect(stdout + stderr).toContain("Invalid JSON in dependency manifest");
+      expect(stdout + stderr).toContain(join(cwd, "package.json"));
+      expect(stdout + stderr).toContain("Fix it and retry");
+      expect(stdout).not.toContain('"hits"');
+      expect(stdout).not.toContain("provider(s) detected");
+      expect(stdout).not.toContain("No providers detected");
+      expect(stdout).not.toContain("scan complete");
+      expect(stdout).not.toContain("fly");
+      expect(existsSync(join(cwd, ".stack.toml"))).toBe(false);
+    },
+  );
+
   test("nonexistent --path exits 1 naming the path (--json)", () => {
-    const missing = join(tmpdir(), "stack-scan-does-not-exist-xyz");
+    const missing = join(tmp({}), "missing");
     const { stdout, stderr, code } = runCli(["scan", "--json", "--path", missing], undefined, {
       CI: "1",
     });
     expect(code).toBe(1);
     expect(stderr).toContain(missing);
+    expect(stderr).toContain("does not exist or is not a directory");
     expect(stdout).not.toContain('"hits"');
   });
 
   test("nonexistent --path exits 1 naming the path (human)", () => {
-    const missing = join(tmpdir(), "stack-scan-does-not-exist-xyz");
+    const missing = join(tmp({}), "missing");
     const { stdout, stderr, code } = runCli(["scan", "--path", missing], undefined, { CI: "1" });
     expect(code).toBe(1);
     expect(stdout + stderr).toContain(missing);
+    expect(stdout + stderr).toContain("does not exist or is not a directory");
+    expect(stdout + stderr).not.toContain("No providers detected");
+  });
+
+  test("nonexistent relative --path fails before --yes can modify the project", () => {
+    const cwd = tmp({});
+    const { stdout, stderr, code } = runCli(["scan", "--yes", "--path", "missing"], cwd, {
+      CI: "1",
+    });
+    expect(code).toBe(1);
+    expect(stdout + stderr).toContain('Path "missing" does not exist or is not a directory');
+    expect(stdout + stderr).not.toContain("scan complete");
+    expect(existsSync(join(cwd, ".stack.toml"))).toBe(false);
   });
 
   test("a file as --path exits 1", () => {

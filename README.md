@@ -4,10 +4,13 @@
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/ashlrai/ashlr-stack/badge)](https://scorecard.dev/viewer/?uri=github.com/ashlrai/ashlr-stack)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 [![npm version](https://img.shields.io/npm/v/@ashlr/stack.svg)](https://www.npmjs.com/package/@ashlr/stack)
+<!-- fresh:begin version-badge -->
+[![source v0.3.0](https://img.shields.io/badge/source-v0.3.0-blue.svg)](CHANGELOG.md)
+<!-- fresh:end -->
 
 **Configure supported services from your terminal or your AI agent.** Stack uses provider-specific OAuth or supplied credentials, provisions where the adapter supports it, and records selected credentials in [Phantom Secrets](https://phm.dev/secrets), Stack configuration and provider MCP entries. Vercel requires an existing personal access token; Stack does not create that token. Export an empty `.env.example` separately with `stack env export --example`.
 
-**Status:** pre-alpha, active development. The 0.2 release line adds a Node-compatible CLI, expanded providers and headless workflows; this checkout is version 0.2.2. See [CHANGELOG.md](./CHANGELOG.md) for the 0.2.0 baseline and subsequent fixes. Source versions do not establish npm publication or provider readiness. Check `npm view @ashlr/stack version`, `npm view ashlr-stack-mcp version`, and your installed `stack --version` before relying on release-specific commands.
+**Status:** pre-alpha, active development. This source line adds fleet diagnostics and stricter input validation on top of the Node-compatible CLI and headless workflows; this checkout is version <!-- fresh:begin version-pin -->0.3.0<!-- fresh:end -->. See [CHANGELOG.md](./CHANGELOG.md) for compatibility notes and changes since 0.2.2. Source versions do not establish npm publication or provider readiness. Check `npm view @ashlr/stack version`, `npm view ashlr-stack-mcp version`, and your installed `stack --version` before relying on release-specific commands.
 
 <!-- Demo GIF: record with vhs, see docs/ -->
 
@@ -25,7 +28,7 @@ To provision a real service, install Stack (below) and run `stack add <provider>
 
 ## Connect your agent (MCP)
 
-Every MCP tool runs the `stack` CLI, so the server needs `stack` on its PATH (or `STACK_BIN` set to it). These snippets fetch both packages in one `npx`, which puts `stack` on the server's PATH:
+Every MCP tool runs the `stack` CLI. Resolution checks `STACK_BIN` first, then the installed `@ashlr/stack` dependency's binary, then `stack` on PATH. These snippets request both packages explicitly:
 
 ```bash
 claude mcp add ashlr-stack -- npx -y -p @ashlr/stack -p ashlr-stack-mcp ashlr-stack-mcp   # Claude Code
@@ -38,7 +41,7 @@ Cursor (`~/.cursor/mcp.json`):
 { "mcpServers": { "ashlr-stack": { "command": "npx", "args": ["-y", "-p", "@ashlr/stack", "-p", "ashlr-stack-mcp", "ashlr-stack-mcp"] } } }
 ```
 
-With only `ashlr-stack-mcp`, the server starts and lists its tools, but every call returns "Could not run the 'stack' CLI".
+The current MCP package depends on `@ashlr/stack`. If no runnable CLI is available, the server can still list tools, but tool calls return "Could not run the 'stack' CLI". For source development, build the CLI or point `STACK_BIN` at its executable source entry.
 
 ### One command for every agent
 
@@ -72,10 +75,15 @@ curl -fsSL stack.ashlr.ai/install.sh | bash
 irm https://stack.ashlr.ai/install.ps1 | iex
 ```
 
+npm / bun registry:
+
+> The command below is generated from this checkout’s source version; a future source version may not be published yet. On November 1, 2026, npm reported 0.3.0 for all three Stack packages. Check `npm view @ashlr/stack-core version`, `npm view @ashlr/stack version` and `npm view ashlr-stack-mcp version` before relying on a newer pin. The 0.3.0 CLI and MCP packages declare Node.js 20 or newer; source development uses Bun.
+
+<!-- fresh:begin install-snippet -->
 ```bash
-# npm / bun registry
-bun add -g @ashlr/stack ashlr-stack-mcp     # or: npm i -g
+bun add -g @ashlr/stack@0.3.0 ashlr-stack-mcp@0.3.0     # or: npm i -g
 ```
+<!-- fresh:end -->
 
 > Check the published versions with `npm view @ashlr/stack version` and `npm view ashlr-stack-mcp version`. Older releases may require [Bun](https://bun.sh) and lack commands such as `stack doctor --ecosystem` or `stack exec --as`. Use the dev install below to run this checkout's commands.
 
@@ -85,7 +93,8 @@ bun add -g @ashlr/stack ashlr-stack-mcp     # or: npm i -g
 git clone https://github.com/ashlrai/ashlr-stack && cd ashlr-stack
 bun install
 bun run packages/cli/src/index.ts --help
-# Optional: alias stack=`bun run $(pwd)/packages/cli/src/index.ts` so it's on your PATH
+# Run source commands with: bun run packages/cli/src/index.ts <command>
+# For MCP, build the CLI: bun run --cwd packages/cli build
 ```
 
 > Using Stack with an AI coding agent? See [STACK.md](./STACK.md): a self-contained project brief for agents pulling context from the repo.
@@ -133,7 +142,7 @@ Stack is the *control plane*. [Phantom Secrets](https://phm.dev/secrets) is the 
 **Email**: Resend
 **Auth**: Clerk
 
-Run `stack providers` to see your installed catalog. This source checkout registers 39 providers across 13 categories; the examples above are a subset. `stack templates list` shows the starter presets. Registration does not establish account access or provider acceptance.
+Run `stack providers` to see your installed catalog. This source checkout registers <!-- fresh:begin provider-count -->39<!-- fresh:end --> providers across <!-- fresh:begin category-count -->13<!-- fresh:end --> categories; the examples above are a subset. `stack templates list` shows the starter presets. Registration does not establish account access or provider acceptance.
 
 ## Usage
 
@@ -161,6 +170,96 @@ stack exec -- bun dev         # Stack wrapper for the same runtime
 stack exec --as acme -- bun dev  # same, but refuse (exit 1, nothing starts) unless Locus has `acme` pinned
 ```
 
+### Source command reference
+
+This checkout registers <!-- fresh:begin command-count -->43<!-- fresh:end --> top-level commands. Run `stack <command> --help`
+for arguments and subcommands supported by your installed version.
+
+<!-- fresh:begin commands-table -->
+| Command | Purpose |
+| --- | --- |
+| `stack init` | Scaffold a .stack.toml in the current directory. |
+| `stack import` | Import an existing .env into Phantom + .stack.toml. |
+| `stack scan` | Detect providers used by this repo (package.json, config files, .env.example). |
+| `stack clone` | Clone a GitHub repo and auto-detect its Stack services. |
+| `stack add` | Provision a service and wire its secrets + MCP entry. |
+| `stack remove` | Remove local service config and MCP wiring; attempt Phantom secret removal (headless runs may retain secrets). |
+| `stack list` | List services configured in this stack. |
+| `stack info` | Show everything Stack knows about a configured service. |
+| `stack status` | Show stack health at a glance. |
+| `stack env` | Inspect the effective env-var map for this stack. |
+| `stack deps` | Show the service dependency graph for this stack. |
+| `stack doctor` | Verify every service is reachable and credentials are valid. |
+| `stack fleet-lanes` | Report lane targets, running and queued work, and dispatch idle reasons. |
+| `stack fleet-supply` | Report hourly launches, observed lane idle minutes, restock errors and UTF-8 queue splits. |
+| `stack fleet-latency` | Report per-repo median and p90 open-to-merge seconds for PRs merged in the last six hours. |
+| `stack fleet-lag` | Report per-repo commits since latest tag, tag age and median time for the last 20 merged PRs. |
+| `stack fleet-waste` | Report per-lane launches, empty finishes, precheck skips by code and unfinished jobs. |
+| `stack fleet-reds` | List failed jobs and first failing tests in the latest completed schedule/push CI runs. |
+| `stack fleet-silent` | Name silent fleet failures in author, dispatch and job logs (read-only JSON). |
+| `stack fleet-collisions` | Rank touched files by open conflicting PR count from one repository's gh JSON. |
+| `stack fleet-delivery-lag` | Report undeployed merged commits and merge wait from a read-only JSON fixture. |
+| `stack fleet-stuck` | List open PRs by merge state, age and auto-merge status with server/ and lockfile path hints. |
+| `stack fleet-slo` | Compare per-repo six-hour merges, open-to-merge latency and conflicting PRs with fleet SLO targets. |
+| `stack fleet-act` | Preview fleet requests; --apply appends a v1 audit request for a dispatcher consumer. |
+| `stack fleet-stream` | Translate fleet logs to typed NDJSON or localhost SSE. |
+| `stack fleet-graph` | Emit schema-versioned fleet pool, job, and repository nodes and edges. |
+| `stack fleet-bets` | Score leader bets: join queue ledger ids with dispatch state and job outcomes for per-bet status and per-lane merged rate. |
+| `stack fleet` | Show repository CI, open PR counts, and dispatcher lane status. |
+| `stack exec` | Run a command with Phantom's secret proxy active. |
+| `stack swap` | Migrate a project from one provider to an equivalent in the same category. |
+| `stack sync` | Push secrets to a deployment platform (via phantom sync). |
+| `stack onboard` | Detect Codex, Claude Code, Cursor and Gemini CLI and register the Phantom gateway in each (plan by default). |
+| `stack open` | Open a service's dashboard in your browser. |
+| `stack login` | Refresh OAuth / PAT credentials for a specific provider. |
+| `stack telemetry` | Opt into / out of anonymous usage telemetry. See docs/PRIVACY.md. |
+| `stack templates` | List or apply starter stack templates. |
+| `stack providers` | List every curated provider Stack can wire up. |
+| `stack recommend` | Pick the right providers for what you're building (AI-assisted). |
+| `stack apply` | Apply a saved recipe: provision each provider, check its secrets in Phantom, and add webhook stubs. |
+| `stack projects` | Manage the cross-project registry at ~/.stack/projects.json. |
+| `stack ci` | CI workflow generation (unavailable; use `stack doctor` instead). |
+| `stack completion` | Emit shell completion for bash, zsh, or fish. |
+| `stack upgrade` | Check for a release or safely upgrade an npm global CLI install. |
+<!-- fresh:end -->
+
+### Source MCP tool reference
+
+The server declares <!-- fresh:begin tool-count -->19<!-- fresh:end --> tools, a subset of the CLI. Each tool accepts its
+advertised input schema; CLI flags are not automatically MCP arguments.
+Project-scoped tools accept an absolute `cwd`; global catalog, registry,
+template and upgrade tools reject it. Results contain CLI output and an
+`isError` flag. They do not guarantee credential validity or provider health.
+
+<!-- fresh:begin tools-table -->
+| Tool | CLI route |
+| --- | --- |
+| `stack_init` | `stack init` |
+| `stack_import` | `stack import` |
+| `stack_scan` | `stack scan` |
+| `stack_add` | `stack add` |
+| `stack_remove` | `stack remove` |
+| `stack_list` | `stack list` |
+| `stack_info` | `stack info` |
+| `stack_status` | `stack status` |
+| `stack_env_show` | `stack env show` |
+| `stack_env_diff` | `stack env diff` |
+| `stack_doctor` | `stack doctor` |
+| `stack_sync` | `stack sync` |
+| `stack_providers` | `stack providers` |
+| `stack_projects_list` | `stack projects list` |
+| `stack_deps` | `stack deps` |
+| `stack_templates_list` | `stack templates list` |
+| `stack_upgrade` | `stack upgrade` |
+| `stack_recommend` | `stack recommend` |
+| `stack_apply` | `stack apply` |
+<!-- fresh:end -->
+
+The server lists up to three resources when their files exist in its working
+directory: `stack://current/.stack.toml`, `stack://current/.stack.local.toml`
+and `stack://current/.mcp.json`. Resources do not accept `cwd`. Review output
+before sharing: the MCP wrapper is not a general secret-redaction boundary.
+
 ### AI recommendation layer
 
 Describe what you're building: Stack picks the providers.
@@ -177,6 +276,8 @@ stack apply <recipe-id>
 #   and writes webhook stub files; successful rotation is not guaranteed
 #   (add --noWire to skip the optional wiring layer)
 ```
+
+See [observing an apply](docs/apply-observation.md) to inspect the result, the [placeholder FAQ](docs/apply-placeholder-faq.md) for missing secrets, and the [apply troubleshooting guide](docs/apply-troubleshooting.md) for prerequisite checks and recovery.
 
 Inside Claude Code, the same flow is one tool call:
 
@@ -218,6 +319,9 @@ stack projects list           # everywhere you've used Stack
 stack doctor --all            # run health check across all registered projects
 ```
 
+See the [scan guide](docs/scan-guide.md) for supported inputs, confidence levels,
+and empty-result behavior.
+
 ### How git-sharing works
 
 Stack splits its config into two files so you can commit the shape of a stack without leaking per-developer resource IDs:
@@ -242,7 +346,7 @@ docs/         auth matrix, schema reference
 
 ### Publishing
 
-Three packages ship to npm: `@ashlr/stack-core`, `ashlr-stack-mcp`, `@ashlr/stack`. For monorepo dev, `@ashlr/stack` depends on `@ashlr/stack-core` via `workspace:*`: that's what lets `bun install` link the local checkout. A plain `npm install @ashlr/stack` from outside the workspace **cannot resolve `workspace:*`**, so the publish flow has to rewrite those ranges to an actual version (e.g. `^0.2.2`) right before `npm publish`.
+Three packages ship to npm: `@ashlr/stack-core`, `ashlr-stack-mcp`, `@ashlr/stack`. For monorepo dev, `@ashlr/stack` depends on `@ashlr/stack-core` via `workspace:*`: that's what lets `bun install` link the local checkout. A plain `npm install @ashlr/stack` from outside the workspace **cannot resolve `workspace:*`**, so the publish flow has to rewrite those ranges to an actual version (e.g. ^<!-- fresh:begin version-pin -->0.3.0<!-- fresh:end -->) right before `npm publish`.
 
 Don't hand-edit the `workspace:*` entries in `packages/*/package.json`: dev needs them. Release owners should follow [docs/RELEASE.md](./docs/RELEASE.md), which describes the current script, its limitations and separate package, native and website acceptance gates.
 

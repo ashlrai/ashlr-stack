@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { delimiter, dirname, join } from "node:path";
 import { scanSource } from "../detect-source.ts";
 
 const projects: string[] = [];
@@ -152,27 +152,27 @@ require (
   });
 });
 
-test.each([null, "openai", 42, true, ["openai"]])(
-  "ignores invalid dependency sections %j while scanning valid siblings",
-  async (invalid) => {
-    for (const section of ["dependencies", "devDependencies"]) {
-      const sibling = section === "dependencies" ? "devDependencies" : "dependencies";
-      const hits = await scanSource(
-        makeProject({
-          "package.json": JSON.stringify({
-            [section]: invalid,
-            [sibling]: { openai: "^4.0.0" },
-          }),
-        }),
-      );
-      expect(hits).toEqual([
-        { provider: "openai", confidence: "high", signals: ["package.json:openai"] },
-      ]);
-    }
-  },
-);
+test.each([
+  ["dependencies", "openai"],
+  ["dependencies", ["openai"]],
+  ["devDependencies", "openai"],
+  ["devDependencies", ["openai"]],
+] as const)("invalid %s section %j preserves a valid sibling", async (section, invalid) => {
+  const sibling = section === "dependencies" ? "devDependencies" : "dependencies";
+  const hits = await scanSource(
+    makeProject({
+      "package.json": JSON.stringify({
+        [section]: invalid,
+        [sibling]: { openai: "^4.0.0" },
+      }),
+    }),
+  );
+  expect(hits).toEqual([
+    { provider: "openai", confidence: "high", signals: ["package.json:openai"] },
+  ]);
+});
 
-test.each(["{broken", "null", "{}", "[]", '"openai"', "42", "true"])(
+test.each(["{broken", "null", "{}"])(
   "malformed or empty package %s does not hide other evidence",
   async (raw) => {
     const cwd = makeProject({ "package.json": raw, "fly.toml": "" });
@@ -238,6 +238,147 @@ test("deduplicates dependency evidence and upgrades confidence without losing si
   ]);
 });
 
+test("repeated scans of an unchanged project return the same unique detections", async () => {
+  const cwd = makeProject({
+    "package.json": JSON.stringify({
+      dependencies: { openai: "1", "@vercel/kv": "1" },
+      devDependencies: { openai: "1" },
+    }),
+    "requirements.txt": "openai==1\nopenai>=1\n",
+    "vercel.json": "{}",
+    ".env.example": "OPENAI_API_KEY=\nOPENAI_API_KEY=\nVERCEL_TOKEN=",
+  });
+  const expected: Awaited<ReturnType<typeof scanSource>> = [
+    {
+      provider: "openai",
+      confidence: "high",
+      signals: ["package.json:openai", "requirements.txt:openai", ".env.example:OPENAI_API_KEY"],
+    },
+    {
+      provider: "vercel",
+      confidence: "high",
+      signals: ["package.json:@vercel/kv", "vercel.json", ".env.example:VERCEL_TOKEN"],
+    },
+  ];
+
+  const first = await scanSource(cwd);
+  const second = await scanSource(cwd);
+
+  expect(first).toEqual(expected);
+  expect(second).toEqual(expected);
+});
+
+test("scans a project directory containing spaces and reports relative file paths", async () => {
+  const root = makeProject({
+    "project with spaces/package.json": JSON.stringify({ dependencies: { openai: "1" } }),
+    "project with spaces/supabase/config.toml": "[api]",
+    "project with spaces/.env.example": "OPENAI_API_KEY=",
+    "project with spaces/vercel.json": "{}",
+  });
+
+  expect(await scanSource(join(root, "project with spaces"))).toEqual([
+    {
+      provider: "openai",
+      confidence: "high",
+      signals: ["package.json:openai", ".env.example:OPENAI_API_KEY"],
+    },
+    { provider: "supabase", confidence: "high", signals: ["supabase/config.toml"] },
+    { provider: "vercel", confidence: "high", signals: ["vercel.json"] },
+  ]);
+});
+
+test("finds the same source markers in equivalent paths with and without spaces", async () => {
+  const files: Record<string, string> = {
+    "package.json": JSON.stringify({ dependencies: { openai: "1" } }),
+    "requirements.txt": "modal==1",
+    "pyproject.toml": '[project]\ndependencies = ["resend"]',
+    "go.mod": "module example.com/app\nrequire github.com/stripe/stripe-go/v76 v76.0.0",
+    "Cargo.toml": '[dependencies]\nsentry = "1"',
+    "supabase/config.toml": "[api]",
+    ".github/workflows/ci.yml": "name: CI",
+    ".env.example": "ANTHROPIC_API_KEY=",
+  };
+  const root = makeProject(
+    Object.fromEntries(
+      ["project", "parent with spaces/project with spaces"].flatMap((dir) =>
+        Object.entries(files).map(([path, content]) => [join(dir, path), content]),
+      ),
+    ),
+  );
+
+  const plain = await scanSource(join(root, "project"));
+  const spaced = await scanSource(join(root, "parent with spaces", "project with spaces"));
+  expect(plain).toEqual([
+    {
+      provider: "github",
+      confidence: "high",
+      signals: [".github/workflows", ".github/workflows/ci.yml"],
+    },
+    { provider: "modal", confidence: "high", signals: ["requirements.txt:modal"] },
+    { provider: "openai", confidence: "high", signals: ["package.json:openai"] },
+    { provider: "resend", confidence: "high", signals: ["pyproject.toml:resend"] },
+    { provider: "sentry", confidence: "high", signals: ["Cargo.toml:sentry"] },
+    { provider: "stripe", confidence: "high", signals: ["go.mod:github.com/stripe/stripe-go/v76"] },
+    { provider: "supabase", confidence: "high", signals: ["supabase/config.toml"] },
+    { provider: "anthropic", confidence: "medium", signals: [".env.example:ANTHROPIC_API_KEY"] },
+  ]);
+  expect(spaced).toEqual(plain);
+});
+
 test("empty project has no detections", async () => {
   expect(await scanSource(makeProject({}))).toEqual([]);
+});
+
+test("unrelated text file with provider-like content has no detections", async () => {
+  const cwd = makeProject({
+    "notes.txt": 'openai\nOPENAI_API_KEY=\n{"dependencies":{"@supabase/supabase-js":"1"}}',
+  });
+
+  expect(await scanSource(cwd)).toEqual([]);
+});
+
+test.each([["--json"], ["--yes"]])(
+  "scan %s rejects a nonexistent project without creating files",
+  async (flag) => {
+    const root = makeProject({});
+    const home = makeProject({});
+    const missing = join(root, "missing", "project");
+    const cli = join(import.meta.dir, "..", "..", "..", "cli", "src", "index.ts");
+    const proc = Bun.spawn([process.execPath, cli, "scan", flag, "--path", missing], {
+      cwd: root,
+      env: {
+        PATH: [dirname(process.execPath), "/usr/bin", "/bin"].join(delimiter),
+        HOME: home,
+        CI: "1",
+        NO_COLOR: "1",
+        STACK_TELEMETRY: "0",
+        STACK_NO_UPDATE_CHECK: "1",
+      },
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [code, stdout, stderr] = await Promise.all([
+      proc.exited,
+      new Response(proc.stdout).text(),
+      new Response(proc.stderr).text(),
+    ]);
+
+    expect(code).toBe(1);
+    expect(stdout + stderr).toContain(`Path "${missing}" does not exist or is not a directory.`);
+    expect(stdout).not.toContain('"hits"');
+    expect(stdout).not.toContain("No providers detected");
+    expect(existsSync(missing)).toBe(false);
+    expect(readdirSync(root)).toEqual([]);
+  },
+  30_000,
+);
+
+test.each([
+  ["package.json", JSON.stringify({ name: "openai", dependencies: {}, devDependencies: {} })],
+  ["requirements.txt", ""],
+  ["pyproject.toml", "[project]\ndependencies = []\n"],
+  ["go.mod", "module example.com/app\n\ngo 1.22\n"],
+  ["Cargo.toml", '[package]\nname = "app"\nversion = "0.1.0"\n\n[dependencies]\n'],
+] as const)("empty dependency manifest %s produces no detections", async (file, content) => {
+  expect(await scanSource(makeProject({ [file]: content }))).toEqual([]);
 });

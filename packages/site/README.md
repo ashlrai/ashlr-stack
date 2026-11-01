@@ -44,30 +44,10 @@ bun run typecheck  # astro check + tsc --noEmit
 
 ## Layout
 
-```
-src/
-  layouts/Base.astro          # head, OG tags, global chrome
-  pages/index.astro           # composes every section
-  components/
-    Nav.astro
-    Logo.astro
-    Hero.astro                # left copy + right <Terminal />
-    Terminal.tsx              # React island, scripted typing
-    OneCommand.tsx            # Framer Motion tab group
-    ProvidersGrid.astro       # static, one cell per provider, hover = brand color
-    HowItWorks.astro          # 3-step explainer
-    Templates.astro           # 5 stack cards
-    ClaudeCodeDemo.tsx        # scripted mock Claude Code chat
-    Constellation.astro       # 4-node platform map
-    Footer.astro              # CTA block + giant wordmark
-  lib/
-    providers.ts              # display metadata matched to the shared catalog identities
-    icons.ts                  # reads simple-icons SVG `d` attrs at build time
-  styles/global.css           # Tailwind theme + component utilities
-public/
-  favicon.svg                 # ▲ in magenta
-  og.svg                      # 1200×630 OG image
-```
+`src/pages/index.astro` composes the landing page from `src/components/`.
+`src/layouts/` supplies the shared chrome; `src/lib/providers.ts` and
+`src/lib/icons.ts` provide the provider catalog and brand marks. Scroll
+animations are installed by `SmoothScroll` and honor reduced-motion settings.
 
 ## Design notes
 

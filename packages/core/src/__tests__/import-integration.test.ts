@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -33,6 +33,7 @@ describe("import pipeline", () => {
   afterEach(() => {
     process.chdir(originalCwd);
     h.cleanup();
+    rmSync(cwd, { recursive: true, force: true });
   });
 
   test("typical Next.js .env gets parsed, stored, and mapped to services", async () => {
@@ -49,7 +50,7 @@ PORT=3000
 `.trim();
     writeFileSync(join(cwd, ".env"), envContent);
 
-    const parsed = parseEnv(envContent);
+    const parsed = parseEnv(readFileSync(join(cwd, ".env"), "utf8"));
     expect(parsed.map((p) => p.key)).toContain("OPENAI_API_KEY");
     expect(parsed.map((p) => p.key)).toContain("NODE_ENV");
 
@@ -70,7 +71,12 @@ PORT=3000
     const vault = await readVault(h.dir);
     expect(vault.OPENAI_API_KEY).toBe("sk-fake");
     expect(vault.NODE_ENV).toBe("development");
-    expect((await listSecrets()).length).toBeGreaterThanOrEqual(8);
+    const expectedVault = Object.fromEntries(parsed.map(({ key, value }) => [key, value]));
+    expect(vault).toEqual(expectedVault);
+    expect((await listSecrets()).sort()).toEqual(Object.keys(expectedVault).sort());
+    expect(h.callsTo("add").map(({ args }) => args)).toEqual(
+      parsed.map(({ key }) => [key, "--stdin"]),
+    );
 
     // Build a .stack.toml from the detected groups.
     const config = emptyConfig("import-test");
@@ -83,5 +89,13 @@ PORT=3000
     expect(roundTripped.services.supabase).toBeDefined();
     expect(roundTripped.services.openai).toBeDefined();
     expect(roundTripped.services.sentry.mcp).toBe("sentry");
-  });
+    expect(Object.keys(roundTripped.services).sort()).toEqual(["openai", "sentry", "supabase"]);
+    for (const [provider, keys] of Object.entries(grouped)) {
+      expect(roundTripped.services[provider].secrets).toEqual(keys);
+    }
+    const serialized = readFileSync(join(cwd, ".stack.toml"), "utf8");
+    for (const { value } of parsed) expect(serialized).not.toContain(value);
+    // Eight sequential real child processes plus list/version probes are integration
+    // work, not a five-second performance assertion (especially under coverage).
+  }, 30_000);
 });

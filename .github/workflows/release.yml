@@ -3,11 +3,15 @@ name: Release
 on:
   push:
     tags: ['v*.*.*']
+  # Dispatch builds an existing tag (auto-tag dispatches here after it creates
+  # one). Only a dispatch from main runs: a dispatch runs the chosen ref's
+  # copy of this file, so an edited branch copy must not reach publish.
   workflow_dispatch:
     inputs:
-      version:
-        description: 'Version to release (no leading v, e.g. 0.1.0)'
+      tag:
+        description: 'Existing release tag to build, for example v0.1.0'
         required: true
+        type: string
       npm_otp:
         description: 'Unsupported legacy input; any nonempty value refuses before release work'
         required: false
@@ -16,13 +20,43 @@ on:
 permissions:
   contents: read
 
+env:
+  # Tag push: the pushed tag. Dispatch: the tag input (validated in build-binaries).
+  RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+
 concurrency:
-  group: release-${{ github.ref }}
+  group: release-${{ inputs.tag || github.ref_name }}
   cancel-in-progress: false
 
 jobs:
+  full-suite-evidence:
+    # Release gate: the full suite (macOS and Windows included) must have
+    # passed in a manual workflow_dispatch run of CI on this exact sha.
+    name: Full suite green on release sha
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions:
+      actions: read
+    steps:
+      - name: Require a successful workflow_dispatch CI run on this sha
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+          CI_WORKFLOW: ci.yml
+        run: |
+          set -euo pipefail
+          n="$(gh api "repos/${REPO}/actions/workflows/${CI_WORKFLOW}/runs?event=workflow_dispatch&head_sha=${SHA}&status=success&per_page=1" --jq '.total_count')"
+          if [ "${n:-0}" -lt 1 ]; then
+            echo "::error::No successful workflow_dispatch run of ${CI_WORKFLOW} on ${SHA}. Run 'gh workflow run ${CI_WORKFLOW} --ref <this ref>', wait for green, then release."
+            exit 1
+          fi
+          echo "full suite green on ${SHA} (${n} run(s))"
+
   build-binaries:
+    needs: [full-suite-evidence]
     name: Build ${{ matrix.asset }}
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -49,11 +83,20 @@ jobs:
             os: ubuntu-latest
             asset: stack-darwin-arm64
     steps:
+      - name: Validate release tag
+        env:
+          REPO_URL: ${{ github.server_url }}/${{ github.repository }}.git
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] || { echo "::error::release tag input is not a valid vX.Y.Z tag"; exit 1; }
+          git ls-remote --exit-code --tags "$REPO_URL" "refs/tags/$RELEASE_TAG" >/dev/null || { echo "::error::release tag does not exist"; exit 1; }
+
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: refs/tags/${{ env.RELEASE_TAG }}
 
       - name: Validate release source before producers
         env:
-          RELEASE_INPUT_VERSION: ${{ github.event.inputs.version }}
           RELEASE_INPUT_OTP: ${{ github.event.inputs.npm_otp }}
         run: |
           set -euo pipefail
@@ -65,7 +108,7 @@ jobs:
             VERSION="${GITHUB_REF#refs/tags/v}"
             [[ -z "${RELEASE_INPUT_VERSION:-}" || "$RELEASE_INPUT_VERSION" == "$VERSION" ]] || die
           else
-            VERSION="${RELEASE_INPUT_VERSION:-}"
+            VERSION="${RELEASE_TAG#v}"
           fi
           [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] || die
           command -v node >/dev/null 2>&1 || die
@@ -101,9 +144,9 @@ jobs:
           then
             die "source version validation failed"
           fi
-          # Check an actually selected tag without inventing a branch-dispatch tag owner.
-          if [[ "${GITHUB_REF:-}" == refs/tags/* ]]; then
-            [[ "$GITHUB_REF" == "refs/tags/v$VERSION" ]] || die "selected tag validation failed"
+          # Check the selected tag (pushed, or dispatched and checked out) is HEAD.
+          if [[ "${GITHUB_REF:-}" == refs/tags/* || "${GITHUB_EVENT_NAME:-}" == workflow_dispatch ]]; then
+            [[ "$RELEASE_TAG" == "v$VERSION" ]] || die "selected tag validation failed"
             TAG_COMMIT="$(git rev-parse --verify "refs/tags/v$VERSION^{commit}" 2>/dev/null)" || die "selected tag validation failed"
             HEAD_COMMIT="$(git rev-parse --verify HEAD 2>/dev/null)" || die "selected tag validation failed"
             [[ -n "$TAG_COMMIT" && "$TAG_COMMIT" == "$HEAD_COMMIT" ]] || die "selected tag validation failed"
@@ -179,7 +222,7 @@ jobs:
     needs: build-binaries
     runs-on: ubuntu-latest
     # Producer success is necessary; npm success alone does not prove registry bytes.
-    if: ${{ !cancelled() && needs.build-binaries.result == 'success' }}
+    if: ${{ !cancelled() && needs.build-binaries.result == 'success' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')) }}
     steps:
       # npm trusted publishing (OIDC): with id-token: write and npm >= 11.5.1,
       # npm exchanges the workflow identity for a short-lived publish token.
@@ -194,6 +237,7 @@ jobs:
       - if: steps.gate.outputs.enabled == 'true'
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          ref: refs/tags/${{ env.RELEASE_TAG }}
           fetch-depth: 0   # scripts/publish.sh uses git tag
 
       - if: steps.gate.outputs.enabled == 'true'
@@ -211,7 +255,6 @@ jobs:
         name: Validate release source before installs
         id: ver
         env:
-          RELEASE_INPUT_VERSION: ${{ github.event.inputs.version }}
           RELEASE_INPUT_OTP: ${{ github.event.inputs.npm_otp }}
         run: |
           set -euo pipefail
@@ -223,7 +266,7 @@ jobs:
             VERSION="${GITHUB_REF#refs/tags/v}"
             [[ -z "${RELEASE_INPUT_VERSION:-}" || "$RELEASE_INPUT_VERSION" == "$VERSION" ]] || die
           else
-            VERSION="${RELEASE_INPUT_VERSION:-}"
+            VERSION="${RELEASE_TAG#v}"
           fi
           [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] || die
           command -v node >/dev/null 2>&1 || die
@@ -259,9 +302,9 @@ jobs:
           then
             die "source version validation failed"
           fi
-          # Check an actually selected tag without inventing a branch-dispatch tag owner.
-          if [[ "${GITHUB_REF:-}" == refs/tags/* ]]; then
-            [[ "$GITHUB_REF" == "refs/tags/v$VERSION" ]] || die "selected tag validation failed"
+          # Check the selected tag (pushed, or dispatched and checked out) is HEAD.
+          if [[ "${GITHUB_REF:-}" == refs/tags/* || "${GITHUB_EVENT_NAME:-}" == workflow_dispatch ]]; then
+            [[ "$RELEASE_TAG" == "v$VERSION" ]] || die "selected tag validation failed"
             TAG_COMMIT="$(git rev-parse --verify "refs/tags/v$VERSION^{commit}" 2>/dev/null)" || die "selected tag validation failed"
             HEAD_COMMIT="$(git rev-parse --verify HEAD 2>/dev/null)" || die "selected tag validation failed"
             [[ -n "$TAG_COMMIT" && "$TAG_COMMIT" == "$HEAD_COMMIT" ]] || die "selected tag validation failed"
@@ -317,10 +360,12 @@ jobs:
     name: Create GitHub Release
     # Producer, native macOS smoke and npm job success are required before this downstream effect.
     needs: [build-binaries, smoke-darwin-arm64, publish-npm]
-    if: ${{ !cancelled() && needs.build-binaries.result == 'success' && needs.smoke-darwin-arm64.result == 'success' && needs.publish-npm.result == 'success' }}
+    if: ${{ !cancelled() && needs.build-binaries.result == 'success' && needs.smoke-darwin-arm64.result == 'success' && needs.publish-npm.result == 'success' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')) }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: refs/tags/${{ env.RELEASE_TAG }}
 
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
@@ -329,15 +374,13 @@ jobs:
 
       - name: Resolve version
         id: ver
-        env:
-          RELEASE_INPUT_VERSION: ${{ github.event.inputs.version }}
         run: |
           set -euo pipefail
           if [[ "${GITHUB_REF:-}" == refs/tags/* ]]; then
             VERSION="${GITHUB_REF#refs/tags/v}"
             [[ -z "${RELEASE_INPUT_VERSION:-}" || "$RELEASE_INPUT_VERSION" == "$VERSION" ]] || exit 1
           else
-            VERSION="${RELEASE_INPUT_VERSION:-}"
+            VERSION="${RELEASE_TAG#v}"
           fi
           [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] || { printf '%s\n' 'release version validation failed' >&2; exit 1; }
           printf 'version=%s\ntag=v%s\n' "$VERSION" "$VERSION" >> "$GITHUB_OUTPUT"
@@ -450,11 +493,11 @@ jobs:
           SHA_LINUX_X64=$(awk   '{print $1}' sha256s/stack-linux-x64.sha256)
 
           sed \
-            -e "s/\$VERSION\$/${VERSION}/g" \
-            -e "s/\$SHA_DARWIN_ARM64\$/${SHA_DARWIN_ARM64}/g" \
-            -e "s/\$SHA_DARWIN_X64\$/${SHA_DARWIN_X64}/g" \
-            -e "s/\$SHA_LINUX_ARM64\$/${SHA_LINUX_ARM64}/g" \
-            -e "s/\$SHA_LINUX_X64\$/${SHA_LINUX_X64}/g" \
+            -e 's/\$VERSION\$/'"${VERSION}"'/g' \
+            -e 's/\$SHA_DARWIN_ARM64\$/'"${SHA_DARWIN_ARM64}"'/g' \
+            -e 's/\$SHA_DARWIN_X64\$/'"${SHA_DARWIN_X64}"'/g' \
+            -e 's/\$SHA_LINUX_ARM64\$/'"${SHA_LINUX_ARM64}"'/g' \
+            -e 's/\$SHA_LINUX_X64\$/'"${SHA_LINUX_X64}"'/g' \
             stack-repo/.github/homebrew-formula.template.rb \
             > homebrew-tap/Formula/stack.rb
 

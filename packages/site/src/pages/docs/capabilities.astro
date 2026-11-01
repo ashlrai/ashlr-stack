@@ -29,12 +29,13 @@ import { PUBLISHED_VERSION } from "~/lib/site-facts.generated";
 
   <h2 id="install">Install the CLI</h2>
   <p>
-    Install <a href="https://bun.sh">Bun</a> first. The recorded published {PUBLISHED_VERSION}
-    packages require Bun, including when started through npx. Check the registry
-    and installed help before relying on a source-only command.
+    The published 0.3.0 CLI and MCP packages declare Node.js 20 or newer, including
+    when started through npx. The recorded public version is {PUBLISHED_VERSION};
+    check other versions’ manifests and installed help before relying on a command.
+    A source checkout uses <a href="https://bun.sh">Bun</a> for development.
   </p>
   <pre><code>{`npm view @ashlr/stack version
-bun add -g @ashlr/stack ashlr-stack-mcp
+npm i -g @ashlr/stack@${PUBLISHED_VERSION} ashlr-stack-mcp@${PUBLISHED_VERSION}
 stack --version
 stack --help
 stack providers`}</code></pre>

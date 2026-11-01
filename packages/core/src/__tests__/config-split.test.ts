@@ -7,6 +7,7 @@ import {
   CONFIG_FILENAME,
   LOCAL_FILENAME,
   emptyConfig,
+  getService,
   readConfig,
   writeConfig,
 } from "../config.ts";
@@ -70,6 +71,71 @@ describe("committed + local config split", () => {
     expect(roundtrip.stack.project_id).toBe(original.stack.project_id);
     expect(roundtrip.services.supabase.resource_id).toBe("merge-me");
     expect(roundtrip.services.supabase.secrets).toEqual(["FOO"]);
+  });
+
+  test("round-trips a service name containing a hyphen through both files", async () => {
+    const original = emptyConfig("fixture-template");
+    original.services["fixture-api"] = {
+      provider: "neon",
+      resource_id: "hyphen-resource",
+      region: "us-east-1",
+      secrets: ["FIXTURE_API_URL", "FIXTURE_API_KEY"],
+      mcp: "fixture-api",
+      meta: { endpoint: "fixture-endpoint" },
+      created_at: "2026-10-30T00:00:00Z",
+      created_by: "test",
+    };
+    await writeConfig(original, cwd);
+
+    const shape = parseToml(readFileSync(join(cwd, CONFIG_FILENAME), "utf-8"));
+    const local = parseToml(readFileSync(join(cwd, LOCAL_FILENAME), "utf-8"));
+    expect(Object.keys(shape.services as object)).toEqual(["fixture-api"]);
+    expect(Object.keys(local.services as object)).toEqual(["fixture-api"]);
+    expect(shape.services).toEqual({
+      "fixture-api": {
+        provider: "neon",
+        secrets: ["FIXTURE_API_URL", "FIXTURE_API_KEY"],
+        mcp: "fixture-api",
+      },
+    });
+    expect(local.services).toEqual({
+      "fixture-api": {
+        resource_id: "hyphen-resource",
+        region: "us-east-1",
+        meta: { endpoint: "fixture-endpoint" },
+        created_at: "2026-10-30T00:00:00Z",
+        created_by: "test",
+      },
+    });
+
+    const merged = await readConfig(cwd);
+    expect(Object.keys(merged.services)).toEqual(["fixture-api"]);
+    expect(getService(merged, "fixture-api")).toEqual(original.services["fixture-api"]);
+  });
+
+  test("legacy file with a hyphenated service name migrates without losing it", async () => {
+    const legacy = `
+[stack]
+version = "1"
+project_id = "stk_hyphen"
+
+[services.fixture-api]
+provider = "neon"
+resource_id = "hyphen-legacy"
+secrets = ["X"]
+created_at = "2026-04-17T00:00:00Z"
+`.trim();
+    writeFileSync(join(cwd, CONFIG_FILENAME), legacy);
+    const config = await readConfig(cwd);
+    expect(Object.keys(config.services)).toEqual(["fixture-api"]);
+    expect(config.services["fixture-api"].resource_id).toBe("hyphen-legacy");
+
+    await writeConfig(config, cwd);
+    const shape = readFileSync(join(cwd, CONFIG_FILENAME), "utf-8");
+    expect(shape).toContain("fixture-api");
+    expect(shape).not.toContain("hyphen-legacy");
+    const roundTrip = await readConfig(cwd);
+    expect(roundTrip.services["fixture-api"]).toEqual(config.services["fixture-api"]);
   });
 
   test("writeConfig auto-appends .stack.local.toml to .gitignore", async () => {

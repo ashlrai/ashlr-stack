@@ -10,25 +10,36 @@ ashlrcode) working on **Ashlr Stack itself**. It's read alongside `CLAUDE.md`
 
 - **`@ashlr/stack-core`** — provider adapters, config schema, pipeline
 - **`@ashlr/stack`** — the `stack` CLI
-- **`ashlr-stack-mcp`** — an MCP server that exposes every CLI command
+- **`ashlr-stack-mcp`**: an MCP server that exposes a subset of CLI commands
 - **Claude Code plugin** — `/stack:add`, `/stack:list`, etc.
 - **Marketing site + docs** at `packages/site/` — deploys to https://stack.ashlr.ai
 
 The product is the control plane that provisions, wires, and operates every
 third-party service in a developer's project with one command.
 
+<!-- fresh:begin version-table -->
+| Package | Manifest | Version |
+| --- | --- | --- |
+| `@ashlr/stack-core` | `packages/core/package.json` | 0.3.0 |
+| `@ashlr/stack` | `packages/cli/package.json` | 0.3.0 |
+| `ashlr-stack-mcp` | `packages/mcp/package.json` | 0.3.0 |
+| `ashlr-stack-monorepo` (private) | `package.json` | 0.1.0 |
+
+Latest dated CHANGELOG section: `0.3.0 (2026-10-31)`.
+<!-- fresh:end -->
+
 ## Quick orientation
 
-- 27 CLI commands live under `packages/cli/src/commands/*.ts` (registered in `packages/cli/src/index.ts`)
-- 39 providers in 13 categories under `packages/core/src/providers/*.ts` (factory: `_api-key.ts`; pilot: `supabase.ts`)
-- 19 MCP tools in the `TOOLS` array of `packages/mcp/src/tools.ts` (served by `server.ts`). Each runs the CLI: `STACK_BIN` if set, else the `stack` bin of the `@ashlr/stack` dependency (`packages/cli/dist/index.js`, present after a build), else `stack` on PATH (`packages/mcp/src/stack-bin.ts`)
-- Tests live in `packages/*/src/__tests__/` — run with `bun test` from the repo root
+- <!-- fresh:begin command-count -->43<!-- fresh:end --> CLI commands live under `packages/cli/src/commands/*.ts` (registered in `packages/cli/src/index.ts`)
+- <!-- fresh:begin provider-count -->39<!-- fresh:end --> providers in <!-- fresh:begin category-count -->13<!-- fresh:end --> categories under `packages/core/src/providers/*.ts` (factory: `_api-key.ts`; pilot: `supabase.ts`)
+- <!-- fresh:begin tool-count -->19<!-- fresh:end --> MCP tools in the `TOOLS` array of `packages/mcp/src/tools.ts` (served by `server.ts`). Each runs the CLI: `STACK_BIN` if set, else the `stack` bin of the `@ashlr/stack` dependency (`packages/cli/dist/index.js`, present after a build), else `stack` on PATH (`packages/mcp/src/stack-bin.ts`)
+- Tests live in `packages/*/src/__tests__/`, `packages/mcp/__tests__/`, `packages/site/tests/` and `scripts/`. Run with `HOME=$(mktemp -d) bun test` from the repo root
 
 ## Agent quickstart (from a clone)
 
 ```bash
 bun install --frozen-lockfile
-bun test                                   # full suite, no network or accounts
+HOME=$(mktemp -d) bun test                  # full suite, isolated home
 bunx tsc --noEmit -p tsconfig.json
 bunx biome check .
 bun run packages/cli/src/index.ts --help   # the CLI from source
@@ -36,7 +47,7 @@ bun run packages/cli/src/index.ts --help   # the CLI from source
 
 Things that trip agents up:
 
-- **No TTY.** Agent shells have no TTY. `stack scan` without flags prints the human report; use `stack scan --json` to parse it. `stack scan --auto` without `--yes` exits 1, since it would ask before each add. `stack init` skips the template picker; pass `--template <name>` (see `stack templates list`).
+- **No TTY.** Agent shells have no TTY. `stack scan` without flags prints the human report; use `stack scan --json` to parse it. `stack scan --auto` without `--yes` exits 1, since it would ask before each add. See [scan troubleshooting](docs/scan-troubleshooting.md) for errors and recovery. `stack init` skips the template picker; pass `--template <name>` (see `stack templates list`).
 - **`stack init --dryRun` still writes.** It provisions nothing, but it writes `.stack.toml`, `.stack.local.toml` and `.gitignore` and registers the project in `~/.stack/projects.json`. Run it in a scratch directory, and set `STACK_REGISTRY_DIR` to a temp dir to keep `~/.stack` clean.
 - **MCP from source needs the CLI too.** Point the server at the source CLI with `STACK_BIN` (see `packages/mcp/README.md`), or build `packages/cli` so `dist/index.js` exists. Otherwise every tool call fails with "Could not run the 'stack' CLI".
 - **MCP tests run the built bundles.** `packages/mcp/__tests__/server.test.ts` drives `packages/mcp/dist/server.js` and `packages/cli/dist/index.js` and only builds them when they are missing. Run `bun run build` after changing CLI or MCP source before trusting an MCP test failure.
@@ -74,14 +85,16 @@ Things that trip agents up:
 3. Add to `packages/cli/src/commands/completion.ts` so shell completion stays current.
 4. Add to the `TOOLS` array in `packages/mcp/src/tools.ts` if it should be exposed to MCP.
 5. Add the name to `COMMAND_ORDER` (and examples to `EXTRAS`) in `packages/site/scripts/gen-cli-ref.ts`, run `bun packages/site/scripts/gen-cli-ref.ts`, and commit `packages/site/src/lib/cli-ref.generated.ts`. CI fails if the committed copy drifts, and `packages/site/tests/cli-ref.test.ts` fails if it does not list exactly the commands in `stack --help`.
-6. Smoke test: `bun run packages/cli/src/index.ts <name> --help`.
+6. Run `bun run fresh:sync` to regenerate the README command table and counts, then `HOME=$(mktemp -d) bun test scripts/docs-freshness.test.ts`.
+7. Smoke test: `bun run packages/cli/src/index.ts <name> --help`.
 
 ### Add a new MCP tool
 
 1. Add to the `TOOLS` array in `packages/mcp/src/tools.ts`.
-2. Add its `cli` synopsis to `TOOL_CLI_EXTRAS` in `packages/site/scripts/gen-site-facts.ts`.
-3. Run `bun packages/site/scripts/gen-cli-ref.ts`, which regenerates `src/lib/mcp-ref.generated.ts`, `public/mcp.json` and the rest of the site facts.
-4. Update `packages/site/src/data/agent-guide.txt` "When to recommend" if appropriate, then run the site build to regenerate `packages/site/public/llms.txt`.
+2. Run `bun run fresh:sync` to regenerate the README tool table and counts, then `HOME=$(mktemp -d) bun test scripts/docs-freshness.test.ts`.
+3. Add its `cli` synopsis to `TOOL_CLI_EXTRAS` in `packages/site/scripts/gen-site-facts.ts`.
+4. Run `bun packages/site/scripts/gen-cli-ref.ts`, which regenerates `src/lib/mcp-ref.generated.ts`, `public/mcp.json` and the rest of the site facts.
+5. Update `packages/site/src/data/agent-guide.txt` "When to recommend" if appropriate, then run the site build to regenerate `packages/site/public/llms.txt`.
 
 ## Do NOT do these
 

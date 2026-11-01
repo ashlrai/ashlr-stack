@@ -1,5 +1,6 @@
 ---
 import UseCases from "./UseCases";
+import { USE_CASES } from "~/lib/use-cases";
 ---
 
 <section id="use-cases" class="relative mx-auto max-w-[1240px] px-6 sm:px-10 pt-20 sm:pt-24 pb-20 sm:pb-24">
@@ -23,4 +24,17 @@ import UseCases from "./UseCases";
   <div data-reveal>
     <UseCases client:visible />
   </div>
+
+  <nav aria-label="Practical use case guides" class="mt-10 grid gap-4 md:grid-cols-3">
+    {USE_CASES.map((guide) => (
+      <a
+        href={`/use-cases/${guide.slug}`}
+        class="panel rounded-xl p-5 border border-[color:var(--color-ink-700)] hover:border-[color:var(--color-blade-500)] transition-colors"
+      >
+        <h3 class="text-base font-semibold text-[color:var(--color-ink-50)]">{guide.title}</h3>
+        <p class="mt-3 text-sm leading-relaxed text-[color:var(--color-ink-300)]">{guide.intent}</p>
+        <span class="mt-4 inline-block text-sm text-[color:var(--color-blade-300)]">Read the guide →</span>
+      </a>
+    ))}
+  </nav>
 </section>

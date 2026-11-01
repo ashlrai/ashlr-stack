@@ -33,6 +33,53 @@ describe("phantom wrapper against the fake harness", () => {
     expect(await isPhantomInstalled()).toBe(true);
   });
 
+  test("exec excludes parent credentials and runtime injection variables", async () => {
+    const keys = ["STACK_TEST_PARENT_CREDENTIAL", "NODE_OPTIONS", "BASH_ENV", "LD_PRELOAD"];
+    const previous = keys.map((key) => process.env[key]);
+    try {
+      for (const key of keys) process.env[key] = "inert-regression-marker";
+      writeFileSync(
+        join(h.dir, "phantom"),
+        '#!/bin/sh\nfor key in STACK_TEST_PARENT_CREDENTIAL NODE_OPTIONS BASH_ENV LD_PRELOAD; do\n  if printenv "$key" >/dev/null; then exit 9; fi\ndone\ntest -n "$HOME" && test -n "$PATH"\n',
+      );
+      expect((await exec(["--version"], { allowFailure: true })).code).toBe(0);
+    } finally {
+      keys.forEach((key, i) => {
+        if (previous[i] === undefined) delete process.env[key];
+        else process.env[key] = previous[i];
+      });
+    }
+  });
+
+  test("exec forwards Phantom's explicit vault unlock input to the child", async () => {
+    const previous = process.env.PHANTOM_VAULT_PASSPHRASE;
+    try {
+      process.env.PHANTOM_VAULT_PASSPHRASE = "inert-regression-passphrase";
+      writeFileSync(
+        join(h.dir, "phantom"),
+        '#!/bin/sh\ntest "$PHANTOM_VAULT_PASSPHRASE" = "inert-regression-passphrase"\n',
+      );
+      expect((await exec(["--version"], { allowFailure: true })).code).toBe(0);
+    } finally {
+      if (previous === undefined) Reflect.deleteProperty(process.env, "PHANTOM_VAULT_PASSPHRASE");
+      else process.env.PHANTOM_VAULT_PASSPHRASE = previous;
+    }
+  });
+
+  test("exec resolves relative PATH entries before entering the project directory", async () => {
+    const previousPath = process.env.PATH;
+    try {
+      writeFileSync(join(h.dir, "phantom"), "#!/bin/sh\nexit 9\n");
+      // A relative entry must never be reinterpreted inside the requested cwd.
+      process.env.PATH = ".:/usr/bin:/bin";
+      await expect(exec(["--version"], { cwd: h.dir })).rejects.toMatchObject({
+        code: "PHANTOM_NOT_INSTALLED",
+      });
+    } finally {
+      process.env.PATH = previousPath;
+    }
+  });
+
   test("addSecret writes to the fake vault over stdin, never argv", async () => {
     await addSecret("NEW_KEY", "new-value");
     expect((await readVault(h.dir)).NEW_KEY).toBe("new-value");

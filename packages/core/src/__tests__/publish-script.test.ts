@@ -151,7 +151,6 @@ describe("publish script early parser (copied script, inert commands)", () => {
       join(bin, "node-reader.cjs"),
       `const {readFileSync, appendFileSync} = require('node:fs');
 const {createHash} = require('node:crypto');
-const {spawnSync} = require('node:child_process');
 const input = readFileSync(0);
 const args = process.argv.slice(2);
 if (args.length !== 3 || args[0] !== '--input-type=module' || args[1] !== '-'
@@ -159,12 +158,14 @@ if (args.length !== 3 || args[0] !== '--input-type=module' || args[1] !== '-'
   appendFileSync(process.env.SCRIPT_FIXTURE_TRACE, 'node\\n'); process.exit(97);
 }
 appendFileSync(process.env.VALIDATOR_TRACE, 'read\\n');
-const result = spawnSync(${JSON.stringify(realNode)}, args, {
-  cwd: process.cwd(), env: process.env, input, timeout: 1000, maxBuffer: 64 * 1024,
-});
-if (result.error || result.signal || result.status === null) process.exit(98);
-process.stdout.write(result.stdout); process.stderr.write(result.stderr);
-process.exit(result.status);
+// Run the hash-checked module in this Node process: a second Node startup
+// can exhaust the outer 1500ms fixture bound under coverage instrumentation.
+process.argv = [process.execPath, '-', args[2]];
+const timer = setTimeout(() => process.exit(98), 1000);
+import('data:text/javascript;base64,' + input.toString('base64')).then(
+  () => clearTimeout(timer),
+  () => process.exit(98),
+);
 `,
       { mode: 0o700 },
     );
@@ -398,6 +399,37 @@ process.exit(result.status);
       ).toBeUndefined();
     }
   });
+  for (const alteration of ["source", "arguments"] as const) {
+    test(`validator wrapper refuses altered ${alteration} before evaluation`, async () => {
+      removeFixtureBackups();
+      const original = readFileSync(script, "utf8");
+      const altered =
+        alteration === "source"
+          ? original.replace(
+              "import { lstatSync, readFileSync }",
+              "/* changed */ import { lstatSync, readFileSync }",
+            )
+          : original.replace(
+              'node --input-type=module - "$VERSION"',
+              'node --input-type=module - "$VERSION" extra',
+            );
+      expect(altered).not.toBe(original);
+      writeFileSync(script, altered);
+      const result = await runBackupCase();
+      expect(result.status).toBe(1);
+      expect(result.output).toContain("source version validation failed");
+      expect(readFileSync(trace, "utf8")).toBe("node\n");
+      expect(readFileSync(env.VALIDATOR_TRACE, "utf8")).toBe("");
+      for (const name of ["core", "mcp", "cli"]) {
+        expect(
+          lstatSync(join(root, "packages", name, "package.json.bak"), {
+            throwIfNoEntry: false,
+          }),
+        ).toBeUndefined();
+      }
+    });
+  }
+
   function inputs() {
     return [
       ...preserved.map((file) => file.path),
@@ -570,14 +602,17 @@ fi
 
   async function preflight(
     name: string,
-    version: string,
+    tag: string,
     otp: string,
-    ref = "refs/heads/synthetic",
+    ref = "refs/heads/main",
+    event = "workflow_dispatch",
   ) {
     const block = workflowBlock(name);
-    env.RELEASE_INPUT_VERSION = version;
+    // Workflow-level RELEASE_TAG: the pushed tag, or the dispatch tag input.
+    env.RELEASE_TAG = tag;
     env.RELEASE_INPUT_OTP = otp;
     env.GITHUB_REF = ref;
+    env.GITHUB_EVENT_NAME = event;
     env.GITHUB_OUTPUT = join(root, "github-output");
     writeFileSync(env.GITHUB_OUTPUT, "", { mode: 0o600 });
     const before = inputs();
@@ -597,7 +632,7 @@ fi
   ]) {
     for (const otp of ["synthetic-otp-secret", " ", "$(synthetic-otp-secret)"]) {
       test(`${name} refuses nonempty unsupported OTP before subprocesses ${JSON.stringify(otp)}`, async () => {
-        const result = await preflight(name, "0.2.1", otp);
+        const result = await preflight(name, "v0.2.1", otp);
         expect(result.status).toBe(1);
         expect(result.output).toContain("release input/source validation failed");
         expect(result.output).not.toContain(otp.trim() || "OTP");
@@ -605,25 +640,35 @@ fi
         expect(readFileSync(env.GITHUB_OUTPUT, "utf8")).toBe("");
       });
     }
-    test(`${name} actually validates branch source and exports only its version`, async () => {
-      const result = await preflight(name, "0.2.1", "");
+    test(`${name} validates dispatched tag source and exports only its version`, async () => {
+      cannedGit("same", "same");
+      const result = await preflight(name, "v0.2.1", "");
       expect(result.status).toBe(0);
       expect(readFileSync(env.VALIDATOR_TRACE, "utf8")).toBe("read\n");
       expect(readFileSync(env.GITHUB_OUTPUT, "utf8")).toBe("version=0.2.1\n");
     });
-    test(`${name} refuses absent, malformed and mismatched version inputs`, async () => {
-      for (const version of ["", "synthetic-version-secret", "0.2.2"]) {
-        const result = await preflight(name, version, "");
+    test(`${name} refuses absent, malformed and mismatched dispatch tags`, async () => {
+      cannedGit("same", "same");
+      for (const tag of ["", "vsynthetic-version-secret", "v0.2.2"]) {
+        const result = await preflight(name, tag, "");
         expect(result.status).toBe(1);
         expect(result.output).not.toContain("synthetic-version-secret");
         expect(readFileSync(env.GITHUB_OUTPUT, "utf8")).toBe("");
       }
     });
+    test(`${name} refuses a dispatched tag that is not the checked-out HEAD`, async () => {
+      cannedGit("tag", "head");
+      const result = await preflight(name, "v0.2.1", "");
+      expect(result.status).toBe(1);
+      // Source validation ran, so the refusal is the tag/HEAD check.
+      expect(readFileSync(env.VALIDATOR_TRACE, "utf8")).toBe("read\n");
+      expect(readFileSync(env.GITHUB_OUTPUT, "utf8")).toBe("");
+    });
     test(`${name} validates actual selected-tag coherence`, async () => {
       cannedGit("same", "same");
-      const matching = await preflight(name, "0.2.1", "", "refs/tags/v0.2.1");
+      const matching = await preflight(name, "v0.2.1", "", "refs/tags/v0.2.1", "push");
       expect(matching.status).toBe(0);
-      const mismatch = await preflight(name, "0.2.2", "", "refs/tags/v0.2.1");
+      const mismatch = await preflight(name, "v0.2.2", "", "refs/tags/v0.2.1", "push");
       expect(mismatch.status).toBe(1);
       expect(readFileSync(env.GITHUB_OUTPUT, "utf8")).toBe("");
     });

@@ -31,7 +31,7 @@ export const MCP_TOOLS: McpTool[] = [
       {
         name: "template",
         type: "string",
-        description: "Optional starter template name.",
+        description: "Starter template name.",
       },
       {
         name: "force",
@@ -41,8 +41,7 @@ export const MCP_TOOLS: McpTool[] = [
       {
         name: "cwd",
         type: "string",
-        description:
-          "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory.",
+        description: "Existing absolute project directory; defaults to server cwd.",
       },
     ],
     cli: "stack init --noInteractive [--template <name>] [--force]",
@@ -55,7 +54,7 @@ export const MCP_TOOLS: McpTool[] = [
       {
         name: "from",
         type: "string",
-        description: "Path to the .env file (default: .env).",
+        description: "Path to the .env file inside the project (default: .env).",
       },
       {
         name: "dryRun",
@@ -65,8 +64,7 @@ export const MCP_TOOLS: McpTool[] = [
       {
         name: "cwd",
         type: "string",
-        description:
-          "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory.",
+        description: "Existing absolute project directory; defaults to server cwd.",
       },
     ],
     cli: "stack import --json [--from <path>] [--dryRun]",
@@ -79,7 +77,7 @@ export const MCP_TOOLS: McpTool[] = [
       {
         name: "path",
         type: "string",
-        description: "Directory to scan (default: cwd).",
+        description: "Directory to scan inside the project (default: cwd).",
       },
       {
         name: "confidence",
@@ -89,8 +87,7 @@ export const MCP_TOOLS: McpTool[] = [
       {
         name: "cwd",
         type: "string",
-        description:
-          "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory.",
+        description: "Existing absolute project directory; defaults to server cwd.",
       },
     ],
     cli: "stack scan [--path <dir>] [--confidence low|medium|high]",
@@ -114,8 +111,7 @@ export const MCP_TOOLS: McpTool[] = [
       {
         name: "cwd",
         type: "string",
-        description:
-          "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory.",
+        description: "Existing absolute project directory; defaults to server cwd.",
       },
     ],
     cli: "stack add <service> [--use <id>]",
@@ -139,8 +135,7 @@ export const MCP_TOOLS: McpTool[] = [
       {
         name: "cwd",
         type: "string",
-        description:
-          "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory.",
+        description: "Existing absolute project directory; defaults to server cwd.",
       },
     ],
     cli: "stack remove <service> --json [--keepRemote]",
@@ -152,13 +147,12 @@ export const MCP_TOOLS: McpTool[] = [
       {
         name: "json",
         type: "boolean",
-        description: "Machine-readable JSON (schema ashlr.stack.list/v1).",
+        description: "JSON: ashlr.stack.list/v1.",
       },
       {
         name: "cwd",
         type: "string",
-        description:
-          "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory.",
+        description: "Existing absolute project directory; defaults to server cwd.",
       },
     ],
     cli: "stack list [--json]",
@@ -177,13 +171,12 @@ export const MCP_TOOLS: McpTool[] = [
       {
         name: "json",
         type: "boolean",
-        description: "Machine-readable JSON (schema ashlr.stack.info/v1).",
+        description: "JSON: ashlr.stack.info/v1.",
       },
       {
         name: "cwd",
         type: "string",
-        description:
-          "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory.",
+        description: "Existing absolute project directory; defaults to server cwd.",
       },
     ],
     cli: "stack info <service> [--json]",
@@ -195,13 +188,12 @@ export const MCP_TOOLS: McpTool[] = [
       {
         name: "json",
         type: "boolean",
-        description: "Machine-readable JSON (schema ashlr.stack.status/v1).",
+        description: "JSON: ashlr.stack.status/v1.",
       },
       {
         name: "cwd",
         type: "string",
-        description:
-          "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory.",
+        description: "Existing absolute project directory; defaults to server cwd.",
       },
     ],
     cli: "stack status [--json]",
@@ -213,13 +205,12 @@ export const MCP_TOOLS: McpTool[] = [
       {
         name: "json",
         type: "boolean",
-        description: "Machine-readable JSON (schema ashlr.stack.env/v1, names only).",
+        description: "JSON: ashlr.stack.env/v1; names only.",
       },
       {
         name: "cwd",
         type: "string",
-        description:
-          "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory.",
+        description: "Existing absolute project directory; defaults to server cwd.",
       },
     ],
     cli: "stack env show [--json]",
@@ -232,13 +223,12 @@ export const MCP_TOOLS: McpTool[] = [
         name: "json",
         type: "boolean",
         description:
-          "Machine-readable JSON (schema ashlr.stack.env-diff/v1, names and declaring service only); still an error result when any are missing.",
+          "JSON: ashlr.stack.env-diff/v1; names and service only. Missing secrets remain an error.",
       },
       {
         name: "cwd",
         type: "string",
-        description:
-          "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory.",
+        description: "Existing absolute project directory; defaults to server cwd.",
       },
     ],
     cli: "stack env diff [--json]",
@@ -261,13 +251,12 @@ export const MCP_TOOLS: McpTool[] = [
       {
         name: "json",
         type: "boolean",
-        description: "Machine-readable JSON output.",
+        description: "JSON output.",
       },
       {
         name: "cwd",
         type: "string",
-        description:
-          "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory.",
+        description: "Existing absolute project directory; defaults to server cwd.",
       },
     ],
     cli: "stack doctor [--fix] [--all] [--json]",
@@ -286,8 +275,7 @@ export const MCP_TOOLS: McpTool[] = [
       {
         name: "cwd",
         type: "string",
-        description:
-          "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory.",
+        description: "Existing absolute project directory; defaults to server cwd.",
       },
     ],
     cli: "stack sync --platform <name>",
@@ -305,7 +293,7 @@ export const MCP_TOOLS: McpTool[] = [
       {
         name: "json",
         type: "boolean",
-        description: "Machine-readable JSON (schema ashlr.stack.providers/v1).",
+        description: "JSON: ashlr.stack.providers/v1.",
       },
     ],
     cli: "stack providers [--category <category>] [--json]",
@@ -318,7 +306,7 @@ export const MCP_TOOLS: McpTool[] = [
       {
         name: "json",
         type: "boolean",
-        description: "Machine-readable JSON (schema ashlr.stack.projects/v1).",
+        description: "JSON: ashlr.stack.projects/v1.",
       },
     ],
     cli: "stack projects list [--json]",
@@ -330,13 +318,12 @@ export const MCP_TOOLS: McpTool[] = [
       {
         name: "json",
         type: "boolean",
-        description: "Machine-readable JSON (schema ashlr.stack.deps/v1).",
+        description: "JSON: ashlr.stack.deps/v1.",
       },
       {
         name: "cwd",
         type: "string",
-        description:
-          "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory.",
+        description: "Existing absolute project directory; defaults to server cwd.",
       },
     ],
     cli: "stack deps [--json]",
@@ -348,8 +335,7 @@ export const MCP_TOOLS: McpTool[] = [
       {
         name: "json",
         type: "boolean",
-        description:
-          "Machine-readable JSON (schema ashlr.stack.templates/v1): each template with its services, providers and secret names.",
+        description: "JSON: ashlr.stack.templates/v1; services, providers and secret names.",
       },
     ],
     cli: "stack templates list [--json]",
@@ -364,7 +350,7 @@ export const MCP_TOOLS: McpTool[] = [
   {
     name: "stack_recommend",
     description:
-      "Retrieve scored curated-provider matches and per-category ranking for a query. save:true writes a Recipe for a later stack_apply request. The CLI JSON payload is forwarded as text; this tool does not request LLM inference.",
+      "Rank curated providers by query, returning JSON as text without LLM inference. save:true writes a Recipe for stack_apply.",
     inputs: [
       {
         name: "query",
@@ -381,19 +367,17 @@ export const MCP_TOOLS: McpTool[] = [
         name: "category",
         type: "string",
         description:
-          "Optional filter to a source catalog category: Database, Deploy, Cloud, AI, Analytics, Observability, Errors, Payments, Code, Tickets, Email, Auth, FeatureFlags. Matched case-insensitively; an unknown category is an error.",
+          "Category (case-insensitive): Database, Deploy, Cloud, AI, Analytics, Observability, Errors, Payments, Code, Tickets, Email, Auth, FeatureFlags. Unknown values error.",
       },
       {
         name: "save",
         type: "boolean",
-        description:
-          "When true, also freeze the result to .stack/recipes/<id>.toml so you can run stack_apply. Returns the recipe id in the response.",
+        description: "Save .stack/recipes/<id>.toml for stack_apply; returns recipe id.",
       },
       {
         name: "cwd",
         type: "string",
-        description:
-          "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory.",
+        description: "Existing absolute project directory; defaults to server cwd.",
       },
     ],
     cli: 'stack recommend "<query>" --json [--k <n>] [--category <name>] [--save]',
@@ -407,7 +391,8 @@ export const MCP_TOOLS: McpTool[] = [
         name: "recipe_id",
         type: "string",
         required: true,
-        description: "Recipe id (filename stem in .stack/recipes/).",
+        description:
+          "Recipe id (filename stem in .stack/recipes/, letters, numbers, underscores or hyphens).",
       },
       {
         name: "no_wire",
@@ -417,8 +402,7 @@ export const MCP_TOOLS: McpTool[] = [
       {
         name: "cwd",
         type: "string",
-        description:
-          "Absolute path of the project directory to run in (default: the MCP server's working directory). Must be an existing directory.",
+        description: "Existing absolute project directory; defaults to server cwd.",
       },
     ],
     cli: "stack apply <recipe_id> [--noWire]",

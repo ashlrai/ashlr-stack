@@ -145,6 +145,28 @@ describe("stack recommend --json", () => {
     expect(payload.guidance).toContain("No strong matches");
   });
 
+  it("treats regex metacharacters as punctuation in a search query", () => {
+    const plain = runCli(["recommend", "stripe", "--json"]);
+    const query = "stripe.*[";
+    const punctuated = runCli(["recommend", query, "--json"]);
+    expect(plain.code).toBe(0);
+    expect(punctuated.code).toBe(0);
+    const plainPayload = JSON.parse(plain.stdout);
+    const payload = JSON.parse(punctuated.stdout);
+    expect(payload.query).toBe(query);
+    expect(plainPayload.hits.length).toBeGreaterThan(0);
+    expect(payload.hits).toEqual(plainPayload.hits);
+    expect(payload.byCategory).toEqual(plainPayload.byCategory);
+
+    const punctuationOnly = runCli(["recommend", ".*[", "--json"]);
+    expect(punctuationOnly.code).toBe(0);
+    const emptyPayload = JSON.parse(punctuationOnly.stdout);
+    expect(emptyPayload.query).toBe(".*[");
+    expect(emptyPayload.hits).toEqual([]);
+    expect(emptyPayload.byCategory).toEqual({});
+    expect(emptyPayload.guidance).toContain("No strong matches");
+  });
+
   it("exits 1 when no query is given, in JSON and human mode", () => {
     const json = runCli(["recommend", "--json"]);
     expect(json.code).toBe(1);
@@ -154,6 +176,21 @@ describe("stack recommend --json", () => {
     const human = runCli(["recommend"]);
     expect(human.code).toBe(1);
     expect(human.stdout + human.stderr).toContain("No query");
+  });
+
+  it("treats a whitespace-only search query as missing instead of matching services", () => {
+    const json = runCli(["recommend", " \t\n ", "--json"]);
+    expect(json.code).toBe(1);
+    expect(JSON.parse(json.stdout)).toEqual({
+      query: "",
+      hits: [],
+      byCategory: {},
+      guidance: 'Provide a query: stack recommend "what you\'re building".',
+    });
+
+    const human = runCli(["recommend", " \t\n "]);
+    expect(human.code).toBe(1);
+    expect(human.stdout + human.stderr).toContain("No query, nothing to recommend.");
   });
 
   it("rejects a --k that is not a whole number of 1 or more", () => {

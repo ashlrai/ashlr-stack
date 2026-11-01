@@ -19,6 +19,7 @@ import {
   ReadResourceRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { planToolCall } from "./cwd.ts";
+import { compactJsonOutput } from "./output.ts";
 import { readServerVersion, resolveStackCommand } from "./stack-bin.ts";
 import { TOOLS } from "./tools.ts";
 
@@ -89,7 +90,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   }
   const { args, cwd } = plan;
   const { stdout, stderr, code } = await runStack(args, cwd);
-  const body = stdout.trim() + (stderr.trim() ? `\n\n[stderr]\n${stderr.trim()}` : "");
+  const body =
+    compactJsonOutput(stdout, args) + (stderr.trim() ? `\n\n[stderr]\n${stderr.trim()}` : "");
   return {
     content: [{ type: "text", text: body || `(stack ${args.join(" ")} exit ${code})` }],
     isError: code !== 0,
@@ -163,4 +165,18 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
 });
 
 const transport = new StdioServerTransport();
+// The SDK transport does not treat stdin EOF as a disconnect. Once the host
+// goes away, close the protocol and exit even if other work holds the loop open.
+let shuttingDown = false;
+async function shutdown() {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  try {
+    await server.close();
+  } finally {
+    process.exit(0);
+  }
+}
+process.stdin.once("end", shutdown);
+process.stdin.once("close", shutdown);
 await server.connect(transport);

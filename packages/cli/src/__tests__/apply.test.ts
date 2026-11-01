@@ -1,10 +1,11 @@
-import { afterEach, describe, expect, it } from "bun:test";
+import { afterEach, describe, expect, it, setDefaultTimeout } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
   chmodSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   readdirSync,
   rmSync,
   writeFileSync,
@@ -55,6 +56,10 @@ function mkTmp(): string {
   createdDirs.push(dir);
   return dir;
 }
+
+// Each test spawns one or two full `bun` CLI processes; on loaded machines a
+// single spawn can take several seconds — well past the 5s default.
+setDefaultTimeout(30_000);
 
 describe("stack apply", () => {
   it("auto-inits .stack.toml when none exists, then runs against the recipe", () => {
@@ -146,6 +151,109 @@ esac
       expect(out).toContain("Some providers failed: openai:");
       expect(out).toContain("; anthropic:");
     }
+  });
+
+  it("prints the changelog example for a missing secret without writing to Phantom", () => {
+    const dir = mkTmp();
+    const home = mkTmp();
+    const bin = join(home, "bin");
+    const calls = join(home, "phantom-calls");
+    mkdirSync(bin);
+    writeFileSync(
+      join(bin, "phantom"),
+      `#!/bin/sh
+echo "$1" >> '${calls}'
+case "$1" in
+ --version) echo fixture;;
+ list) echo '[]';;
+ *) exit 1;;
+esac
+`,
+    );
+    chmodSync(join(bin, "phantom"), 0o700);
+    mkdirSync(join(dir, ".stack", "recipes"), { recursive: true });
+    writeFileSync(join(dir, ".stack.toml"), "");
+    writeFileSync(
+      join(dir, ".stack", "recipes", "example.toml"),
+      'id = "example"\nquery = "ai"\ncreatedAt = "2026-10-17T00:00:00.000Z"\n\n[[providers]]\nname = "openai"\n',
+    );
+
+    // Isolate provisioning and doctor; exercise the real apply command,
+    // recipe reader, wiring, and CLI formatting against the fake vault.
+    const cliDir = dirname(CLI_ENTRY);
+    const script = join(dir, "run-apply.ts");
+    writeFileSync(
+      script,
+      `import { mock } from "bun:test";
+mock.module(${JSON.stringify(join(cliDir, "lib/provision-loop.ts"))}, () => ({
+  provisionProviders: async () => ({ succeeded: ["openai"], failures: [] }),
+}));
+mock.module(${JSON.stringify(join(cliDir, "lib/phantom-preflight.ts"))}, () => ({
+  requirePhantom: async () => {},
+}));
+mock.module(${JSON.stringify(join(cliDir, "commands/doctor.ts"))}, () => ({
+  doctorCommand: { run: async () => {} },
+}));
+const { applyCommand } = await import(${JSON.stringify(join(cliDir, "commands/apply.ts"))});
+await applyCommand.run({ args: { recipeId: "example", noWire: false, noRollback: false } });
+`,
+    );
+    const result = spawnSync("bun", [script], {
+      cwd: dir,
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        HOME: home,
+        PATH: `${bin}:${process.env.PATH ?? ""}`,
+        NO_COLOR: "1",
+        CI: "1",
+      },
+      timeout: 20_000,
+    });
+    expect(result.status).toBe(0);
+    for (const path of ["../../../CHANGELOG.md", "../../site/src/data/CHANGELOG.md"]) {
+      const changelog = readFileSync(join(cliDir, path), "utf8");
+      const example = changelog.match(
+        /For example, with `OPENAI_API_KEY` missing[^\n]*\n\n {2}```text\n([\s\S]*?)\n {2}```/,
+      );
+      expect(example).not.toBeNull();
+      // Markdown strips the list indentation, leaving the CLI's two spaces.
+      const output = example?.[1]
+        .split("\n")
+        .map((line) => line.slice(2))
+        .join("\n");
+      expect(output).toContain("OPENAI_API_KEY");
+      expect(output).toContain("phantom add <NAME>");
+      expect(result.stdout).toContain(output ?? "example missing");
+    }
+    const guide = readFileSync(join(cliDir, "../../../docs/apply-observation.md"), "utf8");
+    const example = guide.match(/```text\n([\s\S]*?)\n```/);
+    expect(example).not.toBeNull();
+    expect(result.stdout).toContain(example?.[1] ?? "example missing");
+    const phantomCalls = readFileSync(calls, "utf8").trim().split("\n");
+    expect(phantomCalls).toContain("list");
+    expect(phantomCalls.every((call) => ["--version", "list"].includes(call))).toBe(true);
+  });
+
+  it("reports valid recipe ids headlessly and surfaces an invalid recipe by id before init", () => {
+    const dir = mkTmp();
+    const home = mkTmp();
+    mkdirSync(join(dir, ".stack", "recipes"), { recursive: true });
+    writeFileSync(
+      join(dir, ".stack", "recipes", "valid.toml"),
+      'id = "valid"\nquery = "ai"\ncreatedAt = "2026-10-17T00:00:00.000Z"\n\n[[providers]]\nname = "openai"\n',
+    );
+    writeFileSync(join(dir, ".stack", "recipes", "broken.toml"), "id = [");
+    const env = { HOME: home, STACK_REGISTRY_DIR: join(home, "registry") };
+    const picker = runCli(["apply"], dir, env);
+    expect(picker.code).toBe(1);
+    expect(picker.stdout + picker.stderr).toContain("No recipe id given. Available: valid.");
+    expect(picker.stdout + picker.stderr).not.toContain("broken");
+    const invalid = runCli(["apply", "broken"], dir, env);
+    expect(invalid.code).toBe(1);
+    expect(invalid.stdout + invalid.stderr).toContain("Available: valid.");
+    expect(existsSync(join(dir, ".stack.toml"))).toBe(false);
+    expect(existsSync(join(home, "registry"))).toBe(false);
   });
 
   it("writes nothing when the recipe id is missing or there are no recipes", () => {

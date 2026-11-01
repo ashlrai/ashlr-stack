@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   CONFIG_FILENAME,
+  LOCAL_FILENAME,
   emptyConfig,
   hasConfig,
   readConfig,
@@ -106,8 +107,27 @@ describe("config", () => {
     expect(config.stack.version).toBe("1");
     expect(config.stack.project_id).toMatch(/^stk_[a-f0-9]{12}$/);
     expect(config.services).toEqual({});
-    expect(existsSync(join(cwd, ".stack.local.toml"))).toBe(false);
+    expect(readFileSync(join(cwd, CONFIG_FILENAME), "utf-8")).toBe("");
+    expect(existsSync(join(cwd, LOCAL_FILENAME))).toBe(false);
+    expect(existsSync(join(cwd, ".gitignore"))).toBe(false);
     expect(config.environments).toEqual([{ name: "dev", default: true }]);
+  });
+
+  test("empty shape keeps the local project id but does not add local-only services", async () => {
+    const cwd = freshCwd();
+    const local =
+      '[stack]\nproject_id = "stk_fixture"\n[services.orphan]\nresource_id = "fixture-resource"\n';
+    writeFileSync(join(cwd, CONFIG_FILENAME), "");
+    writeFileSync(join(cwd, LOCAL_FILENAME), local);
+
+    expect(await readConfig(cwd)).toEqual({
+      stack: { version: "1", project_id: "stk_fixture" },
+      services: {},
+      environments: [{ name: "dev", default: true }],
+    });
+    expect(readFileSync(join(cwd, CONFIG_FILENAME), "utf-8")).toBe("");
+    expect(readFileSync(join(cwd, LOCAL_FILENAME), "utf-8")).toBe(local);
+    expect(existsSync(join(cwd, ".gitignore"))).toBe(false);
   });
   test.each(['created_at = "2026-01-01T00:00:00Z"', 'resource_id = "resource-1"'])(
     "legacy service marker %s normalizes optional fields",

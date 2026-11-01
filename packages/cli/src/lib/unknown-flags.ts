@@ -41,6 +41,8 @@ export interface UnknownFlag {
    * the positionals the command does take, in order.
    */
   extra?: string[];
+  /** A declared option was supplied without its value. */
+  missingValue?: boolean;
 }
 
 type Resolvable<T> = T | Promise<T> | (() => T) | (() => Promise<T>);
@@ -51,6 +53,7 @@ async function resolveValue<T>(value: Resolvable<T> | undefined): Promise<T | un
 
 const kebab = (name: string) => name.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
 const camel = (name: string) => name.replace(/-([a-z0-9])/g, (_, c: string) => c.toUpperCase());
+const isOption = (token: string) => token.startsWith("-") && token !== "-" && !/^-\d/.test(token);
 
 export function distance(a: string, b: string): number {
   const row = Array.from({ length: b.length + 1 }, (_, i) => i);
@@ -79,6 +82,7 @@ function check(tokens: string[], args: ArgsDef, command: string, leaf = false): 
   const short = new Set<string>(["h"]);
   // Options that take a value: a separate value token is not a positional.
   const valued = new Set<string>();
+  const optionalValue = new Set<string>();
   const positionals: string[] = [];
   for (const [key, def] of Object.entries(args)) {
     if (def.type === "positional") {
@@ -89,6 +93,16 @@ function check(tokens: string[], args: ArgsDef, command: string, leaf = false): 
     const aliases = "alias" in def && def.alias ? [def.alias].flat() : [];
     for (const alias of aliases) (alias.length === 1 ? short : long).add(alias);
     if (def.type !== "boolean") for (const name of [key, ...aliases]) valued.add(name);
+    // Some commands parse a bare string option themselves to offer a preview
+    // or a more specific refusal. Keep consuming explicit values as usual,
+    // including on boolean args whose following value goes to rawArgs (e.g.
+    // `stack doctor --install locus,lexicon`).
+    if ("valueOptional" in def && def.valueOptional === true) {
+      for (const name of [key, ...aliases]) {
+        valued.add(name);
+        optionalValue.add(name);
+      }
+    }
   }
   let seen = 0;
   for (let i = 0; i < tokens.length; i++) {
@@ -102,13 +116,14 @@ function check(tokens: string[], args: ArgsDef, command: string, leaf = false): 
     if (token.startsWith("--")) {
       const name = camel(token.slice(2).split("=")[0]);
       const negated = name.startsWith("no") ? name.charAt(2).toLowerCase() + name.slice(3) : "";
-      if (
-        valued.has(name) &&
-        !token.includes("=") &&
-        i + 1 < tokens.length &&
-        tokens[i + 1] !== "--"
-      )
-        i++;
+      if (valued.has(name) && !token.includes("=")) {
+        const next = tokens[i + 1];
+        if (next === undefined || isOption(next)) {
+          if (!optionalValue.has(name)) return { flag: token, command, missingValue: true };
+        } else {
+          i++;
+        }
+      }
       if (long.has(name) || (negated && long.has(negated))) continue;
       const flag = token.split("=")[0];
       const best = closestName(
@@ -124,14 +139,14 @@ function check(tokens: string[], args: ArgsDef, command: string, leaf = false): 
     }
     // `-e prod`: a valued short option as the last letter takes the next token.
     const last = letters.at(-1);
-    if (
-      last &&
-      valued.has(last) &&
-      !token.includes("=") &&
-      i + 1 < tokens.length &&
-      tokens[i + 1] !== "--"
-    )
-      i++;
+    if (last && valued.has(last) && !token.includes("=")) {
+      const next = tokens[i + 1];
+      if (next === undefined || isOption(next)) {
+        if (!optionalValue.has(last)) return { flag: `-${last}`, command, missingValue: true };
+      } else {
+        i++;
+      }
+    }
   }
   return null;
 }
@@ -201,6 +216,9 @@ export async function commandPath<T extends ArgsDef = ArgsDef>(
 
 /** One line naming the option, the closest declared one, and where to look. */
 export function describeUnknownFlag(unknown: UnknownFlag): string {
+  if (unknown.missingValue) {
+    return `Option ${unknown.flag} for \`${unknown.command}\` requires a value. Run \`${unknown.command} --help\` for usage.`;
+  }
   if (unknown.extra) {
     const takes =
       unknown.extra.length === 0
@@ -252,7 +270,7 @@ export async function bindParentOptionValues<T extends ArgsDef = ArgsDef>(
     }
     const name = token.startsWith("--") ? camel(token.slice(2)) : token.slice(1);
     const next = rawArgs[i + 1];
-    if (!token.includes("=") && strings.has(name) && next !== undefined && next !== "--") {
+    if (!token.includes("=") && strings.has(name) && next !== undefined && !isOption(next)) {
       out.push(`${token}=${next}`);
       i++;
       continue;
