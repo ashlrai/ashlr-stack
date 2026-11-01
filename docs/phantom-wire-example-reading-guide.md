@@ -8,6 +8,23 @@ file at that path. It does not register a route or deploy a handler. The whole
 generated example is commented out, so none of the handler steps below runs
 unless someone first turns it into code.
 
+For example, this excerpt is copied from the **commented-out Stripe stub**:
+
+```ts
+//   const signature = req.headers.get("stripe-signature");
+//   if (!signature) return new Response("Missing signature", { status: 400 });
+//   const body = await req.text();
+//   // TODO(security): signature verification is NOT implemented here. The
+//   // header check above proves only that a signature header arrived; its
+//   // value is never compared to anything. Until this TODO is done, `body`
+//   // is unauthenticated, attacker-controlled input — anyone who can POST
+//   // to this endpoint can forge a stripe webhook.
+```
+
+This is a reading example, not an active handler or a verified request. The
+TODO describes work still needed; neither generating the stub nor seeing a
+signature header performs that work.
+
 Read the generated example from top to bottom:
 
 1. **Preamble.** The file says it is a stub and warns that secret retrieval and
