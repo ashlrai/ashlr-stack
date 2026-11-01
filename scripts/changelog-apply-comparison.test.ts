@@ -26,6 +26,9 @@ test("comparison cites the same complete 0.2.1 apply fix in both changelogs", ()
     return readFileSync(join(root, path), "utf8");
   });
   const entry = matchingApplyEntries(changelogs);
+  expect(changelogs[0]).toBe(changelogs[1]);
+  expect(comparison).toContain("**Wording differences: none.**");
+  expect(comparison).toContain("diff -u CHANGELOG.md packages/site/src/data/CHANGELOG.md");
   for (const claim of [
     "The wiring step never writes to the vault or fills in missing values.",
     "Provider setup may already store real values",
@@ -46,6 +49,17 @@ test("comparison cites the same complete 0.2.1 apply fix in both changelogs", ()
     "Result fields",
   ]) {
     expect(comparison).toContain(`| ${topic} |`);
+  }
+});
+
+test("the entry comparison detects wording-only differences in either changelog", () => {
+  const changelogs = copies.map((path) => readFileSync(join(root, path), "utf8"));
+  const wording = "Provider setup may already store real values";
+  for (const index of [0, 1]) {
+    const changed = [...changelogs];
+    expect(changed[index]).toContain(wording);
+    changed[index] = changed[index].replace(wording, "Provider setup can already store real values");
+    expect(() => matchingApplyEntries(changed)).toThrow();
   }
 });
 
