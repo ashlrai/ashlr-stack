@@ -4,6 +4,17 @@ import { join } from "node:path";
 
 const paths = ["CHANGELOG.md", "packages/site/src/data/CHANGELOG.md"] as const;
 
+test.each(paths)("%s uses the same historical placeholder literal in both apply entries", (path) => {
+  const changelog = readFileSync(join(import.meta.dir, "..", path), "utf8");
+  const fixEntry = changelog.split("\n").find((line) => line.startsWith("- **`stack apply` stops attempting"));
+  const originalEntry = changelog.split("\n").find((line) => line.startsWith("- **`stack apply [recipe-id]`**"));
+  const fixLiteral = fixEntry?.match(/Previously, wiring ran `phantom add <KEY> (\S+) --rotate`/)?.[1];
+  const originalLiteral = originalEntry?.match(/Historically, wiring attempted to write a `([^`]+)` placeholder/)?.[1];
+
+  expect(fixLiteral).toBe("TODO_STACK_APPLY");
+  expect(originalLiteral).toBe(fixLiteral);
+});
+
 // Match the historical fix as one list item, regardless of inline Markdown or wrapping.
 function hasPlaceholderFix(changelog: string): boolean {
   const release = changelog.match(/^##\s+\[?0\.2\.1\]?(?:\s|$)[^\n]*\n([\s\S]*?)(?=^##\s|$(?![\s\S]))/m)?.[1];
