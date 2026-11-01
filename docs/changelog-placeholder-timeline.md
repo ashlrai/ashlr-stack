@@ -46,6 +46,8 @@ here and under 0.2.1 below".
 
 ## Related docs
 
+- [Historical `stack apply` placeholder command](apply-placeholder-command-history.md) —
+  the attempted `phantom add` forms and where their removal is documented.
 - [`stack apply` and placeholder secrets](apply-placeholder-history.md) —
   current wiring behavior and the pre-0.2.1 history in prose.
 - [Inspecting a `stack apply` result](apply-observation.md) — how to read the
