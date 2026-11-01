@@ -18,9 +18,35 @@ function hasPlaceholderFix(changelog: string): boolean {
   });
 }
 
+function bothHavePlaceholderFix(changelogs: readonly [string, string]): boolean {
+  return changelogs.every(hasPlaceholderFix);
+}
+
 test.each(paths)("%s retains the stack apply placeholder fix", (path) => {
   const changelog = readFileSync(join(import.meta.dir, "..", path), "utf8");
   expect(hasPlaceholderFix(changelog), `${path} lacks the stack apply placeholder fix in 0.2.1`).toBe(true);
+});
+
+test("both changelogs state that stack apply stopped writing placeholders", () => {
+  const changelogs = paths.map((path) => readFileSync(join(import.meta.dir, "..", path), "utf8")) as [
+    string,
+    string,
+  ];
+  expect(bothHavePlaceholderFix(changelogs)).toBe(true);
+
+  // Unrelated prose can differ, but either copy losing the claim must fail.
+  const surroundingProse = "Provider setup may already store real values";
+  expect(changelogs[1]).toContain(surroundingProse);
+  expect(bothHavePlaceholderFix([changelogs[0], changelogs[1].replace(surroundingProse, "Other setup details")])).toBe(
+    true,
+  );
+  const claim = "The wiring step never writes to the vault or fills in missing values.";
+  for (const index of [0, 1] as const) {
+    const changed: [string, string] = [...changelogs];
+    expect(changed[index]).toContain(claim);
+    changed[index] = changed[index].replace(claim, "The wiring step writes placeholders to the vault.");
+    expect(bothHavePlaceholderFix(changed)).toBe(false);
+  }
 });
 
 test("placeholder fix detection accepts formatting differences within the entry", () => {
