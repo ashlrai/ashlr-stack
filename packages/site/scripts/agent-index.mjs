@@ -28,8 +28,10 @@ export function generateAgentIndex(pages) {
     const anchor = title.toLowerCase().replace(/[^\w\s-]/g, "").replace(/\s/g, "-");
     return `- [${title}](https://github.com/ashlrai/ashlr-stack#${anchor})`;
   });
-  const docs = pages.filter((page) => page.path.startsWith("/docs")).sort((a, b) => a.path.localeCompare(b.path));
-  const guide = read(join(site, "src/data/agent-guide.txt")).replace(/\{\{(\w+)\}\}/g, (whole, key) => {
+  const docs = pages
+    .filter((page) => page.path.startsWith("/docs"))
+    .sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
+  const guide = read(join(site, "src/data/agent-guide.txt")).replace(/\r\n/g, "\n").replace(/\{\{(\w+)\}\}/g, (whole, key) => {
     if (!(key in values)) throw new Error(`unknown placeholder {{${key}}} in src/data/agent-guide.txt`);
     return values[key];
   });

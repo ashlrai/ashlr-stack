@@ -402,25 +402,25 @@ Package: `ashlr-stack-mcp`.
 
 The source declares these 19 tools. They are a subset of CLI commands; use each advertised input schema, whose keys are not uniformly snake_case.
 
-- `stack_init` — `{ template?: string, force?: boolean, cwd?: string }`
-- `stack_import` — `{ from?: string, dryRun?: boolean, cwd?: string }`
-- `stack_scan` — `{ path?: string, confidence?: string, cwd?: string }`
-- `stack_add` — `{ service: string, use?: string, cwd?: string }`
-- `stack_remove` — `{ service: string, keepRemote?: boolean, cwd?: string }`
-- `stack_list` — `{ json?: boolean, cwd?: string }`
-- `stack_info` — `{ service: string, json?: boolean, cwd?: string }`
-- `stack_status` — `{ json?: boolean, cwd?: string }`
-- `stack_env_show` — `{ json?: boolean, cwd?: string }`
-- `stack_env_diff` — `{ json?: boolean, cwd?: string }`
-- `stack_doctor` — `{ fix?: boolean, all?: boolean, json?: boolean, cwd?: string }`
-- `stack_sync` — `{ platform: string, cwd?: string }`
-- `stack_providers` — `{ category?: string, json?: boolean }`
-- `stack_projects_list` — `{ json?: boolean }`
-- `stack_deps` — `{ json?: boolean, cwd?: string }`
-- `stack_templates_list` — `{ json?: boolean }`
-- `stack_upgrade` — `{}`
-- `stack_recommend` — `{ query: string, k?: number, category?: string, save?: boolean, cwd?: string }`
-- `stack_apply` — `{ recipe_id: string, no_wire?: boolean, cwd?: string }`
+- `stack_init` - `{ cwd?: string, force?: boolean, template?: string }`
+- `stack_import` - `{ cwd?: string, dryRun?: boolean, from?: string }`
+- `stack_scan` - `{ confidence?: string, cwd?: string, path?: string }`
+- `stack_add` - `{ cwd?: string, service: string, use?: string }`
+- `stack_remove` - `{ cwd?: string, keepRemote?: boolean, service: string }`
+- `stack_list` - `{ cwd?: string, json?: boolean }`
+- `stack_info` - `{ cwd?: string, json?: boolean, service: string }`
+- `stack_status` - `{ cwd?: string, json?: boolean }`
+- `stack_env_show` - `{ cwd?: string, json?: boolean }`
+- `stack_env_diff` - `{ cwd?: string, json?: boolean }`
+- `stack_doctor` - `{ all?: boolean, cwd?: string, fix?: boolean, json?: boolean }`
+- `stack_sync` - `{ cwd?: string, platform: string }`
+- `stack_providers` - `{ category?: string, json?: boolean }`
+- `stack_projects_list` - `{ json?: boolean }`
+- `stack_deps` - `{ cwd?: string, json?: boolean }`
+- `stack_templates_list` - `{ json?: boolean }`
+- `stack_upgrade` - `{}`
+- `stack_recommend` - `{ category?: string, cwd?: string, k?: number, query: string, save?: boolean }`
+- `stack_apply` - `{ cwd?: string, no_wire?: boolean, recipe_id: string }`
 `cwd?: string` is an absolute path to an existing project directory; the tool runs `stack` there instead of in the server's working directory (use it when the client starts the server outside the project). A relative path, a missing path or a file is refused before anything runs. Tools without `cwd` in their signature refuse it.
 
 The MCP wrapper forwards CLI stdout and stderr as text content and sets `isError` from the exit result. Individual commands may emit JSON; there is no universal structured receipt, sandbox or redaction guarantee. The server needs `stack` on PATH or an explicit `STACK_BIN`.
@@ -438,12 +438,12 @@ Install:
 
 Slash commands:
 
-- `/stack:add <service>` — Provision a service and wire its secrets + MCP entry.
-- `/stack:apply <recipe-id>` — Replay a saved recipe through provider setup and optional wiring; inspect partial results.
-- `/stack:doctor` — Inspect available provider checks and report failed or unchecked services.
-- `/stack:list` — List services configured in this stack.
-- `/stack:recommend <query>` — Recommend providers for a goal and save the result as a reusable recipe.
-- `/stack:status` — Show a one-screen overview of the current stack.
+- `/stack:add <service>` - Provision a service and wire its secrets + MCP entry.
+- `/stack:apply <recipe-id>` - Replay a saved recipe through provider setup and optional wiring; inspect partial results.
+- `/stack:doctor` - Inspect available provider checks and report failed or unchecked services.
+- `/stack:list` - List services configured in this stack.
+- `/stack:recommend <query>` - Recommend providers for a goal and save the result as a reusable recipe.
+- `/stack:status` - Show a one-screen overview of the current stack.
 
 The plugin invokes Stack through MCP. Use slot names in discussions; MCP text and project resources are not a general redaction boundary.
 

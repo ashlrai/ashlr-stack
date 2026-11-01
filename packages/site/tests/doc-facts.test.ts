@@ -84,13 +84,34 @@ const categories = new Set(PROVIDERS_REF.map((p) => p.category));
 const templates = listTemplates();
 const resourceUris = serverResourceUris();
 
-/** `{ a: string, b?: boolean }` signature of a tool's input schema, as llms-full.txt writes it. */
+/**
+ * `{ a: string, b?: boolean }` signature of a tool's input schema, as
+ * llms-full.txt writes it. Keys are rendered in sorted order, the same
+ * canonical form toolSignature() in gen-site-facts.ts emits, so the check
+ * does not depend on object insertion order.
+ */
 function signature(tool: (typeof TOOLS)[number]): string {
   const required = new Set(tool.inputSchema.required ?? []);
-  const props = Object.entries(tool.inputSchema.properties).map(
-    ([k, v]) => `${k}${required.has(k) ? "" : "?"}: ${v.type}`,
-  );
+  const props = Object.keys(tool.inputSchema.properties)
+    .sort()
+    .map((k) => `${k}${required.has(k) ? "" : "?"}: ${tool.inputSchema.properties[k].type}`);
   return props.length ? `{ ${props.join(", ")} }` : "{}";
+}
+
+/** A `- \`stack_x\` - \`{...}\`` bullet line in llms-full.txt. */
+const TOOL_SIG_LINE = /^- `(stack_\w+)` - `(\{.*\})`$/;
+
+/**
+ * Signature bullet lines in llms-full.txt as `{ lineIndex, match }` pairs.
+ * The file is LF-normalized before matching so the `$` anchor also holds on a
+ * checkout that translated the doc to CRLF.
+ */
+function toolSignatureLines(text: string): Array<{ i: number; m: RegExpMatchArray }> {
+  return text
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((l, i) => ({ i, m: l.match(TOOL_SIG_LINE) }))
+    .filter((x): x is { i: number; m: RegExpMatchArray } => x.m !== null);
 }
 
 describe("doc facts: sources of truth are sane", () => {
@@ -167,16 +188,19 @@ describe("doc facts: MCP tools", () => {
   });
 
   test("packages/site/public/llms-full.txt gives each tool's input signature", () => {
-    const lines = read("packages/site/public/llms-full.txt").split("\n");
-    const listed = lines
-      .map((l, i) => ({ i, m: l.match(/^- `(stack_\w+)` — `(\{.*\})`$/) }))
-      .filter((x) => x.m);
-    expect(listed.map((x) => x.m?.[1]), "packages/site/public/llms-full.txt tool list").toEqual(toolNames);
+    const listed = toolSignatureLines(read("packages/site/public/llms-full.txt"));
+    expect(listed.map((x) => x.m[1]), "packages/site/public/llms-full.txt tool list").toEqual(toolNames);
     for (const { i, m } of listed) {
-      const tool = TOOLS.find((t) => t.name === m?.[1]);
+      const tool = TOOLS.find((t) => t.name === m[1]);
       if (!tool) continue;
-      expect(m?.[2], `packages/site/public/llms-full.txt:${i + 1}`).toBe(signature(tool));
+      expect(m[2], `packages/site/public/llms-full.txt:${i + 1}`).toBe(signature(tool));
     }
+  });
+
+  test("tool signature lines parse identically under LF and CRLF", () => {
+    const lf = read("packages/site/public/llms-full.txt").replace(/\r\n/g, "\n");
+    const crlf = lf.replace(/\n/g, "\r\n");
+    expect(toolSignatureLines(crlf)).toEqual(toolSignatureLines(lf));
   });
 
   test("packages/mcp/README.md groups every tool exactly once", () => {
