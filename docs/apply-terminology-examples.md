@@ -68,3 +68,6 @@ Apply tries every provider; provider failures fail the run even when another
 provider succeeds. If none succeeds, wiring is not attempted. `--noWire`
 skips both the secret-name check and webhook stubs, with no wiring summary;
 provider setup still runs. Doctor's final check is informational.
+
+For the changelog wording and the distinction between the root and site copies,
+see [apply wiring terminology](apply-wiring-terminology.md).
