@@ -44,6 +44,39 @@ named in a stub need not be one of the catalog names checked by wiring.
 - At what point may downstream code parse or act on a body, and how will tests
   establish that invalid or unverifiable requests cannot reach that point?
 
+### Provider-specific inputs to confirm
+
+The header and secret names below are what the generated examples name, not
+proof that they are sufficient or correct for a particular webhook product.
+Confirm each integration against the provider's current documentation.
+
+| Example | Header | Secret named | Question for the integration owner |
+| --- | --- | --- | --- |
+| stripe | `stripe-signature` | `STRIPE_WEBHOOK_SECRET` | Which endpoint secret, raw payload representation, timestamp tolerance, and supported verification library apply? |
+| clerk | `svix-signature` | `CLERK_WEBHOOK_SECRET` | Which additional Svix headers, signing secret, raw payload, and replay window does this endpoint require? |
+| supabase | `x-supabase-signature` | `SUPABASE_WEBHOOK_SECRET` | Does the specific Supabase webhook product actually provide this header and signing scheme, and where is its verification documented? |
+| github | `x-hub-signature-256` | `GITHUB_WEBHOOK_SECRET` | Which webhook secret and exact body bytes must be used, and how will the `sha256=` digest be compared safely? |
+
+## Example status
+
+[`writeWebhookStub` and `webhookStubFor`](../packages/core/src/ai/phantom-wire.ts)
+produce fully commented files, not registered or deployed endpoints. If the
+example handler is uncommented as written, it returns 400 for a missing or
+empty expected header and, after reading the body, returns 200 for any non-empty
+header without verifying it. A body-read error rejects the handler instead of
+returning that success response. A generated stub and a successful inventory
+check therefore do not establish that a webhook is operational or trusted.
+
+- Who owns converting each example into a handler and verifying that the
+  deployed route uses that handler rather than the unmodified example?
+- What review and tests must pass before the example can be described as
+  production-ready, including forged signatures, altered bodies and unavailable
+  verification inputs?
+- How will operators tell a generated file from a configured, registered,
+  deployed, and successfully verified endpoint?
+- How will repeated wiring avoid losing an owner-maintained handler when the
+  generated path is overwritten?
+
 ## Failure handling
 
 In [`wirePhantomForRecipe`](../packages/core/src/ai/phantom-wire.ts), a missing
