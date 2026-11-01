@@ -399,6 +399,35 @@ describe("ai/phantom-wire", () => {
     expect(harness.callsTo("list")).toEqual([]);
   });
 
+  it("keeps unverified webhook warnings when Phantom is unavailable", async () => {
+    writeFileSync(join(harness.dir, "phantom"), "#!/usr/bin/env bash\nexit 1\n");
+    const providers = ["stripe", "clerk", "supabase", "github"];
+    const result = await wirePhantomForRecipe(
+      { ...STRIPE_RECIPE, providers: providers.map((name) => ({ name })) },
+      { cwd: harness.dir },
+    );
+
+    expect(result.skipped).toEqual(providers);
+    expect(result.webhooks).toEqual(
+      providers.map((provider) => join(harness.dir, ".stack/webhooks", `${provider}.ts`)),
+    );
+    for (const path of result.webhooks) {
+      const stub = readFileSync(path, "utf-8");
+      const warning = stub.indexOf(
+        "This entire example is commented out and does not verify signatures.",
+      );
+      const handler = stub.indexOf("// export async function");
+      expect(warning).toBeGreaterThanOrEqual(0);
+      expect(handler).toBeGreaterThan(warning);
+      expect(stub).toContain(
+        "200 without authenticating the request. Implement verification first.",
+      );
+      expect(stub).toContain("TODO(security): signature verification is NOT implemented here.");
+      expect(stub).not.toMatch(/signature verified|verified signature|request is authenticated/i);
+      expect(stub.split("\n").every((line) => line === "" || line.startsWith("//"))).toBe(true);
+    }
+  });
+
   it("rejects a stub write failure after leaving earlier stubs in place", async () => {
     const webhookDir = join(harness.dir, ".stack/webhooks");
     mkdirSync(join(webhookDir, "github.ts"), { recursive: true });
