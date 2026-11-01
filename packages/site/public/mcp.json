@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/modelcontextprotocol/specification/main/schema/schema.json",
   "name": "ashlr-stack",
-  "description": "Static catalog of 19 tools declared by reviewed Stack source 0.3.0, a subset of CLI commands; the catalog version label is not an installed or published package claim. The stdio server dispatches CLI arguments and returns stdout plus any nonempty stderr as text, with isError reflecting command completion, not provider/client acceptance. It is a control plane, not a sandbox or redaction layer. Public CLI and MCP packages recorded at 0.1.1 require Bun 1.2 or newer on PATH even when launched via npm/npx. Both stack and ashlr-stack-mcp commands are needed; STACK_BIN can override the CLI path. Adapt setup to your client and confirm the server working directory and actual advertised tools. Project-scoped tools accept an optional absolute cwd so a server started outside the project can target it; resources always read the server working directory. Resources are conditional on existing cwd files and return raw text. Provider configuration may contain literal $(phantom reveal NAME) strings; Stack supplies no general expansion step, so actual client/provider credential setup remains necessary.",
+  "description": "Static catalog of 19 tools declared by reviewed Stack source 0.3.0, a subset of CLI commands; the catalog version label is not an installed or published package claim. The stdio server dispatches CLI arguments and returns stdout plus any nonempty stderr as text, with isError reflecting command completion, not provider/client acceptance. It is a control plane, not a sandbox or redaction layer. Published 0.3.0 CLI and MCP packages declare Node.js 20 or newer; inspect other releases’ engines. The recorded public version is 0.3.0. Both stack and ashlr-stack-mcp commands are needed; STACK_BIN can override the CLI path. Adapt setup to your client and confirm the server working directory and actual advertised tools. Project-scoped tools accept an optional absolute cwd so a server started outside the project can target it; resources always read the server working directory. Resources are conditional on existing cwd files and return raw text. Provider configuration may contain literal $(phantom reveal NAME) strings; Stack supplies no general expansion step, so actual client/provider credential setup remains necessary.",
   "version": "0.3.0",
   "homepage": "https://stack.ashlr.ai",
   "repository": "https://github.com/ashlrai/ashlr-stack",
@@ -11,9 +11,9 @@
     "args": [
       "-y",
       "-p",
-      "@ashlr/stack@0.1.1",
+      "@ashlr/stack@0.3.0",
       "-p",
-      "ashlr-stack-mcp@0.1.1",
+      "ashlr-stack-mcp@0.3.0",
       "ashlr-stack-mcp"
     ],
     "mcpConfigSnippet": {
@@ -23,9 +23,9 @@
           "args": [
             "-y",
             "-p",
-            "@ashlr/stack@0.1.1",
+            "@ashlr/stack@0.3.0",
             "-p",
-            "ashlr-stack-mcp@0.1.1",
+            "ashlr-stack-mcp@0.3.0",
             "ashlr-stack-mcp"
           ]
         }

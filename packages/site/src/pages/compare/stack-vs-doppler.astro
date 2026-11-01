@@ -145,14 +145,14 @@ const faq = faqPageSchema(
     <li><strong>Audit and compliance requirements.</strong> Verify current certifications, retention and access records directly with the vendor. A source roadmap is not an implemented audit guarantee.</li>
     <li><strong>Runtime integration requirements.</strong> Check SDK and process-execution contracts against your application. Stack’s <code>phantom exec</code> forwarding alone does not prove supported runtime secret delivery.</li>
     <li><strong>Existing workflows.</strong> Preserve a working setup while evaluating change. Provider setup with <code>stack add</code> does not automatically transfer secrets to another vault.</li>
-    <li><strong>Support requirements.</strong> Check current support terms and installed-version behavior. Source {SOURCE_VERSION}, recorded public npm {PUBLISHED_VERSION} and historical native 0.2.0 are distinct.</li>
+    <li><strong>Support requirements.</strong> Check current support terms and installed-version behavior. Source {SOURCE_VERSION}, recorded public npm {PUBLISHED_VERSION} and native release binaries are distinct artifacts.</li>
   </ul>
 
   <h2>Can I use both?</h2>
   <p>If you keep an existing vault workflow, qualify any transfer separately. <code>stack add supabase</code> can create a project and persist credentials through Phantom, but this source does not implement a Doppler pipe or an automatic <code>phantom sync</code> bridge. Inspect partial state and permissions before attempting a migration.</p>
 
   <h2>Migration and caveats</h2>
-  <p>This page describes reviewed source {SOURCE_VERSION}. Recorded public npm {PUBLISHED_VERSION} and historical native release 0.2.0 are separate artifacts. Team controls and runtime credential delivery require installed-product qualification. See <a href="/docs/phantom/">/docs/phantom</a>, <a href="/docs/mcp/">/docs/mcp</a> and <a href="/docs/providers/">/docs/providers</a> for the source-defined workflows.</p>
+  <p>This page describes reviewed source {SOURCE_VERSION}. Recorded public npm {PUBLISHED_VERSION} and native release binaries are separate artifacts. Team controls and runtime credential delivery require installed-product qualification. See <a href="/docs/phantom/">/docs/phantom</a>, <a href="/docs/mcp/">/docs/mcp</a> and <a href="/docs/providers/">/docs/providers</a> for the source-defined workflows.</p>
 
   <h2>FAQ</h2>
   <h3>Is Stack a secret manager?</h3>

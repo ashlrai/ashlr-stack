@@ -21,10 +21,13 @@ import { TOOLS } from "../../mcp/src/tools";
 import {
   computeFacts,
   placeholders,
+  publishedVersionFromDocs,
   renderAiPluginJson,
   renderLlmsFull,
   renderMcpJson,
   renderOpenApiJson,
+  renderSiteFactsTs,
+  substitute,
 } from "../scripts/gen-site-facts";
 import { CLI_COMMANDS } from "../src/lib/cli-ref.generated";
 import { MCP_RESOURCES, MCP_TOOLS } from "../src/lib/mcp-ref";
@@ -43,6 +46,11 @@ const PHANTOM_REVIEWED = "0.7.9";
 
 const facts = await computeFacts();
 const ph = await placeholders(facts);
+const nextPatch = (version: string) => {
+  const parts = version.match(/^(\d+)\.(\d+)\.(\d+)$/);
+  if (!parts) throw new Error(`Expected a stable semver, got ${version}`);
+  return `${parts[1]}.${parts[2]}.${Number(parts[3]) + 1}`;
+};
 
 // ---------------------------------------------------------------------------
 // Generated files are fresh
@@ -61,8 +69,75 @@ describe("site facts: sources of truth agree", () => {
     );
     expect(row?.[1]).toBe(facts.publishedVersion);
     expect(row?.[2]).toBe(facts.sourceVersion);
+    expect(
+      publishedVersionFromDocs(readRepo("docs/getting-started-ecosystem.md"), facts.sourceVersion),
+    ).toBe(facts.publishedVersion);
   });
 
+  test("a future source version does not become a published version", async () => {
+    const recorded = readRepo("docs/getting-started-ecosystem.md");
+    const futureSource = nextPatch(facts.sourceVersion);
+    let changedRows = 0;
+    const futureDoc = recorded.replace(
+      /(\|\s*Stack(?: MCP)? `(?:@ashlr\/stack|ashlr-stack-mcp)`\s*\|\s*[^|]+\|\s*<!-- fresh:begin version-pin -->)\d+\.\d+\.\d+(<!-- fresh:end -->)/g,
+      (_match, prefix: string, suffix: string) => {
+        changedRows++;
+        return `${prefix}${futureSource}${suffix}`;
+      },
+    );
+    expect(changedRows).toBe(2);
+    expect(futureDoc).not.toBe(recorded);
+    expect(publishedVersionFromDocs(futureDoc, futureSource)).toBe(facts.publishedVersion);
+    expect(() => publishedVersionFromDocs(recorded, futureSource)).toThrow();
+    const futureFacts = {
+      ...facts,
+      sourceVersion: futureSource,
+      publishedVersion: publishedVersionFromDocs(futureDoc, futureSource),
+    };
+    const future = await placeholders(futureFacts);
+    expect(future.SOURCE_VERSION).toBe(futureSource);
+    expect(future.PUBLISHED_VERSION).toBe(facts.publishedVersion);
+    expect(future.INSTALL_NPM).toBe(`npm i -g @ashlr/stack@${facts.publishedVersion}`);
+    expect(renderSiteFactsTs(futureFacts, future)).toContain(
+      `export const PUBLISHED_VERSION = ${JSON.stringify(facts.publishedVersion)}`,
+    );
+    expect(await renderMcpJson(futureFacts)).toContain(`@ashlr/stack@${facts.publishedVersion}`);
+  });
+
+  test("shared public pins fail closed for divergent, missing or duplicate observations", () => {
+    const recorded = readRepo("docs/getting-started-ecosystem.md");
+    const divergent = recorded.replace(
+      /(\| Stack MCP `ashlr-stack-mcp` \| )\d+\.\d+\.\d+( \|)/,
+      (_match, prefix: string, suffix: string) =>
+        `${prefix}${nextPatch(facts.publishedVersion)}${suffix}`,
+    );
+    const missing = recorded.replace("| Stack MCP `ashlr-stack-mcp` |", "| missing MCP row |");
+    expect(divergent).not.toBe(recorded);
+    expect(missing).not.toBe(recorded);
+    expect(() => publishedVersionFromDocs(divergent, facts.sourceVersion)).toThrow();
+    expect(() => publishedVersionFromDocs(missing, facts.sourceVersion)).toThrow();
+    expect(() =>
+      publishedVersionFromDocs(`${recorded}\n${recorded}`, facts.sourceVersion),
+    ).toThrow();
+    for (const row of [
+      "| Stack MCP `ashlr-stack-mcp` | 0.4.0 | TBD |",
+      "| Stack MCP `ashlr-stack-mcp` | 0.4.0-rc.1 | 0.3.0 |",
+    ]) {
+      expect(() => publishedVersionFromDocs(`${recorded}\n${row}`, facts.sourceVersion)).toThrow();
+    }
+  });
+
+  test("a later recorded publication is not attributed to the 0.3.0 observation date", async () => {
+    const later = { ...facts, publishedVersion: nextPatch(facts.publishedVersion) };
+    const guide = substitute(readSite("src/data/agent-guide.txt"), await placeholders(later));
+    const full = await renderLlmsFull(later);
+    for (const text of [guide, full]) {
+      expect(text).toContain(`recorded public CLI/MCP version is ${later.publishedVersion}`);
+      expect(text).not.toContain(
+        `November 1, 2026 reported CLI/MCP version ${later.publishedVersion}`,
+      );
+    }
+  });
   test("counts match the registries", () => {
     expect(facts.providerCount).toBe(listProviderNames().length);
     expect(facts.categoryCount).toBe(new Set(PROVIDERS_REF.map((p) => p.category)).size);

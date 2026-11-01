@@ -8,9 +8,10 @@ This guide sets up four tools side by side: Phantom (`phm`), Locus (`locus`), St
 |---|---|---|---|
 | Phantom `@ashlr/phantom` | 3.29.15 | 3.29.15 | `npm view @ashlr/phantom version` |
 | Locus `locus-cli` | 0.5.0 | 0.5.1 | `npm view locus-cli version` |
-| Stack `@ashlr/stack` | 0.1.1 | <!-- fresh:begin version-pin -->0.3.0<!-- fresh:end --> | `npm view @ashlr/stack version` |
+| Stack `@ashlr/stack` | 0.3.0 | <!-- fresh:begin version-pin -->0.3.0<!-- fresh:end --> | `npm view @ashlr/stack version` |
+| Stack MCP `ashlr-stack-mcp` | 0.3.0 | <!-- fresh:begin version-pin -->0.3.0<!-- fresh:end --> | `npm view ashlr-stack-mcp version` |
 
-Features that are in source but not in these published builds: `phm fleet receipt` (the published 3.29.15 answers `unknown fleet subcommand: receipt`), `--ashlr-handshake` on `phm`, `stack doctor --ecosystem` and `stack exec --as`. The locus 0.5.0 npm build has a known `locus --version` loop; see the locus README. To try the newer features, build from source as shown below.
+The Phantom observations below are from the October 25 run: `phm fleet receipt` (the published 3.29.15 answered `unknown fleet subcommand: receipt`) and `--ashlr-handshake` on `phm` were not in that build. The locus 0.5.0 npm build has a known `locus --version` loop; see the locus README. To try the newer features, build from source as shown below.
 
 ## 1. Phantom
 
@@ -50,13 +51,15 @@ Notes from the run:
 
 ## 3. Stack
 
-The published 0.1.1 lacks the flags below, so use a source checkout:
+On November 1, 2026, npm reported 0.3.0 as latest for `@ashlr/stack-core`, `@ashlr/stack`, and `ashlr-stack-mcp`; the CLI and MCP packages declare Node.js 20 or newer. The GitHub v0.3.0 release provides macOS/Linux arm64/x64 binaries and checksum sidecars. Verify current registry versions and installed help; publication does not establish provider acceptance.
+
+To run the source checkout (which uses Bun):
 
 ```bash
 git clone https://github.com/ashlrai/ashlr-stack && cd ashlr-stack
 bun install
 alias stack="bun run $(pwd)/packages/cli/src/index.ts"
-stack --version                  # 0.3.0 from this source checkout
+stack --version                  # check the source checkout version
 stack doctor --ecosystem         # which Ashlr tools are installed, via --ashlr-handshake; informational, never fails
 stack exec --as personal -- bun dev   # needs a .stack.toml (run `stack init` first); see `stack exec --help` for --as
 ```
@@ -83,7 +86,7 @@ stack doctor --ecosystem --install                 # prints the commands, in ord
 stack doctor --ecosystem --install --apply phantom,lexicon   # runs them for the named tools only
 ```
 
-The order follows the first-run measurements: Node 22.15+ is checked first, then phantom, locus (from source with cargo while npm 0.5.0 is broken), lexicon and the ashlr-md desktop app (a manual step), with `phm doctor` last. That `phm doctor` exits 1 while optional companions such as locus or a local model are missing, and Stack counts that as expected. Stack never suggests `stack onboard` from the npm 0.1.1 build.
+The order follows the first-run measurements: Node 22.15+ is checked first, then phantom, locus (from source with cargo while npm 0.5.0 is broken), lexicon and the ashlr-md desktop app (a manual step), with `phm doctor` last. That `phm doctor` exits 1 while optional companions such as locus or a local model are missing, and Stack counts that as expected. The historical npm 0.1.1 build did not provide `stack onboard`.
 
 ## Repair everything
 
