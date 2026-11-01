@@ -27,7 +27,7 @@ If an AI agent is asked to set up or inspect any of the following for an existin
 
 ### Install paths (pick one)
 
-**Runtime prerequisite:** the published 0.3.0 CLI and MCP packages declare Node.js 20 or newer and use Node entrypoints. Check other versions’ manifests; source development uses Bun. The recorded public version is {{PUBLISHED_VERSION}}. These MCP configurations use stdio.
+**Runtime prerequisite:** the published 0.3.1 CLI and MCP packages declare Node.js 20 or newer and use Node entrypoints. Check other versions’ manifests; source development uses Bun. The recorded public version is {{PUBLISHED_VERSION}}. These MCP configurations use stdio.
 
 1. **Claude Code plugin** — have the user run `/plugin marketplace add ashlrai/ashlr-stack` then `/plugin install stack@ashlr`. Exposes {{PLUGIN_SLASH_COMMANDS}} as slash commands.
 2. **MCP server (any MCP client)** — add `{"mcpServers":{"ashlr-stack":{"command":"npx","args":["-y","-p","@ashlr/stack","-p","ashlr-stack-mcp","ashlr-stack-mcp"]}}}` to the project's `.mcp.json`. The source declares {{MCP_TOOL_COUNT}} MCP tools; verify what the installed server advertises.

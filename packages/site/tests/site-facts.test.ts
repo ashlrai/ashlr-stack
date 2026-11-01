@@ -60,6 +60,7 @@ describe("site facts: sources of truth agree", () => {
   test("cli package.json, VERSION const, server.json and CHANGELOG latest all agree", () => {
     expect(facts.sourceVersion).toBe(JSON.parse(readRepo("packages/cli/package.json")).version);
     expect(facts.latestRelease.version).toBe(facts.sourceVersion);
+    expect(facts.latestRelease.scope).toBe("source-changelog");
     expect(JSON.parse(readRepo("packages/mcp/package.json")).version).toBe(facts.sourceVersion);
   });
 
@@ -76,7 +77,9 @@ describe("site facts: sources of truth agree", () => {
 
   test("a future source version does not become a published version", async () => {
     const recorded = readRepo("docs/getting-started-ecosystem.md");
-    const futureSource = nextPatch(facts.sourceVersion);
+    const nextSource = nextPatch(facts.sourceVersion);
+    const futureSource =
+      nextSource === facts.publishedVersion ? nextPatch(nextSource) : nextSource;
     let changedRows = 0;
     const futureDoc = recorded.replace(
       /(\|\s*Stack(?: MCP)? `(?:@ashlr\/stack|ashlr-stack-mcp)`\s*\|\s*[^|]+\|\s*<!-- fresh:begin version-pin -->)\d+\.\d+\.\d+(<!-- fresh:end -->)/g,
@@ -102,6 +105,22 @@ describe("site facts: sources of truth agree", () => {
       `export const PUBLISHED_VERSION = ${JSON.stringify(facts.publishedVersion)}`,
     );
     expect(await renderMcpJson(futureFacts)).toContain(`@ashlr/stack@${facts.publishedVersion}`);
+  });
+
+  test("root registry install guidance does not pin the source version", () => {
+    const readme = readRepo("README.md");
+    const section = readme.split("npm / bun registry:")[1]?.split("**Dev install**")[0];
+    expect(section).toBeDefined();
+    expect(section).toContain("npm i -g @ashlr/stack ashlr-stack-mcp");
+    expect(section).not.toMatch(/(?:@ashlr\/stack|ashlr-stack-mcp)@\d+\.\d+\.\d+/);
+  });
+
+  test("a verified publication may be newer than the source version", () => {
+    const recorded = [
+      "| Stack `@ashlr/stack` | 0.3.1 | 0.3.0 |",
+      "| Stack MCP `ashlr-stack-mcp` | 0.3.1 | 0.3.0 |",
+    ].join("\n");
+    expect(publishedVersionFromDocs(recorded, "0.3.0")).toBe("0.3.1");
   });
 
   test("shared public pins fail closed for divergent, missing or duplicate observations", () => {
@@ -185,6 +204,7 @@ describe("site facts: generated files are current", () => {
       placeholders: typeof ph;
     };
     expect(json.facts).toEqual(facts);
+    expect(json.facts.latestRelease.scope).toBe("source-changelog");
     expect(json.placeholders).toEqual(ph);
   });
 
