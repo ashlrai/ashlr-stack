@@ -46,7 +46,7 @@ const howTo = howToSchema({
     },
     {
       name: "Forward your app command to Phantom",
-      text: "Use `stack exec -- bun dev` to forward startup to installed Phantom exec; verify app inputs separately.",
+      text: "For a project with an npm dev script, use `stack exec -- npm run dev`; other projects need their own command and runtime.",
       url: `${pageUrl}#6-run-your-app-with-secrets-injected`,
     },
   ],
@@ -253,13 +253,14 @@ stack init --noInteractive`}
 
   <h2 id="6-run-your-app-with-secrets-injected">6. Forward your app command to Phantom</h2>
   <p>
-    Instead of <code>bun dev</code>, run <code>stack exec -- bun dev</code>.
-    The wrapper forwards the command to installed Phantom. Configure the
-    app's required inputs and verify them separately:
+    For a project with an npm <code>dev</code> script, run
+    <code>stack exec -- npm run dev</code>. The wrapper forwards the command
+    to installed Phantom. For other projects, use their own command and install
+    its required runtime. Configure the app's inputs and verify them separately:
   </p>
 
   <Code
-    code={`stack exec -- bun dev`}
+    code={`stack exec -- npm run dev`}
     lang="bash"
     theme="github-dark-dimmed"
   />

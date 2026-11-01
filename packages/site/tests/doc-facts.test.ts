@@ -204,10 +204,15 @@ describe("doc facts: providers", () => {
   test("provider counts match packages/core/src/providers/index.ts", () => {
     expectCount("STACK.md", /\b(\d+) providers in \d+ categories\b/, n, "providers");
     expectCount("README.md", /\bregisters (\d+) providers\b/, n, "providers");
-    expectCount("packages/cli/README.md", /\bregisters (\d+) providers\b/, n, "providers");
     expectCount("packages/site/public/llms.txt", /\b(\d+) providers across \d+ categories\b/, n, "providers");
     expectCount("packages/site/public/llms-full.txt", /\bregisters (\d+) providers\b/, n, "providers");
     expectCount("docs/provider-auth-matrix.md", /\((\d+) providers\)/, n, "providers");
+  });
+
+  test("the packaged CLI README points to the installed provider catalog", () => {
+    const readme = read("packages/cli/README.md");
+    expect(readme).toContain("Use `stack providers` to inspect your installed catalog.");
+    expect(readme).not.toMatch(/\b(?:registers|contains|exposes|supports)\s+\d+\s+providers\b/i);
   });
 
   test("category counts match packages/core/src/catalog.ts PROVIDERS_REF", () => {

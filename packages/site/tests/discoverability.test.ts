@@ -78,6 +78,21 @@ test("rendered release guidance uses the recorded publication and verified runti
   }
 });
 
+test("quickstart forwards an npm project command without implying Bun is required", async () => {
+  const page = pages.find((item) => item.path === "/docs/quickstart");
+  expect(page).toBeDefined();
+  const text = page!.html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ");
+  expect(text).toContain("For a project with an npm dev script");
+  expect(text).toContain("stack exec -- npm run dev");
+  expect(text).not.toContain("stack exec -- bun dev");
+  expect(text).toContain("For other projects, use their own command and install its required runtime");
+  const scripts = await elements(page!.html, 'script[type="application/ld+json"]');
+  const howTo = scripts.map((item) => JSON.parse(item.text)).find((item) => item["@type"] === "HowTo");
+  const step = howTo?.step?.find((item: { name: string }) => item.name === "Forward your app command to Phantom");
+  expect(step?.text).toContain("stack exec -- npm run dev");
+  expect(step?.text).toContain("other projects need their own command and runtime");
+});
+
 test("every rendered page has one canonical, one h1, description and matching OpenGraph", async () => {
   const canonicals = new Set<string>();
   for (const page of pages) {
