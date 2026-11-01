@@ -152,6 +152,26 @@ require (
   });
 });
 
+test.each([
+  ["dependencies", "openai"],
+  ["dependencies", ["openai"]],
+  ["devDependencies", "openai"],
+  ["devDependencies", ["openai"]],
+] as const)("invalid %s section %j preserves a valid sibling", async (section, invalid) => {
+  const sibling = section === "dependencies" ? "devDependencies" : "dependencies";
+  const hits = await scanSource(
+    makeProject({
+      "package.json": JSON.stringify({
+        [section]: invalid,
+        [sibling]: { openai: "^4.0.0" },
+      }),
+    }),
+  );
+  expect(hits).toEqual([
+    { provider: "openai", confidence: "high", signals: ["package.json:openai"] },
+  ]);
+});
+
 test.each(["{broken", "null", "{}"])(
   "malformed or empty package %s does not hide other evidence",
   async (raw) => {
