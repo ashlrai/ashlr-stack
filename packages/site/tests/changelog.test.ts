@@ -32,6 +32,22 @@ test("site changelog renders its release headings in descending version order", 
     expect(headings[i].depth).toBeLessThanOrEqual(headings[i - 1].depth + 1);
   }
 }, 30_000);
+
+test("rendered 0.2.1 apply entry explains the removal of placeholder writes", async () => {
+  const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
+  const release = published.split("## 0.2.1 (2026-10-16)\n")[1]?.split("\n## ")[0];
+  expect(release).toBeDefined();
+
+  const html = await marked.parse(release ?? "");
+  const entries = [...html.matchAll(/<li>([\s\S]*?)<\/li>/g)]
+    .map((match) => match[1])
+    .filter((entry) => entry.includes("<code>stack apply</code> stops attempting to write placeholder secrets"));
+  expect(entries).toHaveLength(1);
+  expect(entries[0]).toContain("The wiring step never writes to the vault or fills in missing values.");
+  expect(entries[0]).toContain("Previously, wiring ran <code>phantom add &lt;KEY&gt; TODO_STACK_APPLY --rotate</code>");
+  expect(entries[0]).toContain("every call failed");
+});
+
 const placeholderRemovalHeading = "- **`stack apply` stops attempting to write placeholder secrets.**";
 
 // Pin the historical entry so matching edits to both copies cannot silently reverse
