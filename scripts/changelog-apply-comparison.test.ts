@@ -7,18 +7,25 @@ const comparison = readFileSync(join(root, "docs/changelog-apply-comparison.md")
 const copies = ["CHANGELOG.md", "packages/site/src/data/CHANGELOG.md"];
 const title = "- **`stack apply` stops attempting to write placeholder secrets.**";
 
-test("comparison cites the same complete 0.2.1 apply fix in both changelogs", () => {
-  const entries = copies.map((path) => {
-    expect(comparison).toContain(`](../${path}#021-2026-10-16)`);
-    const changelog = readFileSync(join(root, path), "utf8");
+function matchingApplyEntries(changelogs: string[]): string {
+  const entries = changelogs.map((changelog, index) => {
     const release = changelog.split("## 0.2.1 (2026-10-16)\n")[1]?.split("\n## ")[0];
     const fixes = release?.split("### Bug fixes\n")[1]?.split("\n### ")[0];
     const entries = fixes?.split("\n").filter((line) => line.startsWith(title));
-    expect(entries).toHaveLength(1);
-    expect(fixes?.trimStart().startsWith(title)).toBe(true);
+    expect(entries, copies[index]).toHaveLength(1);
+    expect(fixes?.trimStart().startsWith(title), copies[index]).toBe(true);
     return entries?.[0] ?? "";
   });
   expect(entries[0]).toBe(entries[1]);
+  return entries[0];
+}
+
+test("comparison cites the same complete 0.2.1 apply fix in both changelogs", () => {
+  const changelogs = copies.map((path) => {
+    expect(comparison).toContain(`](../${path}#021-2026-10-16)`);
+    return readFileSync(join(root, path), "utf8");
+  });
+  const entry = matchingApplyEntries(changelogs);
   for (const claim of [
     "The wiring step never writes to the vault or fills in missing values.",
     "Provider setup may already store real values",
@@ -28,7 +35,7 @@ test("comparison cites the same complete 0.2.1 apply fix in both changelogs", ()
     "every call failed and the printed `envelopes` count was always 0",
     "`WireResult.envelopes` is replaced by `present` and `missing`",
   ]) {
-    expect(entries[0]).toContain(claim);
+    expect(entry).toContain(claim);
   }
   for (const topic of [
     "Wiring and setup",
@@ -39,5 +46,18 @@ test("comparison cites the same complete 0.2.1 apply fix in both changelogs", ()
     "Result fields",
   ]) {
     expect(comparison).toContain(`| ${topic} |`);
+  }
+});
+
+test("the entry comparison detects a behavior mismatch in either changelog", () => {
+  const changelogs = copies.map((path) => readFileSync(join(root, path), "utf8"));
+  const behavior = "The wiring step never writes to the vault or fills in missing values.";
+  const contradiction = "The wiring step writes placeholder values to the vault.";
+
+  for (const index of [0, 1]) {
+    const changed = [...changelogs];
+    expect(changed[index]).toContain(behavior);
+    changed[index] = changed[index].replace(behavior, contradiction);
+    expect(() => matchingApplyEntries(changed)).toThrow();
   }
 });
