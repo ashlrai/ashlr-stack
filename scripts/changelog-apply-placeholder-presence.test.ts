@@ -10,10 +10,15 @@ function hasPlaceholderFix(changelog: string): boolean {
   if (!release) return false;
   const items = release.match(/^\s*[-*+]\s+[^\n]*(?:\n(?!\s*[-*+]\s|\s*#{1,6}\s)[^\n]*)*/gm) ?? [];
   return items.some((item) => {
-    const text = item.replace(/[`*_]/g, "").replace(/\s+/g, " ").toLowerCase();
+    const text = item
+      .replace(/[`*]|(?<!\w)_(?=\w)|(?<=\w)_(?!\w)/g, "")
+      .replace(/\s+/g, " ")
+      .toLowerCase();
     return (
       /stack apply stops attempting to write placeholder secrets\b/.test(text) &&
-      /wiring step never writes to the vault or fills in missing values\b/.test(text)
+      /wiring step never writes to the vault or fills in missing values\b/.test(text) &&
+      /previously, wiring ran phantom add <key> todo_stack_apply --rotate\b/.test(text) &&
+      /every call failed\b/.test(text)
     );
   });
 }
@@ -47,6 +52,20 @@ test("both changelogs state that stack apply stopped writing placeholders", () =
     changed[index] = changed[index].replace(claim, "The wiring step writes placeholders to the vault.");
     expect(bothHavePlaceholderFix(changed)).toBe(false);
   }
+
+  // A different value or loss of the historical qualifier in either copy is drift.
+  for (const index of [0, 1] as const) {
+    for (const [before, after] of [
+      ["<KEY> TODO_STACK_APPLY --rotate", "<KEY> OTHER_VALUE --rotate"],
+      ["Previously, wiring ran", "Wiring runs"],
+      ["every call failed", "every call succeeded"],
+    ]) {
+      const changed: [string, string] = [...changelogs];
+      expect(changed[index]).toContain(before);
+      changed[index] = changed[index].replace(before, after);
+      expect(bothHavePlaceholderFix(changed)).toBe(false);
+    }
+  }
 });
 
 test("placeholder fix detection accepts formatting differences within the entry", () => {
@@ -54,21 +73,26 @@ test("placeholder fix detection accepts formatting differences within the entry"
 
 ### Bug fixes
 * **stack apply** stops attempting to write
-  placeholder secrets. The *wiring step never writes to the vault*
-  or fills in missing values.
+  placeholder secrets. The _wiring step never writes to the vault_
+  or fills in missing values. Previously, wiring ran
+  \`phantom add <KEY> TODO_STACK_APPLY --rotate\`; every call failed.
 `;
   expect(hasPlaceholderFix(differentlyFormatted)).toBe(true);
 });
 
-test("placeholder fix detection requires both claims in the 0.2.1 entry", () => {
+test("placeholder fix detection requires the removal and history in the same 0.2.1 entry", () => {
   const title = "- `stack apply` stops attempting to write placeholder secrets.";
   const behavior = "The wiring step never writes to the vault or fills in missing values.";
+  const history = "Previously, wiring ran `phantom add <KEY> TODO_STACK_APPLY --rotate`; every call failed.";
   for (const changelog of [
     `## 0.2.1\n${title}\n`,
     `## 0.2.1\n- ${behavior}\n`,
     `## 0.2.1\n${title}\n- ${behavior}\n`,
     `## 0.2.1\n${title}\n## 0.2.2\n- ${behavior}\n`,
     `## 0.2.2\n${title} ${behavior}\n`,
+    `## 0.2.1\n${title} ${behavior}\n- ${history}\n`,
+    `## 0.2.1\n${title} ${behavior}\n## 0.2.2\n- ${history}\n`,
+    `## 0.2.2\n${title} ${behavior} ${history}\n`,
   ]) {
     expect(hasPlaceholderFix(changelog)).toBe(false);
   }
