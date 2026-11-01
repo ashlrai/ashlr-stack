@@ -85,4 +85,6 @@ For the same recipe with an unreadable vault, it shows:
 For this example, use `phantom add OPENAI_API_KEY` in a trusted terminal
 when the name is missing; first resolve the skipped check if the vault was
 unreadable. See [observing an apply](apply-observation.md) for the rest of the
-output and [the placeholder FAQ](apply-placeholder-faq.md) for more detail.
+output, [the placeholder FAQ](apply-placeholder-faq.md) for more detail, and
+the [migration questions](apply-placeholder-migration-questions.md) for reader
+questions about the former behavior.
