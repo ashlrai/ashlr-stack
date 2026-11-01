@@ -335,6 +335,51 @@ describe("ai/phantom-wire", () => {
     },
   );
 
+  it.each(["stripe", "clerk", "supabase", "github"])(
+    "retains a visible verification reminder before trusting the %s body when uncommented",
+    async (provider) => {
+      const recipe: Recipe = { ...STRIPE_RECIPE, providers: [{ name: provider }] };
+      const result = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
+      const stub = readFileSync(result.webhooks[0], "utf-8");
+      const example = stub.match(/^\/\/ export async function [\s\S]*?^\/\/ }$/m)?.[0];
+      if (!example) throw new Error(`Missing ${provider} webhook example`);
+
+      // Uncommenting the example for deployment must not erase the reminder:
+      // every line between capturing the body and returning "ok" stays a
+      // comment, so the warning remains visible and nothing executable
+      // trusts `body` before the TODO is done.
+      const runnable = example.replace(/^\/\/ ?/gm, "");
+      const bodyRead = runnable.indexOf("const body = await req.text();");
+      const success = runnable.indexOf('return new Response("ok", { status: 200 });');
+      expect(bodyRead).toBeGreaterThanOrEqual(0);
+      expect(success).toBeGreaterThan(bodyRead);
+
+      const reminderLines = runnable
+        .slice(bodyRead, success)
+        .split("\n")
+        .slice(1)
+        .filter((line) => line.trim().length > 0);
+      expect(reminderLines.length).toBeGreaterThan(0);
+      for (const line of reminderLines) {
+        expect(line.trimStart().startsWith("//")).toBe(true);
+      }
+      const reminder = reminderLines.join("\n");
+      expect(reminder).toContain("TODO(security): signature verification is NOT implemented here.");
+      expect(reminder).toContain("unauthenticated, attacker-controlled input");
+      expect(reminder).toContain(`forge a ${provider} webhook`);
+      expect(reminder).toContain("constant time");
+      expect(reminder).toContain("parse, trust, or act on the body");
+
+      // In the runnable handler the only statement mentioning `body` is its
+      // capture: untrusted input is read but never consumed ahead of the TODO.
+      const executable = runnable
+        .split("\n")
+        .filter((line) => !line.trimStart().startsWith("//"))
+        .join("\n");
+      expect([...executable.matchAll(/\bbody\b/g)]).toHaveLength(1);
+    },
+  );
+
   it.each([
     ["stripe", "stripe.webhooks.constructEvent"],
     ["clerk", "new Webhook(secret).verify(body, headers)"],
