@@ -13,8 +13,10 @@ The manifests name three packages:
 - [`ashlr-stack-mcp`](../packages/mcp/package.json), unscoped
 - [`@ashlr/stack`](../packages/cli/package.json)
 
-Source versions do not establish publication. Retain the existing 0.1.1 install
-guidance until a new version has publication and consumer verification.
+Source versions do not establish publication. On November 1, 2026, npm reported
+0.3.0 for all three packages, and the v0.3.0 GitHub release had four native
+binaries and checksum sidecars. Check registry, consumer and artifact evidence
+again before updating guidance for any later version.
 
 ## Current script behavior
 

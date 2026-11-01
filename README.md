@@ -10,7 +10,7 @@
 
 **Configure supported services from your terminal or your AI agent.** Stack uses provider-specific OAuth or supplied credentials, provisions where the adapter supports it, and records selected credentials in [Phantom Secrets](https://phm.dev/secrets), Stack configuration and provider MCP entries. Vercel requires an existing personal access token; Stack does not create that token. Export an empty `.env.example` separately with `stack env export --example`.
 
-**Status:** pre-alpha, active development. This 0.3 release candidate adds fleet diagnostics and stricter input validation on top of the Node-compatible CLI and headless workflows; this checkout is version <!-- fresh:begin version-pin -->0.3.0<!-- fresh:end -->. See [CHANGELOG.md](./CHANGELOG.md) for compatibility notes and changes since 0.2.2. Source versions do not establish npm publication or provider readiness. Check `npm view @ashlr/stack version`, `npm view ashlr-stack-mcp version`, and your installed `stack --version` before relying on release-specific commands.
+**Status:** pre-alpha, active development. This source line adds fleet diagnostics and stricter input validation on top of the Node-compatible CLI and headless workflows; this checkout is version <!-- fresh:begin version-pin -->0.3.0<!-- fresh:end -->. See [CHANGELOG.md](./CHANGELOG.md) for compatibility notes and changes since 0.2.2. Source versions do not establish npm publication or provider readiness. Check `npm view @ashlr/stack version`, `npm view ashlr-stack-mcp version`, and your installed `stack --version` before relying on release-specific commands.
 
 <!-- Demo GIF: record with vhs, see docs/ -->
 
@@ -77,7 +77,7 @@ irm https://stack.ashlr.ai/install.ps1 | iex
 
 npm / bun registry:
 
-> **Release candidate:** the generated 0.3.0 install command below is for use only after all three packages are published. First verify `npm view @ashlr/stack-core@0.3.0 version`, `npm view @ashlr/stack@0.3.0 version` and `npm view ashlr-stack-mcp@0.3.0 version` each return `0.3.0`. If any version is unavailable, use the **Dev install** instructions below to build from source instead; the version pin is not evidence of publication.
+> The command below is generated from this checkout’s source version; a future source version may not be published yet. On November 1, 2026, npm reported 0.3.0 for all three Stack packages. Check `npm view @ashlr/stack-core version`, `npm view @ashlr/stack version` and `npm view ashlr-stack-mcp version` before relying on a newer pin. The 0.3.0 CLI and MCP packages declare Node.js 20 or newer; source development uses Bun.
 
 <!-- fresh:begin install-snippet -->
 ```bash

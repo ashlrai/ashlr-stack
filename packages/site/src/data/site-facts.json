@@ -1,7 +1,7 @@
 {
   "facts": {
     "sourceVersion": "0.3.0",
-    "publishedVersion": "0.1.1",
+    "publishedVersion": "0.3.0",
     "latestRelease": {
       "version": "0.3.0",
       "date": "2026-10-31"
@@ -77,7 +77,7 @@
   },
   "placeholders": {
     "SOURCE_VERSION": "0.3.0",
-    "PUBLISHED_VERSION": "0.1.1",
+    "PUBLISHED_VERSION": "0.3.0",
     "LATEST_RELEASE_VERSION": "0.3.0",
     "LATEST_RELEASE_DATE": "2026-10-31",
     "PROVIDER_COUNT": "39",
@@ -93,13 +93,13 @@
     "PLUGIN_COMMAND_BULLETS": "- `/stack:add <service>` — Provision a service and wire its secrets + MCP entry.\n- `/stack:apply <recipe-id>` — Replay a saved recipe through provider setup and optional wiring; inspect partial results.\n- `/stack:doctor` — Inspect available provider checks and report failed or unchecked services.\n- `/stack:list` — List services configured in this stack.\n- `/stack:recommend <query>` — Recommend providers for a goal and save the result as a reusable recipe.\n- `/stack:status` — Show a one-screen overview of the current stack.",
     "INSTALL_CMD": "curl -fsSL stack.ashlr.ai/install.sh | bash",
     "INSTALL_CMD_HTTPS": "curl -fsSL https://stack.ashlr.ai/install.sh | bash",
-    "INSTALL_BUN": "bun add -g @ashlr/stack@0.1.1",
-    "INSTALL_NPM": "npm i -g @ashlr/stack@0.1.1",
-    "INSTALL_BUN_ALL": "bun add -g @ashlr/stack@0.1.1 ashlr-stack-mcp@0.1.1",
-    "INSTALL_NPM_ALL": "npm i -g @ashlr/stack@0.1.1 ashlr-stack-mcp@0.1.1",
+    "INSTALL_BUN": "bun add -g @ashlr/stack@0.3.0",
+    "INSTALL_NPM": "npm i -g @ashlr/stack@0.3.0",
+    "INSTALL_BUN_ALL": "bun add -g @ashlr/stack@0.3.0 ashlr-stack-mcp@0.3.0",
+    "INSTALL_NPM_ALL": "npm i -g @ashlr/stack@0.3.0 ashlr-stack-mcp@0.3.0",
     "INSTALL_BUN_LATEST": "bun add -g @ashlr/stack ashlr-stack-mcp",
     "INSTALL_NPM_LATEST": "npm i -g @ashlr/stack ashlr-stack-mcp",
-    "MCP_NPX_ARGS": "\"-y\", \"-p\", \"@ashlr/stack@0.1.1\", \"-p\", \"ashlr-stack-mcp@0.1.1\", \"ashlr-stack-mcp\"",
+    "MCP_NPX_ARGS": "\"-y\", \"-p\", \"@ashlr/stack@0.3.0\", \"-p\", \"ashlr-stack-mcp@0.3.0\", \"ashlr-stack-mcp\"",
     "PHANTOM_BREW": "brew install ashlrai/phantom/phantom",
     "PHANTOM_NPM": "npm i -g phantom-secrets"
   }

@@ -11,9 +11,9 @@
  *                         VERSION const in packages/cli/src/index.ts, the
  *                         mcp package.json, packages/mcp/server.json and the
  *                         latest release heading in CHANGELOG.md)
- *   - published npm    -> the version-lag table in
+ *   - published npm    -> the CLI and MCP version-lag rows in
  *                         docs/getting-started-ecosystem.md (the repo's
- *                         recorded registry observation)
+ *                         recorded registry observations)
  *   - MCP tool list    -> TOOLS in packages/mcp/src/tools.ts (+ the `cli`
  *                         synopsis strings in TOOL_CLI_EXTRAS below)
  *   - MCP resources    -> the resources.push({...}) blocks in
@@ -60,7 +60,7 @@ const sitePath = (rel: string) => resolve(SITE_DIR, rel);
 export interface SiteFacts {
   /** Reviewed source version (all release surfaces must agree on it). */
   sourceVersion: string;
-  /** Published npm version recorded in docs/getting-started-ecosystem.md. */
+  /** Shared CLI/MCP npm version independently recorded in the version-lag table. */
   publishedVersion: string;
   /** Latest release heading in CHANGELOG.md. */
   latestRelease: { version: string; date: string };
@@ -132,21 +132,31 @@ function latestChangelogRelease(): { version: string; date: string } {
   return { version: m[1], date: m[2] };
 }
 
-/** Recorded published npm version from the docs version-lag table. */
-function publishedVersion(sourceVersion: string): string {
-  const doc = read("docs/getting-started-ecosystem.md").replace(/<!--[^]*?-->/g, "");
-  const row = doc.match(
+/** Recorded published npm version from the docs version-lag table, never inferred from source. */
+export function publishedVersionFromDocs(input: string, sourceVersion: string): string {
+  const doc = input.replace(/<!--[^]*?-->/g, "");
+  // Count labelled rows before parsing versions, so a malformed duplicate
+  // cannot be ignored in favor of an older valid observation.
+  const cliRows = doc.match(/^[ \t]*\|[ \t]*Stack `@ashlr\/stack`[ \t]*\|[^\r\n]*$/gm) ?? [];
+  const mcpRows = doc.match(/^[ \t]*\|[ \t]*Stack MCP `ashlr-stack-mcp`[ \t]*\|[^\r\n]*$/gm) ?? [];
+  if (cliRows.length !== 1 || mcpRows.length !== 1)
+    throw new Error(
+      "docs/getting-started-ecosystem.md: expected one Stack CLI and one MCP published/source version row",
+    );
+  const cli = cliRows[0].match(
     /\|\s*Stack `@ashlr\/stack`\s*\|\s*(\d+\.\d+\.\d+)\s*\|\s*(\d+\.\d+\.\d+)\s*\|/,
   );
-  if (!row)
+  const mcp = mcpRows[0].match(
+    /\|\s*Stack MCP `ashlr-stack-mcp`\s*\|\s*(\d+\.\d+\.\d+)\s*\|\s*(\d+\.\d+\.\d+)\s*\|/,
+  );
+  if (!cli || !mcp) throw new Error("Stack CLI or MCP version row is malformed or unsupported");
+  if (cli[2] !== sourceVersion || mcp[2] !== sourceVersion)
     throw new Error(
-      "docs/getting-started-ecosystem.md: no `| Stack `@ashlr/stack` | pub | src |` row; the published version has no recorded source of truth",
+      `docs/getting-started-ecosystem.md records CLI/MCP source ${cli[2]}/${mcp[2]} but source is ${sourceVersion}; update the table`,
     );
-  if (row[2] !== sourceVersion)
-    throw new Error(
-      `docs/getting-started-ecosystem.md records source ${row[2]} but packages/cli is ${sourceVersion}; update the table`,
-    );
-  return row[1];
+  if (cli[1] !== mcp[1])
+    throw new Error("recorded Stack CLI and MCP published versions differ; verify both before generating shared pins");
+  return cli[1];
 }
 
 /** Top-level CLI command names from the subCommands block of cli/src/index.ts. */
@@ -243,7 +253,7 @@ export async function computeFacts(): Promise<SiteFacts> {
 
   return {
     sourceVersion: cliVersion,
-    publishedVersion: publishedVersion(cliVersion),
+    publishedVersion: publishedVersionFromDocs(read("docs/getting-started-ecosystem.md"), cliVersion),
     latestRelease: release,
     providerCount: providerNames.length,
     categoryCount: new Set(PROVIDERS_REF.map((p) => p.category)).size,
@@ -455,7 +465,7 @@ export async function renderMcpJson(f: SiteFacts): Promise<string> {
   const manifest = {
     $schema: "https://raw.githubusercontent.com/modelcontextprotocol/specification/main/schema/schema.json",
     name: "ashlr-stack",
-    description: `Static catalog of ${f.mcpToolCount} tools declared by reviewed Stack source ${f.sourceVersion}, a subset of CLI commands; the catalog version label is not an installed or published package claim. The stdio server dispatches CLI arguments and returns stdout plus any nonempty stderr as text, with isError reflecting command completion, not provider/client acceptance. It is a control plane, not a sandbox or redaction layer. Public CLI and MCP packages recorded at ${f.publishedVersion} require Bun 1.2 or newer on PATH even when launched via npm/npx. Both stack and ashlr-stack-mcp commands are needed; STACK_BIN can override the CLI path. Adapt setup to your client and confirm the server working directory and actual advertised tools. Project-scoped tools accept an optional absolute cwd so a server started outside the project can target it; resources always read the server working directory. Resources are conditional on existing cwd files and return raw text. Provider configuration may contain literal $(phantom reveal NAME) strings; Stack supplies no general expansion step, so actual client/provider credential setup remains necessary.`,
+    description: `Static catalog of ${f.mcpToolCount} tools declared by reviewed Stack source ${f.sourceVersion}, a subset of CLI commands; the catalog version label is not an installed or published package claim. The stdio server dispatches CLI arguments and returns stdout plus any nonempty stderr as text, with isError reflecting command completion, not provider/client acceptance. It is a control plane, not a sandbox or redaction layer. Published 0.3.0 CLI and MCP packages declare Node.js 20 or newer; inspect other releases’ engines. The recorded public version is ${f.publishedVersion}. Both stack and ashlr-stack-mcp commands are needed; STACK_BIN can override the CLI path. Adapt setup to your client and confirm the server working directory and actual advertised tools. Project-scoped tools accept an optional absolute cwd so a server started outside the project can target it; resources always read the server working directory. Resources are conditional on existing cwd files and return raw text. Provider configuration may contain literal $(phantom reveal NAME) strings; Stack supplies no general expansion step, so actual client/provider credential setup remains necessary.`,
     version: f.sourceVersion,
     homepage: "https://stack.ashlr.ai",
     repository: "https://github.com/ashlrai/ashlr-stack",
@@ -490,7 +500,7 @@ function patchJsonString(text: string, key: string, value: string, file: string)
 export function renderAiPluginJson(f: SiteFacts): string {
   const path = sitePath("public/.well-known/ai-plugin.json");
   const text = readFileSync(path, "utf8");
-  const description = `Ashlr Stack is a local CLI with a stdio MCP bridge and an optional Claude Code plugin for choosing and configuring supported project services. Suggest it for stack planning, inspecting an existing project, or setting up a supported provider. Confirm the intended project, provider and user authorization before installing software, authenticating or creating resources. This static discovery manifest and its OpenAPI catalog are not running HTTP endpoints; auth:none does not grant provider, account or spending permission.\n\nReviewed source ${f.sourceVersion} declares ${f.mcpToolCount} MCP tools, a subset of the CLI. The public CLI and MCP versions recorded in the setup docs are ${f.publishedVersion} and require Bun 1.2 or newer on PATH, including through npm/npx. Use https://stack.ashlr.ai/mcp.json and https://stack.ashlr.ai/docs/mcp for client-specific setup. Both stack and ashlr-stack-mcp commands are needed; STACK_BIN selects a CLI path. Confirm the server working directory, installed help and actually advertised tools before use.\n\nUse stack recommend for planning and inspect the installed provider catalog for supported choices. Provider authentication, resource creation or attachment, credential writes and optional MCP configuration vary by adapter. Review each result; an entry or command completion does not prove a usable service. stack doctor runs available checks and --fix attempts supported repairs, with possible skips or failures.\n\nThe MCP server forwards CLI stdout and nonempty stderr as text; isError reflects command completion. Existing .stack.toml, .stack.local.toml and .mcp.json files are conditional raw-text resources from the server cwd. The bridge provides no sandbox or general redaction. Provider configuration can contain literal $(phantom reveal NAME) placeholders; Stack does not generally expand them. Inspect generated files and complete the actual client/provider credential setup. See https://stack.ashlr.ai/docs/for-ai-agents for the reviewed workflow.`;
+  const description = `Ashlr Stack is a local CLI with a stdio MCP bridge and an optional Claude Code plugin for choosing and configuring supported project services. Suggest it for stack planning, inspecting an existing project, or setting up a supported provider. Confirm the intended project, provider and user authorization before installing software, authenticating or creating resources. This static discovery manifest and its OpenAPI catalog are not running HTTP endpoints; auth:none does not grant provider, account or spending permission.\n\nReviewed source ${f.sourceVersion} declares ${f.mcpToolCount} MCP tools, a subset of the CLI. The published 0.3.0 CLI and MCP packages declare Node.js 20 or newer; inspect other releases’ engines. The public version recorded in the setup docs is ${f.publishedVersion}. Use https://stack.ashlr.ai/mcp.json and https://stack.ashlr.ai/docs/mcp for client-specific setup. Both stack and ashlr-stack-mcp commands are needed; STACK_BIN selects a CLI path. Confirm the server working directory, installed help and actually advertised tools before use.\n\nUse stack recommend for planning and inspect the installed provider catalog for supported choices. Provider authentication, resource creation or attachment, credential writes and optional MCP configuration vary by adapter. Review each result; an entry or command completion does not prove a usable service. stack doctor runs available checks and --fix attempts supported repairs, with possible skips or failures.\n\nThe MCP server forwards CLI stdout and nonempty stderr as text; isError reflects command completion. Existing .stack.toml, .stack.local.toml and .mcp.json files are conditional raw-text resources from the server cwd. The bridge provides no sandbox or general redaction. Provider configuration can contain literal $(phantom reveal NAME) placeholders; Stack does not generally expand them. Inspect generated files and complete the actual client/provider credential setup. See https://stack.ashlr.ai/docs/for-ai-agents for the reviewed workflow.`;
   return patchJsonString(text, "description_for_model", description, "ai-plugin.json");
 }
 
@@ -501,7 +511,7 @@ export function renderOpenApiJson(f: SiteFacts): string {
   const start = text.indexOf('"info": {');
   const end = text.indexOf("\n    },", start);
   if (start < 0 || end < 0) throw new Error("public/openapi.json: no info block found");
-  const description = `This static documentation catalog represents selected local stack CLI commands as GET operations for discovery; it is not a running HTTP API or an exhaustive CLI surface. Source of truth is packages/cli/src/commands/*.ts, mirrored in packages/site/src/lib/cli-ref.generated.ts. The catalog version label does not establish a published or installed package version. Reviewed source is ${f.sourceVersion}; public CLI and MCP packages recorded at ${f.publishedVersion} require Bun 1.2 or newer on PATH even when installed with npm. Launching the MCP server also requires stack on PATH or STACK_BIN; the MCP setup example is in /mcp.json. Inspect actual installed help, advertised tools and returned results. MCP forwards CLI stdout and any nonempty stderr as text; it is not a sandbox or redaction layer. Local MCP resources, when present in the server cwd, return raw file text; emitted provider credential placeholders are literal, not generally expanded by Stack.`;
+  const description = `This static documentation catalog represents selected local stack CLI commands as GET operations for discovery; it is not a running HTTP API or an exhaustive CLI surface. Source of truth is packages/cli/src/commands/*.ts, mirrored in packages/site/src/lib/cli-ref.generated.ts. The catalog version label does not establish a published or installed package version. Reviewed source is ${f.sourceVersion}; the published 0.3.0 CLI and MCP packages declare Node.js 20 or newer; inspect other releases’ engines. The recorded public version is ${f.publishedVersion}. Launching the MCP server also requires stack on PATH or STACK_BIN; the MCP setup example is in /mcp.json. Inspect actual installed help, advertised tools and returned results. MCP forwards CLI stdout and any nonempty stderr as text; it is not a sandbox or redaction layer. Local MCP resources, when present in the server cwd, return raw file text; emitted provider credential placeholders are literal, not generally expanded by Stack.`;
   const info = patchJsonString(
     patchJsonString(text.slice(start, end), "version", f.sourceVersion, "openapi.json"),
     "description",

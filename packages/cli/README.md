@@ -1,12 +1,12 @@
 # @ashlr/stack
 
-> The `stack` CLI — configure supported services with Phantom-backed credentials and MCP wiring. This source checkout registers 39 providers; use `stack providers` for your installed catalog.
+> The `stack` CLI — configure supported services with Phantom-backed credentials and MCP wiring. Use `stack providers` to inspect your installed catalog.
 
 Part of [Ashlr Stack](https://stack.ashlr.ai). See the monorepo at [ashlrai/ashlr-stack](https://github.com/ashlrai/ashlr-stack).
 
 ## What it is
 
-`stack` collapses the "spin up ten services" phase of a project into a single command. Instead of tab-hopping between Supabase, Vercel, Sentry, Neon, etc. to create projects and paste secrets into `.env`, you run:
+`stack` offers template-assisted setup for selected supported services. For example:
 
 ```bash
 stack init --template nextjs-supabase-posthog
@@ -31,17 +31,17 @@ irm https://stack.ashlr.ai/install.ps1 | iex
 Or install manually from the registry:
 
 ```bash
-bun add -g @ashlr/stack ashlr-stack-mcp    # preferred
-# or
 npm i -g @ashlr/stack ashlr-stack-mcp
+# or use Bun as the package manager
+bun add -g @ashlr/stack ashlr-stack-mcp
 ```
 
 Prerequisites:
 
-- [Bun](https://bun.sh) >= 1.2 for the published 0.1.1 CLI/MCP packages, including when launched with `npx`; npm does not supply Bun
+- Node.js >= 20 for this npm package, including with `npx`; check your installed package manifest. Source development uses [Bun](https://bun.sh).
 - [Phantom Secrets](https://phm.dev/secrets) — installed and initialized for the intended project before writing setup flows
 
-This README describes source version 0.2.1. Registry metadata checked on October 14, 2026 reported CLI/MCP version 0.1.1. Verify your installed `stack --version` and command `--help`; source qualification is separate from publication and provider acceptance.
+Verify your installed `stack --version` and command `--help`; available commands depend on the installed version. Package installation does not establish provider acceptance.
 
 ## Quickstart
 
@@ -72,7 +72,7 @@ stack exec -- bun dev
 
 ## Commands
 
-A cheat sheet for the current source interface:
+A guide to common commands; check your installed version's help for availability:
 
 | Command | What it does |
 | --- | --- |

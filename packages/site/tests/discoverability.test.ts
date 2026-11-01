@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join, resolve, sep } from "node:path";
 import cliPackage from "../../cli/package.json";
 import { canonicalUrl } from "../src/lib/og";
+import { PUBLISHED_VERSION } from "../src/lib/site-facts.generated";
 import { generateAgentIndex } from "../scripts/agent-index.mjs";
 import { USE_CASES } from "../src/lib/use-cases";
 
@@ -63,6 +64,35 @@ test("landing page retains reveal targets and the shared scroll island", async (
   expect(html).toContain("SmoothScroll");
 });
 
+test("rendered release guidance uses the recorded publication and verified runtime", () => {
+  const text = (path: string) => read(path).replace(/<[^>]*>/g, " ").replace(/\s+/g, " ");
+  const home = text("index.html");
+  expect(home).toContain(`v${PUBLISHED_VERSION} LIVE ON NPM`);
+  expect(home).toContain(`control plane · v${PUBLISHED_VERSION}`);
+  for (const path of ["docs/quickstart/index.html", "docs/mcp/index.html"]) {
+    const page = text(path);
+    expect(page).toMatch(/published 0\.3\.0 CLI and MCP packages declare/i);
+    expect(page).toContain("Node.js 20");
+    expect(page).not.toMatch(/\b(?:published|public)\b.{0,160}\b(?:requires?|needs?)\b.{0,30}\bBun\b/i);
+    expect(page).not.toMatch(/\bBun\s+1\.2\+?.{0,80}\brequired\b.{0,60}\b(?:public|published)\b/i);
+  }
+});
+
+test("quickstart forwards an npm project command without implying Bun is required", async () => {
+  const page = pages.find((item) => item.path === "/docs/quickstart");
+  expect(page).toBeDefined();
+  const text = page!.html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ");
+  expect(text).toContain("For a project with an npm dev script");
+  expect(text).toContain("stack exec -- npm run dev");
+  expect(text).not.toContain("stack exec -- bun dev");
+  expect(text).toContain("For other projects, use their own command and install its required runtime");
+  const scripts = await elements(page!.html, 'script[type="application/ld+json"]');
+  const howTo = scripts.map((item) => JSON.parse(item.text)).find((item) => item["@type"] === "HowTo");
+  const step = howTo?.step?.find((item: { name: string }) => item.name === "Forward your app command to Phantom");
+  expect(step?.text).toContain("stack exec -- npm run dev");
+  expect(step?.text).toContain("other projects need their own command and runtime");
+});
+
 test("every rendered page has one canonical, one h1, description and matching OpenGraph", async () => {
   const canonicals = new Set<string>();
   for (const page of pages) {
@@ -96,7 +126,7 @@ test("headings start at h1 and never skip a level", async () => {
   }
 });
 
-test("JSON-LD parses and software metadata follows source with honest free license", async () => {
+test("JSON-LD parses and software metadata follows recorded publication with honest free license", async () => {
   let softwareCount = 0;
   for (const page of pages) {
     for (const script of await elements(page.html, 'script[type="application/ld+json"]')) {
@@ -106,7 +136,7 @@ test("JSON-LD parses and software metadata follows source with honest free licen
       if (schema["@type"] !== "SoftwareApplication") continue;
       softwareCount++;
       expect(schema.name).toBe("Ashlr Stack");
-      expect(schema.softwareVersion).toBe(cliPackage.version);
+      expect(schema.softwareVersion).toBe(PUBLISHED_VERSION);
       expect(schema.license).toBe(`https://spdx.org/licenses/${cliPackage.license}.html`);
       expect(schema.codeRepository).toBe("https://github.com/ashlrai/ashlr-stack");
       expect(schema.operatingSystem).toBe("macOS, Linux, Windows");
