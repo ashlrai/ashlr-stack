@@ -335,6 +335,51 @@ describe("ai/phantom-wire", () => {
     },
   );
 
+  it.each(["stripe", "clerk", "supabase", "github"])(
+    "retains a visible verification reminder before trusting the %s body when uncommented",
+    async (provider) => {
+      const recipe: Recipe = { ...STRIPE_RECIPE, providers: [{ name: provider }] };
+      const result = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
+      const stub = readFileSync(result.webhooks[0], "utf-8");
+      const example = stub.match(/^\/\/ export async function [\s\S]*?^\/\/ }$/m)?.[0];
+      if (!example) throw new Error(`Missing ${provider} webhook example`);
+
+      // Uncommenting the example for deployment must not erase the reminder:
+      // every line between capturing the body and returning "ok" stays a
+      // comment, so the warning remains visible and nothing executable
+      // trusts `body` before the TODO is done.
+      const runnable = example.replace(/^\/\/ ?/gm, "");
+      const bodyRead = runnable.indexOf("const body = await req.text();");
+      const success = runnable.indexOf('return new Response("ok", { status: 200 });');
+      expect(bodyRead).toBeGreaterThanOrEqual(0);
+      expect(success).toBeGreaterThan(bodyRead);
+
+      const reminderLines = runnable
+        .slice(bodyRead, success)
+        .split("\n")
+        .slice(1)
+        .filter((line) => line.trim().length > 0);
+      expect(reminderLines.length).toBeGreaterThan(0);
+      for (const line of reminderLines) {
+        expect(line.trimStart().startsWith("//")).toBe(true);
+      }
+      const reminder = reminderLines.join("\n");
+      expect(reminder).toContain("TODO(security): signature verification is NOT implemented here.");
+      expect(reminder).toContain("unauthenticated, attacker-controlled input");
+      expect(reminder).toContain(`forge a ${provider} webhook`);
+      expect(reminder).toContain("constant time");
+      expect(reminder).toContain("parse, trust, or act on the body");
+
+      // In the runnable handler the only statement mentioning `body` is its
+      // capture: untrusted input is read but never consumed ahead of the TODO.
+      const executable = runnable
+        .split("\n")
+        .filter((line) => !line.trimStart().startsWith("//"))
+        .join("\n");
+      expect([...executable.matchAll(/\bbody\b/g)]).toHaveLength(1);
+    },
+  );
+
   it.each([
     ["stripe", "stripe.webhooks.constructEvent"],
     ["clerk", "new Webhook(secret).verify(body, headers)"],
@@ -397,6 +442,35 @@ describe("ai/phantom-wire", () => {
     });
     expect(existsSync(stubPath)).toBe(true);
     expect(harness.callsTo("list")).toEqual([]);
+  });
+
+  it("keeps unverified webhook warnings when Phantom is unavailable", async () => {
+    writeFileSync(join(harness.dir, "phantom"), "#!/usr/bin/env bash\nexit 1\n");
+    const providers = ["stripe", "clerk", "supabase", "github"];
+    const result = await wirePhantomForRecipe(
+      { ...STRIPE_RECIPE, providers: providers.map((name) => ({ name })) },
+      { cwd: harness.dir },
+    );
+
+    expect(result.skipped).toEqual(providers);
+    expect(result.webhooks).toEqual(
+      providers.map((provider) => join(harness.dir, ".stack/webhooks", `${provider}.ts`)),
+    );
+    for (const path of result.webhooks) {
+      const stub = readFileSync(path, "utf-8");
+      const warning = stub.indexOf(
+        "This entire example is commented out and does not verify signatures.",
+      );
+      const handler = stub.indexOf("// export async function");
+      expect(warning).toBeGreaterThanOrEqual(0);
+      expect(handler).toBeGreaterThan(warning);
+      expect(stub).toContain(
+        "200 without authenticating the request. Implement verification first.",
+      );
+      expect(stub).toContain("TODO(security): signature verification is NOT implemented here.");
+      expect(stub).not.toMatch(/signature verified|verified signature|request is authenticated/i);
+      expect(stub.split("\n").every((line) => line === "" || line.startsWith("//"))).toBe(true);
+    }
   });
 
   it("rejects a stub write failure after leaving earlier stubs in place", async () => {

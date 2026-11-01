@@ -29,5 +29,7 @@ these starting points in either copy:
 | [0.1.0](../CHANGELOG.md#010--2026-04-19-superseded-by-011) / [site](../packages/site/src/data/CHANGELOG.md#010--2026-04-19-superseded-by-011) → AI recommendation layer | The `stack apply [recipe-id]` bullet describes the original command and annotated wiring history. |
 
 The [detailed source map](site-changelog-source-map.md) distinguishes nearby
-mentions and lists each known entry. These checked-in files describe repository
-content; they do not establish which version is installed or deployed.
+mentions and lists each known entry. The
+[apply changelog terminology](apply-changelog-terminology.md) defines the terms
+the entries use and cites each term's entries. These checked-in files describe
+repository content; they do not establish which version is installed or deployed.

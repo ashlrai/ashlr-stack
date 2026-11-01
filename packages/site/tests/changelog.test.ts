@@ -48,6 +48,23 @@ test("rendered 0.2.1 apply entry explains the removal of placeholder writes", as
   expect(entries[0]).toContain("every call failed");
 });
 
+test("rendered 0.2.1 apply entry tells operators how to supply missing values", async () => {
+  const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
+  const release = published.split("## 0.2.1 (2026-10-16)\n")[1]?.split("\n## ")[0];
+  expect(release).toBeDefined();
+
+  const html = await marked.parse(release ?? "");
+  const entries = [...html.matchAll(/<li>([\s\S]*?)<\/li>/g)]
+    .map((match) => match[1])
+    .filter((entry) => entry.includes("<code>stack apply</code> stops attempting to write placeholder secrets"));
+  expect(entries).toHaveLength(1);
+  expect(entries[0]).toContain("The wiring step never writes to the vault or fills in missing values.");
+  expect(entries[0]).toContain(
+    "users must supply each required missing value themselves: run <code>phantom add &lt;NAME&gt;</code> from a trusted terminal and enter the real value.",
+  );
+  expect(entries[0]).toContain("If it cannot read the vault, it reports providers as skipped instead of identifying missing names.");
+});
+
 const placeholderRemovalHeading = "- **`stack apply` stops attempting to write placeholder secrets.**";
 
 // Pin the historical entry so matching edits to both copies cannot silently reverse

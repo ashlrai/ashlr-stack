@@ -17,6 +17,33 @@ function releaseSection(text: string, heading: string): string {
   return end === -1 ? rest : rest.slice(0, heading.length + end);
 }
 
+// Extract the value only when both release entries describe failed, past attempts.
+function historicalPlaceholderValues(changelog: string): string[] | null {
+  const fix = releaseSection(changelog, "## 0.2.1 (2026-10-16)");
+  const initial = releaseSection(changelog, "## 0.1.0 — 2026-04-19 (superseded by 0.1.1)");
+  const commands = [...fix.matchAll(/Previously, wiring ran `phantom add <KEY> ([A-Z0-9_]+) --rotate`[^\n]*?every call failed/g)];
+  const placeholders = [...initial.matchAll(/Historically, wiring attempted to write a `([A-Z0-9_]+)` placeholder[^\n]*?those calls failed/g)];
+  if (commands.length !== 1 || placeholders.length !== 1) return null;
+  return [commands[0][1], placeholders[0][1]];
+}
+
+test("both changelogs agree on the historical placeholder value in both releases", () => {
+  for (const changelog of changelogs) {
+    expect(historicalPlaceholderValues(changelog)).toEqual(["TODO_STACK_APPLY", "TODO_STACK_APPLY"]);
+  }
+});
+
+test("the historical placeholder check detects drift and loss of historical context", () => {
+  const source = changelogs[0];
+  expect(historicalPlaceholderValues(source.replace("<KEY> TODO_STACK_APPLY --rotate", "<KEY> OTHER_VALUE --rotate")))
+    .not.toEqual(["TODO_STACK_APPLY", "TODO_STACK_APPLY"]);
+  expect(historicalPlaceholderValues(source.replace("a `TODO_STACK_APPLY` placeholder", "a `OTHER_VALUE` placeholder")))
+    .not.toEqual(["TODO_STACK_APPLY", "TODO_STACK_APPLY"]);
+  for (const phrase of ["Previously, wiring ran", "every call failed", "Historically, wiring attempted", "those calls failed"]) {
+    expect(historicalPlaceholderValues(source.replace(phrase, ""))).toBeNull();
+  }
+});
+
 test("both changelogs document the attempted command and its removal", () => {
   for (const changelog of changelogs) {
     const fix = releaseSection(changelog, "## 0.2.1 (2026-10-16)");
