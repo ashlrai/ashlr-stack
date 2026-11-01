@@ -10,7 +10,7 @@ export const isFleetRow = (value: unknown): value is FleetRow =>
 export type FleetSourceStatus = "ok" | "missing" | "invalid" | "unavailable";
 
 export interface FleetReadOptions {
-  /** Maximum bytes read (default 16 MiB); larger sources are rejected, or tailed. */
+  /** Maximum accepted bytes (default 16 MiB); a non-tail read may probe one extra byte. */
   maxBytes?: number;
   /** Keep only the final maxBytes of a larger file and drop the split first line. */
   tail?: boolean;
@@ -39,6 +39,7 @@ export async function readFleetText(
 ): Promise<FleetTextSource> {
   const { maxBytes = 16 * 1024 * 1024, tail = false, ioStatus = "invalid" } = options;
   try {
+    if (!Number.isSafeInteger(maxBytes) || maxBytes < 0) throw new Error("Invalid byte limit");
     const file = await openFleetFile(path);
     try {
       const stat = await file.stat();
@@ -51,7 +52,28 @@ export async function readFleetText(
         const newline = chunk.indexOf("\n");
         text = newline < 0 ? "" : chunk.slice(newline + 1);
       } else {
-        text = await file.readFile("utf8");
+        // Read to EOF into one growing buffer. Probe one byte at the cap to
+        // detect growth without allocating per short read or returning excess.
+        const initial = Math.min(64 * 1024, Math.max(1, stat.size), maxBytes);
+        let buffer = Buffer.alloc(initial);
+        let offset = 0;
+        for (;;) {
+          if (offset === maxBytes) {
+            const probe = Buffer.alloc(1);
+            if ((await file.read(probe, 0, 1, offset)).bytesRead)
+              throw new Error("Oversized source");
+            break;
+          }
+          if (offset === buffer.length) {
+            const grown = Buffer.alloc(Math.min(maxBytes, buffer.length * 2));
+            buffer.copy(grown, 0, 0, offset);
+            buffer = grown;
+          }
+          const { bytesRead } = await file.read(buffer, offset, buffer.length - offset, offset);
+          if (!bytesRead) break;
+          offset += bytesRead;
+        }
+        text = buffer.subarray(0, offset).toString("utf8");
       }
       return { status: "ok", text };
     } finally {
