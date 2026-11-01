@@ -14,15 +14,27 @@ permissions:
 
 jobs:
   publish:
+    # Prereleases may be created before their producers finish; dispatch on the
+    # exact tag after release.yml completes instead of waiting on a runner. Stable
+    # events that arrive before the producer finishes also require a later dispatch.
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'release' && toJSON(github.event.release.prerelease) == 'false')
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+      - name: Require completed exact release and reconcile registry
+        id: gate
+        run: node scripts/mcp-registry-gate.mjs prepare
       - name: Install mcp-publisher
+        if: steps.gate.outputs.action == 'publish'
         run: |
           curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_linux_amd64.tar.gz" | tar xz mcp-publisher
           ./mcp-publisher --help >/dev/null
       - name: Login (GitHub OIDC)
+        if: steps.gate.outputs.action == 'publish'
         run: ./mcp-publisher login github-oidc
-      - name: Publish
-        working-directory: packages/mcp
-        run: $GITHUB_WORKSPACE/mcp-publisher publish
+      - name: Recheck and publish once
+        if: steps.gate.outputs.action == 'publish'
+        run: node scripts/mcp-registry-gate.mjs publish
