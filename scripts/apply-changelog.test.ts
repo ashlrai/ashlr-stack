@@ -78,6 +78,12 @@ await applyCommand.run({ args: { recipeId: "example", noWire: false, noRollback:
     expect(migration).toContain(`\`\`\`text\n${output}\n\`\`\``);
     const upgradeQuestions = readFileSync(join(root, "docs/apply-placeholder-upgrade-questions.md"), "utf8");
     expect(upgradeQuestions).toContain(`\`\`\`text\n${output}\n\`\`\``);
+    const operatorImpact = readFileSync(join(root, "docs/apply-placeholder-operator-impact.md"), "utf8");
+    const impactExamples = [...operatorImpact.matchAll(/```text\n([\s\S]*?)\n\s*```/g)].map(
+      (match) => match[1].split("\n").map((line) => line.trim()).join("\n"),
+    );
+    expect(impactExamples).toHaveLength(2);
+    expect(result.stdout.split("\n").map((line) => line.trim()).join("\n")).toContain(impactExamples[1]);
     const readerGuide = readFileSync(join(root, "docs/changelog-apply-reader-guide.md"), "utf8");
     expect(readerGuide).toContain(`\`\`\`text\n${output}\n\`\`\``);
     expect(result.stdout).not.toContain("not in Phantom:");
@@ -106,6 +112,7 @@ await applyCommand.run({ args: { recipeId: "example", noWire: false, noRollback:
     expect(missingExample).not.toBeNull();
     expect(missingExample?.[1]).toContain("not in Phantom: OPENAI_API_KEY");
     expect(missing.stdout).toContain(missingExample?.[1] ?? "example missing");
+    expect(missing.stdout.split("\n").map((line) => line.trim()).join("\n")).toContain(impactExamples[0]);
     expect(migration).toContain(`\`\`\`text\n${missingExample?.[1]}\n\`\`\``);
     expect(upgradeQuestions).toContain(`\`\`\`text\n${missingExample?.[1]}\n\`\`\``);
     expect(readerGuide).toContain(`\`\`\`text\n${missingExample?.[1]}\n\`\`\``);
