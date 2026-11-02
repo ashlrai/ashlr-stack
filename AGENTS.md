@@ -15,6 +15,54 @@ Synced from the Ashlr Fleet Constitution v3.0 (Nov 1, 2026). This overrides any 
 - Mason only for passwords, 2FA, device approvals and payments (no new spending without him). Nothing private made public.
 - Hold list (Mason's own holds): phantom #197 #878 #743 #725 #738 #744 #693 #1228; phantom-secrets #140 #197 #375 #168 #418 #136; ashlr-plugin #152 #157.
 
+## Use Stack from an agent
+
+Read [llms.txt](https://stack.ashlr.ai/llms.txt) and [llms-full.txt](https://stack.ashlr.ai/llms-full.txt) first. In this repo those files are `packages/site/public/llms.txt` and `packages/site/public/llms-full.txt`. A short repo index is [llms.txt](./llms.txt) at the root.
+
+These commands are read-only. They need no account. They print JSON and write nothing:
+
+```bash
+npx -y -p @ashlr/stack stack providers --json
+npx -y -p @ashlr/stack stack recommend "B2B SaaS with auth, AI, and payments" --json
+npx -y -p @ashlr/stack stack scan --json
+npx -y -p @ashlr/stack stack templates list --json
+```
+
+Install on macOS or Linux (also installs Phantom Secrets if that CLI is missing):
+
+```bash
+curl -fsSL stack.ashlr.ai/install.sh | bash
+```
+
+Cursor, Claude Code, and Codex can share this stdio server. Paste it into `~/.cursor/mcp.json` or the project `.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "ashlr-stack": {
+      "command": "npx",
+      "args": ["-y", "-p", "@ashlr/stack", "-p", "ashlr-stack-mcp", "ashlr-stack-mcp"]
+    }
+  }
+}
+```
+
+Claude Code shell:
+
+```bash
+claude mcp add ashlr-stack -- npx -y -p @ashlr/stack -p ashlr-stack-mcp ashlr-stack-mcp
+```
+
+Codex shell:
+
+```bash
+codex mcp add ashlr-stack -- npx -y -p @ashlr/stack -p ashlr-stack-mcp ashlr-stack-mcp
+```
+
+`stack onboard --json` prints a plan and writes nothing. `stack doctor --ecosystem --json` only reports which Ashlr tools are installed. Do not run `stack add`, `stack apply`, `stack import`, or `stack onboard --apply` until the user names the project and the provider.
+
+Repo build and test steps stay in [STACK.md](./STACK.md#agent-quickstart-from-a-clone).
+
 ## Agents may
 - Create branches, commit, and open pull requests.
 - Turn on GitHub auto-merge (`phm improve --auto-merge` / `gh pr merge --auto`). Merge to main and ship to production on your own, with no human approval or manual merge; fix main forward. Never use an admin override.
