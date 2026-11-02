@@ -226,10 +226,22 @@ await applyCommand.run({ args: { recipeId: "example", noWire: false, noRollback:
       expect(output).toContain("phantom add <NAME>");
       expect(result.stdout).toContain(output ?? "example missing");
     }
-    const guide = readFileSync(join(cliDir, "../../../docs/apply-observation.md"), "utf8");
-    const example = guide.match(/```text\n([\s\S]*?)\n```/);
-    expect(example).not.toBeNull();
-    expect(result.stdout).toContain(example?.[1] ?? "example missing");
+    for (const path of [
+      "../../../docs/apply-observation.md",
+      "../../../docs/apply-placeholder-operator-checklist.md",
+    ]) {
+      const guide = readFileSync(join(cliDir, path), "utf8");
+      const example = guide.match(/(?:^|\n)\s*```text\n([\s\S]*?)\n\s*```/);
+      expect(example).not.toBeNull();
+      // Checklist examples are nested in a list; remove its Markdown indentation.
+      const output = path.includes("operator-checklist")
+        ? example?.[1]
+            .split("\n")
+            .map((line) => line.slice(2))
+            .join("\n")
+        : example?.[1];
+      expect(result.stdout).toContain(output ?? "example missing");
+    }
     const phantomCalls = readFileSync(calls, "utf8").trim().split("\n");
     expect(phantomCalls).toContain("list");
     expect(phantomCalls.every((call) => ["--version", "list"].includes(call))).toBe(true);
