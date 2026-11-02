@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, setDefaultTimeout } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { wirePhantomForRecipe } from "../ai/phantom-wire.ts";
 import { type Recipe, readRecipe, writeRecipe } from "../ai/recipe.ts";
 import { listSecrets } from "../phantom.ts";
@@ -729,5 +730,20 @@ describe("ai/phantom-wire", () => {
     const result = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
     expect(result.webhooks).toEqual([]);
     expect(result.missing.length).toBeGreaterThan(0);
+  });
+
+  it("documents in the module header that readers must verify before trusting the body", () => {
+    const source = readFileSync(
+      fileURLToPath(new URL("../ai/phantom-wire.ts", import.meta.url)),
+      "utf-8",
+    );
+    const header = source.match(/^\/\*\*[\s\S]*?\*\//)?.[0];
+    if (!header) throw new Error("Missing phantom-wire module header");
+    const prose = header.replace(/^ ?\*+ ?/gm, "").replace(/\s+/g, " ");
+
+    expect(prose).toContain("Signature verification is not implemented");
+    expect(prose).toContain("a present signature header authenticates nothing");
+    expect(prose).toContain("the body is untrusted input");
+    expect(prose).toContain("verification to add before deploying a handler");
   });
 });
