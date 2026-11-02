@@ -70,6 +70,28 @@ attacker-controlled input. Do not deploy or act on the example as-is; use the
 provider's supported verifier where available, and test valid and invalid
 signatures, changed bodies, missing headers, and timestamp and replay cases.
 
+## Where each side lives in the source
+
+Both sides come from
+[`packages/core/src/ai/phantom-wire.ts`](../packages/core/src/ai/phantom-wire.ts):
+
+- The example side is text emitted by `webhookStubFor`, which interpolates the
+  provider's `signatureHeaderFor`, `webhookSecretKeyFor`, and
+  `verificationHintFor` values. `writeWebhookStub` writes that text to
+  `.stack/webhooks/<provider>.ts`; generating the file runs none of it.
+- The verification side exists only as comments: the `TODO(security)` block
+  `webhookStubFor` inlines, and the module header's statement that signature
+  verification is not implemented.
+- The vault check in `wirePhantomForRecipe` (`listVaultNames` against
+  `findProviderRef` catalog names) is names-only: a present name does not
+  retrieve or validate a value.
+
+The excerpt above and the 400-before-body-read, 200-on-any-header boundary are
+enforced by
+[`scripts/phantom-wire-example-boundaries.test.ts`](../scripts/phantom-wire-example-boundaries.test.ts),
+which regenerates the stubs, uncomments the Stripe handler, and runs it. For
+the full function inventory, see the [code map](phantom-wire-code-map.md).
+
 Recipe manifests sit at a second boundary: they are unsigned, and checking
 provider names against the catalog does not authenticate their origin or
 integrity. Use trusted recipes. For what each runtime observation establishes,

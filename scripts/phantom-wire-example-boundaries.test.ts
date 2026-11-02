@@ -54,6 +54,26 @@ describe("Phantom wire example boundaries", () => {
       expect(doc).toContain("attacker-controlled");
       expect(stripe).toContain("TODO(security): signature verification is NOT implemented here.");
 
+      // The doc's source citations name real identifiers in the module, so a
+      // rename there is caught here as doc drift.
+      const src = readFileSync(
+        new URL("../packages/core/src/ai/phantom-wire.ts", import.meta.url),
+        "utf8",
+      );
+      for (const cited of [
+        "webhookStubFor",
+        "writeWebhookStub",
+        "wirePhantomForRecipe",
+        "listVaultNames",
+        "findProviderRef",
+        "signatureHeaderFor",
+        "webhookSecretKeyFor",
+        "verificationHintFor",
+      ]) {
+        expect(doc).toContain(`\`${cited}\``);
+        expect(src).toContain(cited);
+      }
+
       // Behavior on each side of the boundary, proven by running the
       // uncommented example: missing header → 400 before the body is read;
       // any non-empty value → 200 (nothing is verified).
