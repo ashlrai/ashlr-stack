@@ -50,6 +50,17 @@ test("both changelogs state that stack apply stopped writing placeholders", () =
   ];
   expect(bothHavePlaceholderFix(changelogs)).toBe(true);
 
+  // Other references to stack apply and placeholders must not mask a missing fix.
+  for (const index of [0, 1] as const) {
+    const changed: [string, string] = [...changelogs];
+    const entry = changed[index].split("\n").find((line) => line.startsWith("- **`stack apply` stops attempting"));
+    expect(entry).toBeDefined();
+    changed[index] = changed[index].replace(entry!, "");
+    expect(changed[index]).toContain("`stack apply`");
+    expect(changed[index]).toContain("placeholder secrets");
+    expect(bothHavePlaceholderFix(changed)).toBe(false);
+  }
+
   // Unrelated prose can differ, but either copy losing the claim must fail.
   const surroundingProse = "Provider setup may already store real values";
   expect(changelogs[1]).toContain(surroundingProse);
