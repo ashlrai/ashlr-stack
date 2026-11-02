@@ -141,6 +141,25 @@ test("the original apply entry cannot describe placeholder writes as a current s
   expect(`${entry} It then writes a \`TODO_STACK_APPLY\` placeholder for every secret.`).toMatch(currentWrite);
 });
 
+
+test("historical apply entry records cessation of placeholder writes", () => {
+  const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
+  const release = published.split("## 0.1.0 — 2026-04-19 (superseded by 0.1.1)\n")[1]?.split("\n## ")[0];
+  expect(release).toBeDefined();
+
+  const entries = marked.lexer(release ?? "").flatMap((token) => (token.type === "list" ? token.items : []));
+  const applyEntry = entries.find((item) => item.raw.startsWith("- **`stack apply [recipe-id]`**"));
+  expect(applyEntry).toBeDefined();
+
+  // The entry must document that wiring stopped writing placeholder values.
+  // Regression: if the 0.1.0 entry is edited and this sentence is dropped, the story is lost.
+  expect(applyEntry.raw).toContain(
+    "Wiring no longer attempts to write placeholder values; it does not write to the vault or fill in missing values.",
+  );
+  // The entry must also cite the 0.2.1 fix that removed the broken behavior.
+  expect(applyEntry.raw).toContain("the 0.2.1 fix above removed the attempts");
+});
+
 test("rendered 0.2.1 apply entry explains the removal of placeholder writes", async () => {
   const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
   const release = published.split("## 0.2.1 (2026-10-16)\n")[1]?.split("\n## ")[0];
