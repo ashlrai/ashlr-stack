@@ -85,6 +85,10 @@ Build, test and run instructions for agents are in [STACK.md](./STACK.md#agent-q
 - `HOME=$(mktemp -d) bun test scripts/docs-freshness.test.ts` cross-checks the generated tables and counts against the TypeScript source (AST plus runtime dispatch) and verifies documented commands and flags exist.
 - Source capabilities do not establish published package versions or provider readiness. Verify installed command help, such as `stack onboard --help`, before using release-specific examples.
 
+## Hot files: bridge PRs carry changelog entries in the notes
+
+`CHANGELOG.md`, `packages/site/src/data/CHANGELOG.md` and `packages/site/tests/changelog.test.ts` are the most contended files in the repo — each shows up in 10 or 11 of the 30 newest open PRs, so parallel bridge jobs collide on them constantly. A bridge PR does not edit those three files: the notes carry the entry instead. Write the changelog text in `BRIDGE_NOTES.md` at the worktree root; a later dedicated PR can land it in the changelog itself.
+
 ## Ground rules
 - Keep diffs small and reviewable, with one concern per PR.
 - Never commit secrets. Use Phantom Secrets placeholders.
