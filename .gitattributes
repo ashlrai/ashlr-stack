@@ -1,0 +1,2 @@
+# Keep the CRLF fixture byte-for-byte; autocrlf/eol must not normalize it.
+packages/site/tests/__fixtures__/changelog-three-versions-crlf.md -text eol=crlf
