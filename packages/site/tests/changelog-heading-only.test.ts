@@ -38,3 +38,10 @@ test("a heading-only version is retained in every position without throwing", ()
   expect(bracketed.map((v) => v.heading)).toEqual(["[0.2.0] — 2026-04-23", "[0.1.0]"]);
   expect(bracketed.every((v) => content(v.body).length === 0)).toBe(true);
 });
+
+test("middle fixture retains an empty release between populated ones and ignores Unreleased", () => {
+  const fixture = readFileSync(join(import.meta.dir, "__fixtures__/changelog-heading-only-middle.md"), "utf8");
+  const versions = parseVersions(fixture);
+  expect(versions.map((v) => v.heading)).toEqual(["0.3.0 (2026-04-25)", "0.2.0 (2026-04-23)", "[0.1.0] - 2026-04-19"]);
+  expect(versions.map((v) => content(v.body).length)).toEqual([1, 0, 1]);
+});
