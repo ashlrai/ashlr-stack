@@ -181,6 +181,24 @@ describe("ai/phantom-wire", () => {
     }
   });
 
+  it("keeps the example boundary note's excerpt identical to the generated Stripe example", async () => {
+    const note = readFileSync(
+      new URL("../../../../docs/phantom-wire-example-boundary.md", import.meta.url),
+      "utf-8",
+    );
+    const result = await wirePhantomForRecipe(STRIPE_RECIPE, { cwd: harness.dir });
+    const stub = readFileSync(result.webhooks[0], "utf-8");
+    const excerpt = note.match(/```ts\n([\s\S]*?)```/)?.[1] ?? "";
+    expect(excerpt.length).toBeGreaterThan(0);
+    // Every quoted line is a comment line present verbatim in the generated file.
+    for (const line of excerpt.trimEnd().split("\n")) {
+      expect(line.startsWith("//")).toBe(true);
+      expect(stub).toContain(line);
+    }
+    expect(note).toContain("TODO in an example");
+    expect(note).toContain("not a verifier");
+  });
+
   it("keeps the signature review aligned with the commented follow-up and active code", async () => {
     const review = readFileSync(
       new URL("../../../../docs/phantom-wire-signature-review.md", import.meta.url),
