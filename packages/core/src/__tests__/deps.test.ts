@@ -56,4 +56,26 @@ describe("config carrying 21+ provider entries still round-trips", () => {
     const roundtrip = await readConfig(cwd);
     expect(Object.keys(roundtrip.services).length).toBe(listProviderNames().length);
   });
+  test("duplicate secret entries are preserved verbatim (no dedupe on round-trip)", async () => {
+    const config = emptyConfig("dupes");
+    config.services.render = {
+      provider: "render",
+      secrets: ["RENDER_API_KEY", "RENDER_API_KEY"],
+      created_at: new Date().toISOString(),
+    };
+    await writeConfig(config, cwd);
+    const { readConfig } = await import("../config.ts");
+    const roundtrip = await readConfig(cwd);
+    expect(roundtrip.services.render?.secrets).toEqual(["RENDER_API_KEY", "RENDER_API_KEY"]);
+  });
+
+  test("a duplicated [services.x] table in .stack.toml is rejected, not merged", async () => {
+    const { readConfig, CONFIG_FILENAME } = await import("../config.ts");
+    const toml =
+      '[stack]\nversion = "1"\n\n' +
+      '[services.render]\nprovider = "render"\nsecrets = ["A"]\n\n' +
+      '[services.render]\nprovider = "render"\nsecrets = ["B"]\n';
+    await Bun.write(join(cwd, CONFIG_FILENAME), toml);
+    await expect(readConfig(cwd)).rejects.toThrow();
+  });
 });
