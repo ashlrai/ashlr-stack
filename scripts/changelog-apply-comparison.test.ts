@@ -52,6 +52,14 @@ test("comparison cites the same complete 0.2.1 apply fix in both changelogs", ()
   }
 });
 
+test("both historical apply entries retain the later removal of --rotate", () => {
+  const changelogs = copies.map((path) => readFileSync(join(root, path), "utf8"));
+  const entry = matchingApplyEntries(changelogs);
+  expect(entry).toContain(
+    "Previously, wiring ran `phantom add <KEY> TODO_STACK_APPLY --rotate` (then without `--rotate`) for every declared secret.",
+  );
+});
+
 test("the entry comparison detects wording-only differences in either changelog", () => {
   const changelogs = copies.map((path) => readFileSync(join(root, path), "utf8"));
   const wording = "Provider setup may already store real values";
