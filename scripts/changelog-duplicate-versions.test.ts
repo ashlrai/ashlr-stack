@@ -4,6 +4,7 @@ import { join } from "node:path";
 
 const paths = ["CHANGELOG.md", "packages/site/src/data/CHANGELOG.md"];
 const fixturePath = "scripts/__fixtures__/changelog/duplicate-version-headings.md";
+const orderFixturePath = "scripts/__fixtures__/changelog/version-order.md";
 
 /**
  * Version headings look like `## 0.3.0 (date)`, `## [0.2.0] — date`, or
@@ -76,4 +77,12 @@ test("duplicate check ignores example headings inside fenced code blocks", () =>
   // The fixture shows `## 0.3.0` and `## 0.1.1` examples inside fences; each
   // version has exactly one real heading, so neither may count twice.
   expect(versionsOf(fixture)).toEqual(["0.3.0", "0.2.0", "0.2.0", "0.1.1"]);
+});
+
+test("version parsing keeps deliberately ordered fixture entries in source order", () => {
+  const fixture = readFileSync(join(import.meta.dir, "..", orderFixturePath), "utf8");
+  // 0.2.0 precedes 0.10.0 although a numeric sort would put it last, and a
+  // lexical sort would put 0.10.0 first; neither may reorder the result.
+  expect(versionsOf(fixture)).toEqual(["0.2.0", "0.10.0"]);
+  expect(duplicateVersions(fixture)).toEqual([]);
 });
