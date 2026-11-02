@@ -50,6 +50,24 @@ test("recommendation heading contains the apply entry about stopping placeholder
   expect(applyEntries[0].raw).toContain("Wiring no longer attempts to write placeholder values; it does not write to the vault or fill in missing values.");
 });
 
+test("rendered original apply entry identifies the placeholder as historical", async () => {
+  const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
+  const release = published.split("## 0.1.0 — 2026-04-19 (superseded by 0.1.1)\n")[1]?.split("\n## ")[0];
+  expect(release).toBeDefined();
+
+  const html = await marked.parse(release ?? "");
+  const entries = [...html.matchAll(/<li>([\s\S]*?)<\/li>/g)]
+    .map((match) => match[1])
+    .filter((entry) => entry.includes("<code>stack apply [recipe-id]</code>"));
+  expect(entries).toHaveLength(1);
+  expect(entries[0]).toContain(
+    "Historically, wiring attempted to write a <code>TODO_STACK_APPLY</code> placeholder for each declared secret, but those calls failed; the 0.2.1 fix above removed the attempts.",
+  );
+  expect(entries[0]).toContain(
+    "Wiring no longer attempts to write placeholder values; it does not write to the vault or fill in missing values.",
+  );
+});
+
 test("rendered 0.2.1 apply entry explains the removal of placeholder writes", async () => {
   const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
   const release = published.split("## 0.2.1 (2026-10-16)\n")[1]?.split("\n## ")[0];
