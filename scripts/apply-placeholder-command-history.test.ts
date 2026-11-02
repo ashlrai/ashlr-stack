@@ -8,6 +8,8 @@ const doc = readFileSync(docPath, "utf8");
 const changelogs = ["CHANGELOG.md", "packages/site/src/data/CHANGELOG.md"].map((path) =>
   readFileSync(join(root, path), "utf8"),
 );
+const historicalRotateSentence =
+  "Previously, wiring ran `phantom add <KEY> TODO_STACK_APPLY --rotate` (then without `--rotate`) for every declared secret.";
 
 function releaseSection(text: string, heading: string): string {
   const start = text.indexOf(`\n${heading}\n`);
@@ -65,15 +67,26 @@ test("both changelogs document the attempted command and its removal", () => {
   }
 });
 
+function hasHistoricalRotateQualifier(changelog: string): boolean {
+  const fix = releaseSection(changelog, "## 0.2.1 (2026-10-16)");
+  const entry = fix.split("\n\n").find((paragraph) =>
+    paragraph.startsWith("- **`stack apply` stops attempting to write placeholder secrets.**"),
+  );
+  return entry?.includes(historicalRotateSentence) ?? false;
+}
+
 test("both changelog entries retain the historical --rotate qualifier", () => {
   for (const changelog of changelogs) {
-    const fix = releaseSection(changelog, "## 0.2.1 (2026-10-16)");
-    const entry = fix.split("\n\n").find((paragraph) =>
-      paragraph.startsWith("- **`stack apply` stops attempting to write placeholder secrets.**"),
-    );
-    expect(entry).toContain(
-      "Previously, wiring ran `phantom add <KEY> TODO_STACK_APPLY --rotate` (then without `--rotate`) for every declared secret.",
-    );
+    expect(hasHistoricalRotateQualifier(changelog)).toBe(true);
+  }
+});
+
+test("the historical --rotate check detects missing qualifiers and historical context", () => {
+  for (const changelog of changelogs) {
+    for (const phrase of ["Previously, ", " --rotate", " (then without `--rotate`)"]) {
+      expect(hasHistoricalRotateQualifier(changelog.replace(historicalRotateSentence, historicalRotateSentence.replace(phrase, ""))))
+        .toBe(false);
+    }
   }
 });
 
