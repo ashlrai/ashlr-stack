@@ -114,3 +114,14 @@ test("three-version fixture parses all versions in source order with their own b
     expect(body.match(/^- .*$/gm)).toEqual([`- ${own} version entry.`]);
   }
 });
+
+test("blank lines inside a version body stay in the parsed body", () => {
+  const fixture = readFileSync(new URL("./__fixtures__/changelog-blank-lines.md", import.meta.url), "utf8");
+  expect(malformedHeadings(fixture)).toEqual([]);
+  const [newer, older] = versionSections(fixture);
+  expect(newer.heading).toBe("## 0.2.0 (2026-04-23)");
+  // Single and repeated blank lines between entries are kept verbatim.
+  expect(newer.body).toContain("### Added\n\n\n- First entry.\n\n\n\n- Second entry after three blank lines.\n\n### Fixed\n\n- Fix entry.\n");
+  expect(newer.body.split("\n").filter((l) => l === "").length).toBe(10);
+  expect(older.body).toBe("\n- Old entry.\n\n");
+});
