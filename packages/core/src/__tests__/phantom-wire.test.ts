@@ -124,6 +124,21 @@ describe("ai/phantom-wire", () => {
     }
   });
 
+  it("places a single provider's signature header in its generated handler", async () => {
+    const recipe: Recipe = { ...STRIPE_RECIPE, providers: [{ name: "github" }] };
+    const stubPath = join(harness.dir, ".stack/webhooks/github.ts");
+
+    const result = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
+
+    expect(result.webhooks).toEqual([stubPath]);
+    const stub = readFileSync(stubPath, "utf-8");
+    expect(stub).toContain(
+      "// export async function handleGithubWebhook(req: Request): Promise<Response> {\n" +
+        '//   const signature = req.headers.get("x-hub-signature-256");\n' +
+        '//   if (!signature) return new Response("Missing signature", { status: 400 });',
+    );
+  });
+
   it("keeps the verification review aligned with the generated webhook examples", async () => {
     const review = readFileSync(
       new URL("../../../../docs/phantom-wire-review.md", import.meta.url),
