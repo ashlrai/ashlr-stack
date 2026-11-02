@@ -34,7 +34,7 @@ export const MCP_TOOL_NAMES: string[] = [
   "stack_templates_list",
   "stack_upgrade",
   "stack_recommend",
-  "stack_apply"
+  "stack_apply",
 ];
 export const PLUGIN_SLASH_COMMANDS: string[] = [
   "/stack:add",
@@ -42,7 +42,7 @@ export const PLUGIN_SLASH_COMMANDS: string[] = [
   "/stack:doctor",
   "/stack:list",
   "/stack:recommend",
-  "/stack:status"
+  "/stack:status",
 ];
 export const INSTALL_CMD = "curl -fsSL stack.ashlr.ai/install.sh | bash";
 export const INSTALL_CMD_HTTPS = "curl -fsSL https://stack.ashlr.ai/install.sh | bash";
@@ -60,6 +60,7 @@ export const MCP_NPX_ARGS: string[] = [
   "@ashlr/stack@0.3.1",
   "-p",
   "ashlr-stack-mcp@0.3.1",
-  "ashlr-stack-mcp"
+  "ashlr-stack-mcp",
 ];
-export const MCP_STDIO_CONFIG = "{\n  \"mcpServers\": {\n    \"ashlr-stack\": {\n      \"command\": \"npx\",\n      \"args\": [\n        \"-y\",\n        \"-p\",\n        \"@ashlr/stack@0.3.1\",\n        \"-p\",\n        \"ashlr-stack-mcp@0.3.1\",\n        \"ashlr-stack-mcp\"\n      ]\n    }\n  }\n}";
+export const MCP_STDIO_CONFIG =
+  '{\n  "mcpServers": {\n    "ashlr-stack": {\n      "command": "npx",\n      "args": [\n        "-y",\n        "-p",\n        "@ashlr/stack@0.3.1",\n        "-p",\n        "ashlr-stack-mcp@0.3.1",\n        "ashlr-stack-mcp"\n      ]\n    }\n  }\n}';
