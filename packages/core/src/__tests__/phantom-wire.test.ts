@@ -124,6 +124,35 @@ describe("ai/phantom-wire", () => {
     }
   });
 
+  it.each([
+    [false, ["github", "stripe"]],
+    [false, ["stripe", "github"]],
+    [true, ["github", "stripe"]],
+    [true, ["stripe", "github"]],
+  ])(
+    "generates two examples in input order (Phantom unavailable: %s)",
+    async (unavailable, providers) => {
+      if (unavailable) {
+        writeFileSync(join(harness.dir, "phantom"), "#!/usr/bin/env bash\nexit 1\n");
+      }
+      const recipe: Recipe = {
+        ...STRIPE_RECIPE,
+        providers: providers.map((name) => ({ name })),
+      };
+      const result = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
+
+      expect(result.webhooks).toEqual(
+        providers.map((name) => join(harness.dir, ".stack/webhooks", `${name}.ts`)),
+      );
+      const examples = result.webhooks.map((path) => readFileSync(path, "utf-8")).join("\n");
+      expect(
+        [...examples.matchAll(/^\/\/ export async function (handle\w+Webhook)\(/gm)].map(
+          (m) => m[1],
+        ),
+      ).toEqual(providers.map((name) => `handle${name[0].toUpperCase()}${name.slice(1)}Webhook`));
+    },
+  );
+
   it("keeps the verification review aligned with the generated webhook examples", async () => {
     const review = readFileSync(
       new URL("../../../../docs/phantom-wire-review.md", import.meta.url),
