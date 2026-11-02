@@ -38,13 +38,13 @@ function emptyVersionSections(markdown: string): string[] {
   return empty;
 }
 
-test("site changelog has no empty version sections", () => {
-  const published = readFileSync(
-    join(root, "packages/site/src/data/CHANGELOG.md"),
-    "utf8",
-  );
-  expect(emptyVersionSections(published)).toEqual([]);
-});
+test.each(["CHANGELOG.md", "packages/site/src/data/CHANGELOG.md"])(
+  "%s has no empty version sections",
+  (path) => {
+    const changelog = readFileSync(join(root, path), "utf8");
+    expect(emptyVersionSections(changelog)).toEqual([]);
+  },
+);
 
 test("empty section detection flags releases without notes", () => {
   expect(
@@ -67,6 +67,10 @@ test("empty section detection flags releases without notes", () => {
   expect(
     emptyVersionSections("## [0.2.0] — date\n\n## 0.1.0\n\n- x\n"),
   ).toEqual(["[0.2.0] — date"]);
+  // Every empty section is reported, in file order.
+  expect(
+    emptyVersionSections("## 0.3.0\n\n## 0.2.0\n\n- x\n\n## 0.1.0\n"),
+  ).toEqual(["0.3.0", "0.1.0"]);
   // No version headings at all.
   expect(emptyVersionSections("")).toEqual([]);
   expect(emptyVersionSections("# Changelog\n\n- stray\n")).toEqual([]);
