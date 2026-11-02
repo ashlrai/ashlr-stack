@@ -787,6 +787,31 @@ describe("ai/phantom-wire", () => {
     },
   );
 
+  it("keeps the trust-boundary doc aligned with the unimplemented verification", async () => {
+    const doc = readFileSync(
+      new URL("../../../../docs/phantom-wire-trust-boundary.md", import.meta.url),
+      "utf-8",
+    );
+    expect(doc).toContain("Signature verification is not implemented");
+    expect(doc).toContain("Recipe signature verification");
+    expect(doc).toContain("Webhook signature verification");
+    expect(doc).toContain("## Data that must not be trusted before verification");
+
+    const providers = ["stripe", "clerk", "supabase", "github"];
+    const result = await wirePhantomForRecipe(
+      { ...STRIPE_RECIPE, providers: providers.map((name) => ({ name })) },
+      { cwd: harness.dir },
+    );
+    for (const path of result.webhooks) {
+      const stub = readFileSync(path, "utf-8");
+      // Every header the doc says is untrusted must be the one the stub reads.
+      const header = stub.match(/req\.headers\.get\("([^"]+)"\)/)?.[1];
+      expect(header).toBeDefined();
+      expect(doc).toContain(`\`${header}\``);
+      expect(stub).toContain("TODO(security): signature verification is NOT implemented here.");
+    }
+  });
+
   it("skips a path-traversal provider name without writing any stub", async () => {
     const recipe: Recipe = { ...STRIPE_RECIPE, providers: [{ name: "../../evil" }] };
 
