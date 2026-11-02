@@ -83,6 +83,23 @@ test("rendered 0.2.1 apply entry explains the removal of placeholder writes", as
   expect(entries[0]).toContain("every call failed");
 });
 
+test("rendered 0.2.1 apply change heading matches in both changelogs", async () => {
+  const headings = await Promise.all(
+    ["CHANGELOG.md", "packages/site/src/data/CHANGELOG.md"].map(async (path) => {
+      const changelog = readFileSync(join(root, path), "utf8");
+      const release = changelog.split("## 0.2.1 (2026-10-16)\n")[1]?.split("\n## ")[0];
+      expect(release, path).toBeDefined();
+
+      const html = await marked.parse(release ?? "");
+      const matches = [...html.matchAll(/<li>(?:<p>)?<strong>(<code>stack apply<\/code>[^<]*)<\/strong>/g)];
+      expect(matches, path).toHaveLength(1);
+      return matches[0][1];
+    }),
+  );
+
+  expect(headings[0]).toBe(headings[1]);
+});
+
 test("rendered 0.2.1 apply entry tells operators how to supply missing values", async () => {
   const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
   const release = published.split("## 0.2.1 (2026-10-16)\n")[1]?.split("\n## ")[0];
