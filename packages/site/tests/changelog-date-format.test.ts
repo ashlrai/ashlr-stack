@@ -48,6 +48,13 @@ function undatedReleaseHeadings(markdown: string): string[] {
     .map(({ heading }) => heading);
 }
 
+/** Version headings carrying more than one `YYYY-MM-DD` date token. */
+function multiDatedReleaseHeadings(markdown: string): string[] {
+  return versionHeadingDates(markdown)
+    .filter(({ dates }) => dates.length > 1)
+    .map(({ heading }) => heading);
+}
+
 test("every dated site changelog version heading uses a real calendar date", () => {
   const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
   expect(invalidReleaseDates(published)).toEqual([]);
@@ -56,6 +63,11 @@ test("every dated site changelog version heading uses a real calendar date", () 
 test("every site changelog version heading carries a YYYY-MM-DD date", () => {
   const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
   expect(undatedReleaseHeadings(published)).toEqual([]);
+});
+
+test("no site changelog version heading carries two dates", () => {
+  const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
+  expect(multiDatedReleaseHeadings(published)).toEqual([]);
 });
 
 test("calendar date validation accepts real dates including leap day", () => {
@@ -136,4 +148,45 @@ test("release date checks flag impossible, malformed and missing dates", () => {
     "0.4.0 (October 31, 2026)",
   ]);
   expect(undatedReleaseHeadings("## 0.4.0 (2026-10-311)\n")).toEqual(["0.4.0 (2026-10-311)"]);
+});
+
+test("duplicate date detection flags version headings with two dates", () => {
+  // One date per heading passes in either style, including a superseded-by note.
+  expect(multiDatedReleaseHeadings("## 0.3.0 (2026-10-31)\n")).toEqual([]);
+  expect(multiDatedReleaseHeadings("## [0.2.0] — 2026-04-23\n")).toEqual([]);
+  expect(multiDatedReleaseHeadings("## 0.1.0 — 2026-04-19 (superseded by 0.1.1)\n")).toEqual([]);
+
+  // Two date tokens on one version heading are rejected, whichever style.
+  expect(multiDatedReleaseHeadings("## 0.4.0 (2026-10-31) (2026-11-01)\n")).toEqual([
+    "0.4.0 (2026-10-31) (2026-11-01)",
+  ]);
+  expect(multiDatedReleaseHeadings("## [0.4.0] — 2026-10-31 — 2026-11-01\n")).toEqual([
+    "[0.4.0] — 2026-10-31 — 2026-11-01",
+  ]);
+  // Repeating the same date is still a duplicate.
+  expect(multiDatedReleaseHeadings("## 0.4.0 (2026-10-31) (2026-10-31)\n")).toEqual([
+    "0.4.0 (2026-10-31) (2026-10-31)",
+  ]);
+  // A stray second date mid-heading counts too.
+  expect(
+    multiDatedReleaseHeadings("## 0.4.0 — 2026-10-31 (supersedes 0.3.0 from 2026-10-01)\n"),
+  ).toEqual(["0.4.0 — 2026-10-31 (supersedes 0.3.0 from 2026-10-01)"]);
+
+  // Non-version headings are ignored; every offender is reported in file order.
+  expect(
+    multiDatedReleaseHeadings(
+      [
+        "## Unreleased — 2026-11-01 — 2026-11-02",
+        "",
+        "### 0.4.0 2026-10-31 2026-11-01",
+        "",
+        "## 0.4.0 (2026-10-31) (2026-11-01)",
+        "",
+        "## 0.3.0 (2026-10-30)",
+        "",
+        "## 0.2.0 — 2026-04-23 / 2026-04-24",
+        "",
+      ].join("\n"),
+    ),
+  ).toEqual(["0.4.0 (2026-10-31) (2026-11-01)", "0.2.0 — 2026-04-23 / 2026-04-24"]);
 });
