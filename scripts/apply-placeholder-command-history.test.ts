@@ -85,6 +85,38 @@ function hasHistoricalRotateQualifier(changelog: string): boolean {
   return entry?.includes(historicalRotateSentence) ?? false;
 }
 
+function historicalCommand(changelog: string): [string, string] | null {
+  const fix = releaseSection(changelog, "## 0.2.1 (2026-10-16)");
+  const entries = fix.split("\n").filter((line) =>
+    line.startsWith("- **`stack apply` stops attempting to write placeholder secrets.**"),
+  );
+  if (entries.length !== 1) return null;
+  const matches = [...entries[0].matchAll(/Previously, wiring ran `([^`]+)` \(then without `([^`]+)`\)/g)];
+  return matches.length === 1 ? [matches[0][1], matches[0][2]] : null;
+}
+
+test("both historical apply entries contain the same placeholder command and rotation flag", () => {
+  const commands = changelogs.map(historicalCommand);
+  expect(commands[0]).toEqual(["phantom add <KEY> TODO_STACK_APPLY --rotate", "--rotate"]);
+  expect(commands[1]).toEqual(commands[0]);
+});
+
+test("historical command comparison detects drift in either changelog", () => {
+  for (const index of [0, 1]) {
+    for (const replacement of [
+      "phantom add <KEY> OTHER_VALUE --rotate",
+      "phantom add <KEY> TODO_STACK_APPLY",
+    ]) {
+      const changed = [...changelogs];
+      changed[index] = changed[index].replace("phantom add <KEY> TODO_STACK_APPLY --rotate", replacement);
+      expect(historicalCommand(changed[0])).not.toEqual(historicalCommand(changed[1]));
+    }
+    const changed = [...changelogs];
+    changed[index] = changed[index].replace("then without `--rotate`", "then without `--other`");
+    expect(historicalCommand(changed[0])).not.toEqual(historicalCommand(changed[1]));
+  }
+});
+
 test("both changelog entries retain the historical --rotate qualifier", () => {
   for (const changelog of changelogs) {
     expect(hasHistoricalRotateQualifier(changelog)).toBe(true);
