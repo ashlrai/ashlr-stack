@@ -1,5 +1,32 @@
 # `stack apply` and placeholder secrets
 
+## History
+
+The current changelog annotates the [0.1.0 entry](../CHANGELOG.md#010--2026-04-19-superseded-by-011):
+wiring historically attempted a `TODO_STACK_APPLY` placeholder for each declared
+secret. Those calls failed; they did not create usable credentials.
+
+The [0.2.1 bug fix](../CHANGELOG.md#021-2026-10-16) removed those attempts.
+Previously, wiring ran `phantom add <KEY> TODO_STACK_APPLY --rotate`, then
+retried without `--rotate`, for every declared secret. Phantom rejected values
+in command arguments and had no `--rotate`, so every call failed and the
+reported `envelopes` count was always zero. These commands are historical; do
+not run them. The fix replaced `WireResult.envelopes` with `present` and
+`missing`.
+
+The [0.2.2 release entry](../CHANGELOG.md#022-2026-10-25) says 0.2.1 was
+tagged but its npm publish failed; 0.2.2 superseded it and shipped the 0.2.1
+changes. The [0.3.0 entry](../CHANGELOG.md#030-2026-10-31) reiterates that
+wiring checks secret names without storing placeholders, and reports an
+unreadable vault as skipped rather than missing. The
+[Unreleased entry](../CHANGELOG.md#unreleased) clarifies that, after at least
+one provider succeeds, wiring covers every provider in the recipe, including
+failed providers.
+
+Do not add placeholder values yourself: they are not credentials and can prevent
+a real value from being stored under the same name. Release notes describe source
+history; check the installed version before assuming its behavior.
+
 ## Current behavior
 
 `stack apply <recipe-id>` provisions the recipe's providers in order using the
@@ -39,18 +66,6 @@ the provider failed. Repeated wiring overwrites an existing stub. These
 examples do not implement signature verification and must be completed before
 use. `--noWire` skips both the inventory check and webhook stubs; provider
 setup still runs and may store real credentials. Apply still requires Phantom.
-
-## Historical behavior
-
-Before the change recorded in the [0.2.1 changelog](../CHANGELOG.md), wiring
-attempted `phantom add <KEY> TODO_STACK_APPLY --rotate`, then retried without
-`--rotate`, for every declared secret. Phantom Secrets rejects secret values
-in command arguments and does not support `--rotate`, so those attempts
-failed; the old `envelopes` count was always zero. They did not create usable
-credentials. The fix removed the attempts and replaced `WireResult.envelopes`
-with `present` and `missing`. Do not add placeholder values yourself: they
-are not credentials and can prevent a real value from being stored under the
-same name.
 
 For the exact changelog entry that removed the attempts, see the
 [placeholder-secret changelog timeline](changelog-placeholder-timeline.md).
