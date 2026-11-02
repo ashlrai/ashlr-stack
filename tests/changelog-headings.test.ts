@@ -63,3 +63,9 @@ test("detects malformed version headings in a fixture", () => {
     "## 0.0.9 (2026-04-19) trailing",
   ]);
 });
+
+test("empty changelog fixture has no malformed headings", () => {
+  const fixture = readFileSync(new URL("./__fixtures__/changelog-empty.md", import.meta.url), "utf8");
+  expect(() => malformedHeadings(fixture)).not.toThrow();
+  expect(malformedHeadings(fixture)).toEqual([]);
+});

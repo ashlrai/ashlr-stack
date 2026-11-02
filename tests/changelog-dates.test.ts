@@ -65,3 +65,11 @@ test("site changelog copy has valid heading dates and matches the root changelog
   expect(badHeadings(site)).toEqual([]);
   expect(site).toBe(changelog);
 });
+
+test("empty changelog fixture parses to no versions without throwing", () => {
+  const fixture = read("./__fixtures__/changelog-empty.md");
+  expect(fixture).toBe("");
+  expect(() => versionHeadings(fixture)).not.toThrow();
+  expect(versionHeadings(fixture)).toEqual([]);
+  expect(badHeadings(fixture)).toEqual([]);
+});
