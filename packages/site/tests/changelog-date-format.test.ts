@@ -190,3 +190,25 @@ test("duplicate date detection flags version headings with two dates", () => {
     ),
   ).toEqual(["0.4.0 (2026-10-31) (2026-11-01)", "0.2.0 — 2026-04-23 / 2026-04-24"]);
 });
+
+/** Release headings whose date is later than the release listed above them (newest first). */
+function outOfOrderReleaseHeadings(markdown: string): string[] {
+  const dated = versionHeadingDates(markdown).filter(({ dates }) => dates.length === 1);
+  const flagged: string[] = [];
+  for (let i = 1; i < dated.length; i++) {
+    if (dated[i].dates[0] > dated[i - 1].dates[0]) flagged.push(dated[i].heading);
+  }
+  return flagged;
+}
+
+test("site changelog releases are listed newest first", () => {
+  const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
+  expect(outOfOrderReleaseHeadings(published)).toEqual([]);
+});
+
+test("release order check flags a release dated after the one above it", () => {
+  expect(
+    outOfOrderReleaseHeadings("## 0.3.0 (2026-10-31)\n\n## 0.2.0 (2026-10-16)\n\n## 0.1.0 (2026-10-17)\n"),
+  ).toEqual(["0.1.0 (2026-10-17)"]);
+  expect(outOfOrderReleaseHeadings("## 0.2.0 (2026-10-31)\n\n## 0.1.0 (2026-10-31)\n")).toEqual([]);
+});
