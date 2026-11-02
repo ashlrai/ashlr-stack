@@ -68,6 +68,46 @@ test("nested items outside a version section get no version", () => {
   expect(nestedLists("## Unreleased\n\n- a\n  - b\n")).toEqual([{ version: "", parent: "a", children: ["b"] }]);
 });
 
+/** Item text in document order, parents before their nested items, depth-first. */
+function flattenItems(list: Tokens.List): string[] {
+  return list.items.flatMap((item) => {
+    const sub = item.tokens.find((t): t is Tokens.List => t.type === "list");
+    return [ownText(item), ...(sub ? flattenItems(sub) : [])];
+  });
+}
+
+/** Flattened item text of every list under each version heading. */
+function entriesByVersion(markdown: string): Record<string, string[]> {
+  const out: Record<string, string[]> = {};
+  let version = "";
+  for (const token of marked.lexer(markdown)) {
+    if (token.type === "heading" && token.depth <= 2) {
+      version = token.depth === 2 && /^\d+\.\d+\.\d+(?:\s|$)/.test(token.text) ? token.text : "";
+    } else if (token.type === "list" && version) {
+      (out[version] ??= []).push(...flattenItems(token));
+    }
+  }
+  return out;
+}
+
+test("fixture entry retains parent and nested list text in order", () => {
+  const md = readFileSync(join(import.meta.dir, "__fixtures__/changelog-nested-lists.md"), "utf8");
+  expect(entriesByVersion(md)).toEqual({
+    "0.2.0 (2026-02-01)": [
+      "Parent alpha:",
+      "child alpha one",
+      "child alpha two",
+      "grandchild alpha",
+      "Flat entry",
+      "Parent beta",
+      "ordered beta one",
+      "ordered beta two",
+    ],
+    "0.1.0 (2026-01-01)": ["Older parent", "older child"],
+  });
+  expect(nestedLists(md).map((n) => n.parent)).toEqual(["Parent alpha:", "Parent beta", "Older parent"]);
+});
+
 // The root CHANGELOG.md is the source of truth; the site copy is synced from it.
 const sources = [
   ["root CHANGELOG.md", "CHANGELOG.md"],
