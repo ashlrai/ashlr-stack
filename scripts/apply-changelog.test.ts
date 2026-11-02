@@ -6,6 +6,19 @@ import { join } from "node:path";
 
 const root = join(import.meta.dir, "..");
 
+test("original apply entry describes placeholder writes as past attempts", () => {
+  const changelog = readFileSync(join(root, "CHANGELOG.md"), "utf8");
+  const release = changelog.split("## 0.1.0 — 2026-04-19 (superseded by 0.1.1)\n")[1]?.split("\n## ")[0];
+  expect(release).toBeDefined();
+  const entries = (release ?? "").split("\n").filter((line) => line.startsWith("- **`stack apply [recipe-id]`**"));
+  expect(entries).toHaveLength(1);
+  expect(entries[0]).toContain(
+    "Historically, wiring attempted to write a `TODO_STACK_APPLY` placeholder for each declared secret, but those calls failed; the 0.2.1 fix above removed the attempts.",
+  );
+  expect(entries[0]).toContain("Wiring no longer attempts to write placeholder values; it does not write to the vault or fill in missing values.");
+  expect(entries[0]).not.toMatch(/\b(?:wiring|`stack apply`|it) (?:now |still )?(?:writes|creates|stores|adds) (?:a |the )?placeholder/i);
+});
+
 test("the changelog's unreadable vault example matches apply output", () => {
   const dir = mkdtempSync(join(tmpdir(), "stack-apply-doc-"));
   try {
