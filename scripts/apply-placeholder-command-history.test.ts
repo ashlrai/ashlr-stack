@@ -65,6 +65,18 @@ test("both changelogs document the attempted command and its removal", () => {
   }
 });
 
+test("both changelog entries retain the historical --rotate qualifier", () => {
+  for (const changelog of changelogs) {
+    const fix = releaseSection(changelog, "## 0.2.1 (2026-10-16)");
+    const entry = fix.split("\n\n").find((paragraph) =>
+      paragraph.startsWith("- **`stack apply` stops attempting to write placeholder secrets.**"),
+    );
+    expect(entry).toContain(
+      "Previously, wiring ran `phantom add <KEY> TODO_STACK_APPLY --rotate` (then without `--rotate`) for every declared secret.",
+    );
+  }
+});
+
 test("the doc records the historical command and where its removal is documented", () => {
   expect(doc).toContain("`phantom add <KEY> TODO_STACK_APPLY --rotate`");
   expect(doc).toContain("`phantom add <KEY> TODO_STACK_APPLY`");
