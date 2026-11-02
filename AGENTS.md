@@ -2,6 +2,54 @@
 
 This repository is part of the AshlrAI ecosystem. It is maintained by Phantom (`phm improve` / steward) and other coding agents, under the same standing authority that applies to `ashlrai/phantom` (see phantom `docs/STANDING-AUTHORITY.md`).
 
+## Use Stack from an agent
+
+Read [llms.txt](https://stack.ashlr.ai/llms.txt) and [llms-full.txt](https://stack.ashlr.ai/llms-full.txt) first. In this repo those files are `packages/site/public/llms.txt` and `packages/site/public/llms-full.txt`. A short repo index is [llms.txt](./llms.txt) at the root.
+
+These commands are read-only. They need no account. They print JSON and write nothing:
+
+```bash
+npx -y -p @ashlr/stack stack providers --json
+npx -y -p @ashlr/stack stack recommend "B2B SaaS with auth, AI, and payments" --json
+npx -y -p @ashlr/stack stack scan --json
+npx -y -p @ashlr/stack stack templates list --json
+```
+
+Install on macOS or Linux (also installs Phantom Secrets if that CLI is missing):
+
+```bash
+curl -fsSL stack.ashlr.ai/install.sh | bash
+```
+
+Cursor, Claude Code, and Codex can share this stdio server. Paste it into `~/.cursor/mcp.json` or the project `.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "ashlr-stack": {
+      "command": "npx",
+      "args": ["-y", "-p", "@ashlr/stack", "-p", "ashlr-stack-mcp", "ashlr-stack-mcp"]
+    }
+  }
+}
+```
+
+Claude Code shell:
+
+```bash
+claude mcp add ashlr-stack -- npx -y -p @ashlr/stack -p ashlr-stack-mcp ashlr-stack-mcp
+```
+
+Codex shell:
+
+```bash
+codex mcp add ashlr-stack -- npx -y -p @ashlr/stack -p ashlr-stack-mcp ashlr-stack-mcp
+```
+
+`stack onboard --json` prints a plan and writes nothing. `stack doctor --ecosystem --json` only reports which Ashlr tools are installed. Do not run `stack add`, `stack apply`, `stack import`, or `stack onboard --apply` until the user names the project and the provider.
+
+Repo build and test steps stay in [STACK.md](./STACK.md#agent-quickstart-from-a-clone).
+
 ## Agents may
 - Create branches, commit, and open pull requests.
 - Turn on GitHub auto-merge (`phm improve --auto-merge` / `gh pr merge --auto`). A PR merges only after every required CI check is green. Never bypass a failing or pending check, and never use an admin override.

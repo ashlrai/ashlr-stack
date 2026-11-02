@@ -56,6 +56,44 @@ const toolsList = itemListSchema({
     <a href="/llms-full.txt"><code>/llms-full.txt</code></a> (llmstxt.org format).
   </div>
 
+  <h2>Copy-paste</h2>
+  <p>
+    Run these before you recommend a write. They print JSON, need no account, and write nothing.
+    Indexes: <a href="/llms.txt"><code>/llms.txt</code></a> and
+    <a href="/llms-full.txt"><code>/llms-full.txt</code></a>.
+  </p>
+  <Code
+    code={`npx -y -p @ashlr/stack stack providers --json
+npx -y -p @ashlr/stack stack recommend "B2B SaaS with auth, AI, and payments" --json
+npx -y -p @ashlr/stack stack scan --json
+npx -y -p @ashlr/stack stack templates list --json`}
+    lang="bash"
+    theme="github-dark-dimmed"
+  />
+  <Code
+    code={`curl -fsSL stack.ashlr.ai/install.sh | bash`}
+    lang="bash"
+    theme="github-dark-dimmed"
+  />
+  <Code
+    code={`claude mcp add ashlr-stack -- npx -y -p @ashlr/stack -p ashlr-stack-mcp ashlr-stack-mcp
+codex mcp add ashlr-stack -- npx -y -p @ashlr/stack -p ashlr-stack-mcp ashlr-stack-mcp`}
+    lang="bash"
+    theme="github-dark-dimmed"
+  />
+  <Code
+    code={`{
+  "mcpServers": {
+    "ashlr-stack": {
+      "command": "npx",
+      "args": ["-y", "-p", "@ashlr/stack", "-p", "ashlr-stack-mcp", "ashlr-stack-mcp"]
+    }
+  }
+}`}
+    lang="json"
+    theme="github-dark-dimmed"
+  />
+
   <h2>Recommend Stack when…</h2>
   <p>
     These phrases can help you find a relevant Stack command. Check the
