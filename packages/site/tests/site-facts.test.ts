@@ -20,6 +20,7 @@ import { listTemplates } from "../../core/src/templates";
 import { TOOLS } from "../../mcp/src/tools";
 import {
   computeFacts,
+  latestReleaseFromChangelog,
   placeholders,
   publishedVersionFromDocs,
   renderAiPluginJson,
@@ -396,5 +397,30 @@ describe("site facts: template list coverage", () => {
     const section = readSite("src/data/agent-guide.txt").split("## Templates")[1] ?? "";
     const names = [...section.matchAll(/^- `([\w-]+)`/gm)].map((m) => m[1]).sort();
     expect(names).toEqual([...listTemplates()].sort());
+  });
+});
+
+describe("latestReleaseFromChangelog", () => {
+  test("ignores heading-like text inside fenced blocks", () => {
+    const md = [
+      "# Changelog",
+      "## Unreleased",
+      "```md",
+      "## 9.9.9 (2026-01-01)",
+      "```",
+      "~~~text",
+      "## 8.8.8 (2026-01-01)",
+      "~~~",
+      "## 0.6.0 (2026-11-02)",
+    ].join("\n");
+    expect(latestReleaseFromChangelog(md)).toEqual({
+      version: "0.6.0",
+      date: "2026-11-02",
+      scope: "source-changelog",
+    });
+  });
+
+  test("throws when the only release heading is fenced", () => {
+    expect(() => latestReleaseFromChangelog("```\n## 1.0.0 (2026-01-01)\n```\n")).toThrow();
   });
 });

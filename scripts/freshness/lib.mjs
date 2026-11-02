@@ -37,6 +37,23 @@ const BEGIN_INLINE = /<!--\s*fresh:begin\s+([a-z0-9][a-z0-9-]*)\s*-->/;
 const END_INLINE = /<!--\s*fresh:end\s*-->/;
 const RELEASE_HEADING = /^## (\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)\s*\((\d{4}-\d{2}-\d{2})\)/m;
 
+/** Blank out fenced code (``` or ~~~) so heading-like lines inside it never match a heading regex. */
+export function stripFencedCode(text) {
+  let fence = null;
+  return text
+    .split('\n')
+    .map((line) => {
+      const m = line.match(/^\s*(`{3,}|~{3,})/);
+      if (!fence) {
+        if (m) fence = m[1];
+        return m ? '' : line;
+      }
+      if (m && m[1][0] === fence[0] && m[1].length >= fence.length && /^\s*[`~]+\s*$/.test(line)) fence = null;
+      return '';
+    })
+    .join('\n');
+}
+
 function readJson(path) {
   try {
     return JSON.parse(readFileSync(path, 'utf8'));
@@ -73,7 +90,7 @@ export function buildContext(root) {
   let changelog = null;
   try {
     const changelogText = readFileSync(join(root, 'CHANGELOG.md'), 'utf8');
-    const match = changelogText.match(RELEASE_HEADING);
+    const match = stripFencedCode(changelogText).match(RELEASE_HEADING);
     if (!match) {
       errors.push('CHANGELOG.md has no released "## x.y.z (date)" section');
     } else {
