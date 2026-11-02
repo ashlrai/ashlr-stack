@@ -4,6 +4,18 @@ import { join } from "node:path";
 
 const paths = ["CHANGELOG.md", "packages/site/src/data/CHANGELOG.md"] as const;
 
+test("site placeholder-removal entry presents the former value as historical", () => {
+  const changelog = readFileSync(join(import.meta.dir, "..", paths[1]), "utf8");
+  const release = changelog.split("## 0.2.1 (2026-10-16)\n")[1]?.split("\n## ")[0];
+  const entry = release?.split("\n").find((line) => line.startsWith("- **`stack apply` stops attempting"));
+
+  expect(entry).toBeDefined();
+  expect(entry?.match(/TODO_STACK_APPLY/g)).toHaveLength(1);
+  expect(entry).toContain("Previously, wiring ran `phantom add <KEY> TODO_STACK_APPLY --rotate`");
+  expect(entry).toContain("every call failed");
+  expect(entry).toContain("The wiring step never writes to the vault or fills in missing values.");
+});
+
 test.each(paths)("%s uses the same historical placeholder literal in both apply entries", (path) => {
   const changelog = readFileSync(join(import.meta.dir, "..", path), "utf8");
   const fixEntry = changelog.split("\n").find((line) => line.startsWith("- **`stack apply` stops attempting"));
