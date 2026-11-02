@@ -125,3 +125,26 @@ test("blank lines inside a version body stay in the parsed body", () => {
   expect(newer.body.split("\n").filter((l) => l === "").length).toBe(10);
   expect(older.body).toBe("\n- Old entry.\n\n");
 });
+
+/** Inline Markdown links `[label](destination "optional title")` in a body, in source order. */
+function inlineLinks(body: string): { label: string; destination: string }[] {
+  return [...body.matchAll(/\[([^\]]+)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g)].map((m) => ({
+    label: m[1],
+    destination: m[2],
+  }));
+}
+
+test("a Markdown link in a version body keeps its label and destination", () => {
+  const fixture = readFileSync(new URL("./__fixtures__/changelog-links.md", import.meta.url), "utf8");
+  expect(malformedHeadings(fixture)).toEqual([]);
+  const [newer, older] = versionSections(fixture);
+  // The link text survives verbatim inside the body, not just the parsed pieces.
+  expect(newer.body).toContain("[provider guide](docs/adding-a-provider.md)");
+  expect(newer.body).toContain('[Phantom](https://phm.dev "Phantom Secrets")');
+  expect(inlineLinks(newer.body)).toEqual([
+    { label: "provider guide", destination: "docs/adding-a-provider.md" },
+    { label: "Phantom", destination: "https://phm.dev" },
+  ]);
+  // A link belongs to its own version only.
+  expect(inlineLinks(older.body)).toEqual([]);
+});
