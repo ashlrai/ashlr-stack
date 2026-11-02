@@ -3,18 +3,21 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const root = join(import.meta.dir, "..");
-const map = readFileSync(join(root, "docs/changelog-apply-source-map.md"), "utf8");
+const maps = ["docs/changelog-apply-source-map.md", "docs/apply-changelog-source-map.md"];
 const paths = ["CHANGELOG.md", "packages/site/src/data/CHANGELOG.md"];
 const release = "0.2.1 (2026-10-16)";
 const entry = "- **`stack apply` stops attempting to write placeholder secrets.**";
 
 test("source map links each copy and records its exact headings and entry", () => {
-  for (const path of paths) {
-    const row = map.split("\n").find((line) => line.includes(`](../${path}#021-2026-10-16)`));
-    expect(row).toBeDefined();
-    expect(row).toContain(`\`${release}\``);
-    expect(row).toContain("`Bug fixes`");
-    expect(row).toContain(entry.slice(2));
+  for (const mapPath of maps) {
+    const map = readFileSync(join(root, mapPath), "utf8");
+    for (const path of paths) {
+      const row = map.split("\n").find((line) => line.includes(`](../${path}#021-2026-10-16)`));
+      expect(row).toBeDefined();
+      expect(row).toContain(`\`${release}\``);
+      expect(row).toContain("`Bug fixes`");
+      expect(row).toContain(entry.slice(2));
+    }
   }
 });
 
