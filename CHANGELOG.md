@@ -6,6 +6,22 @@
 
 - `stack apply` does not create placeholder secrets. After at least one provider succeeds, wiring checks secret names for every provider in the recipe, including providers that failed; a missing name does not itself fail apply, while provider failures do. Wiring can also create webhook stubs for those recipe providers, even if the vault is unreadable. Supply required missing secrets as real values through Phantom; `--noWire` skips both checks and stubs.
 
+## 0.3.2 (2026-11-01)
+
+0.3.1 was published from a release-validation branch and is not an ancestor of `main`. 0.3.2 is the first release cut from `main` after 0.3.0, so it carries the main-line fixes below. The `stack apply` placeholder change recorded under Unreleased above ships in this release too; it stays under that heading until the docs and tests that cite it by anchor are moved.
+
+### Fixed
+
+- `stack fleet` JSONL reads are bounded, and short reads no longer allocate by the requested size (#360).
+- The MCP server closes and exits when its host closes stdin, instead of lingering because the SDK transport ignores EOF.
+- MCP tool input validation treats JSON `null` as a type error for optional arguments; omit an argument to leave it unset.
+- `stack scan` next-step suggestions align under the "Next steps" heading.
+- Homebrew formula rendering keeps literal placeholders (#354).
+
+### Changed
+
+- Documentation and tests now keep published-package and runtime-evidence claims scoped to verified releases (#356, #361, #363, #419). Source versions still do not establish what npm or GitHub hold.
+
 ## 0.3.0 (2026-10-31)
 
 ### Added

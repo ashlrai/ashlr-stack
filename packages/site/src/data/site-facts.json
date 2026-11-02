@@ -1,10 +1,10 @@
 {
   "facts": {
-    "sourceVersion": "0.3.0",
+    "sourceVersion": "0.3.2",
     "publishedVersion": "0.3.1",
     "latestRelease": {
-      "version": "0.3.0",
-      "date": "2026-10-31",
+      "version": "0.3.2",
+      "date": "2026-11-01",
       "scope": "source-changelog"
     },
     "providerCount": 39,
@@ -77,10 +77,10 @@
     "siteHost": "stack.ashlr.ai"
   },
   "placeholders": {
-    "SOURCE_VERSION": "0.3.0",
+    "SOURCE_VERSION": "0.3.2",
     "PUBLISHED_VERSION": "0.3.1",
-    "LATEST_RELEASE_VERSION": "0.3.0",
-    "LATEST_RELEASE_DATE": "2026-10-31",
+    "LATEST_RELEASE_VERSION": "0.3.2",
+    "LATEST_RELEASE_DATE": "2026-11-01",
     "PROVIDER_COUNT": "39",
     "CATEGORY_COUNT": "13",
     "TEMPLATE_COUNT": "7",
