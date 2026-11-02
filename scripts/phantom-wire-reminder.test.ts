@@ -42,7 +42,21 @@ describe("generated webhook signature-verification reminder", () => {
         expect(example).toContain("unauthenticated, attacker-controlled input");
         expect(example).toContain(`forge a ${provider} webhook`);
         expect(example).toContain(hint);
-        expect(example).toContain("parse, trust, or act on the body");
+
+        // The instruction must remain in the handler after the raw body is
+        // read and before the success response, including after uncommenting.
+        const runnable = example.replace(/^\/\/ ?/gm, "");
+        const bodyRead = runnable.indexOf("const body = await req.text();");
+        const success = runnable.indexOf('return new Response("ok", { status: 200 });');
+        expect(bodyRead).toBeGreaterThanOrEqual(0);
+        expect(success).toBeGreaterThan(bodyRead);
+        const reminder = runnable.slice(bodyRead, success);
+        expect(reminder).toContain(
+          "// Verify over the exact raw body bytes with the webhook secret\n" +
+            `  // (\`phantom reveal ${provider.toUpperCase()}_WEBHOOK_SECRET\`) and compare in\n` +
+            "  // constant time; reject missing or invalid signatures, and only then\n" +
+            "  // parse, trust, or act on the body.",
+        );
       }
     } finally {
       harness.cleanup();
