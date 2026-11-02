@@ -82,6 +82,21 @@ test("the historical apply entry does not also claim wiring writes placeholders 
   expect(entry).not.toMatch(/\b(?:wiring|`stack apply`|it) (?:now |still )?(?:writes|creates|stores|adds) (?:a |the )?placeholder/i);
 });
 
+test("the original apply entry cannot describe placeholder writes as a current step", () => {
+  const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
+  const release = published.split("## 0.1.0 — 2026-04-19 (superseded by 0.1.1)\n")[1]?.split("\n## ")[0];
+  const entries = marked.lexer(release ?? "").flatMap((token) => (token.type === "list" ? token.items : []));
+  const applyEntries = entries.filter((entry) => entry.raw.startsWith("- **`stack apply [recipe-id]`**"));
+  expect(applyEntries).toHaveLength(1);
+  const entry = applyEntries[0].raw;
+  expect(entry).toContain("Historically, wiring attempted to write a `TODO_STACK_APPLY` placeholder");
+
+  // Catch an added present-tense claim even when the historical sentence remains intact.
+  const currentWrite = /\b(?:writes|creates|stores|adds)\b[^.!?]*\bplaceholders?\b/i;
+  expect(entry).not.toMatch(currentWrite);
+  expect(`${entry} It then writes a \`TODO_STACK_APPLY\` placeholder for every secret.`).toMatch(currentWrite);
+});
+
 test("rendered 0.2.1 apply entry explains the removal of placeholder writes", async () => {
   const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
   const release = published.split("## 0.2.1 (2026-10-16)\n")[1]?.split("\n## ")[0];
