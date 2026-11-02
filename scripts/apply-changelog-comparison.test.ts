@@ -49,3 +49,26 @@ test("the entry comparison catches wording changes in examples as well as bullet
   const [release, section, opening] = entries[2];
   expect(entry(changed, release, section, opening)).not.toBe(entry(sources[0], release, section, opening));
 });
+
+const originalApplyLocation = entries[9];
+const noPlaceholderWrites = "Wiring no longer attempts to write placeholder values; it does not write to the vault or fill in missing values.";
+
+function originalApplyEntriesAgree(source: string, site: string): boolean {
+  return source === site && source.includes(noPlaceholderWrites);
+}
+
+test("both original apply entries say wiring no longer writes placeholder secrets", () => {
+  const [source, site] = sources.map((changelog) => entry(changelog, ...originalApplyLocation));
+  expect(originalApplyEntriesAgree(source, site)).toBe(true);
+});
+
+test("original apply consistency rejects drift and matching regressions", () => {
+  const original = entry(sources[0], ...originalApplyLocation);
+  for (const replacement of ["", "Wiring writes placeholder values to the vault."]) {
+    const changed = original.replace(noPlaceholderWrites, replacement);
+    expect(changed).not.toBe(original);
+    expect(originalApplyEntriesAgree(changed, original)).toBe(false);
+    expect(originalApplyEntriesAgree(original, changed)).toBe(false);
+    expect(originalApplyEntriesAgree(changed, changed)).toBe(false);
+  }
+});
