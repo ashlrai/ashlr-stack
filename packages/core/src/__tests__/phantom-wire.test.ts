@@ -746,4 +746,36 @@ describe("ai/phantom-wire", () => {
     expect(prose).toContain("the body is untrusted input");
     expect(prose).toContain("verification to add before deploying a handler");
   });
+
+  it.each([
+    ["missing providers", { providers: undefined }],
+    ["null providers", { providers: null }],
+    ["a null provider entry", { providers: [null] }],
+  ])(
+    "rejects a malformed recipe with %s before touching the vault or disk",
+    async (_label, bad) => {
+      // Recipes are normally parsed by readRecipe; a hand-built object that skips
+      // it is not validated here, so the failure is a plain TypeError.
+      await expect(
+        wirePhantomForRecipe({ ...STRIPE_RECIPE, ...bad } as unknown as Recipe, {
+          cwd: harness.dir,
+        }),
+      ).rejects.toBeInstanceOf(TypeError);
+      expect(harness.callsTo("add")).toEqual([]);
+      expect(existsSync(join(harness.dir, ".stack/webhooks"))).toBe(false);
+    },
+  );
+
+  it("skips a path-traversal provider name without writing any stub", async () => {
+    const recipe: Recipe = { ...STRIPE_RECIPE, providers: [{ name: "../../evil" }] };
+
+    expect(await wirePhantomForRecipe(recipe, { cwd: harness.dir })).toEqual({
+      present: [],
+      missing: [],
+      webhooks: [],
+      skipped: ["../../evil"],
+    });
+    expect(existsSync(join(harness.dir, ".stack/webhooks"))).toBe(false);
+    expect(harness.callsTo("add")).toEqual([]);
+  });
 });
