@@ -33,6 +33,16 @@ test("both changelogs agree on the historical placeholder value in both releases
   }
 });
 
+test("the original stack apply entry identifies the placeholder as historical", () => {
+  for (const changelog of changelogs) {
+    const initial = releaseSection(changelog, "## 0.1.0 — 2026-04-19 (superseded by 0.1.1)");
+    const entry = initial.split("\n").find((line) => line.startsWith("- **`stack apply [recipe-id]`**"));
+    expect(entry).toContain("Historically, wiring attempted to write a `TODO_STACK_APPLY` placeholder");
+    expect(entry).toContain("those calls failed; the 0.2.1 fix above removed the attempts");
+    expect(entry).toContain("Wiring no longer attempts to write placeholder values");
+  }
+});
+
 test("the historical placeholder check detects drift and loss of historical context", () => {
   const source = changelogs[0];
   expect(historicalPlaceholderValues(source.replace("<KEY> TODO_STACK_APPLY --rotate", "<KEY> OTHER_VALUE --rotate")))
