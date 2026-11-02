@@ -83,6 +83,17 @@ test("historical apply release detection respects Markdown section boundaries", 
   expect(historicalApplyReleases(`## 0.1.0\n\n\`\`\`md\n${entry}\n\`\`\`\n`)).toEqual([]);
 });
 
+test("source changelog historical apply entry is within a version section", () => {
+  const source = readFileSync(join(root, "CHANGELOG.md"), "utf8");
+  const releases = historicalApplyReleases(source);
+  expect(releases).not.toContain(null);
+});
+
+test("source changelog historical apply entry belongs to the 0.1.0 release", () => {
+  const source = readFileSync(join(root, "CHANGELOG.md"), "utf8");
+  expect(historicalApplyReleases(source)).toEqual(["0.1.0 — 2026-04-19 (superseded by 0.1.1)"]);
+});
+
 test("rendered original apply entry identifies the placeholder as historical", async () => {
   const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
   const release = published.split("## 0.1.0 — 2026-04-19 (superseded by 0.1.1)\n")[1]?.split("\n## ")[0];
