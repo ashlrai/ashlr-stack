@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="340" viewBox="0 0 1200 340" role="img" aria-labelledby="howTitle howDesc">
+  <title id="howTitle">How Ashlr Stack works</title>
+  <desc id="howDesc">Three steps: an agent reads JSON, you authorize a provider, Stack records config and selected secrets.</desc>
+  <rect width="1200" height="340" fill="#050506"/>
+  <g font-family="ui-sans-serif, system-ui, Segoe UI, Helvetica, Arial, sans-serif">
+    <g>
+      <rect x="40" y="48" width="320" height="244" rx="12" fill="#101218" stroke="#2a3140"/>
+      <text x="64" y="92" fill="#e96b2a" font-size="13" letter-spacing="2">01</text>
+      <text x="64" y="132" fill="#f4f5f7" font-size="26" font-weight="650">Read</text>
+      <text x="64" y="176" fill="#c5cad3" font-size="16">providers, recommend,</text>
+      <text x="64" y="202" fill="#c5cad3" font-size="16">scan, and templates</text>
+      <text x="64" y="228" fill="#c5cad3" font-size="16">print JSON.</text>
+      <text x="64" y="262" fill="#9aa3b2" font-size="14">Nothing is created.</text>
+    </g>
+    <g>
+      <rect x="440" y="48" width="320" height="244" rx="12" fill="#101218" stroke="#2a3140"/>
+      <text x="464" y="92" fill="#e96b2a" font-size="13" letter-spacing="2">02</text>
+      <text x="464" y="132" fill="#f4f5f7" font-size="26" font-weight="650">Authorize</text>
+      <text x="464" y="176" fill="#c5cad3" font-size="16">OAuth, a PAT, or an</text>
+      <text x="464" y="202" fill="#c5cad3" font-size="16">API key you supply.</text>
+      <text x="464" y="236" fill="#9aa3b2" font-size="14">Vercel needs a token</text>
+      <text x="464" y="258" fill="#9aa3b2" font-size="14">you already have.</text>
+    </g>
+    <g>
+      <rect x="840" y="48" width="320" height="244" rx="12" fill="#101218" stroke="#e96b2a"/>
+      <text x="864" y="92" fill="#e96b2a" font-size="13" letter-spacing="2">03</text>
+      <text x="864" y="132" fill="#f4f5f7" font-size="26" font-weight="650">Record</text>
+      <text x="864" y="176" fill="#c5cad3" font-size="16">.stack.toml</text>
+      <text x="864" y="202" fill="#c5cad3" font-size="16">Phantom Secrets</text>
+      <text x="864" y="228" fill="#c5cad3" font-size="16">MCP entries</text>
+      <text x="864" y="262" fill="#9aa3b2" font-size="14">Only after you ask.</text>
+    </g>
+    <path d="M368 170 H432" stroke="#e96b2a" stroke-width="2"/>
+    <path d="M424 162 L436 170 L424 178" fill="none" stroke="#e96b2a" stroke-width="2"/>
+    <path d="M768 170 H832" stroke="#e96b2a" stroke-width="2"/>
+    <path d="M824 162 L836 170 L824 178" fill="none" stroke="#e96b2a" stroke-width="2"/>
+  </g>
+</svg>

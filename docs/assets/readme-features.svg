@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="360" viewBox="0 0 1200 360" role="img" aria-labelledby="featTitle featDesc">
+  <title id="featTitle">Ashlr Stack features</title>
+  <desc id="featDesc">Three features: JSON CLI output, MCP setup for Claude Cursor and Codex, and links to llms.txt and llms-full.txt.</desc>
+  <rect width="1200" height="360" fill="#050506"/>
+  <g font-family="ui-sans-serif, system-ui, Segoe UI, Helvetica, Arial, sans-serif">
+    <g>
+      <rect x="40" y="36" width="350" height="288" rx="12" fill="#101218" stroke="#2a3140"/>
+      <rect x="64" y="64" width="44" height="44" rx="8" fill="#1c120c" stroke="#e96b2a"/>
+      <text x="76" y="93" fill="#e96b2a" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="16">{ }</text>
+      <text x="64" y="148" fill="#f4f5f7" font-size="24" font-weight="650">JSON CLI</text>
+      <text x="64" y="188" fill="#c5cad3" font-size="16">Agents parse stdout.</text>
+      <text x="64" y="216" fill="#c5cad3" font-size="16">Flags sit after the</text>
+      <text x="64" y="244" fill="#c5cad3" font-size="16">subcommand.</text>
+      <text x="64" y="284" fill="#9aa3b2" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14">stack providers --json</text>
+    </g>
+    <g>
+      <rect x="425" y="36" width="350" height="288" rx="12" fill="#101218" stroke="#2a3140"/>
+      <rect x="449" y="64" width="44" height="44" rx="8" fill="#1c120c" stroke="#e96b2a"/>
+      <text x="460" y="93" fill="#e96b2a" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="16">MCP</text>
+      <text x="449" y="148" fill="#f4f5f7" font-size="24" font-weight="650">One MCP server</text>
+      <text x="449" y="188" fill="#c5cad3" font-size="16">Claude Code, Cursor,</text>
+      <text x="449" y="216" fill="#c5cad3" font-size="16">and Codex use the</text>
+      <text x="449" y="244" fill="#c5cad3" font-size="16">same stdio command.</text>
+      <text x="449" y="284" fill="#9aa3b2" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14">ashlr-stack-mcp</text>
+    </g>
+    <g>
+      <rect x="810" y="36" width="350" height="288" rx="12" fill="#101218" stroke="#2a3140"/>
+      <rect x="834" y="64" width="44" height="44" rx="8" fill="#1c120c" stroke="#e96b2a"/>
+      <text x="844" y="93" fill="#e96b2a" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14">TXT</text>
+      <text x="834" y="148" fill="#f4f5f7" font-size="24" font-weight="650">Agent indexes</text>
+      <text x="834" y="188" fill="#c5cad3" font-size="16">llms.txt is the short</text>
+      <text x="834" y="216" fill="#c5cad3" font-size="16">index. llms-full.txt</text>
+      <text x="834" y="244" fill="#c5cad3" font-size="16">is the long reference.</text>
+      <text x="834" y="284" fill="#9aa3b2" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14">stack.ashlr.ai/llms.txt</text>
+    </g>
+  </g>
+</svg>
