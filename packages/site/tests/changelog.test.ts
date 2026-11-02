@@ -238,6 +238,19 @@ test("placeholder-removal check rejects changed or duplicated behavior in either
   }
 });
 
+test("both changelogs file the placeholder-removal entry under the same 0.2.1 release", () => {
+  const releases = ["CHANGELOG.md", "packages/site/src/data/CHANGELOG.md"].map((path) => {
+    const changelog = readFileSync(join(root, path), "utf8");
+    const release = changelog.split("## 0.2.1 (2026-10-16)\n")[1]?.split("\n## ")[0];
+    expect(release, path).toBeDefined();
+    const entries = (release ?? "").split("\n").filter((line) => line.startsWith(placeholderRemovalHeading));
+    expect(entries, path).toHaveLength(1);
+    expect(entries[0], path).toBe(placeholderRemovalEntry);
+    return entries[0];
+  });
+  expect(releases[0]).toBe(releases[1]);
+});
+
 test("site changelog mirrors the source and explains apply's placeholder behavior", () => {
   const source = readFileSync(join(root, "CHANGELOG.md"), "utf8");
   const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
