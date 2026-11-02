@@ -50,28 +50,18 @@ test("date validator rejects impossible dates", () => {
   expect(isValidDate(2026, 2, 29)).toBe(false);
 });
 
-/** Version-heading dates that are missing or not real calendar dates. */
-function badHeadingDates(markdown: string): string[] {
-  return markdown
-    .split("\n")
-    .filter((l) => /^## +\[?\d+\.\d+\.\d+/.test(l))
-    .filter((h) => {
-      const m = DATE.exec(h);
-      return !m || !isValidDate(+m[1], +m[2], +m[3]);
-    });
-}
-
-test("leap-day fixture headings pass the date validation", () => {
-  const fixture = ["## 1.0.1 (2028-02-29)", "## [1.0.0] — 2024-02-29", "## 0.9.0 (2000-02-29)"].join("\n");
-  expect(badHeadingDates(fixture)).toEqual([]);
+test("fixture with valid leap-day headings (incl. 2000) is accepted", () => {
+  const fixture = read("./__fixtures__/changelog-valid-leap-day.md");
+  expect(versionHeadings(fixture)).toHaveLength(3);
+  expect(badHeadings(fixture)).toEqual([]);
 });
 
 test("non-leap Feb 29 fixtures fail the date validation", () => {
-  expect(badHeadingDates("## 1.0.0 (2026-02-29)\n## 0.9.0 (1900-02-29)")).toHaveLength(2);
+  expect(badHeadings("## 1.0.0 (2026-02-29)\n## 0.9.0 (1900-02-29)")).toHaveLength(2);
 });
 
 test("site changelog copy has valid heading dates and matches the root changelog", () => {
   const site = readFileSync(new URL("../packages/site/src/data/CHANGELOG.md", import.meta.url), "utf8");
-  expect(badHeadingDates(site)).toEqual([]);
+  expect(badHeadings(site)).toEqual([]);
   expect(site).toBe(changelog);
 });
