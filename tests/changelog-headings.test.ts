@@ -166,3 +166,40 @@ test("the site CHANGELOG.md mirror parses with well-formed headings and non-empt
   expect(malformedHeadings(site)).toEqual([]);
   for (const s of versionSections(site)) expect(s.body.trim()).not.toBe("");
 });
+
+/** Entries per version and `### ` section, in source order; repeated section names stay separate. */
+function sectionEntries(markdown: string): { version: string; section: string; entries: string[] }[] {
+  const out: { version: string; section: string; entries: string[] }[] = [];
+  let version = "";
+  let fenced = false;
+  for (const line of markdown.split("\n")) {
+    if (/^\s*(```|~~~)/.test(line)) fenced = !fenced;
+    if (fenced) continue;
+    if (/^##(?!#)/.test(line)) version = line;
+    else if (/^### /.test(line)) out.push({ version, section: line.slice(4), entries: [] });
+    else if (/^- /.test(line) && out.length > 0) out[out.length - 1].entries.push(line.slice(2));
+  }
+  return out;
+}
+
+test("repeated section headings keep entries with their own version and section", () => {
+  const fixture = readFileSync(new URL("./__fixtures__/changelog-repeated-sections.md", import.meta.url), "utf8");
+  expect(malformedHeadings(fixture)).toEqual([]);
+  expect(sectionEntries(fixture)).toEqual([
+    { version: "## 0.2.0 (2026-04-23)", section: "Added", entries: ["New in 0.2.0 (first Added)."] },
+    { version: "## 0.2.0 (2026-04-23)", section: "Fixed", entries: ["Fixed in 0.2.0."] },
+    { version: "## 0.2.0 (2026-04-23)", section: "Added", entries: ["New in 0.2.0 (second Added, same version)."] },
+    { version: "## 0.1.0 (2026-04-19)", section: "Added", entries: ["New in 0.1.0."] },
+    { version: "## 0.1.0 (2026-04-19)", section: "Fixed", entries: ["Fixed in 0.1.0."] },
+  ]);
+});
+
+test("the site CHANGELOG.md mirror keeps every entry under a version and section", () => {
+  const site = readFileSync(new URL("../packages/site/src/data/CHANGELOG.md", import.meta.url), "utf8");
+  const sections = sectionEntries(site);
+  expect(sections.length).toBeGreaterThan(0);
+  for (const s of sections) {
+    expect(s.version).not.toBe("");
+    expect(s.section.trim()).not.toBe("");
+  }
+});
