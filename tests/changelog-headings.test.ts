@@ -148,3 +148,21 @@ test("a Markdown link in a version body keeps its label and destination", () => 
   // A link belongs to its own version only.
   expect(inlineLinks(older.body)).toEqual([]);
 });
+
+test("both paragraphs of a multi-paragraph entry stay attached to the same version", () => {
+  const fixture = readFileSync(new URL("./__fixtures__/changelog-multi-paragraph.md", import.meta.url), "utf8");
+  expect(malformedHeadings(fixture)).toEqual([]);
+  const [newer, older] = versionSections(fixture);
+  expect(newer.heading).toBe("## 0.2.0 (2026-04-23)");
+  expect(newer.body).toContain(
+    "- First paragraph of the entry states the change.\n\n  Second paragraph of the same entry explains why and stays attached to 0.2.0.\n",
+  );
+  // The blank line between paragraphs does not start a new version.
+  expect(older.body).not.toContain("paragraph");
+});
+
+test("the site CHANGELOG.md mirror parses with well-formed headings and non-empty versions", () => {
+  const site = readFileSync(new URL("../packages/site/src/data/CHANGELOG.md", import.meta.url), "utf8");
+  expect(malformedHeadings(site)).toEqual([]);
+  for (const s of versionSections(site)) expect(s.body.trim()).not.toBe("");
+});
