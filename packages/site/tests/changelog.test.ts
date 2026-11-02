@@ -306,3 +306,29 @@ test("unreleased apply note describes wiring after a partial failure", () => {
   expect(unreleased).toContain("even if the vault is unreadable");
   expect(unreleased).toContain("`--noWire` skips both checks and stubs");
 });
+
+/** Versions (e.g. "0.3.0") that appear in more than one `##` release heading. */
+function duplicateVersions(markdown: string): string[] {
+  const seen = new Set<string>();
+  const duplicates = new Set<string>();
+  for (const token of marked.lexer(markdown)) {
+    if (token.type !== "heading" || token.depth !== 2) continue;
+    const match = token.text.match(/^\[?(\d+\.\d+\.\d+)\]?(?:\s|$)/);
+    if (!match) continue;
+    if (seen.has(match[1])) duplicates.add(match[1]);
+    seen.add(match[1]);
+  }
+  return [...duplicates];
+}
+
+test("site changelog lists each version heading only once", () => {
+  const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
+  expect(duplicateVersions(published)).toEqual([]);
+});
+
+test("duplicate version detection catches repeats across heading styles", () => {
+  expect(duplicateVersions("## 0.1.0\n\n## 0.2.0\n")).toEqual([]);
+  expect(duplicateVersions("## 0.1.0\n\n## 0.1.0\n")).toEqual(["0.1.0"]);
+  expect(duplicateVersions("## [0.2.0] — date\n\n## 0.2.0 (2026-01-01)\n")).toEqual(["0.2.0"]);
+  expect(duplicateVersions("## 0.1.0\n\n### 0.1.0\n")).toEqual([]);
+});
