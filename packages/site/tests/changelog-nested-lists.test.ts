@@ -68,33 +68,41 @@ test("nested items outside a version section get no version", () => {
   expect(nestedLists("## Unreleased\n\n- a\n  - b\n")).toEqual([{ version: "", parent: "a", children: ["b"] }]);
 });
 
-test("site changelog retains its nested lists under the right versions", () => {
-  const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
-  const nested = nestedLists(published);
+// The root CHANGELOG.md is the source of truth; the site copy is synced from it.
+const sources = [
+  ["root CHANGELOG.md", "CHANGELOG.md"],
+  ["site changelog", "packages/site/src/data/CHANGELOG.md"],
+] as const;
 
-  const demo = nested.filter((n) => n.version === "0.2.1 (2026-10-16)");
-  expect(demo).toHaveLength(1);
-  expect(demo[0].parent).toStartWith('Clickable in-hero animation');
-  expect(demo[0].children).toHaveLength(2);
-  expect(demo[0].children[0]).toContain("GenerateStackDemo.tsx");
+for (const [label, path] of sources) {
+  const published = readFileSync(join(root, path), "utf8");
 
-  const docs = nested.filter((n) => n.version === "0.1.0 — 2026-04-19 (superseded by 0.1.1)");
-  expect(docs).toHaveLength(1);
-  expect(docs[0].children).toHaveLength(4);
-  expect(docs[0].children[0]).toContain("packages/cli/README.md");
-  expect(docs[0].children[3]).toContain("LICENSE");
+  test(`${label} retains its nested lists under the right versions`, () => {
+    const nested = nestedLists(published);
 
-  expect(nested).toHaveLength(2);
-});
+    const demo = nested.filter((n) => n.version === "0.2.1 (2026-10-16)");
+    expect(demo).toHaveLength(1);
+    expect(demo[0].parent).toStartWith("Clickable in-hero animation");
+    expect(demo[0].children).toHaveLength(2);
+    expect(demo[0].children[0]).toContain("GenerateStackDemo.tsx");
 
-test("every indented bullet in the site changelog is parsed as a nested item", () => {
-  const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
-  let inFence = false;
-  let indented = 0;
-  for (const line of published.split("\n")) {
-    if (/^\s*```/.test(line)) inFence = !inFence;
-    else if (!inFence && /^ +[-*] /.test(line)) indented++;
-  }
-  const parsed = nestedLists(published).reduce((sum, n) => sum + n.children.length, 0);
-  expect(parsed).toBe(indented);
-});
+    const docs = nested.filter((n) => n.version === "0.1.0 — 2026-04-19 (superseded by 0.1.1)");
+    expect(docs).toHaveLength(1);
+    expect(docs[0].children).toHaveLength(4);
+    expect(docs[0].children[0]).toContain("packages/cli/README.md");
+    expect(docs[0].children[3]).toContain("LICENSE");
+
+    expect(nested).toHaveLength(2);
+  });
+
+  test(`every indented bullet in the ${label} is parsed as a nested item`, () => {
+    let inFence = false;
+    let indented = 0;
+    for (const line of published.split("\n")) {
+      if (/^\s*```/.test(line)) inFence = !inFence;
+      else if (!inFence && /^ +[-*] /.test(line)) indented++;
+    }
+    const parsed = nestedLists(published).reduce((sum, n) => sum + n.children.length, 0);
+    expect(parsed).toBe(indented);
+  });
+}
