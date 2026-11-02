@@ -69,3 +69,17 @@ test("empty changelog fixture has no malformed headings", () => {
   expect(() => malformedHeadings(fixture)).not.toThrow();
   expect(malformedHeadings(fixture)).toEqual([]);
 });
+
+test("prose before the first version is not a version and the first version stays intact", () => {
+  const fixture = readFileSync(new URL("./__fixtures__/changelog-preamble.md", import.meta.url), "utf8");
+  const lines = fixture.split("\n");
+  const versions = lines.filter((l) => /^## /.test(l));
+  expect(malformedHeadings(fixture)).toEqual([]);
+  expect(versions).toEqual(["## 0.2.0 (2026-04-23)", "## 0.1.0 (2026-04-19)"]);
+  // The first version section starts at its heading and keeps its own body.
+  const first = lines.indexOf(versions[0]);
+  const second = lines.indexOf(versions[1]);
+  expect(lines.slice(first, second).join("\n")).toContain("- First version entry stays intact.");
+  // Nothing before it (the preamble) leaks a version-like heading.
+  expect(lines.slice(0, first).filter((l) => /^## /.test(l))).toEqual([]);
+});
