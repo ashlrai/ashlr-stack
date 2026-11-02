@@ -148,3 +148,31 @@ test("a Markdown link in a version body keeps its label and destination", () => 
   // A link belongs to its own version only.
   expect(inlineLinks(older.body)).toEqual([]);
 });
+
+test("Unicode characters in a version body survive parsing byte for byte", () => {
+  const fixture = readFileSync(new URL("./__fixtures__/changelog-unicode.md", import.meta.url), "utf8");
+  expect(malformedHeadings(fixture)).toEqual([]);
+  const [newer, older] = versionSections(fixture);
+  expect(newer.heading).toBe("## 0.2.0 (2026-04-23)");
+  expect(newer.body).toContain("- Café-style naïve “smart quotes” and an em dash — kept intact.");
+  expect(newer.body).toContain("- CJK 日本語のテキスト and Cyrillic Привет, мир.");
+  // Astral emoji, a ZWJ sequence and a decomposed accent are not split or normalised.
+  expect(newer.body).toContain("🚀");
+  expect(newer.body).toContain("👩‍💻");
+  expect(newer.body).toContain("é");
+  expect(newer.body).not.toContain("�");
+  // The em dash in a bracketed heading is accepted, and the next body stays ASCII.
+  expect(older.heading).toBe("## [0.1.0] — 2026-04-19");
+  expect(older.body).toBe("\n- Plain ASCII entry.\n\n");
+});
+
+test("the site changelog parses with its non-ASCII characters intact", () => {
+  const site = readFileSync(new URL("../packages/site/src/data/CHANGELOG.md", import.meta.url), "utf8");
+  expect(malformedHeadings(site)).toEqual([]);
+  const sections = versionSections(site);
+  expect(sections.length).toBeGreaterThan(0);
+  // Re-joining the parsed sections loses no character, so Unicode in any body is preserved.
+  const rejoined = sections.map((s) => `${s.heading}\n${s.body}`).join("");
+  for (const ch of new Set(site.match(/[^\x00-\x7F]/gu) ?? [])) expect(rejoined).toContain(ch);
+  expect(site).not.toContain("�");
+});
