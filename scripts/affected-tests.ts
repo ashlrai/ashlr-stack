@@ -39,6 +39,8 @@ export function affectedTests(paths: readonly string[]): string[] | "ALL" {
       path.startsWith("scripts/__fixtures__/affected-tests/")
     ) {
       targets.add("./scripts/affected-tests.test.ts");
+    } else if (path.startsWith("scripts/__fixtures__/changelog/")) {
+      targets.add("./scripts/changelog-duplicate-versions.test.ts");
     } else {
       // New packages, shared scripts, templates and unrecognized inputs fail closed.
       return "ALL";
