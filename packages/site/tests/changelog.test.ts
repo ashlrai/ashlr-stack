@@ -68,6 +68,20 @@ test("rendered original apply entry identifies the placeholder as historical", a
   );
 });
 
+test("the historical apply entry does not also claim wiring writes placeholders today", () => {
+  const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
+  const release = published.split("## 0.1.0 — 2026-04-19 (superseded by 0.1.1)\n")[1]?.split("\n## ")[0];
+  expect(release).toBeDefined();
+
+  const entries = marked.lexer(release ?? "").flatMap((token) => (token.type === "list" ? token.items : []));
+  const applyEntries = entries.filter((entry) => entry.raw.startsWith("- **`stack apply [recipe-id]`**"));
+  expect(applyEntries).toHaveLength(1);
+  const entry = applyEntries[0].raw;
+  expect(entry).toContain("Historically, wiring attempted to write a `TODO_STACK_APPLY` placeholder");
+  expect(entry).toContain("Wiring no longer attempts to write placeholder values");
+  expect(entry).not.toMatch(/\b(?:wiring|`stack apply`|it) (?:now |still )?(?:writes|creates|stores|adds) (?:a |the )?placeholder/i);
+});
+
 test("rendered 0.2.1 apply entry explains the removal of placeholder writes", async () => {
   const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
   const release = published.split("## 0.2.1 (2026-10-16)\n")[1]?.split("\n## ")[0];
