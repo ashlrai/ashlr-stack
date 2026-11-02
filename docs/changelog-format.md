@@ -97,18 +97,21 @@ heading, as `## 0.1.1 — 2026-04-19` does.
 
 ## Rules enforced by tests
 
-`packages/site/tests/changelog.test.ts` and the `scripts/` suite pin this
-format:
+`packages/site/tests/changelog.test.ts`,
+`packages/site/tests/changelog-empty-sections.test.ts` and the `scripts/`
+suite pin this format:
 
 - exactly one `#` heading, `Changelog`;
 - the first `##` is `Unreleased`;
 - every other `##` begins with an optionally bracketed `X.Y.Z` version;
 - release versions strictly decrease down the file, each version listed once;
+- every version heading is followed by non-whitespace content before the next
+  version heading or the end of the file — no empty release sections;
 - heading depth never increases by more than one level;
 - the site copy equals the root copy byte for byte.
 
 Run the checks:
 
 ```sh
-HOME=$(mktemp -d) bun test packages/site/tests/changelog.test.ts scripts/changelog-version-headings.test.ts scripts/changelog-mirroring.test.ts scripts/changelog-format.test.ts
+HOME=$(mktemp -d) bun test packages/site/tests/changelog.test.ts packages/site/tests/changelog-empty-sections.test.ts scripts/changelog-version-headings.test.ts scripts/changelog-mirroring.test.ts scripts/changelog-format.test.ts
 ```
