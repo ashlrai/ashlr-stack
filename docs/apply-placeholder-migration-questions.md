@@ -45,6 +45,15 @@ listed under 0.2.1. The later entries —
 [Unreleased](../CHANGELOG.md#unreleased) — describe only the name-checking
 wiring.
 
+## How do I tell which wiring my installed copy runs?
+
+Compare the installed version against the release entries above. `stack
+--version` reports the running version, and on releases that have it
+`stack upgrade --json` prints `current` and `latest` while installing
+nothing. `stack apply --help` shows whether the installed copy accepts
+flags such as `--noWire`. This repository's changelog describes the code
+across releases; it does not establish what is installed.
+
 ## Did provider setup write placeholders too?
 
 The changelog does not say that. It notes provider setup may store real values
@@ -59,6 +68,14 @@ failed, so it describes no apply-written placeholders to remove. What it
 prescribes runs the other direction: supply each required *missing* value
 yourself — run `phantom add <NAME>` in a trusted terminal and enter the real
 value when prompted, never as a command argument.
+
+## Do I need to re-run `stack apply` to fix old state?
+
+The changelog prescribes no re-run, and records no apply-written vault state
+to repair: every placeholder call failed. It does record that apply re-runs
+the provider setup pipeline for every recipe provider and can create webhook
+stubs, so a re-run is a real operation rather than an inspection. The
+recorded remediation is supplying each required missing value yourself.
 
 ## What does wiring do instead?
 
