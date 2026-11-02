@@ -200,6 +200,27 @@ describe("ai/phantom-wire", () => {
     expect(note).toContain("not a verifier");
   });
 
+  it("keeps the example review's source references pointing at the cited lines", () => {
+    const review = readFileSync(
+      new URL("../../../../docs/phantom-wire-example-review.md", import.meta.url),
+      "utf-8",
+    );
+    const source = readFileSync(
+      fileURLToPath(new URL("../ai/phantom-wire.ts", import.meta.url)),
+      "utf-8",
+    ).split("\n");
+    const rows = [...review.matchAll(/\| ([\d, -]+) \| `([^`]+)` \|$/gm)];
+    // 9 assumptions + 4 open items.
+    expect(rows).toHaveLength(13);
+    for (const [, ranges, anchor] of rows) {
+      const found = ranges!.split(",").some((range) => {
+        const [start, end = start] = range.trim().split("-").map(Number);
+        return source.slice(start! - 1, end).some((line) => line.includes(anchor!));
+      });
+      expect(found, `"${anchor}" not within lines ${ranges}`).toBe(true);
+    }
+  });
+
   it("keeps the signature review aligned with the commented follow-up and active code", async () => {
     const review = readFileSync(
       new URL("../../../../docs/phantom-wire-signature-review.md", import.meta.url),
