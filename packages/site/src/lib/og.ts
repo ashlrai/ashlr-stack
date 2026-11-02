@@ -5,12 +5,9 @@
  * (docs, blog posts) callers pass a title and get back the meta tag set they
  * should render.
  *
- * Rasterization caveat: SVG OG images are accepted by most modern crawlers
- * (Discord, Slack, iMessage) but some legacy previewers — notably older
- * Facebook scrapers and some LinkedIn surfaces — still require PNG. In a real
- * deploy, run an asset pipeline (sharp / resvg / satori) against these SVGs
- * and emit `.png` siblings; this module accepts an `ogImage` override so the
- * pipeline can point at the rasterized variant.
+ * Social cards are PNG so Facebook, LinkedIn, and other previewers that skip
+ * SVG still get an image. The SVG originals stay in public/ for browsers.
+ * Pass `ogImage` to override the default card.
  */
 
 export const SITE_URL = "https://stack.ashlr.ai";
@@ -25,10 +22,10 @@ export function canonicalUrl(path: string): string {
 
 export const SITE_NAME = "Ashlr Stack";
 export const TWITTER_HANDLE = "@ashlrai";
-export const DEFAULT_OG_IMAGE = "/og.svg";
-export const DEFAULT_TWITTER_IMAGE = "/twitter-card.svg";
+export const DEFAULT_OG_IMAGE = "/og.png";
+export const DEFAULT_TWITTER_IMAGE = "/twitter-card.png";
 
-export const DEFAULT_TITLE = "Ashlr Stack — The control plane for your entire dev stack";
+export const DEFAULT_TITLE = "Ashlr Stack: the control plane for your entire dev stack";
 export const DEFAULT_DESCRIPTION =
   "Plan and configure supported services for a local development project, using Stack CLI workflows and its MCP bridge.";
 
@@ -67,7 +64,7 @@ export function buildOgMeta(input: OgMetaInput = {}): OgMetaTag[] {
   const canonical = input.canonical ?? `${SITE_URL}/`;
   const imageAlt =
     input.imageAlt ??
-    "Ashlr Stack — orange Orbit & Spire mark with an illustrative Stack workflow. Credentials and client setup are still required.";
+    "Ashlr Stack orange Orbit and Spire mark with an illustrative Stack workflow. Credentials and client setup are still required.";
 
   return [
     { attr: "property", key: "og:site_name", value: SITE_NAME },
@@ -77,6 +74,7 @@ export function buildOgMeta(input: OgMetaInput = {}): OgMetaTag[] {
     { attr: "property", key: "og:title", value: title },
     { attr: "property", key: "og:description", value: description },
     { attr: "property", key: "og:image", value: ogImage },
+    { attr: "property", key: "og:image:type", value: "image/png" },
     { attr: "property", key: "og:image:alt", value: imageAlt },
     { attr: "property", key: "og:image:width", value: "1200" },
     { attr: "property", key: "og:image:height", value: "630" },
@@ -97,9 +95,7 @@ function absolute(pathOrUrl: string): string {
 }
 
 /**
- * Placeholder for a future asset-pipeline hook. A real implementation would
- * rasterize /og.svg with a per-page title overlay and return the .png URL.
- * Today it simply returns the static /og.svg.
+ * Returns the shared PNG card. Per-page title overlays are not generated.
  */
 export function stampOgImage(_title: string): string {
   return DEFAULT_OG_IMAGE;
