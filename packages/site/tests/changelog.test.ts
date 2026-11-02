@@ -50,6 +50,39 @@ test("recommendation heading contains the apply entry about stopping placeholder
   expect(applyEntries[0].raw).toContain("Wiring no longer attempts to write placeholder values; it does not write to the vault or fill in missing values.");
 });
 
+function historicalApplyReleases(markdown: string): (string | null)[] {
+  let release: string | null = null;
+  const releases: (string | null)[] = [];
+  for (const token of marked.lexer(markdown)) {
+    if (token.type === "heading" && token.depth <= 2) {
+      release = token.depth === 2 && /^(?:\[\d+\.\d+\.\d+\]|\d+\.\d+\.\d+)(?:\s|$)/.test(token.text) ? token.text : null;
+    }
+    if (token.type === "list") {
+      for (const item of token.items) {
+        if (item.raw.startsWith("- **`stack apply [recipe-id]`**")) releases.push(release);
+      }
+    }
+  }
+  return releases;
+}
+
+test("historical apply entry belongs to the 0.1.0 release", () => {
+  const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
+  expect(historicalApplyReleases(published)).toEqual(["0.1.0 — 2026-04-19 (superseded by 0.1.1)"]);
+});
+
+test("historical apply release detection respects Markdown section boundaries", () => {
+  const entry = "- **`stack apply [recipe-id]`** — historical entry";
+  expect(historicalApplyReleases(`${entry}\n`)).toEqual([null]);
+  expect(historicalApplyReleases(`## Unreleased\n\n### Changed\n\n${entry}\n`)).toEqual([null]);
+  expect(historicalApplyReleases(`## 0.1.0\n\n### Added\n\n${entry}\n`)).toEqual(["0.1.0"]);
+  expect(historicalApplyReleases(`## [0.2.0] — date\n\n${entry}\n`)).toEqual(["[0.2.0] — date"]);
+  expect(historicalApplyReleases(`## 0.1.0\n\n## Notes\n\n${entry}\n`)).toEqual([null]);
+  expect(historicalApplyReleases(`## 0.1.0\n\n# Other\n\n${entry}\n`)).toEqual([null]);
+  expect(historicalApplyReleases(`## 0.1.0\n\n${entry}\n\n## 0.2.0\n\n${entry}\n`)).toEqual(["0.1.0", "0.2.0"]);
+  expect(historicalApplyReleases(`## 0.1.0\n\n\`\`\`md\n${entry}\n\`\`\`\n`)).toEqual([]);
+});
+
 test("rendered original apply entry identifies the placeholder as historical", async () => {
   const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
   const release = published.split("## 0.1.0 — 2026-04-19 (superseded by 0.1.1)\n")[1]?.split("\n## ")[0];
