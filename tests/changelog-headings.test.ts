@@ -83,3 +83,34 @@ test("prose before the first version is not a version and the first version stay
   // Nothing before it (the preamble) leaks a version-like heading.
   expect(lines.slice(0, first).filter((l) => /^## /.test(l))).toEqual([]);
 });
+
+/** Version sections in source order: heading line → body up to the next `## ` heading. */
+function versionSections(markdown: string): { heading: string; body: string }[] {
+  const sections: { heading: string; body: string }[] = [];
+  let fenced = false;
+  for (const line of markdown.split("\n")) {
+    if (/^\s*(```|~~~)/.test(line)) fenced = !fenced;
+    if (!fenced && /^##(?!#)/.test(line)) sections.push({ heading: line, body: "" });
+    else if (sections.length > 0) sections[sections.length - 1].body += `${line}\n`;
+  }
+  return sections;
+}
+
+test("three-version fixture parses all versions in source order with their own bodies", () => {
+  const fixture = readFileSync(new URL("./__fixtures__/changelog-three-versions.md", import.meta.url), "utf8");
+  expect(malformedHeadings(fixture)).toEqual([]);
+  const sections = versionSections(fixture);
+  expect(sections.map((s) => s.heading)).toEqual([
+    "## 0.3.0 (2026-05-01)",
+    "## [0.2.0] — 2026-04-23",
+    "## 0.1.0 (2026-04-19)",
+  ]);
+  const [third, second, first] = sections.map((s) => s.body);
+  expect(third).toContain("- Third version entry.");
+  expect(second).toContain("- Second version entry.");
+  expect(first).toContain("- First version entry.");
+  // Each body holds only its own entry.
+  for (const [body, own] of [[third, "Third"], [second, "Second"], [first, "First"]] as const) {
+    expect(body.match(/^- .*$/gm)).toEqual([`- ${own} version entry.`]);
+  }
+});
