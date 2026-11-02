@@ -362,3 +362,31 @@ test("duplicate version detection catches repeats across heading styles", () => 
   expect(duplicateVersions("## [0.2.0] — date\n\n## 0.2.0 (2026-01-01)\n")).toEqual(["0.2.0"]);
   expect(duplicateVersions("## 0.1.0\n\n### 0.1.0\n")).toEqual([]);
 });
+
+function releaseVersions(markdown: string): string[] {
+  return marked
+    .lexer(markdown)
+    .flatMap((token) => (token.type === "heading" && token.depth === 2 ? [token.text.match(/^\[?(\d+\.\d+\.\d+)\]?(?:\s|$)/)?.[1]] : []))
+    .filter((version): version is string => version !== undefined);
+}
+
+test("blank lines between version entries keep both entries distinct and in input order", () => {
+  const entry = (version: string) => `## ${version} (2026-01-01)\n\n### Added\n\n- item for ${version}\n`;
+  const input = `# Changelog\n\n${entry("0.2.0")}\n\n\n${entry("0.1.0")}`;
+  expect(releaseVersions(input)).toEqual(["0.2.0", "0.1.0"]);
+
+  const releases = input.split(/\n(?=## )/).slice(1);
+  expect(releases).toHaveLength(2);
+  expect(releases[0]).toContain("item for 0.2.0");
+  expect(releases[0]).not.toContain("0.1.0");
+  expect(releases[1]).toContain("item for 0.1.0");
+});
+
+test("a single blank line, extra blank lines, or none before the next heading parse identically", () => {
+  const body = (gap: string) => `## 0.2.0\n\n- a${gap}## 0.1.0\n\n- b\n`;
+  for (const gap of ["\n", "\n\n", "\n\n\n\n"]) {
+    expect(releaseVersions(body(gap))).toEqual(["0.2.0", "0.1.0"]);
+    const lists = marked.lexer(body(gap)).flatMap((token) => (token.type === "list" ? token.items.map((item) => item.text) : []));
+    expect(lists).toEqual(["a", "b"]);
+  }
+});
