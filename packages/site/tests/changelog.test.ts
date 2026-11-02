@@ -33,6 +33,23 @@ test("site changelog renders its release headings in descending version order", 
   }
 }, 30_000);
 
+test("recommendation heading contains the apply entry about stopping placeholder writes", () => {
+  const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
+  const tokens = marked.lexer(published);
+  const headings = tokens.filter(
+    (token) => token.type === "heading" && token.depth === 3 && token.text === "AI recommendation layer — `stack recommend` + `stack apply`",
+  );
+  expect(headings).toHaveLength(1);
+
+  const start = tokens.indexOf(headings[0]);
+  const followingHeading = tokens.findIndex((token, index) => index > start && token.type === "heading" && token.depth <= 3);
+  const section = tokens.slice(start + 1, followingHeading === -1 ? undefined : followingHeading);
+  const entries = section.flatMap((token) => (token.type === "list" ? token.items : []));
+  const applyEntries = entries.filter((entry) => entry.raw.startsWith("- **`stack apply [recipe-id]`**"));
+  expect(applyEntries).toHaveLength(1);
+  expect(applyEntries[0].raw).toContain("Wiring no longer attempts to write placeholder values; it does not write to the vault or fill in missing values.");
+});
+
 test("rendered 0.2.1 apply entry explains the removal of placeholder writes", async () => {
   const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
   const release = published.split("## 0.2.1 (2026-10-16)\n")[1]?.split("\n## ")[0];
