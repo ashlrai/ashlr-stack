@@ -6,6 +6,8 @@ import { marked, type Tokens } from "marked";
 const root = join(import.meta.dir, "../../..");
 const fixture = readFileSync(join(import.meta.dir, "__fixtures__/changelog-fenced-code.md"), "utf8");
 
+const edges = readFileSync(join(import.meta.dir, "__fixtures__/changelog-fenced-code-edges.md"), "utf8");
+
 type Entry = { version: string; raw: string };
 
 /** Top-level `##`/`#` headings (the only section boundaries) and the list entries under each. */
@@ -48,6 +50,18 @@ test("tilde fences keep heading-like lines out of the section list", () => {
   const tokens = marked.lexer(fixture);
   const code = tokens.filter((t): t is Tokens.Code => t.type === "code");
   expect(code.map((t) => t.text)).toContain("## 8.8.8 (2026-01-01)");
+});
+
+test("longer fences, nested lists and an unterminated fence never create versions or sections", () => {
+  const tokens = marked.lexer(edges);
+  const headings = tokens.flatMap((t) => (t.type === "heading" ? [`${t.depth}:${t.text}`] : []));
+  expect(headings).toEqual(["1:Changelog", "2:0.7.0 (2026-11-02)", "2:0.6.0 (2026-10-01)"]);
+
+  const { entries: found } = entries(edges);
+  expect(found[0].raw).toContain("## 7.7.7 (2026-01-01)");
+  expect(found[0].raw).toContain("## 6.6.6 (2026-01-01)");
+  expect(found[1].raw).toContain("## 5.5.5 (2026-01-01)");
+  expect(JSON.stringify(headings)).not.toMatch(/[4567]\.[4567]\.[4567]|Unterminated/);
 });
 
 for (const [label, path] of [
