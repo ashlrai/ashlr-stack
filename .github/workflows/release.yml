@@ -6,11 +6,17 @@ on:
   # Dispatch builds an existing tag (auto-tag dispatches here after it creates
   # one). Only a dispatch from main runs: a dispatch runs the chosen ref's
   # copy of this file, so an edited branch copy must not reach publish.
+  # Pass either tag (vX.Y.Z) or version (X.Y.Z, builds tag v<version>); when
+  # both are given they must agree. One is required (checked in build-binaries).
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Existing release tag to build, for example v0.1.0'
-        required: true
+        description: 'Existing release tag to build, for example v0.1.0 (or pass version instead)'
+        required: false
+        type: string
+      version:
+        description: 'Released version X.Y.Z; builds existing tag v<version>'
+        required: false
         type: string
       npm_otp:
         description: 'Unsupported legacy input; any nonempty value refuses before release work'
@@ -21,11 +27,12 @@ permissions:
   contents: read
 
 env:
-  # Tag push: the pushed tag. Dispatch: the tag input (validated in build-binaries).
-  RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+  # Tag push: the pushed tag. Dispatch: the tag input, or v<version> when only
+  # version is given (both validated in build-binaries).
+  RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && (inputs.tag || format('v{0}', inputs.version)) || github.ref_name }}
 
 concurrency:
-  group: release-${{ inputs.tag || github.ref_name }}
+  group: release-${{ github.event_name == 'workflow_dispatch' && (inputs.tag || format('v{0}', inputs.version)) || github.ref_name }}
   cancel-in-progress: false
 
 jobs:
@@ -86,8 +93,20 @@ jobs:
       - name: Validate release tag
         env:
           REPO_URL: ${{ github.server_url }}/${{ github.repository }}.git
+          INPUT_TAG: ${{ github.event.inputs.tag }}
+          INPUT_VERSION: ${{ github.event.inputs.version }}
         run: |
           set -euo pipefail
+          # Dispatch selects the release with tag or version; both may be given
+          # only when they agree, and at least one is required.
+          if [ "${GITHUB_EVENT_NAME:-}" = workflow_dispatch ]; then
+            if [ -n "$INPUT_VERSION" ]; then
+              [[ "$INPUT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::version input is not X.Y.Z"; exit 1; }
+              [ -z "$INPUT_TAG" ] || [ "$INPUT_TAG" = "v$INPUT_VERSION" ] || { echo "::error::tag and version inputs disagree"; exit 1; }
+            elif [ -z "$INPUT_TAG" ]; then
+              echo "::error::workflow_dispatch requires a tag or version input"; exit 1
+            fi
+          fi
           [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] || { echo "::error::release tag input is not a valid vX.Y.Z tag"; exit 1; }
           git ls-remote --exit-code --tags "$REPO_URL" "refs/tags/$RELEASE_TAG" >/dev/null || { echo "::error::release tag does not exist"; exit 1; }
 
@@ -98,6 +117,7 @@ jobs:
       - name: Validate release source before producers
         env:
           RELEASE_INPUT_OTP: ${{ github.event.inputs.npm_otp }}
+          RELEASE_INPUT_VERSION: ${{ github.event.inputs.version }}
         run: |
           set -euo pipefail
           die() { printf '%s\n' 'release input/source validation failed' >&2; exit 1; }
@@ -256,6 +276,7 @@ jobs:
         id: ver
         env:
           RELEASE_INPUT_OTP: ${{ github.event.inputs.npm_otp }}
+          RELEASE_INPUT_VERSION: ${{ github.event.inputs.version }}
         run: |
           set -euo pipefail
           die() { printf '%s\n' 'release input/source validation failed' >&2; exit 1; }
@@ -374,6 +395,8 @@ jobs:
 
       - name: Resolve version
         id: ver
+        env:
+          RELEASE_INPUT_VERSION: ${{ github.event.inputs.version }}
         run: |
           set -euo pipefail
           if [[ "${GITHUB_REF:-}" == refs/tags/* ]]; then
