@@ -92,6 +92,16 @@ test("two-section fixture keeps both sections' entries in source order", () => {
   ]);
 });
 
+test("two-section fixture keeps section names and per-section entries in source order", () => {
+  const md = read("./__fixtures__/changelog-two-section-order.md");
+  expect(sectionEntries(md)).toEqual([
+    { version: "## 0.4.0 (2026-11-03)", section: "Fixed", entries: ["Fixed first.", "Fixed second."] },
+    { version: "## 0.4.0 (2026-11-03)", section: "Added", entries: ["Added first.", "Added second."] },
+  ]);
+  // CRLF endings must not change section or entry order.
+  expect(sectionEntries(md.replace(/\n/g, "\r\n"))).toEqual(sectionEntries(md));
+});
+
 test("single-section fixture parses the section name and its entries", () => {
   const sections = sectionEntries(read("./__fixtures__/changelog-single-section.md"));
   expect(sections).toEqual([
