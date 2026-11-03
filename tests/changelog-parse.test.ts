@@ -189,6 +189,16 @@ test("bold-entry fixture keeps ** and __ markers verbatim in parsed entries", ()
   ]);
 });
 
+test("site CHANGELOG.md keeps bold lead-ins and the text after them in parsed entries", () => {
+  const md = read("../packages/site/src/data/CHANGELOG.md");
+  const bulletsWithBold = md.replace(/\r\n/g, "\n").split("\n").filter((l) => /^- \*\*[^*]+\*\*/.test(l));
+  expect(bulletsWithBold.length).toBeGreaterThan(0);
+  const entries = parseChangelog(md).flatMap((v) => v.entries);
+  for (const line of bulletsWithBold) expect(entries).toContain(line.slice(2));
+  const entry = entries.find((e) => e.startsWith("**`litellm-gateway` template.**"));
+  expect(entry).toContain("** Provider key slots (OpenAI, Anthropic, xAI, DeepSeek)");
+});
+
 test("blank-lines fixture returns both entries in order without blank entries", () => {
   const [v] = parseChangelog(read("./__fixtures__/changelog-blank-lines-between-entries.md"));
   expect(v).toEqual({
