@@ -322,3 +322,22 @@ test("root CHANGELOG.md with its trailing newline stripped parses the same, fina
   const lastLine = bare.split("\n").filter((l) => l.startsWith("- ")).at(-1) ?? "";
   expect(parsed.at(-1)?.entries.at(-1)).toBe(lastLine.slice(2));
 });
+
+test("unicode fixture keeps every parsed entry's characters and code points intact", () => {
+  const md = read("./__fixtures__/changelog-unicode.md");
+  const entries = {
+    pending: "Café ☕ — naïve, “smart quotes”, ‘ticks’",
+    cjkEmoji: "日本語のメモ: プロバイダーを追加 🚀 👩‍💻",
+    rtl: "مرحبا بالعالم — שלום עולם",
+    greek: "Ελληνικά: αβγδ → ✓ done",
+    accents: "NFC é (U+00E9) vs NFD é (e + U+0301), Ω ≠ µ",
+    cyrillic: "Привет, мир — 你好，世界 🎉",
+  };
+  expect(parseChangelog(md)).toEqual([
+    { version: null, date: null, entries: [entries.pending] },
+    { version: "0.3.0", date: "2026-10-31", entries: [entries.cjkEmoji, entries.rtl, entries.greek, entries.accents] },
+    { version: "0.2.0", date: "2026-04-23", entries: [entries.cyrillic] },
+  ]);
+  // CRLF line endings must not disturb non-ASCII text either.
+  expect(parseChangelog(md.replace(/\n/g, "\r\n"))).toEqual(parseChangelog(md));
+});
