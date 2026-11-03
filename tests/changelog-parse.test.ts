@@ -79,3 +79,14 @@ test("inline-code fixture keeps backtick text verbatim in parsed entries", () =>
     },
   ]);
 });
+
+test("blank-lines-between-entries fixture returns both entries in order without blank entries", () => {
+  expect(parseChangelog(read("./__fixtures__/changelog-blank-lines.md"))).toEqual([
+    {
+      version: "0.2.0",
+      date: "2026-04-23",
+      entries: ["First entry.", "Second entry after three blank lines.", "Fix entry."],
+    },
+    { version: "0.1.0", date: "2026-04-19", entries: ["Old entry."] },
+  ]);
+});
