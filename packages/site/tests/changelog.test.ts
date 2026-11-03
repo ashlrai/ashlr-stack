@@ -83,6 +83,15 @@ test("historical apply release detection respects Markdown section boundaries", 
   expect(historicalApplyReleases(`## 0.1.0\n\n\`\`\`md\n${entry}\n\`\`\`\n`)).toEqual([]);
 });
 
+test("parsing an empty changelog returns no sections or releases", () => {
+  expect(marked.lexer("")).toEqual([]);
+  expect(marked.lexer("").filter((token) => token.type === "heading")).toHaveLength(0);
+  expect(historicalApplyReleases("")).toEqual([]);
+  // Whitespace-only input is also empty: no headings, so no sections.
+  expect(marked.lexer("\n\n  \n").filter((token) => token.type === "heading")).toHaveLength(0);
+  expect(historicalApplyReleases("\n\n  \n")).toEqual([]);
+});
+
 test("source changelog historical apply entry is within a version section", () => {
   const source = readFileSync(join(root, "CHANGELOG.md"), "utf8");
   const releases = historicalApplyReleases(source);
