@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { malformedHeadings, sectionEntries, versionSections } from "./changelog-parser-utils";
+import { inlineLinks, malformedHeadings, sectionEntries, versionBodies, versionSections } from "./changelog-parser-utils";
 import { readFileSync } from "node:fs";
 
 const fixture = readFileSync(new URL("./__fixtures__/changelog-crlf.md", import.meta.url), "utf8");
@@ -46,4 +46,16 @@ test("shared parser utils return identical results for CRLF and LF", () => {
   expect(versionSections(fixture)).toEqual(versionSections(lf));
   expect(malformedHeadings(fixture)).toEqual(malformedHeadings(lf));
   expect(sectionEntries(fixture).flatMap((s) => s.entries)).toEqual(["Second version entry.", "First version entry."]);
+});
+
+test("versionBodies and inlineLinks keep CRLF text clean and match LF", () => {
+  const lf = fixture.replace(/\r\n/g, "\n");
+  const bodies = versionBodies(fixture);
+  expect(bodies).toEqual(versionBodies(lf));
+  expect([...bodies.keys()]).toEqual(["## 0.2.0 (2026-05-01)", "## 0.1.0 (2026-04-19)"]);
+  expect([...bodies.values()].some((b) => b.includes("\r"))).toBe(false);
+  const withLink = "## 1.0.0 (2026-01-01)\r\n\r\n### Added\r\n\r\n- See [docs](https://example.com/a \"T\") now.\r\n";
+  expect(inlineLinks(versionBodies(withLink).get("## 1.0.0 (2026-01-01)") ?? "")).toEqual([
+    { label: "docs", destination: "https://example.com/a" },
+  ]);
 });
