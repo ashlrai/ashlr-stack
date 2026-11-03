@@ -40,3 +40,14 @@ test("entries with identical text stay attached to their own version", () => {
 test("0.10.0 stays ahead of 0.9.0 as written (no numeric or lexical re-sorting)", () => {
   expect(parseReleases(fixture).map((r) => r.version.split(" ")[0])).toEqual(["0.10.0", "0.9.0"]);
 });
+
+test("every heading and entry appears at a strictly later line than the one before it", () => {
+  const lines = fixture.split("\n");
+  const expected = ["## 0.10.0", "- Shared entry text.", "- Only in 0.10.0.", "- Shared fix text.", "## 0.9.0", "- Shared entry text.", "- Only in 0.9.0.", "- Shared fix text."];
+  let from = 0;
+  for (const want of expected) {
+    const at = lines.findIndex((l, i) => i >= from && l.startsWith(want));
+    expect(at, want).toBeGreaterThanOrEqual(from);
+    from = at + 1;
+  }
+});
