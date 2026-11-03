@@ -92,6 +92,24 @@ test("two-section fixture keeps both sections' entries in source order", () => {
   ]);
 });
 
+test("single-section fixture parses the section name and its entries", () => {
+  const sections = sectionEntries(read("./__fixtures__/changelog-single-section.md"));
+  expect(sections).toEqual([
+    {
+      version: "## 0.5.0 (2026-11-02)",
+      section: "Fixed",
+      entries: ["Fixed first entry.", "Fixed second entry.", "Fixed third entry."],
+    },
+  ]);
+  expect(parseChangelog(read("./__fixtures__/changelog-single-section.md"))).toEqual([
+    {
+      version: "0.5.0",
+      date: "2026-11-02",
+      entries: ["Fixed first entry.", "Fixed second entry.", "Fixed third entry."],
+    },
+  ]);
+});
+
 test("multiple-sections fixture keeps section order and entry membership per version", () => {
   const sections = sectionEntries(read("./__fixtures__/changelog-multiple-sections.md"));
   // Non-alphabetical order, an empty section, and a section name repeated across versions.
