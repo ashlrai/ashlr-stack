@@ -1,6 +1,12 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
-import { inlineLinks } from "./changelog-parser-utils";
+import {
+  inlineLinks,
+  malformedHeadings,
+  sectionEntries,
+  versionBodies,
+  versionSections,
+} from "./changelog-parser-utils";
 
 export interface ChangelogVersion {
   /** `null` for `## Unreleased`. */
@@ -160,4 +166,12 @@ test("site CHANGELOG.md without final newline parses the final entry completely"
   expect(last.entries.at(-1)).toBe(
     "47 tests across 12 files; fetch-mocked provider tests and fake-phantom integration harness.",
   );
+});
+
+test("empty input returns no changelog sections from any parser", () => {
+  expect(parseChangelog("")).toEqual([]);
+  expect(versionSections("")).toEqual([]);
+  expect(sectionEntries("")).toEqual([]);
+  expect(versionBodies("").size).toBe(0);
+  expect(malformedHeadings("")).toEqual([]);
 });
