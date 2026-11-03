@@ -896,6 +896,35 @@ echo "[]"
     expect(stub.endsWith("// }\n")).toBe(true);
   });
 
+  it("gives the secret-name and signature-header placeholders their own replacement per provider", () => {
+    // `${webhookSecretKeyFor(provider)}` and `${signatureHeaderFor(provider)}`
+    // are separate slots filled by separate lookups. Two providers pin the
+    // mapping: a shared or swapped substitution would drop the wrong value
+    // into a slot or leak one provider's value into the other's stub.
+    const stripe = webhookStubFor("stripe");
+    const github = webhookStubFor("github");
+
+    // The secret-name placeholder expands in both of its stub positions.
+    expect(stripe.match(/phantom reveal \w+/g)).toEqual([
+      "phantom reveal STRIPE_WEBHOOK_SECRET",
+      "phantom reveal STRIPE_WEBHOOK_SECRET",
+    ]);
+    expect(github.match(/phantom reveal \w+/g)).toEqual([
+      "phantom reveal GITHUB_WEBHOOK_SECRET",
+      "phantom reveal GITHUB_WEBHOOK_SECRET",
+    ]);
+
+    // The signature-header placeholder takes each provider's own header, not
+    // the secret-name slot's replacement or the other provider's header.
+    expect(stripe).toContain('req.headers.get("stripe-signature")');
+    expect(github).toContain('req.headers.get("x-hub-signature-256")');
+    expect(stripe).not.toContain('req.headers.get("STRIPE_WEBHOOK_SECRET")');
+    expect(stripe).not.toContain("GITHUB_WEBHOOK_SECRET");
+    expect(stripe).not.toContain("x-hub-signature-256");
+    expect(github).not.toContain("STRIPE_WEBHOOK_SECRET");
+    expect(github).not.toContain("stripe-signature");
+  });
+
   it("skips a path-traversal provider name without writing any stub", async () => {
     const recipe: Recipe = { ...STRIPE_RECIPE, providers: [{ name: "../../evil" }] };
 
