@@ -442,3 +442,45 @@ test("published changelog returns the 0.2.1 placeholder-removal entry in source 
   expect(positions.every((p) => p >= 0)).toBe(true);
   expect(positions).toEqual([...positions].sort((a, b) => a - b));
 });
+
+test("an entry keeps its inline-code content and belongs to the right version", () => {
+  const input = [
+    "## 0.2.0",
+    "",
+    "### Added",
+    "",
+    "- `stack apply [recipe-id]` writes `.stack.toml` and runs `bun run fresh:sync`",
+    "- plain entry",
+    "",
+    "## 0.1.0",
+    "",
+    "### Added",
+    "",
+    "- `stack init --force` was the only way in",
+    "",
+  ].join("\n");
+  expect(sectionEntries(input, "0.2.0", "Added")).toEqual([
+    "`stack apply [recipe-id]` writes `.stack.toml` and runs `bun run fresh:sync`",
+    "plain entry",
+  ]);
+  expect(sectionEntries(input, "0.1.0", "Added")).toEqual(["`stack init --force` was the only way in"]);
+
+  // The lexer also exposes the code span as its own token with the exact content.
+  const item = marked.lexer(input).flatMap((token) => (token.type === "list" ? token.items : []))[0];
+  const codes = item.tokens.flatMap((token) => (token.type === "text" && token.tokens ? token.tokens : [token])).filter((token) => token.type === "codespan");
+  expect(codes.map((code) => code.text)).toEqual(["stack apply [recipe-id]", ".stack.toml", "bun run fresh:sync"]);
+});
+
+test("heading-like text inside inline code does not start a new release or section", () => {
+  const input = "## 0.2.0\n\n### Added\n\n- mention `## 0.1.0` and `### Fixed` literally\n- next `entry`\n\n## 0.1.0\n\n### Added\n\n- old\n";
+  expect(releaseVersions(input)).toEqual(["0.2.0", "0.1.0"]);
+  expect(sectionEntries(input, "0.2.0", "Added")).toEqual(["mention `## 0.1.0` and `### Fixed` literally", "next `entry`"]);
+  expect(sectionEntries(input, "0.2.0", "Fixed")).toEqual([]);
+  expect(sectionEntries(input, "0.1.0", "Added")).toEqual(["old"]);
+});
+
+test("double-backtick inline code keeps an embedded backtick and its release", () => {
+  const input = "## 0.3.0\n\n### Changed\n\n- renamed ``a `b` c`` to `d`\n\n## 0.2.0\n\n### Changed\n\n- other\n";
+  expect(sectionEntries(input, "0.3.0", "Changed")).toEqual(["renamed ``a `b` c`` to `d`"]);
+  expect(sectionEntries(input, "0.2.0", "Changed")).toEqual(["other"]);
+});
