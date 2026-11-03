@@ -254,3 +254,32 @@ test("multiple-section fixture keeps section order and entry membership per vers
   ]);
   expect(malformedHeadings(md)).toEqual([]);
 });
+
+test("many-entries fixture keeps every entry in source order, duplicates included", () => {
+  expect(parseChangelog(read("./__fixtures__/changelog-many-entries-order.md"))).toEqual([
+    { version: null, date: null, entries: ["Zulu pending entry.", "Alpha pending entry.", "Mike pending entry."] },
+    {
+      version: "0.4.0",
+      date: "2026-11-01",
+      entries: ["Entry 5.", "Entry 1.", "Entry 4.", "Entry 2.", "Entry 3.", "Entry 1."],
+    },
+    { version: "0.3.0", date: "2026-10-31", entries: ["Beta.", "Alpha."] },
+  ]);
+});
+
+test("site CHANGELOG.md entries, concatenated across versions, match its bullet lines in file order", () => {
+  const md = read("../packages/site/src/data/CHANGELOG.md");
+  const flat = parseChangelog(md).flatMap((v) => v.entries);
+  // Independent oracle: top-level bullets after the first version heading, outside code fences.
+  const expected: string[] = [];
+  let fenced = false;
+  let started = false;
+  for (const line of md.replace(/\r\n/g, "\n").split("\n")) {
+    if (/^\s*(```|~~~)/.test(line)) fenced = !fenced;
+    if (fenced) continue;
+    if (/^## (Unreleased|\[?\d+\.\d+\.\d+)/.test(line)) started = true;
+    else if (started && /^- /.test(line)) expected.push(line.slice(2));
+  }
+  expect(flat.length).toBeGreaterThan(0);
+  expect(flat).toEqual(expected);
+});
