@@ -6,7 +6,7 @@ import { type Recipe, readRecipe, writeRecipe } from "../ai/recipe.ts";
 import { listSecrets } from "../phantom.ts";
 import { type Harness, setupFakePhantom } from "./_harness.ts";
 
-// Every test spawns the fake `phantom` shim (bash + several python3 calls),
+// Every test spawns the fake `phantom` shim (bash + a Bun JSON helper),
 // which takes multiple seconds on loaded machines — well past the 5s default.
 setDefaultTimeout(30_000);
 
@@ -179,6 +179,24 @@ describe("ai/phantom-wire", () => {
       expect(row).toContain(`\`${header}\``);
       expect(row).toContain(`\`${secret}\``);
     }
+  });
+
+  it("keeps the example boundary note's excerpt identical to the generated Stripe example", async () => {
+    const note = readFileSync(
+      new URL("../../../../docs/phantom-wire-example-boundary.md", import.meta.url),
+      "utf-8",
+    );
+    const result = await wirePhantomForRecipe(STRIPE_RECIPE, { cwd: harness.dir });
+    const stub = readFileSync(result.webhooks[0], "utf-8");
+    const excerpt = note.match(/```ts\n([\s\S]*?)```/)?.[1] ?? "";
+    expect(excerpt.length).toBeGreaterThan(0);
+    // Every quoted line is a comment line present verbatim in the generated file.
+    for (const line of excerpt.trimEnd().split("\n")) {
+      expect(line.startsWith("//")).toBe(true);
+      expect(stub).toContain(line);
+    }
+    expect(note).toContain("TODO in an example");
+    expect(note).toContain("not a verifier");
   });
 
   it("keeps the signature review aligned with the commented follow-up and active code", async () => {
