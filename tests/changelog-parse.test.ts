@@ -52,6 +52,24 @@ test("site CHANGELOG.md parses 0.3.0 with its date and entries", () => {
   for (const v of site) if (v.version) expect(v.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
 });
 
+
+test("site CHANGELOG.md returns a non-empty result with Unreleased and dated versions", () => {
+  const site = parseChangelog(read("../packages/site/src/data/CHANGELOG.md"));
+  // Parser returns a non-empty array — every version found in the file.
+  expect(site.length).toBeGreaterThan(0);
+  // First section is Unreleased (no version tag).
+  expect(site[0].version).toBe(null);
+  expect(site[0].date).toBe(null);
+  // At least one dated release follows.
+  const dated = site.filter((v) => v.version !== null);
+  expect(dated.length).toBeGreaterThan(0);
+  // Every dated version has a valid date and at least one entry.
+  for (const v of dated) {
+    expect(v.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(v.entries.length).toBeGreaterThan(0);
+  }
+});
+
 test("two-version fixture keeps versions and entries in source order (not sorted)", () => {
   expect(parseChangelog(read("./__fixtures__/changelog-two-version-order.md"))).toEqual([
     {
