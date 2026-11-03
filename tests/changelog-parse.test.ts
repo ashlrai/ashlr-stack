@@ -49,6 +49,9 @@ test("site CHANGELOG.md parses 0.3.0 with its date and entries", () => {
   const v030 = site.find((v) => v.version === "0.3.0");
   expect(v030?.date).toBe("2026-10-31");
   expect(v030?.entries.length).toBeGreaterThan(0);
+  // Inline-code text in entries is retained by the parser (backticks preserved).
+  expect(v030?.entries[0]).toContain("`stack fleet`");
+  expect(v030?.entries[1]).toContain("`stack doctor --repos`");
   for (const v of site) if (v.version) expect(v.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
 });
 
@@ -544,4 +547,20 @@ test("CRLF fixture and both real CHANGELOG.md files parse like their LF equivale
     { version: "0.2.0", date: "2026-05-01", entries: ["Second version entry."] },
     { version: "0.1.0", date: "2026-04-19", entries: ["First version entry."] },
   ]);
+});
+test("root CHANGELOG.md retains inline-code text in parsed entries", () => {
+  const root = parseChangelog(read("../CHANGELOG.md"));
+  const v030 = root.find((v) => v.version === "0.3.0");
+  expect(v030).not.toBeUndefined();
+  // Inline-code entries retain backtick markup in parsed text.
+  expect(v030?.entries[0]).toContain("`stack fleet`");
+  expect(v030?.entries[1]).toContain("`stack doctor --repos`");
+  expect(v030?.entries[3]).toContain("`stack upgrade --apply`");
+  // All entries that contain backticks retain matching pairs.
+  for (const entry of v030?.entries ?? []) {
+    if (entry.includes("`")) {
+      const count = (entry.match(/`/g) ?? []).length;
+      expect(count % 2).toBe(0);
+    }
+  }
 });
