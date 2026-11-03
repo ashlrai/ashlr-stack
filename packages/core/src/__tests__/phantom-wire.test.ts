@@ -925,6 +925,31 @@ echo "[]"
     expect(github).not.toContain("stripe-signature");
   });
 
+  it("expands a line holding only a known placeholder to exactly the replacement", () => {
+    // These stub lines are a fixed prefix plus one placeholder and nothing
+    // else, so after stripping the prefix the remainder must equal the
+    // replacement exactly: no padding, quoting, or trailing text.
+    const lineAfter = (stub: string, prefix: string): string[] =>
+      stub
+        .split("\n")
+        .filter((l) => l.startsWith(prefix))
+        .map((l) => l.slice(prefix.length));
+
+    expect(lineAfter(webhookStubFor("stripe"), "//   phantom reveal ")).toEqual([
+      "STRIPE_WEBHOOK_SECRET",
+    ]);
+    expect(lineAfter(webhookStubFor("github"), "//   phantom reveal ")).toEqual([
+      "GITHUB_WEBHOOK_SECRET",
+    ]);
+    // The hint line is `// ` + the verification hint, verbatim.
+    expect(lineAfter(webhookStubFor("github"), "//   // GitHub: ")).toEqual([
+      "`x-hub-signature-256` is `sha256=` + HMAC-SHA256 of the raw body.",
+    ]);
+    expect(lineAfter(webhookStubFor("clerk"), "//   // ")).toContain(
+      "Clerk (svix): `new Webhook(secret).verify(body, headers)`.",
+    );
+  });
+
   it("skips a path-traversal provider name without writing any stub", async () => {
     const recipe: Recipe = { ...STRIPE_RECIPE, providers: [{ name: "../../evil" }] };
 
