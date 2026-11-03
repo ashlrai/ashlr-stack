@@ -661,3 +661,59 @@ test("source changelog entries with a colon and comma keep both in parsed text",
     expect(item.raw).toContain(",");
   }
 });
+
+type ParsedRelease = { heading: string; entries: string[] };
+
+// Collects each "## <version>" release and its list entries (across ### groups) in source order.
+function parseReleases(markdown: string): ParsedRelease[] {
+  const releases: ParsedRelease[] = [];
+  let current: ParsedRelease | null = null;
+  for (const token of marked.lexer(markdown)) {
+    if (token.type === "heading" && token.depth <= 2) {
+      current = token.depth === 2 ? { heading: token.text, entries: [] } : null;
+      if (current) releases.push(current);
+    } else if (current && token.type === "list") {
+      for (const item of token.items) current.entries.push(item.text);
+    }
+  }
+  return releases;
+}
+
+test("parseReleases keeps two successive releases and their entries in source order", () => {
+  const sample = "# Changelog\n\n## 2.0.0\n\n### Added\n\n- b1\n- b2\n\n### Fixed\n\n- b3\n\n## 1.0.0\n\n- a1\n- a2\n";
+  expect(parseReleases(sample)).toEqual([
+    { heading: "2.0.0", entries: ["b1", "b2", "b3"] },
+    { heading: "1.0.0", entries: ["a1", "a2"] },
+  ]);
+});
+
+test("source changelog 0.3.0 and 0.2.2 are successive and their entries stay in source order", () => {
+  const source = readFileSync(join(root, "CHANGELOG.md"), "utf8");
+  const releases = parseReleases(source);
+  const index = releases.findIndex((release) => release.heading.startsWith("0.3.0"));
+  expect(index).toBeGreaterThanOrEqual(0);
+  const [newer, older] = [releases[index], releases[index + 1]];
+  expect(older?.heading.startsWith("0.2.2")).toBe(true);
+
+  const offsetOf = (release: ParsedRelease) => {
+    const start = source.indexOf(`## ${release.heading}`);
+    expect(start).toBeGreaterThanOrEqual(0);
+    return start;
+  };
+  expect(offsetOf(newer)).toBeLessThan(offsetOf(older));
+
+  for (const release of [newer, older]) {
+    expect(release.entries.length).toBeGreaterThan(0);
+    // Each entry's first line must appear in the raw source after the previous entry's.
+    let cursor = offsetOf(release);
+    for (const entry of release.entries) {
+      const at = source.indexOf(entry.split("\n")[0], cursor);
+      expect(at, `${release.heading}: ${entry.slice(0, 40)}`).toBeGreaterThanOrEqual(cursor);
+      cursor = at + 1;
+    }
+  }
+
+  // Anchor the first entry of each release, so a reorder at either boundary is caught.
+  expect(newer.entries[0]).toMatch(/^Fleet diagnostics: lanes/);
+  expect(older.entries[0]).toMatch(/^Release: npm publishing relies only on npm trusted publishing/);
+});
