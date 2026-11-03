@@ -82,6 +82,19 @@ test("empty changelog fixture parses with no results from every parser function"
   expect(inlineLinks(fixture)).toEqual([]);
 });
 
+test("whitespace-only input returns no sections from every parser function without throwing", () => {
+  for (const input of [" ", "\n", "\r\n", "   \n\t\n  \r\n\n", "\u00a0\u2003\n"]) {
+    expect(() => malformedHeadings(input)).not.toThrow();
+    expect(malformedHeadings(input)).toEqual([]);
+    expect(() => versionSections(input)).not.toThrow();
+    expect(versionSections(input)).toEqual([]);
+    expect(() => sectionEntries(input)).not.toThrow();
+    expect(sectionEntries(input)).toEqual([]);
+    expect(() => inlineLinks(input)).not.toThrow();
+    expect(inlineLinks(input)).toEqual([]);
+  }
+});
+
 test("prose before the first version is not a version and the first version stays intact", () => {
   const fixture = readFileSync(new URL("./__fixtures__/changelog-preamble.md", import.meta.url), "utf8");
   const lines = fixture.split("\n");
