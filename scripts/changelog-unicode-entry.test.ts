@@ -63,3 +63,25 @@ test("entries in one section keep source order and text", () => {
 test("entry order survives CRLF line endings", () => {
   expect(parseLatestRelease(ordered.replace(/\n/g, "\r\n"))).toEqual(parseLatestRelease(ordered));
 });
+
+// A blank line between entries (a loose list, as in CHANGELOG.md's long entries) keeps every entry, in order.
+const loose = read("./__fixtures__/changelog/blank-line-between-entries.md");
+
+test("entries separated by blank lines are all retained in source order", () => {
+  const release = parseLatestRelease(loose);
+  expect(release.heading).toBe("4.0.0 (2026-11-03)");
+  const bullets = release.entry.split("\n").filter((l: string) => l.startsWith("- "));
+  expect(bullets).toEqual([
+    "- First entry sits alone, followed by one blank line.",
+    "- Second entry follows a blank line and keeps `inline code` and a [link](https://example.com/second).",
+    "- Third entry follows two blank lines.",
+    "- Fourth entry in the next subsection.",
+  ]);
+  expect(release.entry).toContain("line.\n\n- Second entry");
+  expect(release.entry).toContain("\n\n\n- Third entry");
+  expect(release.entry).not.toContain("Older release entry");
+});
+
+test("blank-line-separated entries survive CRLF line endings", () => {
+  expect(parseLatestRelease(loose.replace(/\n/g, "\r\n"))).toEqual(parseLatestRelease(loose));
+});
