@@ -661,3 +661,55 @@ test("source changelog entries with a colon and comma keep both in parsed text",
     expect(item.raw).toContain(",");
   }
 });
+
+// Walks the lexer tokens and returns each depth-2 release with its depth-3 subsections and
+// list entries, in the order they appear in the file.
+function releaseSections(markdown: string) {
+  const releases: { title: string; subsections: string[]; entries: string[] }[] = [];
+  for (const token of marked.lexer(markdown)) {
+    if (token.type === "heading" && token.depth === 2) {
+      releases.push({ title: token.text, subsections: [], entries: [] });
+    } else if (releases.length > 0 && token.type === "heading" && token.depth === 3) {
+      releases[releases.length - 1].subsections.push(token.text);
+    } else if (releases.length > 0 && token.type === "list") {
+      for (const item of token.items) releases[releases.length - 1].entries.push(item.raw);
+    }
+  }
+  return releases;
+}
+
+test("two successive releases keep their headings, subsections and entries in source order", () => {
+  const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
+  const releases = releaseSections(published);
+  const newer = releases.findIndex((release) => release.title === "0.3.0 (2026-10-31)");
+  expect(newer).toBeGreaterThanOrEqual(0);
+  // 0.2.2 is the very next release heading after 0.3.0.
+  expect(releases[newer + 1]?.title).toBe("0.2.2 (2026-10-25)");
+  const [first, second] = releases.slice(newer, newer + 2);
+
+  expect(first.subsections.slice(0, 3)).toEqual(["Added", "Changed and fixed", "Compatibility notes"]);
+  expect(second.subsections.slice(0, 3)).toEqual(["Changed", "Added", "Templates"]);
+  expect(first.entries[0]).toStartWith("- Fleet diagnostics: lanes, supply");
+  expect(second.entries[0]).toStartWith("- Release: npm publishing relies only on npm trusted publishing");
+
+  // Every entry appears in the file after the previous one, and each release's entries
+  // all fall between its own heading and the next release heading.
+  const bounds = [
+    published.indexOf("\n## 0.3.0 (2026-10-31)\n"),
+    published.indexOf("\n## 0.2.2 (2026-10-25)\n"),
+    published.indexOf("\n## 0.2.1 (2026-10-16)\n"),
+  ];
+  expect(bounds[0]).toBeGreaterThanOrEqual(0);
+  expect(bounds[0]).toBeLessThan(bounds[1]);
+  expect(bounds[1]).toBeLessThan(bounds[2]);
+  [first, second].forEach((release, index) => {
+    let cursor = bounds[index];
+    expect(release.entries.length).toBeGreaterThan(0);
+    for (const entry of release.entries) {
+      const position = published.indexOf(entry.trimEnd(), cursor);
+      expect(position, entry.slice(0, 60)).toBeGreaterThan(cursor);
+      expect(position).toBeLessThan(bounds[index + 1]);
+      cursor = position;
+    }
+  });
+});
