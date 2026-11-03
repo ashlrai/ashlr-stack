@@ -102,3 +102,22 @@ test("linked-text fixture keeps link text and destination in parsed entries", ()
     { label: "Phantom", destination: "https://phm.dev" },
   ]);
 });
+
+test("blank and whitespace-only lines never add, drop or reorder entries across versions", () => {
+  const md = read("./__fixtures__/changelog-blank-lines-multi-version.md");
+  const expected: ChangelogVersion[] = [
+    { version: null, date: null, entries: ["Pending A.", "Pending B."] },
+    { version: "0.7.0", date: "2026-11-03", entries: ["Fixed one.", "Fixed two.", "Added one."] },
+    { version: "0.6.0", date: "2026-10-31", entries: ["Old one.", "Old two."] },
+  ];
+  expect(parseChangelog(md)).toEqual(expected);
+  // Removing every blank line must not change the result.
+  const compact = md.split("\n").filter((l) => l.trim() !== "").join("\n");
+  expect(parseChangelog(compact)).toEqual(expected);
+});
+
+test("site CHANGELOG.md parses the same with all blank lines removed", () => {
+  const md = read("../packages/site/src/data/CHANGELOG.md");
+  const compact = md.split("\n").filter((l) => l.trim() !== "").join("\n");
+  expect(parseChangelog(compact)).toEqual(parseChangelog(md));
+});
