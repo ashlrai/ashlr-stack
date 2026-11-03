@@ -166,6 +166,21 @@ test("a Markdown link in a version body keeps its label and destination", () => 
   expect(inlineLinks(older.body)).toEqual([]);
 });
 
+test("a parsed entry keeps its link text and destination", () => {
+  const fixture = readFileSync(new URL("./__fixtures__/changelog-links.md", import.meta.url), "utf8");
+  const added = sectionEntries(fixture).find((g) => g.section === "Added")!;
+  // Entries are kept verbatim, link markup included.
+  expect(added.entries).toEqual([
+    "See the [provider guide](docs/adding-a-provider.md) for every file a provider touches.",
+    'Secrets live in [Phantom](https://phm.dev "Phantom Secrets") and never in the repo.',
+  ]);
+  // Each entry yields exactly its own link; the optional title is not part of the destination.
+  expect(added.entries.map((e) => inlineLinks(e))).toEqual([
+    [{ label: "provider guide", destination: "docs/adding-a-provider.md" }],
+    [{ label: "Phantom", destination: "https://phm.dev" }],
+  ]);
+});
+
 test("both paragraphs of a multi-paragraph entry stay attached to the same version", () => {
   const fixture = readFileSync(new URL("./__fixtures__/changelog-multi-paragraph.md", import.meta.url), "utf8");
   expect(malformedHeadings(fixture)).toEqual([]);
