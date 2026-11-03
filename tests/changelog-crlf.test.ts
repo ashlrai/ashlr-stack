@@ -59,3 +59,35 @@ test("versionBodies and inlineLinks keep CRLF text clean and match LF", () => {
     { label: "docs", destination: "https://example.com/a" },
   ]);
 });
+
+// --- Tests against the real site CHANGELOG.md (CRLF converted) ---
+
+const realSiteLf = readFileSync(new URL("../packages/site/src/data/CHANGELOG.md", import.meta.url), "utf8")
+  .replace(/\r\n/g, "\n");
+const realSiteCrlf = realSiteLf.replace(/\n/g, "\r\n");
+
+test("real site CHANGELOG.md is a valid CRLF fixture when converted", () => {
+  expect(realSiteCrlf.includes("\r\n")).toBe(true);
+  expect(realSiteCrlf.replace(/\r\n/g, "").includes("\n")).toBe(false);
+});
+
+test("real site CHANGELOG.md version/sections/entries parse identically from CRLF vs LF (local parser)", () => {
+  expect(parse(realSiteCrlf)).toEqual(parse(realSiteLf));
+  expect(parse(realSiteCrlf).length).toBeGreaterThan(0);
+});
+
+test("real site CHANGELOG.md sectionEntries identical under CRLF and LF", () => {
+  expect(sectionEntries(realSiteCrlf)).toEqual(sectionEntries(realSiteLf));
+});
+
+test("real site CHANGELOG.md versionBodies and versionSections identical under CRLF and LF", () => {
+  expect(versionSections(realSiteCrlf)).toEqual(versionSections(realSiteLf));
+  expect([...versionBodies(realSiteCrlf)]).toEqual([...versionBodies(realSiteLf)]);
+});
+
+test("real site CHANGELOG.md malformedHeadings and inlineLinks identical under CRLF and LF", () => {
+  expect(malformedHeadings(realSiteCrlf)).toEqual(malformedHeadings(realSiteLf));
+  expect(inlineLinks([...versionBodies(realSiteCrlf).values()].join("\n"))).toEqual(
+    inlineLinks([...versionBodies(realSiteLf).values()].join("\n")),
+  );
+});
