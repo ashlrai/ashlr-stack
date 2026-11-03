@@ -234,3 +234,23 @@ test("whitespace-only input returns no changelog sections from any parser", () =
     expect(malformedHeadings(ws)).toEqual([]);
   }
 });
+
+test("multiple-section fixture keeps section order and entry membership per version", () => {
+  // Sections are deliberately non-alphabetical, and "Fixed"/"Added" repeat across versions.
+  const md = read("./__fixtures__/changelog-multi-section.md");
+  expect(sectionEntries(md)).toEqual([
+    { version: "## Unreleased", section: "Fixed", entries: ["Pending fix."] },
+    { version: "## 0.8.0 (2026-11-03)", section: "Removed", entries: ["Removed one."] },
+    { version: "## 0.8.0 (2026-11-03)", section: "Added", entries: ["Added one.", "Added two."] },
+    { version: "## 0.8.0 (2026-11-03)", section: "Fixed", entries: ["Fixed one."] },
+    { version: "## 0.7.0 (2026-11-02)", section: "Fixed", entries: ["Older fix."] },
+    { version: "## 0.7.0 (2026-11-02)", section: "Added", entries: ["Older add."] },
+  ]);
+  // The flat parser sees the same entries, grouped by version in the same order.
+  expect(parseChangelog(md)).toEqual([
+    { version: null, date: null, entries: ["Pending fix."] },
+    { version: "0.8.0", date: "2026-11-03", entries: ["Removed one.", "Added one.", "Added two.", "Fixed one."] },
+    { version: "0.7.0", date: "2026-11-02", entries: ["Older fix.", "Older add."] },
+  ]);
+  expect(malformedHeadings(md)).toEqual([]);
+});
