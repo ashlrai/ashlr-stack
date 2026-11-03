@@ -303,3 +303,22 @@ test("a final newline never changes parsed entries, for the fixture or the site 
   }
   expect(parseChangelog(bare).at(-1)?.entries).toEqual(["First version entry, final line has no newline."]);
 });
+
+test("input that ends right after the final entry's text still yields that entry", () => {
+  const md = "# Changelog\n\n## Unreleased\n\n- Pending.\n\n## 0.1.0 (2026-01-02)\n\n### Added\n\n- Last entry";
+  expect(md.endsWith("\n")).toBe(false);
+  expect(parseChangelog(md)).toEqual([
+    { version: null, date: null, entries: ["Pending."] },
+    { version: "0.1.0", date: "2026-01-02", entries: ["Last entry"] },
+  ]);
+});
+
+test("root CHANGELOG.md with its trailing newline stripped parses the same, final entry included", () => {
+  const full = read("../CHANGELOG.md");
+  const bare = full.replace(/\n+$/, "");
+  expect(bare.endsWith("\n")).toBe(false);
+  const parsed = parseChangelog(bare);
+  expect(parsed).toEqual(parseChangelog(full));
+  const lastLine = bare.split("\n").filter((l) => l.startsWith("- ")).at(-1) ?? "";
+  expect(parsed.at(-1)?.entries.at(-1)).toBe(lastLine.slice(2));
+});
