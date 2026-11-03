@@ -253,6 +253,26 @@ test("blank and whitespace-only lines never add, drop or reorder entries across 
   expect(parseChangelog(compact)).toEqual(expected);
 });
 
+test("blank lines inside an entry (continuation, nested bullet, fenced block) never create extra entries", () => {
+  const md = read("./__fixtures__/changelog-blank-line-continuation.md");
+  const expected: ChangelogVersion[] = [
+    {
+      version: "0.8.0",
+      date: "2026-11-03",
+      entries: [
+        "Entry with a continuation paragraph.",
+        "Entry with a fenced block containing blank lines.",
+        "Last entry.",
+      ],
+    },
+    { version: "0.7.0", date: "2026-11-02", entries: ["Older entry."] },
+  ];
+  expect(parseChangelog(md)).toEqual(expected);
+  expect(parseChangelog(md.replace(/\n/g, "\r\n"))).toEqual(expected);
+  // Doubling every blank line must not change the result either.
+  expect(parseChangelog(md.replace(/\n\n/g, "\n\n\n"))).toEqual(expected);
+});
+
 test("site CHANGELOG.md parses the same with all blank lines removed", () => {
   const md = read("../packages/site/src/data/CHANGELOG.md");
   const compact = md.split("\n").filter((l) => l.trim() !== "").join("\n");
