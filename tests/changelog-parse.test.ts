@@ -359,3 +359,17 @@ test("unicode fixture keeps every parsed entry's characters and code points inta
   // CRLF line endings must not disturb non-ASCII text either.
   expect(parseChangelog(md.replace(/\n/g, "\r\n"))).toEqual(parseChangelog(md));
 });
+
+test("punctuation fixture keeps every entry's punctuation verbatim", () => {
+  expect(parseChangelog(read("./__fixtures__/changelog-parse-punctuation.md"))).toEqual([
+    { version: null, date: null, entries: ["Quotes, \"double\" and 'single'; semicolons; and slashes (a/b, c\\d)."] },
+    {
+      version: "0.3.0",
+      date: "2026-10-31",
+      entries: [
+        "Why did it fail? Now it doesn't! Wait... really? [Yes] {braces} <angles> - dash.",
+        "Symbols & more: 50% faster, $5 saved, #1 fix, a+b=c, x*y, ~tilde, @scope/pkg, 100% (done).",
+      ],
+    },
+  ]);
+});
