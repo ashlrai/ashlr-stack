@@ -38,3 +38,11 @@ test("the gap size between version entries does not change the result", () => {
   }
   expect(expected).toHaveLength(2);
 });
+
+test("padding the gaps before headings in the real CHANGELOG.md keeps its versions and items in order", () => {
+  const real = readFileSync(join(import.meta.dir, "../src/data/CHANGELOG.md"), "utf8");
+  const expected = parseVersions(real);
+  expect(expected.length).toBeGreaterThan(1);
+  const padded = real.replace(/\n\n(?=#{2,3} )/g, "\n\n\n\n");
+  expect(parseVersions(padded)).toEqual(expected);
+});
