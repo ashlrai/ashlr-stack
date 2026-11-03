@@ -142,16 +142,20 @@ test("multiple-sections fixture: version-level parse flattens entries in source 
 });
 
 test("inline-code fixture keeps backtick text verbatim in parsed entries", () => {
-  expect(parseChangelog(read("./__fixtures__/changelog-inline-code.md"))).toEqual([
-    {
-      version: "0.5.0",
-      date: "2026-11-03",
-      entries: [
-        "Run `stack apply --noWire` to skip wiring; flags like `--json` stay literal.",
-        "Code spans keep markup: `a - b`, `[not a link](x)`, and `## not a heading`.",
-      ],
-    },
+  const entries = parseChangelog(read("./__fixtures__/changelog-inline-code.md"))[0].entries;
+  expect(entries).toEqual([
+    "Run `stack apply --noWire` to skip wiring; flags like `--json` stay literal.",
+    "Code spans keep markup: `a - b`, `[not a link](x)`, and `## not a heading`.",
+    "Starts with `--flag` immediately at the beginning.",
+    "Ends with `--flag` at the very end.",
+    "Multiple spans: `a`, `b`, and `c` in one line.",
   ]);
+  // Inline-code delimiters (backticks) are retained in parsed entry text—never stripped.
+  for (const entry of entries) expect(entry).toMatch(/`/);
+  // Content between delimiters is also preserved (not evaluated as Markdown).
+  expect(entries[1]).toContain("a - b");
+  expect(entries[1]).toContain("[not a link](x)");
+  expect(entries[1]).toContain("## not a heading");
 });
 
 test("bold-entry fixture keeps ** and __ markers verbatim in parsed entries", () => {
