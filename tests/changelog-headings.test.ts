@@ -82,6 +82,24 @@ test("empty changelog fixture parses with no results from every parser function"
   expect(inlineLinks(fixture)).toEqual([]);
 });
 
+test("whitespace-only changelog fixture parses with no results from every parser function", () => {
+  const fixture = readFileSync(new URL("./__fixtures__/changelog-whitespace-only.md", import.meta.url), "utf8");
+  expect(fixture.length).toBeGreaterThan(0);
+  expect(fixture.trim()).toBe("");
+  for (const text of [fixture, fixture.replace(/\n/g, "\r\n"), " \t\n\n  "]) {
+    expect(() => {
+      malformedHeadings(text);
+      versionSections(text);
+      sectionEntries(text);
+      inlineLinks(text);
+    }).not.toThrow();
+    expect(malformedHeadings(text)).toEqual([]);
+    expect(versionSections(text)).toEqual([]);
+    expect(sectionEntries(text)).toEqual([]);
+    expect(inlineLinks(text)).toEqual([]);
+  }
+});
+
 test("prose before the first version is not a version and the first version stays intact", () => {
   const fixture = readFileSync(new URL("./__fixtures__/changelog-preamble.md", import.meta.url), "utf8");
   const lines = fixture.split("\n");
