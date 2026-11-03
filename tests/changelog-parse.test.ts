@@ -458,3 +458,26 @@ test("repeated-entry fixture keeps both identical entries in source order, never
     ["Added", ["Repeated fix."]],
   ]);
 });
+
+test("heading-only fixture returns every version with no entries from any parser without throwing", () => {
+  const md = read("./__fixtures__/changelog-heading-only.md");
+  expect(() => {
+    parseChangelog(md);
+    versionSections(md);
+    sectionEntries(md);
+    versionBodies(md);
+    malformedHeadings(md);
+    inlineLinks(md);
+  }).not.toThrow();
+  expect(parseChangelog(md)).toEqual([
+    { version: "0.2.0", date: "2026-04-23", entries: [] },
+    { version: "0.1.0", date: "2026-04-19", entries: [] },
+  ]);
+  expect(versionSections(md).map((s) => s.heading)).toEqual(["## 0.2.0 (2026-04-23)", "## 0.1.0 (2026-04-19)"]);
+  expect(sectionEntries(md)).toEqual([]);
+  expect([...versionBodies(md).values()].map((b) => b.trim())).toEqual(["", ""]);
+  expect(malformedHeadings(md)).toEqual([]);
+  expect(inlineLinks(md)).toEqual([]);
+  // A lone heading with no newline and no body is still a version with no entries.
+  expect(parseChangelog("## Unreleased")).toEqual([{ version: null, date: null, entries: [] }]);
+});
