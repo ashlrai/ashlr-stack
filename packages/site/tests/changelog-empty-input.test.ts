@@ -24,3 +24,14 @@ test("whitespace-only and heading-only input also yield no entries", () => {
     expect(versionHeadings(input)).toEqual([]);
   }
 });
+
+test("the published changelog is not empty, so the empty fixture is a real contrast", () => {
+  const published = readFileSync(join(import.meta.dir, "../src/data/CHANGELOG.md"), "utf8");
+  expect(versionHeadings(published).length).toBeGreaterThan(0);
+});
+
+test("the docs page transform renders empty input as empty HTML", async () => {
+  // Same steps as src/pages/docs/changelog.astro: strip the H1, then marked.parse.
+  const body = "".replace(/^#\s+Changelog\s*\n+/, "");
+  expect(await marked.parse(body)).toBe("");
+});
