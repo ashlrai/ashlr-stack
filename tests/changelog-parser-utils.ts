@@ -15,11 +15,18 @@ export function malformedHeadings(markdown: string): string[] {
   return bad;
 }
 
+/** Splits into lines; a final newline terminates the last line instead of adding an empty one. */
+function sourceLines(markdown: string): string[] {
+  const lines = markdown.split(/\r?\n/);
+  if (lines.length > 1 && lines[lines.length - 1] === "") lines.pop();
+  return lines;
+}
+
 /** Version sections in source order: heading line → body up to the next `## ` heading. */
 export function versionSections(markdown: string): { heading: string; body: string }[] {
   const sections: { heading: string; body: string }[] = [];
   let fenced = false;
-  for (const line of markdown.split(/\r?\n/)) {
+  for (const line of sourceLines(markdown)) {
     if (/^\s*(```|~~~)/.test(line)) fenced = !fenced;
     if (!fenced && /^##(?!#)/.test(line)) sections.push({ heading: line, body: "" });
     else if (sections.length > 0) sections[sections.length - 1].body += `${line}\n`;
@@ -60,7 +67,7 @@ export function versionBodies(md: string): Map<string, string> {
   const bodies = new Map<string, string>();
   let key: string | null = null;
   let fenced = false;
-  for (const line of md.split(/\r?\n/)) {
+  for (const line of sourceLines(md)) {
     if (/^\s*(```|~~~)/.test(line)) fenced = !fenced;
     if (!fenced && /^##(?!#)/.test(line)) {
       key = /^## +\[?\d+\.\d+\.\d+/.test(line) ? line : null;
