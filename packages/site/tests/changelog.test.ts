@@ -538,3 +538,38 @@ test("heading-only fixture: published CHANGELOG.md parses without error and hand
   // Every section has a name (even if its item list is empty)
   expect(parsed.flatMap((v) => v.sections.map((s) => s.name))).toBeTruthy();
 });
+
+// Single-version, single-entry fixture in the shape of src/data/CHANGELOG.md.
+const SINGLE_ENTRY = "CLI lazily loads the selected command rather than all commands at startup.";
+const SINGLE_ENTRY_FIXTURE = `# Changelog
+
+## 0.3.0 (2026-10-31)
+
+### Changed and fixed
+
+- ${SINGLE_ENTRY}
+`;
+
+function parseReleaseEntries(markdown: string): { version: string; entries: string[] }[] {
+  const releases: { version: string; entries: string[] }[] = [];
+  for (const token of marked.lexer(markdown)) {
+    if (token.type === "heading" && token.depth === 2) {
+      const match = token.text.match(/^\[?(\d+\.\d+\.\d+)\]?/);
+      releases.push({ version: match?.[1] ?? token.text, entries: [] });
+    } else if (token.type === "list" && releases.length > 0) {
+      releases[releases.length - 1].entries.push(...token.items.map((item) => item.text));
+    }
+  }
+  return releases;
+}
+
+test("single-version, single-entry fixture parses to its version and entry text", () => {
+  expect(parseReleaseEntries(SINGLE_ENTRY_FIXTURE)).toEqual([{ version: "0.3.0", entries: [SINGLE_ENTRY] }]);
+});
+
+test("the fixture's version and entry text match the published site changelog", () => {
+  const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
+  const release = parseReleaseEntries(published).find((r) => r.version === "0.3.0");
+  expect(release).toBeDefined();
+  expect(release?.entries).toContain(SINGLE_ENTRY);
+});
