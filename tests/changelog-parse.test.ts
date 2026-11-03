@@ -259,6 +259,17 @@ test("site CHANGELOG.md without final newline parses the final entry completely"
   );
 });
 
+test("site no-final-newline fixture is the real CHANGELOG.md minus its trailing newline, and shared parsers keep the last entry", () => {
+  const real = read("../packages/site/src/data/CHANGELOG.md");
+  const bare = read("./__fixtures__/changelog-no-final-newline-site.md");
+  expect(bare).toBe(real.replace(/\n+$/, ""));
+  const lastEntry = "47 tests across 12 files; fetch-mocked provider tests and fake-phantom integration harness.";
+  expect(sectionEntries(bare).at(-1)?.entries.at(-1)).toBe(lastEntry);
+  expect(versionSections(bare).at(-1)?.body.trimEnd().endsWith(lastEntry)).toBe(true);
+  expect([...versionBodies(bare).values()].at(-1)?.trimEnd().endsWith(lastEntry)).toBe(true);
+  expect(sectionEntries(bare)).toEqual(sectionEntries(real));
+});
+
 test("empty input returns no changelog sections from any parser", () => {
   expect(parseChangelog("")).toEqual([]);
   expect(versionSections("")).toEqual([]);
