@@ -390,3 +390,14 @@ test("a single blank line, extra blank lines, or none before the next heading pa
     expect(lists).toEqual(["a", "b"]);
   }
 });
+
+test("blank-lines-between-entries fixture: both entries parsed in original order", () => {
+  const fixture = readFileSync(join(import.meta.dir, "__fixtures__/changelog-blank-line-between-entries.md"), "utf8");
+  const versions = releaseVersions(fixture);
+  expect(versions).toEqual(["0.2.0", "0.1.0"]);
+
+  const items = marked.lexer(fixture).flatMap(
+    (token) => (token.type === "list" ? token.items.map((item) => item.text.trim()) : []),
+  );
+  expect(items).toEqual(["Second entry.", "Second entry, loose item.", "First entry."]);
+});
