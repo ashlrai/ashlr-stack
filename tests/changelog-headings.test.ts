@@ -151,6 +151,22 @@ test("blank lines between entries do not add, drop or reorder entries", () => {
   expect(sectionEntries(fixture.replace(/\n/g, "\n\n"))).toEqual(expected);
 });
 
+test("blank and whitespace-only lines keep entries in their own section and order across versions", () => {
+  const fixture = readFileSync(new URL("./__fixtures__/changelog-blank-lines-multi-version.md", import.meta.url), "utf8");
+  const expected = [
+    { version: "## 0.7.0 (2026-11-03)", section: "Fixed", entries: ["Fixed one.", "Fixed two."] },
+    { version: "## 0.7.0 (2026-11-03)", section: "Added", entries: ["Added one."] },
+  ];
+  // Entries under `### Fixed` must not leak into `### Added` across the blank lines between them.
+  expect(sectionEntries(fixture)).toEqual(expected);
+  expect(sectionEntries(fixture.split("\n").filter((l) => l.trim() !== "").join("\n"))).toEqual(expected);
+  expect(versionSections(fixture).map((s) => s.heading)).toEqual([
+    "## Unreleased",
+    "## 0.7.0 (2026-11-03)",
+    "## 0.6.0 (2026-10-31)",
+  ]);
+});
+
 test("a Markdown link in a version body keeps its label and destination", () => {
   const fixture = readFileSync(new URL("./__fixtures__/changelog-links.md", import.meta.url), "utf8");
   expect(malformedHeadings(fixture)).toEqual([]);
