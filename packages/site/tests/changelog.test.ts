@@ -637,3 +637,27 @@ test("source changelog apply entry keeps its Phantom link text and destination",
     href: "https://phm.dev",
   });
 });
+
+test("parsed changelog entries preserve colons and commas", () => {
+  const entry = "Fixed: wiring skips unset keys, then continues with the rest";
+  const markdown = `## 0.1.0\n\n### Fixed\n\n- ${entry}\n- **Note:** plain, bold lead-in\n`;
+  const items = marked.lexer(markdown).flatMap((token) => (token.type === "list" ? token.items : []));
+  expect(items.map((item) => item.text)).toEqual([entry, "**Note:** plain, bold lead-in"]);
+  for (const item of items) {
+    expect(item.text).toContain(":");
+    expect(item.text).toContain(",");
+  }
+});
+
+test("source changelog entries with a colon and comma keep both in parsed text", () => {
+  const source = readFileSync(join(root, "CHANGELOG.md"), "utf8");
+  const items = marked.lexer(source).flatMap((token) => (token.type === "list" ? token.items : []));
+  const raw = items.find((item) => item.raw.startsWith("- **`stack apply [recipe-id]`**"));
+  expect(raw).toBeDefined();
+  const withBoth = items.filter((item) => item.text.includes(":") && item.text.includes(","));
+  expect(withBoth.length).toBeGreaterThan(0);
+  for (const item of withBoth) {
+    expect(item.raw).toContain(":");
+    expect(item.raw).toContain(",");
+  }
+});
