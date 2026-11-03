@@ -64,10 +64,21 @@ test("detects malformed version headings in a fixture", () => {
   ]);
 });
 
-test("empty changelog fixture has no malformed headings", () => {
+test("empty changelog fixture parses with no results from every parser function", () => {
   const fixture = readFileSync(new URL("./__fixtures__/changelog-empty.md", import.meta.url), "utf8");
+  expect(fixture).toBe("");
+  // malformedHeadings returns no bad headings without throwing.
   expect(() => malformedHeadings(fixture)).not.toThrow();
   expect(malformedHeadings(fixture)).toEqual([]);
+  // versionSections returns no versions without throwing.
+  expect(() => versionSections(fixture)).not.toThrow();
+  expect(versionSections(fixture)).toEqual([]);
+  // sectionEntries returns no entries without throwing.
+  expect(() => sectionEntries(fixture)).not.toThrow();
+  expect(sectionEntries(fixture)).toEqual([]);
+  // inlineLinks on empty body returns no links without throwing.
+  expect(() => inlineLinks(fixture)).not.toThrow();
+  expect(inlineLinks(fixture)).toEqual([]);
 });
 
 test("prose before the first version is not a version and the first version stays intact", () => {
