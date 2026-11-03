@@ -168,6 +168,22 @@ test("inline-code fixture keeps backtick text verbatim in parsed entries", () =>
   expect(entries[1]).toContain("## not a heading");
 });
 
+test("site CHANGELOG.md retains inline-code text (backticks) in parsed entries", () => {
+  const site = parseChangelog(read("../packages/site/src/data/CHANGELOG.md"));
+  const v030 = site.find((v) => v.version === "0.3.0");
+  expect(v030).toBeDefined();
+  // Entries that start with inline code retain their backtick delimiters.
+  expect(v030!.entries).toContain(
+    "`stack doctor --repos` reports default-branch CI and open PR counts through gh. Only --json may be combined with this mode.",
+  );
+  expect(v030!.entries).toContain(
+    "`stack upgrade --apply` supports npm global upgrades with health checks and rollback; --dry-run remains non-installing. Review installer constraints before use.",
+  );
+  // Inline code within entries is also preserved.
+  expect(v030!.entries.some((e) => e.includes("`stack apply`"))).toBe(true);
+  expect(v030!.entries.some((e) => e.includes("`stack fleet`"))).toBe(true);
+});
+
 test("bold-entry fixture keeps ** and __ markers verbatim in parsed entries", () => {
   // Documented representation: entries are raw Markdown, so bold markers are retained, not stripped.
   expect(parseChangelog(read("./__fixtures__/changelog-bold-entry.md"))).toEqual([
