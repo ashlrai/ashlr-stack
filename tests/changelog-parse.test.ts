@@ -631,3 +631,28 @@ test("site two-entry fixture is the first two consecutive Unreleased Fixed entri
   );
   expect(fixture).toEqual(source?.entries.slice(0, 2));
 });
+
+test("multi-version fixture keeps each entry under its own version heading", () => {
+  const fixture = read("./__fixtures__/changelog-source-multi-version.md");
+  expect(parseChangelog(fixture).map((v) => [v.version, v.entries.length])).toEqual([
+    [null, 1],
+    ["0.3.0", 2],
+  ]);
+  const groups = sectionEntries(fixture);
+  expect(groups.map((g) => [g.version, g.section])).toEqual([
+    ["## Unreleased", "Changed"],
+    ["## 0.3.0 (2026-10-31)", "Added"],
+  ]);
+  // Neither version's entries leak into the other.
+  expect(groups[0].entries.some((e) => groups[1].entries.includes(e))).toBe(false);
+});
+
+test("multi-version fixture entries are verbatim from the matching version and section of CHANGELOG.md", () => {
+  const source = sectionEntries(read("../CHANGELOG.md"));
+  const find = (version: string, section: string) =>
+    source.find((g) => g.version === version && g.section === section)?.entries ?? [];
+  const [changed, added] = sectionEntries(read("./__fixtures__/changelog-source-multi-version.md"));
+  expect(changed.entries).toEqual(find("## Unreleased", "Changed").slice(0, 1));
+  expect(added.entries).toEqual(find("## 0.3.0 (2026-10-31)", "Added").slice(0, 2));
+  expect(added.entries[0]).toStartWith("Fleet diagnostics");
+});
