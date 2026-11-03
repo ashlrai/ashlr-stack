@@ -573,3 +573,44 @@ test("the fixture's version and entry text match the published site changelog", 
   expect(release).toBeDefined();
   expect(release?.entries).toContain(SINGLE_ENTRY);
 });
+
+// Fixture modeled on the 0.1.0 `stack apply` entry in CHANGELOG.md: a list entry with a Markdown link.
+const LINK_ENTRY_FIXTURE = [
+  "## 0.1.0",
+  "",
+  "### Added",
+  "",
+  "- **`stack apply [recipe-id]`** — checks declared secret names in [Phantom](https://phm.dev) and creates webhook stubs.",
+  "",
+].join("\n");
+
+function linksInEntry(markdown: string, prefix: string): { text: string; href: string }[] {
+  const entry = marked
+    .lexer(markdown)
+    .flatMap((token) => (token.type === "list" ? token.items : []))
+    .find((item) => item.raw.startsWith(prefix));
+  expect(entry).toBeDefined();
+  const links: { text: string; href: string }[] = [];
+  marked.walkTokens(entry?.tokens ?? [], (token) => {
+    if (token.type === "link") links.push({ text: token.text, href: token.href });
+  });
+  return links;
+}
+
+test("fixture entry with a Markdown link keeps its link text and destination", async () => {
+  expect(linksInEntry(LINK_ENTRY_FIXTURE, "- **`stack apply [recipe-id]`**")).toEqual([
+    { text: "Phantom", href: "https://phm.dev" },
+  ]);
+  const html = await marked.parse(LINK_ENTRY_FIXTURE);
+  expect(html).toContain('<a href="https://phm.dev">Phantom</a>');
+  // Brackets in the entry's code span are not mistaken for a link.
+  expect(html).toContain("<code>stack apply [recipe-id]</code>");
+});
+
+test("source changelog apply entry keeps its Phantom link text and destination", () => {
+  const source = readFileSync(join(root, "CHANGELOG.md"), "utf8");
+  expect(linksInEntry(source, "- **`stack apply [recipe-id]`**")).toContainEqual({
+    text: "Phantom",
+    href: "https://phm.dev",
+  });
+});
