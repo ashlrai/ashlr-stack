@@ -9,7 +9,7 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { wirePhantomForRecipe } from "../ai/phantom-wire.ts";
+import { webhookStubFor, wirePhantomForRecipe } from "../ai/phantom-wire.ts";
 import { type Recipe, readRecipe, writeRecipe } from "../ai/recipe.ts";
 import { exec, listSecrets } from "../phantom.ts";
 import { type Harness, setupFakePhantom } from "./_harness.ts";
@@ -82,6 +82,16 @@ describe("ai/phantom-wire", () => {
     expect(readFileSync(stubPath, "utf-8")).toContain("stripe-signature");
     expect(harness.callsTo("list")).toEqual([{ cmd: "list", args: ["--json"] }]);
     expect(harness.callsTo("add")).toEqual([]);
+  });
+
+  it("expands a provider name containing dollar signs literally in the webhook stub", () => {
+    // `$&`, `$1`, `$$` and `` $` `` are special in String.replace replacement
+    // strings; the stub must carry them through verbatim.
+    const provider = "pay$&x$1$$y$`z";
+    const stub = webhookStubFor(provider);
+    expect(stub).toContain(`webhook handler stub for ${provider}.`);
+    expect(stub).toContain(`forge a ${provider} webhook.`);
+    expect(stub).toContain(`handle${provider[0].toUpperCase()}${provider.slice(1)}Webhook`);
   });
 
   it("replaces an existing webhook stub when wiring is repeated", async () => {
