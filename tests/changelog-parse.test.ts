@@ -66,3 +66,18 @@ test("two-section fixture keeps both sections' entries in source order", () => {
     },
   ]);
 });
+
+test("inline-code fixture retains backtick-wrapped text in parsed entries", () => {
+  expect(parseChangelog(read("./__fixtures__/changelog-inline-code.md"))).toEqual([
+    {
+      version: "0.2.0",
+      date: "2026-11-03",
+      entries: ["Use `stack apply` to wire providers.", "Set `OPENAI_API_KEY` in `~/.env`.", "The `--noWire` flag opts out of wiring."],
+    },
+    {
+      version: "0.1.0",
+      date: "2026-04-19",
+      entries: ["Run `stack scan` first, then `stack onboard`.", "Configure the provider in `.stack/config.json`."],
+    },
+  ]);
+});
