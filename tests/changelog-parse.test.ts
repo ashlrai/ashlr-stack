@@ -612,3 +612,22 @@ test("multi-entry fixture entries are still the Unreleased Fixed entries of CHAN
   );
   expect(fixture).toEqual(source?.entries);
 });
+
+test("site two-entry fixture returns two consecutive entries in source order", () => {
+  const fixture = read("./__fixtures__/changelog-site-two-entry-order.md");
+  const [unreleased] = parseChangelog(fixture);
+  expect(unreleased.entries).toHaveLength(2);
+  expect(unreleased.entries[0]).toStartWith("Fleet JSONL reads");
+  expect(unreleased.entries[1]).toStartWith("The release workflow renders");
+  expect(sectionEntries(fixture)).toEqual([
+    { version: "## Unreleased", section: "Fixed", entries: unreleased.entries },
+  ]);
+});
+
+test("site two-entry fixture is the first two consecutive Unreleased Fixed entries of the site CHANGELOG.md", () => {
+  const fixture = parseChangelog(read("./__fixtures__/changelog-site-two-entry-order.md"))[0].entries;
+  const source = sectionEntries(read("../packages/site/src/data/CHANGELOG.md")).find(
+    (g) => g.version === "## Unreleased" && g.section === "Fixed",
+  );
+  expect(fixture).toEqual(source?.entries.slice(0, 2));
+});
