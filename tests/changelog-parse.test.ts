@@ -481,3 +481,32 @@ test("heading-only fixture returns every version with no entries from any parser
   // A lone heading with no newline and no body is still a version with no entries.
   expect(parseChangelog("## Unreleased")).toEqual([{ version: null, date: null, entries: [] }]);
 });
+
+
+test("hyphenated-word fixture retains every hyphenated word in parsed entries", () => {
+  expect(parseChangelog(read("./__fixtures__/changelog-hyphenated-word.md"))).toEqual([
+    { version: null, date: null, entries: ["Full-stack rewrite of the onboarding flow."] },
+    {
+      version: "0.3.0",
+      date: "2026-10-31",
+      entries: [
+        "Real-time collaboration with self-hosted sync.",
+        "Support for cross-platform, agent-native tooling.",
+        "Work around a well-known edge case in error-handling.",
+      ],
+    },
+    {
+      version: "0.2.0",
+      date: "2026-04-23",
+      entries: ["Opt-in, best-effort offline mode for deep-link navigation."],
+    },
+  ]);
+  // CRLF line endings must not strip hyphens either.
+  const md = read("./__fixtures__/changelog-hyphenated-word.md");
+  expect(parseChangelog(md.replace(/\n/g, "\r\n"))).toEqual(parseChangelog(md));
+  // Per-section view: hyphenated text stays intact in section entries too.
+  expect(sectionEntries(md).map((s) => [s.section, s.entries])).toEqual([
+    ["Added", ["Real-time collaboration with self-hosted sync.", "Support for cross-platform, agent-native tooling."]],
+    ["Fixed", ["Work around a well-known edge case in error-handling."]],
+  ]);
+});
