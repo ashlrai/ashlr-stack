@@ -390,3 +390,55 @@ test("a single blank line, extra blank lines, or none before the next heading pa
     expect(lists).toEqual(["a", "b"]);
   }
 });
+
+/** Entry texts (list items) of the `###` section titled `title` inside release `release`, in source order. */
+function sectionEntries(markdown: string, release: string, title: string): string[] {
+  const entries: string[] = [];
+  let inRelease = false;
+  let inSection = false;
+  for (const token of marked.lexer(markdown)) {
+    if (token.type === "heading" && token.depth <= 3) {
+      if (token.depth <= 2) inRelease = token.depth === 2 && token.text === release;
+      inSection = inRelease && token.depth === 3 && token.text === title;
+    } else if (inSection && token.type === "list") {
+      for (const item of token.items) entries.push(item.text.trim());
+    }
+  }
+  return entries;
+}
+
+test("two entries in one section are returned in source order", () => {
+  const input = "## 0.2.0\n\n### Added\n\n- zebra entry\n- alpha entry\n\n### Fixed\n\n- other entry\n";
+  expect(sectionEntries(input, "0.2.0", "Added")).toEqual(["zebra entry", "alpha entry"]);
+  // Reversing the source reverses the result, so order is not an artifact of sorting.
+  const reversed = "## 0.2.0\n\n### Added\n\n- alpha entry\n- zebra entry\n";
+  expect(sectionEntries(reversed, "0.2.0", "Added")).toEqual(["alpha entry", "zebra entry"]);
+});
+
+test("entries split by a blank line or an interleaved paragraph stay in source order", () => {
+  const input = "## 0.2.0\n\n### Added\n\n- first\n\n- second\n\nnote\n\n- third\n";
+  expect(sectionEntries(input, "0.2.0", "Added")).toEqual(["first", "second", "third"]);
+});
+
+test("section entries do not leak across sections or releases", () => {
+  const input = "## 0.2.0\n\n### Added\n\n- a\n- b\n\n### Fixed\n\n- c\n\n## 0.1.0\n\n### Added\n\n- d\n";
+  expect(sectionEntries(input, "0.2.0", "Added")).toEqual(["a", "b"]);
+  expect(sectionEntries(input, "0.1.0", "Added")).toEqual(["d"]);
+  expect(sectionEntries(input, "0.3.0", "Added")).toEqual([]);
+});
+
+test("published changelog returns the 0.2.1 placeholder-removal entry in source order", () => {
+  const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
+  const lines = published.split("\n");
+  const start = lines.indexOf("## 0.2.1 (2026-10-16)");
+  expect(start).toBeGreaterThan(-1);
+  const end = lines.findIndex((line, i) => i > start && line.startsWith("## "));
+  const section = lines.slice(start, end === -1 ? undefined : end);
+  const heading = section.find((line) => line.startsWith("### "))?.slice(4) ?? "";
+  const entries = sectionEntries(published, "0.2.1 (2026-10-16)", heading);
+  expect(entries.length).toBeGreaterThanOrEqual(2);
+  // Source order: each entry's first line appears in the file in the same sequence.
+  const positions = entries.map((entry) => published.indexOf(entry.split("\n")[0]));
+  expect(positions.every((p) => p >= 0)).toBe(true);
+  expect(positions).toEqual([...positions].sort((a, b) => a - b));
+});
