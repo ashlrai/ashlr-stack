@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { inlineLinks } from "./changelog-parser-utils";
 
 export interface ChangelogVersion {
   /** `null` for `## Unreleased`. */
@@ -88,4 +89,16 @@ test("blank-lines fixture returns both entries in order without blank entries", 
     entries: ["First entry after blank lines.", "Second entry after more blank lines."],
   });
   expect(v.entries.every((e) => e.trim() !== "")).toBe(true);
+});
+
+test("linked-text fixture keeps link text and destination in parsed entries", () => {
+  const [v] = parseChangelog(read("./__fixtures__/changelog-linked-text-entry.md"));
+  expect(v.entries).toEqual([
+    "Read the [provider guide](docs/adding-a-provider.md) before adding a provider.",
+    'Secrets live in [Phantom](https://phm.dev "Phantom Secrets"), not in the repo.',
+  ]);
+  expect(inlineLinks(v.entries.join("\n"))).toEqual([
+    { label: "provider guide", destination: "docs/adding-a-provider.md" },
+    { label: "Phantom", destination: "https://phm.dev" },
+  ]);
 });
