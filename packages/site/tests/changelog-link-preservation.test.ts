@@ -61,3 +61,13 @@ test("rendered HTML keeps each link's label and href", async () => {
   expect(html).toContain('<a href="https://phm.dev">Phantom</a>');
   expect(html).toContain('<a href="docs/adding-a-provider.md">adding a provider guide</a>');
 });
+
+test("the published changelog keeps the Phantom link on the apply entry", () => {
+  const published = readFileSync(join(import.meta.dir, "../src/data/CHANGELOG.md"), "utf8");
+  const tokens = marked.lexer(published);
+  const entry = tokens
+    .flatMap((t) => (t.type === "list" ? (t as Tokens.List).items : []))
+    .find((item) => item.raw.startsWith("- **`stack apply [recipe-id]`**"));
+  expect(entry).toBeDefined();
+  expect(collectLinks(entry?.tokens ?? [])).toContainEqual({ label: "Phantom", href: "https://phm.dev" });
+});
