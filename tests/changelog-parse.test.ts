@@ -689,3 +689,22 @@ test("site CHANGELOG.md entry with a colon and commas keeps them in the parsed t
   const entry = unreleased?.entries.find((e) => e.startsWith("Fleet JSONL reads"));
   expect(entry).toContain("while reading: a non-tail read grows one buffer up to the cap, probes");
 });
+
+test("real CHANGELOG.md code-span fixture keeps each span and its contents in parsed entries", () => {
+  const fixture = read("./__fixtures__/changelog-real-code-span.md");
+  const lines = new Set(read("../CHANGELOG.md").split("\n"));
+  const [unreleased] = parseChangelog(fixture);
+  expect(unreleased.entries).toHaveLength(2);
+  // The fixture is verbatim CHANGELOG.md content, not a hand-written approximation.
+  for (const entry of unreleased.entries) expect(lines.has(`- ${entry}`)).toBe(true);
+
+  const spans = (e: string) => [...e.matchAll(/`([^`]+)`/g)].map((m) => m[1]);
+  // Spans holding `$`, `*` and `_` stay literal: no expansion, no emphasis stripping.
+  expect(spans(unreleased.entries[0])).toEqual(["$VERSION$", "$SHA_*$", "sed", "$"]);
+  expect(unreleased.entries[0]).toContain("(`$VERSION$` and the per-platform `$SHA_*$` values)");
+  // A span with a path and dot survives next to parentheses and a trailing `(#363)`.
+  expect(spans(unreleased.entries[1])).toEqual(["scripts/mcp-registry-gate.mjs"]);
+  expect(unreleased.entries[1]).toContain("(`scripts/mcp-registry-gate.mjs`)");
+  // The section parser agrees with parseChangelog on the same text.
+  expect(sectionEntries(fixture)[0].entries).toEqual(unreleased.entries);
+});
