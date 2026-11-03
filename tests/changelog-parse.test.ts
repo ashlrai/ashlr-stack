@@ -44,3 +44,14 @@ test("site CHANGELOG.md parses 0.3.0 with its date and entries", () => {
   expect(v030?.entries.length).toBeGreaterThan(0);
   for (const v of site) if (v.version) expect(v.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
 });
+
+test("two-version fixture keeps versions and entries in source order (not sorted)", () => {
+  expect(parseChangelog(read("./__fixtures__/changelog-two-version-order.md"))).toEqual([
+    {
+      version: "0.2.0",
+      date: "2026-04-23",
+      entries: ["Second entry A for 0.2.0.", "First entry B for 0.2.0.", "Third entry C for 0.2.0."],
+    },
+    { version: "0.1.0", date: "2026-04-19", entries: ["Entry Z for 0.1.0.", "Entry A for 0.1.0."] },
+  ]);
+});
