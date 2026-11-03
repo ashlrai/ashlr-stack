@@ -175,3 +175,13 @@ test("empty input returns no changelog sections from any parser", () => {
   expect(versionBodies("").size).toBe(0);
   expect(malformedHeadings("")).toEqual([]);
 });
+
+test("whitespace-only input returns no changelog sections from any parser", () => {
+  for (const blank of [" ", "   \n", "\n\n\n", "\t\n \t\n", "\r\n\r\n", "  \n"]) {
+    expect(parseChangelog(blank)).toEqual([]);
+    expect(versionSections(blank)).toEqual([]);
+    expect(sectionEntries(blank)).toEqual([]);
+    expect(versionBodies(blank).size).toBe(0);
+    expect(malformedHeadings(blank)).toEqual([]);
+  }
+});
