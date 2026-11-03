@@ -493,3 +493,48 @@ test("double-backtick inline code keeps an embedded backtick and its release", (
   expect(sectionEntries(input, "0.3.0", "Changed")).toEqual(["renamed ``a `b` c`` to `d`"]);
   expect(sectionEntries(input, "0.2.0", "Changed")).toEqual(["other"]);
 });
+
+// ── Heading-only fixture: empty subsection parsing ──
+
+type Parsed = { version: string; sections: { name: string; items: string[] }[] };
+
+function parse(markdown: string): Parsed[] {
+  const versions: Parsed[] = [];
+  let version: Parsed | null = null;
+  let section: Parsed["sections"][number] | null = null;
+  for (const token of marked.lexer(markdown)) {
+    if (token.type === "heading" && token.depth <= 2) {
+      section = null;
+      version = token.depth === 2 && /^\[?\d+\.\d+\.\d+\]?(?:\s|$)/.test(token.text) ? { version: token.text, sections: [] } : null;
+      if (version) versions.push(version);
+    } else if (token.type === "heading" && token.depth === 3 && version) {
+      section = { name: token.text, items: [] };
+      version.sections.push(section);
+    } else if (token.type === "list" && section) {
+      for (const item of token.items) section.items.push(item.text);
+    }
+  }
+  return versions;
+}
+
+test("heading-only fixture: empty ### section is kept with no entries", () => {
+  const fixture = readFileSync(join(import.meta.dir, "__fixtures__/changelog-empty-section-heading.md"), "utf8");
+  const parsed = parse(fixture);
+  expect(parsed.map((v) => v.version)).toEqual(["0.2.0 (2026-04-23)", "0.1.0 (2026-04-19)"]);
+  expect(parsed[0].sections).toEqual([{ name: "Added", items: ["Entry."] }]);
+  expect(parsed[1].sections).toEqual([{ name: "Fixed", items: [] }]);
+});
+
+test("heading-only fixture: empty subsection does not throw", () => {
+  const fixture = readFileSync(join(import.meta.dir, "__fixtures__/changelog-empty-section-heading.md"), "utf8");
+  expect(() => parse(fixture)).not.toThrow();
+});
+
+test("heading-only fixture: published CHANGELOG.md parses without error and handles all sections", () => {
+  const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
+  expect(() => parse(published)).not.toThrow();
+  const parsed = parse(published);
+  expect(parsed.length).toBeGreaterThan(0);
+  // Every section has a name (even if its item list is empty)
+  expect(parsed.flatMap((v) => v.sections.map((s) => s.name))).toBeTruthy();
+});
