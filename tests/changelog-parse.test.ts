@@ -500,3 +500,23 @@ test("blank-line-sections fixture keeps entries on either side of a blank line i
   expect(sectionEntries(md.replace(/\n/g, "\r\n"))).toEqual(sections);
   expect(sectionEntries(md.split("\n").filter((l) => l.trim() !== "").join("\n"))).toEqual(sections);
 });
+
+test("numbered-version fixture puts each multi-digit version heading's entry in its own section", () => {
+  const md = read("./__fixtures__/changelog-numbered-version.md");
+  expect(parseChangelog(md)).toEqual([
+    { version: "10.12.134", date: "2026-11-03", entries: ["Entry for the multi-digit version."] },
+    { version: "1.10.0", date: "2026-11-02", entries: ["Entry for 1.10.0, not 1.1.0."] },
+    { version: "1.1.0", date: "2026-11-01", entries: ["Entry for 1.1.0."] },
+  ]);
+  expect(sectionEntries(md)).toEqual([
+    { version: "## 10.12.134 (2026-11-03)", section: "Added", entries: ["Entry for the multi-digit version."] },
+    { version: "## 1.10.0 (2026-11-02)", section: "Fixed", entries: ["Entry for 1.10.0, not 1.1.0."] },
+    { version: "## 1.1.0 (2026-11-01)", section: "Changed", entries: ["Entry for 1.1.0."] },
+  ]);
+  expect([...versionBodies(md).keys()]).toEqual([
+    "## 10.12.134 (2026-11-03)",
+    "## 1.10.0 (2026-11-02)",
+    "## 1.1.0 (2026-11-01)",
+  ]);
+  expect(malformedHeadings(md)).toEqual([]);
+});
