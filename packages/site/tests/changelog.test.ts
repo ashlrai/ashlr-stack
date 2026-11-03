@@ -574,6 +574,29 @@ test("the fixture's version and entry text match the published site changelog", 
   expect(release?.entries).toContain(SINGLE_ENTRY);
 });
 
+// Trailing-newline fixture: the same changelog with and without its final newline.
+const NO_FINAL_NEWLINE_FIXTURE = SINGLE_ENTRY_FIXTURE.replace(/\n+$/, "");
+
+test("trailing-newline fixture differs only by its final newline", () => {
+  expect(SINGLE_ENTRY_FIXTURE.endsWith("\n")).toBe(true);
+  expect(NO_FINAL_NEWLINE_FIXTURE.endsWith("\n")).toBe(false);
+  expect(`${NO_FINAL_NEWLINE_FIXTURE}\n`).toBe(SINGLE_ENTRY_FIXTURE);
+});
+
+test("a version and its entry parse identically with and without a final newline", () => {
+  const expected = [{ version: "0.3.0", entries: [SINGLE_ENTRY] }];
+  expect(parseReleaseEntries(NO_FINAL_NEWLINE_FIXTURE)).toEqual(expected);
+  expect(parseReleaseEntries(SINGLE_ENTRY_FIXTURE)).toEqual(expected);
+});
+
+test("the published site changelog parses identically with and without its final newline", () => {
+  const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
+  const trimmed = published.replace(/\n+$/, "");
+  expect(trimmed.endsWith("\n")).toBe(false);
+  expect(parseReleaseEntries(trimmed)).toEqual(parseReleaseEntries(`${trimmed}\n`));
+  expect(parseReleaseEntries(trimmed).length).toBeGreaterThan(0);
+});
+
 // Fixture modeled on the 0.1.0 `stack apply` entry in CHANGELOG.md: a list entry with a Markdown link.
 const LINK_ENTRY_FIXTURE = [
   "## 0.1.0",
