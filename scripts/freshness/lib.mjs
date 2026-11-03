@@ -70,6 +70,28 @@ export function parseLatestRelease(text) {
   return { version, date, heading: `${version} (${date})`, entry: lines.slice(start + 1, end).join('\n').trim() };
 }
 
+/**
+ * Bullet entries of a release body (see parseLatestRelease), one string per
+ * top-level `- ` item, in file order. Indented continuation lines stay with
+ * their entry; subsection headings and blank lines separate entries and are
+ * dropped. Duplicates are kept.
+ */
+export function parseReleaseEntries(body) {
+  const entries = [];
+  let current = null;
+  for (const line of body.replace(/\r\n?/g, '\n').split('\n')) {
+    if (line.startsWith('- ')) {
+      current = [line];
+      entries.push(current);
+    } else if (current && /^\s+\S/.test(line)) {
+      current.push(line);
+    } else {
+      current = null;
+    }
+  }
+  return entries.map((lines) => lines.join('\n'));
+}
+
 function readJson(path) {
   try {
     return JSON.parse(readFileSync(path, 'utf8'));
