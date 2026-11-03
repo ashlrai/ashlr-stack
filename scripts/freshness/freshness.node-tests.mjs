@@ -377,3 +377,31 @@ test('stripFencedCode keeps text outside fences and honors fence char and length
   assert.ok(!out.includes('## x'));
   assert.ok(out.includes('a') && out.includes('## b'));
 });
+
+test('a CRLF CHANGELOG.md yields the same released section as LF, ignoring fenced headings', () => {
+  const lf = [
+    '# Changelog',
+    '',
+    '## Unreleased',
+    '',
+    '```markdown',
+    '## 0.0.1 (2020-01-01)',
+    '```',
+    '',
+    `## ${V} (2026-10-26)`,
+    '',
+    '- things',
+    '',
+  ].join('\n');
+  const crlf = lf.replace(/\n/g, '\r\n');
+  assert.equal(stripFencedCode(crlf).includes('0.0.1'), false);
+
+  const expected = { version: V, date: '2026-10-26', heading: `${V} (2026-10-26)` };
+  for (const body of [lf, crlf]) {
+    const root = repo({ 'CHANGELOG.md': body });
+    const { ctx, errors } = buildContext(root);
+    assert.deepEqual(errors, []);
+    assert.deepEqual(ctx.changelog, expected);
+    rmSync(root, { recursive: true });
+  }
+});
