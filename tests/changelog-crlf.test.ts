@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { malformedHeadings, sectionEntries, versionSections } from "./changelog-parser-utils";
 import { readFileSync } from "node:fs";
 
 const fixture = readFileSync(new URL("./__fixtures__/changelog-crlf.md", import.meta.url), "utf8");
@@ -37,4 +38,12 @@ test("versions, sections and entries parse with CRLF endings", () => {
 
 test("CRLF and LF fixtures parse identically", () => {
   expect(parse(fixture.replace(/\r\n/g, "\n"))).toEqual(parse(fixture));
+});
+
+test("shared parser utils return identical results for CRLF and LF", () => {
+  const lf = fixture.replace(/\r\n/g, "\n");
+  expect(sectionEntries(fixture)).toEqual(sectionEntries(lf));
+  expect(versionSections(fixture)).toEqual(versionSections(lf));
+  expect(malformedHeadings(fixture)).toEqual(malformedHeadings(lf));
+  expect(sectionEntries(fixture).flatMap((s) => s.entries)).toEqual(["Second version entry.", "First version entry."]);
 });
