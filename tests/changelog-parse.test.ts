@@ -676,3 +676,16 @@ test("multi-version fixture entries are verbatim from the matching version and s
   expect(added.entries).toEqual(find("## 0.3.0 (2026-10-31)", "Added").slice(0, 2));
   expect(added.entries[0]).toStartWith("Fleet diagnostics");
 });
+
+test("colon-and-comma fixture retains both punctuation marks in the parsed entry text", () => {
+  const [v] = parseChangelog(read("./__fixtures__/changelog-colon-comma.md"));
+  expect(v.entries).toEqual(["Fixed timeout handling: connections close cleanly, retries resume, and logs stay readable."]);
+  expect(v.entries[0]).toContain(": ");
+  expect(v.entries[0]).toContain(", ");
+});
+
+test("site CHANGELOG.md entry with a colon and commas keeps them in the parsed text", () => {
+  const unreleased = parseChangelog(read("../packages/site/src/data/CHANGELOG.md")).find((v) => v.version === null);
+  const entry = unreleased?.entries.find((e) => e.startsWith("Fleet JSONL reads"));
+  expect(entry).toContain("while reading: a non-tail read grows one buffer up to the cap, probes");
+});
