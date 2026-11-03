@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { sectionEntries } from "./changelog-parser-utils";
 
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), "utf8");
 
@@ -60,4 +61,21 @@ test("CHANGELOG.md has no replacement characters and round-trips as UTF-8", () =
   expect(Buffer.from(text, "utf8").equals(raw)).toBe(true);
   const nonAscii = [...versionBodies(text).values()].filter((b) => /[^\x00-\x7F]/.test(b));
   expect(nonAscii.length).toBeGreaterThan(0);
+});
+
+test("sectionEntries keeps Unicode entry text verbatim, under LF and CRLF", () => {
+  const sections = sectionEntries(fixture);
+  expect(sections).toEqual([
+    {
+      version: "## 0.3.0 (2026-10-31)",
+      section: "Added",
+      entries: [
+        "日本語のメモ: プロバイダーを追加 🚀 👩‍💻",
+        "مرحبا بالعالم — שלום עולם",
+        "Ελληνικά: αβγδ → ✓ done",
+      ],
+    },
+    { version: "## 0.3.0 (2026-10-31)", section: "Fixed", entries: ["NFC \u00e9 (U+00E9) vs NFD e\u0301 (e + U+0301), \u03a9 \u2260 \u00b5"] },
+  ]);
+  expect(sectionEntries(fixture.replace(/\n/g, "\r\n"))).toEqual(sections);
 });
