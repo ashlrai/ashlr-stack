@@ -55,3 +55,14 @@ test("two-version fixture keeps versions and entries in source order (not sorted
     { version: "0.1.0", date: "2026-04-19", entries: ["Entry Z for 0.1.0.", "Entry A for 0.1.0."] },
   ]);
 });
+
+test("two-section fixture keeps both sections' entries in source order", () => {
+  // "Fixed" precedes "Added" in the source, so alphabetical sorting would fail this.
+  expect(parseChangelog(read("./__fixtures__/changelog-two-section-order.md"))).toEqual([
+    {
+      version: "0.4.0",
+      date: "2026-11-03",
+      entries: ["Fixed first.", "Fixed second.", "Added first.", "Added second."],
+    },
+  ]);
+});
