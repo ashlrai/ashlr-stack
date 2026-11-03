@@ -717,3 +717,52 @@ test("source changelog 0.3.0 and 0.2.2 are successive and their entries stay in 
   expect(newer.entries[0]).toMatch(/^Fleet diagnostics: lanes/);
   expect(older.entries[0]).toMatch(/^Release: npm publishing relies only on npm trusted publishing/);
 });
+
+// Walk every list item (including nested ones) and return the inline code spans it holds.
+function codespansByEntry(markdown: string): { raw: string; codespans: string[] }[] {
+  const found: { raw: string; codespans: string[] }[] = [];
+  const visit = (tokens: ReturnType<typeof marked.lexer>) => {
+    for (const token of tokens) {
+      if (token.type !== "list") continue;
+      for (const item of token.items) {
+        const spans: string[] = [];
+        marked.walkTokens(item.tokens, (t) => {
+          if (t.type === "codespan") spans.push(t.text);
+        });
+        found.push({ raw: item.raw, codespans: spans });
+        visit(item.tokens as ReturnType<typeof marked.lexer>);
+      }
+    }
+  };
+  visit(marked.lexer(markdown));
+  return found;
+}
+
+test("parsed changelog entries keep the TODO_STACK_APPLY marker intact", () => {
+  const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
+  const entries = codespansByEntry(published).filter((entry) => entry.raw.includes("TODO_STACK_APPLY"));
+  // One in 0.2.1 (the fix) and one in 0.1.0 (the original apply entry).
+  expect(entries.length).toBeGreaterThanOrEqual(2);
+  for (const entry of entries) {
+    // Not split, escaped, or mangled by the parser: every occurrence is whole in the raw source...
+    expect(entry.raw.match(/TODO_STACK_APPLY/g)?.length).toBe(entry.raw.match(/\bTODO_STACK_APPLY\b/g)?.length);
+    expect(entry.raw).not.toMatch(/TODO\\_STACK|TODO_\\STACK|STACK\\_APPLY|TODO_STACK_ APPLY/);
+    // ...and the parser keeps it whole inside an inline code span.
+    expect(entry.codespans.some((span) => span.includes("TODO_STACK_APPLY"))).toBe(true);
+  }
+  // The exact span text for each known entry survives parsing.
+  const spans = entries.flatMap((entry) => entry.codespans);
+  expect(spans).toContain("TODO_STACK_APPLY");
+  expect(spans).toContain("phantom add <KEY> TODO_STACK_APPLY --rotate");
+});
+
+test("marker survival check detects a mangled TODO_STACK_APPLY marker", () => {
+  const whole = codespansByEntry("- wrote `TODO_STACK_APPLY` once\n");
+  expect(whole[0].codespans).toEqual(["TODO_STACK_APPLY"]);
+  // Emphasis parsing eats underscores outside code spans, so the marker must stay in backticks.
+  const bare = codespansByEntry("- wrote TODO_STACK_APPLY once\n");
+  expect(bare[0].codespans).toEqual([]);
+  // Nested list items are visited too.
+  const nested = codespansByEntry("- outer\n  - inner `TODO_STACK_APPLY`\n");
+  expect(nested.some((entry) => entry.codespans.includes("TODO_STACK_APPLY"))).toBe(true);
+});
