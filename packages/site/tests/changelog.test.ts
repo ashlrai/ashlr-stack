@@ -493,3 +493,40 @@ test("double-backtick inline code keeps an embedded backtick and its release", (
   expect(sectionEntries(input, "0.3.0", "Changed")).toEqual(["renamed ``a `b` c`` to `d`"]);
   expect(sectionEntries(input, "0.2.0", "Changed")).toEqual(["other"]);
 });
+
+test("a hyphenated-word entry retains its hyphenated text through the parser", () => {
+  const input = [
+    "## 0.4.0",
+    "",
+    "### Fixed",
+    "",
+    "- Fixed the well-known, long-standing, state-of-the-art re-run bug in non-interactive mode.",
+    "- Kept self-hosted, pre-1.0, e-mail-style and cross-platform names like `--dry-run` intact.",
+    "- Trailing hyphen- and leading -dash words stay as written.",
+    "",
+    "## 0.3.0",
+    "",
+    "### Added",
+    "",
+    "- Plain entry without hyphens.",
+    "",
+  ].join("\n");
+  expect(sectionEntries(input, "0.4.0", "Fixed")).toEqual([
+    "Fixed the well-known, long-standing, state-of-the-art re-run bug in non-interactive mode.",
+    "Kept self-hosted, pre-1.0, e-mail-style and cross-platform names like `--dry-run` intact.",
+    "Trailing hyphen- and leading -dash words stay as written.",
+  ]);
+  // Entries in the other version are not affected.
+  expect(sectionEntries(input, "0.3.0", "Added")).toEqual(["Plain entry without hyphens."]);
+});
+
+test("published changelog retains hyphenated words in its Unreleased Fixed section", () => {
+  const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
+  const entries = sectionEntries(published, "Unreleased", "Fixed");
+  expect(entries.length).toBeGreaterThanOrEqual(1);
+  const fleetEntry = entries[0];
+  // Hyphenated words must survive the lexer round-trip intact.
+  expect(fleetEntry).toContain("non-tail");
+  expect(fleetEntry).toContain("non-integer");
+  expect(fleetEntry).toContain("oversized");
+});
