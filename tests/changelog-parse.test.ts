@@ -283,3 +283,23 @@ test("site CHANGELOG.md entries, concatenated across versions, match its bullet 
   expect(flat.length).toBeGreaterThan(0);
   expect(flat).toEqual(expected);
 });
+
+test("a final newline never changes parsed entries, for the fixture or the site CHANGELOG.md", () => {
+  const bare = read("./__fixtures__/changelog-no-final-newline.md");
+  expect(bare.endsWith("\n")).toBe(false);
+  const site = read("../packages/site/src/data/CHANGELOG.md").replace(/\n+$/, "");
+  for (const md of [bare, site]) {
+    for (const nl of ["\n", "\r\n", "\n\n"]) {
+      const withNl = md + nl;
+      expect(parseChangelog(withNl)).toEqual(parseChangelog(md));
+      expect(sectionEntries(withNl)).toEqual(sectionEntries(md));
+      expect(malformedHeadings(withNl)).toEqual(malformedHeadings(md));
+      expect(versionSections(withNl).map((s) => [s.heading, s.body.trimEnd()])).toEqual(
+        versionSections(md).map((s) => [s.heading, s.body.trimEnd()]),
+      );
+      const a = [...versionBodies(withNl)].map(([k, v]) => [k, v.trimEnd()]);
+      expect(a).toEqual([...versionBodies(md)].map(([k, v]) => [k, v.trimEnd()]));
+    }
+  }
+  expect(parseChangelog(bare).at(-1)?.entries).toEqual(["First version entry, final line has no newline."]);
+});
