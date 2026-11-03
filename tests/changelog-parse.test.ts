@@ -520,3 +520,28 @@ test("numbered-version fixture puts each multi-digit version heading's entry in 
   ]);
   expect(malformedHeadings(md)).toEqual([]);
 });
+
+test("CRLF fixture and both real CHANGELOG.md files parse like their LF equivalents", () => {
+  const sources = [
+    read("./__fixtures__/changelog-crlf.md"),
+    read("../CHANGELOG.md"),
+    read("../packages/site/src/data/CHANGELOG.md"),
+  ];
+  for (const source of sources) {
+    const lf = source.replace(/\r\n/g, "\n");
+    const crlf = lf.replace(/\n/g, "\r\n");
+    const parsed = parseChangelog(crlf);
+    expect(parsed.length).toBeGreaterThan(0);
+    expect(parsed).toEqual(parseChangelog(lf));
+    expect(parsed.flatMap((v) => v.entries).some((e) => e.includes("\r"))).toBe(false);
+    expect(sectionEntries(crlf)).toEqual(sectionEntries(lf));
+    expect(versionSections(crlf).some((s) => s.body.includes("\r") || s.heading.includes("\r"))).toBe(false);
+    expect(versionSections(crlf)).toEqual(versionSections(lf));
+    expect([...versionBodies(crlf)]).toEqual([...versionBodies(lf)]);
+    expect(malformedHeadings(crlf)).toEqual(malformedHeadings(lf));
+  }
+  expect(parseChangelog(sources[0])).toEqual([
+    { version: "0.2.0", date: "2026-05-01", entries: ["Second version entry."] },
+    { version: "0.1.0", date: "2026-04-19", entries: ["First version entry."] },
+  ]);
+});
