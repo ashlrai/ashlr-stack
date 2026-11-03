@@ -40,3 +40,20 @@ test("entries with identical text stay attached to their own version", () => {
 test("0.10.0 stays ahead of 0.9.0 as written (no numeric or lexical re-sorting)", () => {
   expect(parseReleases(fixture).map((r) => r.version.split(" ")[0])).toEqual(["0.10.0", "0.9.0"]);
 });
+
+test("site changelog: its two newest released versions list entries in file order", () => {
+  const path = join(import.meta.dir, "../src/data/CHANGELOG.md");
+  const raw = readFileSync(path, "utf8").replace(/\r\n/g, "\n");
+  const [first, second] = parseReleases(raw).filter((r) => /^\[?\d+\.\d+\.\d+/.test(r.version));
+  expect(first?.entries.length).toBeGreaterThan(0);
+  expect(second?.entries.length).toBeGreaterThan(0);
+  // Each release's entries must start at increasing offsets, and the first release must precede the second.
+  let from = 0;
+  for (const release of [first, second]) {
+    for (const entry of release.entries) {
+      const at = raw.indexOf(entry.split("\n")[0].slice(0, 40), from);
+      expect(at, `${release.version}: ${entry.slice(0, 40)}`).toBeGreaterThanOrEqual(from);
+      from = at;
+    }
+  }
+});
