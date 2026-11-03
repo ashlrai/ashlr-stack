@@ -142,3 +142,22 @@ test("site CHANGELOG.md parses the same with all blank lines removed", () => {
   const compact = md.split("\n").filter((l) => l.trim() !== "").join("\n");
   expect(parseChangelog(compact)).toEqual(parseChangelog(md));
 });
+
+test("site CHANGELOG.md without final newline parses the final entry completely", () => {
+  // Fixture is a copy of packages/site/src/data/CHANGELOG.md with the trailing newline stripped.
+  const noNewline = read("./__fixtures__/changelog-no-final-newline-site.md");
+  expect(noNewline.endsWith("\n")).toBe(false);
+
+  const parsed = parseChangelog(noNewline);
+  const normal = parseChangelog(read("../packages/site/src/data/CHANGELOG.md"));
+  // Parsed output must be identical regardless of trailing newline.
+  expect(parsed).toEqual(normal);
+
+  // Verify the final entry is present and complete.
+  const last = parsed[parsed.length - 1];
+  expect(last.version).toBe("0.1.0");
+  expect(last.date).toBe("2026-04-19");
+  expect(last.entries.at(-1)).toBe(
+    "47 tests across 12 files; fetch-mocked provider tests and fake-phantom integration harness.",
+  );
+});
