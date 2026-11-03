@@ -341,3 +341,37 @@ test("unicode fixture keeps every parsed entry's characters and code points inta
   // CRLF line endings must not disturb non-ASCII text either.
   expect(parseChangelog(md.replace(/\n/g, "\r\n"))).toEqual(parseChangelog(md));
 });
+
+test("punctuation fixture keeps commas, colons, parentheses, and semicolons in parsed entry text", () => {
+  expect(parseChangelog(read("./__fixtures__/changelog-punctuation.md"))).toEqual([
+    {
+      version: "0.3.0",
+      date: "2026-10-31",
+      entries: [
+        "Added retry logic, with exponential backoff, for unreliable endpoints (see #123).",
+        "New provider for Cloudflare Workers: supports binding, streaming, and observability.",
+        "Fixed timeout handling: connections now close cleanly (fixes #456, closes #457).",
+        "Punctuation in entries: commas, colons (:) and parentheses () are all preserved.",
+      ],
+    },
+    {
+      version: "0.2.0",
+      date: "2026-04-23",
+      entries: [
+        "Updated configuration format (breaking: migrate your config file).",
+        "Renamed the `stack apply` flag: use `--apply` instead of `--run` (deprecated).",
+      ],
+    },
+    {
+      version: "0.1.0",
+      date: "2026-04-19",
+      entries: ["Initial release: core parsing, version detection, and changelog mirroring."],
+    },
+  ]);
+  // Spot-check individual punctuation characters survived the parse.
+  const all = parseChangelog(read("./__fixtures__/changelog-punctuation.md")).flatMap((v) => v.entries);
+  expect(all.some((e) => e.includes(", "))).toBe(true);
+  expect(all.some((e) => e.includes(": "))).toBe(true);
+  expect(all.some((e) => e.includes("("))).toBe(true);
+  expect(all.some((e) => e.includes("#123)"))).toBe(true);
+});
