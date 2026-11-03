@@ -243,6 +243,25 @@ test("empty input returns no changelog sections from any parser", () => {
   expect(malformedHeadings("")).toEqual([]);
 });
 
+test("empty fixture file returns no changelog sections from any parser without throwing", () => {
+  const md = read("./__fixtures__/changelog-empty.md");
+  expect(md).toBe("");
+  expect(() => {
+    parseChangelog(md);
+    versionSections(md);
+    sectionEntries(md);
+    versionBodies(md);
+    malformedHeadings(md);
+    inlineLinks(md);
+  }).not.toThrow();
+  expect(parseChangelog(md)).toEqual([]);
+  expect(versionSections(md)).toEqual([]);
+  expect(sectionEntries(md)).toEqual([]);
+  expect(versionBodies(md).size).toBe(0);
+  expect(malformedHeadings(md)).toEqual([]);
+  expect(inlineLinks(md)).toEqual([]);
+});
+
 test("whitespace-only input returns no changelog sections from any parser", () => {
   for (const ws of [" ", "   \t  ", "\n", "\n\n\n", " \n\t\n  \n", "\r\n \r\n", "  \n"]) {
     expect(parseChangelog(ws)).toEqual([]);
