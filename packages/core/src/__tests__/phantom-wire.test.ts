@@ -585,6 +585,23 @@ describe("ai/phantom-wire", () => {
     });
   });
 
+  it("preserves a newline in a provider name exactly and never turns it into a stub or file", async () => {
+    // A name with a newline is not a known provider. It must come back
+    // byte-for-byte in `skipped` (no trimming, no escaping), and must not
+    // reach the webhook stub template, where a raw newline would end the `//`
+    // comment line and leave live code in the generated file.
+    const name = "stripe\nexport const injected = true;";
+    const recipe: Recipe = { ...STRIPE_RECIPE, providers: [{ name }] };
+
+    const result = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
+
+    expect(result).toEqual({ present: [], missing: [], webhooks: [], skipped: [name] });
+    expect(result.skipped[0]).toBe("stripe\nexport const injected = true;");
+    expect(result.skipped[0].split("\n")).toHaveLength(2);
+    expect(existsSync(join(harness.dir, ".stack/webhooks"))).toBe(false);
+    expect(harness.callsTo("add")).toEqual([]);
+  });
+
   it("splits a multi-secret provider into present and missing", async () => {
     harness.cleanup();
     harness = setupFakePhantom({ SUPABASE_URL: "https://x.supabase.co", SUPABASE_ANON_KEY: "a" });
