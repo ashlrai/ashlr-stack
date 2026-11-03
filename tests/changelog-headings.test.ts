@@ -203,3 +203,15 @@ test("the site CHANGELOG.md mirror keeps every entry under a version and section
     expect(s.section.trim()).not.toBe("");
   }
 });
+
+test("heading-only fixture returns each version with no fabricated body or entries", () => {
+  const fixture = readFileSync(new URL("./__fixtures__/changelog-heading-only.md", import.meta.url), "utf8");
+  expect(malformedHeadings(fixture)).toEqual([]);
+  const sections = versionSections(fixture);
+  expect(sections.map((s) => s.heading)).toEqual(["## 0.2.0 (2026-04-23)", "## 0.1.0 (2026-04-19)"]);
+  for (const s of sections) expect(s.body.trim()).toBe("");
+  expect(sectionEntries(fixture)).toEqual([]);
+  // A version heading as the very last line (no newline, no body) is still returned.
+  expect(versionSections("## 0.1.0 (2026-04-19)").map((s) => s.heading)).toEqual(["## 0.1.0 (2026-04-19)"]);
+  expect(sectionEntries("## 0.1.0 (2026-04-19)")).toEqual([]);
+});
