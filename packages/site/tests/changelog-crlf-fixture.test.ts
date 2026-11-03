@@ -46,3 +46,13 @@ test("the real CHANGELOG.md parses the same when converted to CRLF", () => {
   expect(versions.length).toBeGreaterThan(0);
   expect(parse(asCrlf)).toEqual(versions);
 });
+
+test("the published site CHANGELOG.md has the same version headings and entries when converted to CRLF", () => {
+  const real = readFileSync(join(import.meta.dir, "../src/data/CHANGELOG.md"), "utf8").replace(/\r\n/g, "\n");
+  const versions = parse(real);
+  expect(versions.length).toBeGreaterThan(0);
+  expect(versions.some((v) => v.entries.length > 0)).toBe(true);
+  const fromCrlf = parse(real.replace(/\n/g, "\r\n"));
+  expect(fromCrlf).toEqual(versions);
+  expect(JSON.stringify(fromCrlf)).not.toContain("\\r");
+});
