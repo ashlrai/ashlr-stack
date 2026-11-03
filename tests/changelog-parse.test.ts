@@ -481,3 +481,22 @@ test("heading-only fixture returns every version with no entries from any parser
   // A lone heading with no newline and no body is still a version with no entries.
   expect(parseChangelog("## Unreleased")).toEqual([{ version: null, date: null, entries: [] }]);
 });
+
+test("blank-line-sections fixture keeps entries on either side of a blank line in their section and order", () => {
+  const md = read("./__fixtures__/changelog-blank-line-sections.md");
+  const sections = [
+    {
+      version: "## 0.9.0 (2026-11-03)",
+      section: "Fixed",
+      entries: ["Fixed before blank.", "Fixed after blank.", "Fixed after whitespace line."],
+    },
+    { version: "## 0.9.0 (2026-11-03)", section: "Added", entries: ["Added before blank.", "Added after blank."] },
+  ];
+  expect(sectionEntries(md)).toEqual(sections);
+  expect(parseChangelog(md)).toEqual([
+    { version: "0.9.0", date: "2026-11-03", entries: sections.flatMap((s) => s.entries) },
+  ]);
+  // CRLF endings and removing every blank line must not move an entry between sections.
+  expect(sectionEntries(md.replace(/\n/g, "\r\n"))).toEqual(sections);
+  expect(sectionEntries(md.split("\n").filter((l) => l.trim() !== "").join("\n"))).toEqual(sections);
+});
