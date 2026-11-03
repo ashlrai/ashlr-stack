@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { inlineLinks, sectionEntries } from "./changelog-parser-utils";
 
 const DATE = "\\d{4}-\\d{2}-\\d{2}";
 /** `## Unreleased`, `## 0.3.0 (DATE)`, `## [0.2.0] — DATE`, `## 0.1.0 — DATE (note)`. */
@@ -137,13 +138,18 @@ test("blank lines inside a version body stay in the parsed body", () => {
   expect(older.body).toBe("\n- Old entry.\n\n");
 });
 
-/** Inline Markdown links `[label](destination "optional title")` in a body, in source order. */
-function inlineLinks(body: string): { label: string; destination: string }[] {
-  return [...body.matchAll(/\[([^\]]+)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g)].map((m) => ({
-    label: m[1],
-    destination: m[2],
-  }));
-}
+test("blank lines between entries do not add, drop or reorder entries", () => {
+  const fixture = readFileSync(new URL("./__fixtures__/changelog-blank-lines.md", import.meta.url), "utf8");
+  const expected = [
+    { version: "## 0.2.0 (2026-04-23)", section: "Added", entries: ["First entry.", "Second entry after three blank lines."] },
+    { version: "## 0.2.0 (2026-04-23)", section: "Fixed", entries: ["Fix entry."] },
+  ];
+  expect(sectionEntries(fixture)).toEqual(expected);
+  // Removing every blank line yields the same entries in the same order.
+  expect(sectionEntries(fixture.replace(/\n{2,}/g, "\n"))).toEqual(expected);
+  // Adding a blank line after every line changes nothing either.
+  expect(sectionEntries(fixture.replace(/\n/g, "\n\n"))).toEqual(expected);
+});
 
 test("a Markdown link in a version body keeps its label and destination", () => {
   const fixture = readFileSync(new URL("./__fixtures__/changelog-links.md", import.meta.url), "utf8");
@@ -177,21 +183,6 @@ test("the site CHANGELOG.md mirror parses with well-formed headings and non-empt
   expect(malformedHeadings(site)).toEqual([]);
   for (const s of versionSections(site)) expect(s.body.trim()).not.toBe("");
 });
-
-/** Entries per version and `### ` section, in source order; repeated section names stay separate. */
-function sectionEntries(markdown: string): { version: string; section: string; entries: string[] }[] {
-  const out: { version: string; section: string; entries: string[] }[] = [];
-  let version = "";
-  let fenced = false;
-  for (const line of markdown.split("\n")) {
-    if (/^\s*(```|~~~)/.test(line)) fenced = !fenced;
-    if (fenced) continue;
-    if (/^##(?!#)/.test(line)) version = line;
-    else if (/^### /.test(line)) out.push({ version, section: line.slice(4), entries: [] });
-    else if (/^- /.test(line) && out.length > 0) out[out.length - 1].entries.push(line.slice(2));
-  }
-  return out;
-}
 
 test("repeated section headings keep entries with their own version and section", () => {
   const fixture = readFileSync(new URL("./__fixtures__/changelog-repeated-sections.md", import.meta.url), "utf8");

@@ -31,13 +31,18 @@ export function versionSections(markdown: string): { heading: string; body: stri
 export function sectionEntries(markdown: string): { version: string; section: string; entries: string[] }[] {
   const out: { version: string; section: string; entries: string[] }[] = [];
   let version = "";
+  let current: (typeof out)[number] | null = null;
   let fenced = false;
   for (const line of markdown.split("\n")) {
     if (/^\s*(```|~~~)/.test(line)) fenced = !fenced;
     if (fenced) continue;
-    if (/^##(?!#)/.test(line)) version = line;
-    else if (/^### /.test(line)) out.push({ version, section: line.slice(4), entries: [] });
-    else if (/^- /.test(line) && out.length > 0) out[out.length - 1].entries.push(line.slice(2));
+    if (/^##(?!#)/.test(line)) {
+      version = line;
+      current = null; // a new version must not inherit the previous version's section
+    } else if (/^### /.test(line)) {
+      current = { version, section: line.slice(4), entries: [] };
+      out.push(current);
+    } else if (/^- /.test(line) && current) current.entries.push(line.slice(2));
   }
   return out;
 }
