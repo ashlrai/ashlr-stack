@@ -92,6 +92,37 @@ test("two-section fixture keeps both sections' entries in source order", () => {
   ]);
 });
 
+test("multiple-sections fixture keeps section order and entry membership per version", () => {
+  const sections = sectionEntries(read("./__fixtures__/changelog-multiple-sections.md"));
+  // Non-alphabetical order, an empty section, and a section name repeated across versions.
+  expect(sections).toEqual([
+    { version: "## Unreleased", section: "Security", entries: ["Pending security note."] },
+    { version: "## Unreleased", section: "Added", entries: ["Pending addition."] },
+    { version: "## 0.6.0 (2026-11-03)", section: "Fixed", entries: ["Fixed in 0.6.0."] },
+    {
+      version: "## 0.6.0 (2026-11-03)",
+      section: "Added",
+      entries: ["Added in 0.6.0 (first).", "Added in 0.6.0 (second)."],
+    },
+    { version: "## 0.6.0 (2026-11-03)", section: "Removed", entries: [] },
+    { version: "## 0.6.0 (2026-11-03)", section: "Changed", entries: ["Changed in 0.6.0."] },
+    { version: "## 0.5.0 (2026-10-01)", section: "Added", entries: ["Added in 0.5.0."] },
+    { version: "## 0.5.0 (2026-10-01)", section: "Fixed", entries: ["Fixed in 0.5.0."] },
+  ]);
+});
+
+test("multiple-sections fixture: version-level parse flattens entries in source order", () => {
+  expect(parseChangelog(read("./__fixtures__/changelog-multiple-sections.md"))).toEqual([
+    { version: null, date: null, entries: ["Pending security note.", "Pending addition."] },
+    {
+      version: "0.6.0",
+      date: "2026-11-03",
+      entries: ["Fixed in 0.6.0.", "Added in 0.6.0 (first).", "Added in 0.6.0 (second).", "Changed in 0.6.0."],
+    },
+    { version: "0.5.0", date: "2026-10-01", entries: ["Added in 0.5.0.", "Fixed in 0.5.0."] },
+  ]);
+});
+
 test("inline-code fixture keeps backtick text verbatim in parsed entries", () => {
   expect(parseChangelog(read("./__fixtures__/changelog-inline-code.md"))).toEqual([
     {
