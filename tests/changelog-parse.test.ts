@@ -438,3 +438,23 @@ test("punctuation fixture keeps every entry's punctuation verbatim", () => {
     },
   ]);
 });
+
+test("repeated-entry fixture keeps both identical entries in source order, never merged or deduplicated", () => {
+  const md = read("./__fixtures__/changelog-repeated-entry.md");
+  const expected: ChangelogVersion[] = [
+    { version: null, date: null, entries: ["Same pending entry.", "Same pending entry."] },
+    {
+      version: "0.9.0",
+      date: "2026-11-03",
+      entries: ["Repeated fix.", "Unique fix between.", "Repeated fix.", "Repeated fix."],
+    },
+    { version: "0.8.0", date: "2026-11-02", entries: ["Repeated fix."] },
+  ];
+  expect(parseChangelog(md)).toEqual(expected);
+  expect(parseChangelog(md.replace(/\n/g, "\r\n"))).toEqual(expected);
+  // Per-section view: the repeat inside "Fixed" and the one in "Added" stay separate.
+  expect(sectionEntries(md).map((s) => [s.section, s.entries])).toEqual([
+    ["Fixed", ["Repeated fix.", "Unique fix between.", "Repeated fix."]],
+    ["Added", ["Repeated fix."]],
+  ]);
+});
