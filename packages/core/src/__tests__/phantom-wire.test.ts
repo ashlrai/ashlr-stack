@@ -9,7 +9,7 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { wirePhantomForRecipe } from "../ai/phantom-wire.ts";
+import { webhookStubFor, wirePhantomForRecipe } from "../ai/phantom-wire.ts";
 import { type Recipe, readRecipe, writeRecipe } from "../ai/recipe.ts";
 import { exec, listSecrets } from "../phantom.ts";
 import { type Harness, setupFakePhantom } from "./_harness.ts";
@@ -860,6 +860,57 @@ echo "[]"
       skipped: ["../../evil"],
     });
     expect(existsSync(join(harness.dir, ".stack/webhooks"))).toBe(false);
+    expect(harness.callsTo("add")).toEqual([]);
+  });
+
+  it("preserves backslashes exactly when expanding stub placeholders", () => {
+    // `${provider}` expansion is plain template interpolation, not
+    // String.replace: a replacement containing backslashes lands verbatim,
+    // and placeholder syntax inside it is data, never re-expanded.
+    const name = "..\\evil\\${name}";
+    const stub = webhookStubFor(name);
+    const secretKey = `${name.toUpperCase()}_WEBHOOK_SECRET`;
+
+    expect(stub).toContain(`webhook handler stub for ${name}.`);
+    expect(stub).toContain(`handle${name.charAt(0).toUpperCase()}${name.slice(1)}Webhook`);
+    expect(stub).toContain(`forge a ${name} webhook`);
+    expect(stub).toContain(`//   phantom reveal ${secretKey}`);
+    expect(stub).toContain(`(\`phantom reveal ${secretKey}\`)`);
+    expect(stub).toContain('req.headers.get("x-webhook-signature")');
+    expect(stub).toContain("Verify per the provider's documented signature scheme.");
+
+    // The raw name reaches three sites verbatim; the uppercased secret key two.
+    expect(stub.split(name)).toHaveLength(4);
+    expect(stub.split(secretKey)).toHaveLength(3);
+  });
+
+  it("skips a backslash path-traversal provider name without writing any stub", async () => {
+    // Windows-separator traversal gets the same treatment as "../../evil":
+    // the name is preserved verbatim in `skipped` and never reaches a path.
+    const name = "..\\..\\evil";
+    const recipe: Recipe = { ...STRIPE_RECIPE, providers: [{ name }] };
+
+    expect(await wirePhantomForRecipe(recipe, { cwd: harness.dir })).toEqual({
+      present: [],
+      missing: [],
+      webhooks: [],
+      skipped: [name],
+    });
+    expect(existsSync(join(harness.dir, ".stack/webhooks"))).toBe(false);
+    expect(harness.callsTo("add")).toEqual([]);
+  });
+
+  it("returns stub paths with a backslash-containing cwd preserved exactly", async () => {
+    // A literal backslash is a legal POSIX filename character; resolve() must
+    // not strip or escape it in the stub path handed back to the caller.
+    const projectDir = join(harness.dir, "proj\\dir");
+    mkdirSync(projectDir);
+
+    const result = await wirePhantomForRecipe(STRIPE_RECIPE, { cwd: projectDir });
+    expect(result.webhooks).toEqual([join(projectDir, ".stack/webhooks/stripe.ts")]);
+    expect(result.webhooks[0]).toContain("\\");
+    expect(readFileSync(result.webhooks[0]!, "utf-8")).toContain("stripe-signature");
+    expect(result.missing).toContain("stripe:STRIPE_SECRET_KEY");
     expect(harness.callsTo("add")).toEqual([]);
   });
 });
