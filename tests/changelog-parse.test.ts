@@ -591,3 +591,24 @@ test("root CHANGELOG.md retains inline-code text in parsed entries", () => {
     }
   }
 });
+
+test("multi-entry section fixture from CHANGELOG.md keeps entries in source order", () => {
+  const fixture = read("./__fixtures__/changelog-source-multi-entry-section.md");
+  const [unreleased] = parseChangelog(fixture);
+  expect(unreleased.entries).toHaveLength(3);
+  expect(unreleased.entries.map((e) => /\(#(\d+)\)\.$/.exec(e)?.[1])).toEqual(["360", "354", "363"]);
+  expect(unreleased.entries[0]).toStartWith("Fleet JSONL reads");
+  expect(unreleased.entries[1]).toStartWith("The release workflow renders");
+  expect(unreleased.entries[2]).toStartWith("The MCP Registry workflow");
+  expect(sectionEntries(fixture)).toEqual([
+    { version: "## Unreleased", section: "Fixed", entries: unreleased.entries },
+  ]);
+});
+
+test("multi-entry fixture entries are still the Unreleased Fixed entries of CHANGELOG.md", () => {
+  const fixture = parseChangelog(read("./__fixtures__/changelog-source-multi-entry-section.md"))[0].entries;
+  const source = sectionEntries(read("../CHANGELOG.md")).find(
+    (g) => g.version === "## Unreleased" && g.section === "Fixed",
+  );
+  expect(fixture).toEqual(source?.entries);
+});
