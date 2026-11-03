@@ -66,3 +66,16 @@ test("two-section fixture keeps both sections' entries in source order", () => {
     },
   ]);
 });
+
+test("inline-code fixture keeps backtick text verbatim in parsed entries", () => {
+  expect(parseChangelog(read("./__fixtures__/changelog-inline-code.md"))).toEqual([
+    {
+      version: "0.5.0",
+      date: "2026-11-03",
+      entries: [
+        "Run `stack apply --noWire` to skip wiring; flags like `--json` stay literal.",
+        "Code spans keep markup: `a - b`, `[not a link](x)`, and `## not a heading`.",
+      ],
+    },
+  ]);
+});
