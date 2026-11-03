@@ -1,10 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, setDefaultTimeout } from "bun:test";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  realpathSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { wirePhantomForRecipe } from "../ai/phantom-wire.ts";
 import { type Recipe, readRecipe, writeRecipe } from "../ai/recipe.ts";
-import { listSecrets } from "../phantom.ts";
+import { exec, listSecrets } from "../phantom.ts";
 import { type Harness, setupFakePhantom } from "./_harness.ts";
 
 // Every test spawns the fake `phantom` shim (bash + several python3 calls),
@@ -810,6 +817,37 @@ describe("ai/phantom-wire", () => {
       expect(doc).toContain(`\`${header}\``);
       expect(stub).toContain("TODO(security): signature verification is NOT implemented here.");
     }
+  });
+
+  it("passes arguments containing parentheses to the phantom executable unchanged", async () => {
+    // Stub records each argv entry NUL-delimited, plus the working directory.
+    const argvLog = join(harness.dir, "argv.log");
+    const cwdLog = join(harness.dir, "cwd.log");
+    writeFileSync(
+      join(harness.dir, "phantom"),
+      `#!/bin/sh
+case "$1" in --version) echo "phantom 0.0.0"; exit 0;; esac
+for a in "$@"; do printf '%s\\0' "$a" >> "${argvLog}"; done
+printf '%s' "$(pwd -P)" > "${cwdLog}"
+echo "[]"
+`,
+    );
+    chmodSync(join(harness.dir, "phantom"), 0o755);
+    const argv = () => readFileSync(argvLog, "utf-8").split("\0").slice(0, -1);
+
+    // A project directory with parentheses reaches phantom as its cwd, intact.
+    const projectDir = join(harness.dir, "proj (copy) (1)");
+    mkdirSync(projectDir);
+    const result = await wirePhantomForRecipe(STRIPE_RECIPE, { cwd: projectDir });
+    expect(argv()).toEqual(["list", "--json"]);
+    expect(readFileSync(cwdLog, "utf-8")).toBe(realpathSync(projectDir));
+    expect(result.missing).toContain("stripe:STRIPE_SECRET_KEY");
+
+    // A parenthesized argv entry is not split, expanded, or quoted.
+    writeFileSync(argvLog, "");
+    const arg = "KEY (v2) $(echo x) `id` *";
+    await exec(["reveal", arg], { cwd: projectDir });
+    expect(argv()).toEqual(["reveal", arg]);
   });
 
   it("skips a path-traversal provider name without writing any stub", async () => {
