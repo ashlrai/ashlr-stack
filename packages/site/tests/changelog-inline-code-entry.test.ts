@@ -40,6 +40,12 @@ test("a parsed entry retains its code span text, one entry at a time", () => {
   expect(parsed[1].text).toContain("**`stack apply`**");
 });
 
+test("a parsed entry keeps the delimiters and raw content of padded and piped spans", () => {
+  const parsed = entries(fixture, "0.2.0 (2026-05-01)");
+  expect(parsed[1].text).toBe("**`stack apply`** keeps the `OPENAI_API_KEY` name, never its value.");
+  expect(parsed[3].text).toBe("Spaces inside a span: `  padded  ` and a pipe `a | b`.");
+});
+
 test("code spans do not leak into the neighbouring version's entries", () => {
   expect(entries(fixture, "0.1.0 (2026-04-19)").map((e) => e.code)).toEqual([["stack scan"]]);
 });
