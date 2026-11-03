@@ -481,3 +481,14 @@ test("heading-only fixture returns every version with no entries from any parser
   // A lone heading with no newline and no body is still a version with no entries.
   expect(parseChangelog("## Unreleased")).toEqual([{ version: null, date: null, entries: [] }]);
 });
+
+test("numbered-version fixture parses the heading and its entry into the expected section", () => {
+  const md = read("./__fixtures__/changelog-numbered-version.md");
+  expect(parseChangelog(md)).toEqual([
+    { version: "1.2.3", date: "2026-11-03", entries: ["Numbered-version entry for 1.2.3."] },
+  ]);
+  expect(sectionEntries(md)).toEqual([
+    { version: "## 1.2.3 (2026-11-03)", section: "Added", entries: ["Numbered-version entry for 1.2.3."] },
+  ]);
+  expect(malformedHeadings(md)).toEqual([]);
+});
