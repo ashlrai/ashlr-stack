@@ -1,0 +1,46 @@
+import { expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+
+export interface ChangelogVersion {
+  /** `null` for `## Unreleased`. */
+  version: string | null;
+  /** `YYYY-MM-DD`, or `null` for `## Unreleased`. */
+  date: string | null;
+  /** Bullet entries (`- ` lines) under the version, without the marker. */
+  entries: string[];
+}
+
+const HEADING = /^## (?:Unreleased|\[?(\d+\.\d+\.\d+)\]?\s+(?:\(|—\s+)(\d{4}-\d{2}-\d{2})\)?.*)$/;
+
+/** Parses level-2 version headings and their bullet entries (fenced code ignored). */
+export function parseChangelog(markdown: string): ChangelogVersion[] {
+  const out: ChangelogVersion[] = [];
+  let fenced = false;
+  for (const line of markdown.replace(/\r\n/g, "\n").split("\n")) {
+    if (/^\s*(```|~~~)/.test(line)) fenced = !fenced;
+    if (fenced) continue;
+    const m = HEADING.exec(line);
+    if (m) out.push({ version: m[1] ?? null, date: m[2] ?? null, entries: [] });
+    else if (/^- /.test(line) && out.length > 0) out[out.length - 1].entries.push(line.slice(2));
+  }
+  return out;
+}
+
+const read = (path: string) => readFileSync(new URL(path, import.meta.url), "utf8");
+
+test("dated version fixture returns version, date and entry for every heading style", () => {
+  expect(parseChangelog(read("./__fixtures__/changelog-dated-version.md"))).toEqual([
+    { version: null, date: null, entries: ["Pending entry."] },
+    { version: "0.3.0", date: "2026-10-31", entries: ["Dated entry for 0.3.0."] },
+    { version: "0.2.0", date: "2026-04-23", entries: ["Bracketed entry for 0.2.0."] },
+    { version: "0.1.0", date: "2026-04-19", entries: ["Noted entry for 0.1.0."] },
+  ]);
+});
+
+test("site CHANGELOG.md parses 0.3.0 with its date and entries", () => {
+  const site = parseChangelog(read("../packages/site/src/data/CHANGELOG.md"));
+  const v030 = site.find((v) => v.version === "0.3.0");
+  expect(v030?.date).toBe("2026-10-31");
+  expect(v030?.entries.length).toBeGreaterThan(0);
+  for (const v of site) if (v.version) expect(v.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+});
