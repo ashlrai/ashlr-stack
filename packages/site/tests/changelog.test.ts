@@ -766,3 +766,38 @@ test("marker survival check detects a mangled TODO_STACK_APPLY marker", () => {
   const nested = codespansByEntry("- outer\n  - inner `TODO_STACK_APPLY`\n");
   expect(nested.some((entry) => entry.codespans.includes("TODO_STACK_APPLY"))).toBe(true);
 });
+
+function entryLinks(entry: { tokens: { type: string; tokens?: unknown[] }[] }): { text: string; href: string }[] {
+  const links: { text: string; href: string }[] = [];
+  const walk = (tokens: unknown[]) => {
+    for (const token of tokens as { type: string; text?: string; href?: string; tokens?: unknown[] }[]) {
+      if (token.type === "link") links.push({ text: token.text ?? "", href: token.href ?? "" });
+      if (token.tokens) walk(token.tokens);
+    }
+  };
+  walk(entry.tokens);
+  return links;
+}
+
+test("parsed changelog entry keeps Markdown link text and destination", () => {
+  const entry = "- See [Phantom](https://phm.dev) for secrets and the [docs](https://stack.ashlr.ai/docs \"Docs\").\n";
+  const [item] = marked.lexer(entry).flatMap((token) => (token.type === "list" ? token.items : []));
+  expect(item.raw).toContain("[Phantom](https://phm.dev)");
+  expect(entryLinks(item)).toEqual([
+    { text: "Phantom", href: "https://phm.dev" },
+    { text: "docs", href: "https://stack.ashlr.ai/docs" },
+  ]);
+});
+
+test("published 0.1.0 apply entry keeps its Phantom link text and destination", async () => {
+  const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
+  const release = published.split("## 0.1.0 — 2026-04-19 (superseded by 0.1.1)\n")[1]?.split("\n## ")[0];
+  const entries = marked.lexer(release ?? "").flatMap((token) => (token.type === "list" ? token.items : []));
+  const applyEntry = entries.find((item) => item.raw.startsWith("- **`stack apply [recipe-id]`**"));
+  expect(applyEntry).toBeDefined();
+  expect(applyEntry?.raw).toContain("[Phantom](https://phm.dev)");
+  expect(entryLinks(applyEntry as never)).toContainEqual({ text: "Phantom", href: "https://phm.dev" });
+
+  const html = await marked.parse(applyEntry?.raw ?? "");
+  expect(html).toContain('<a href="https://phm.dev">Phantom</a>');
+});
