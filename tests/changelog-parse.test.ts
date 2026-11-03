@@ -276,6 +276,28 @@ test("whitespace-only input returns no changelog sections from any parser", () =
   }
 });
 
+test("whitespace-only fixture file returns no changelog sections from any parser without throwing", () => {
+  const md = read("./__fixtures__/changelog-whitespace-only.md");
+  expect(md.length).toBeGreaterThan(0);
+  expect(md.trim()).toBe("");
+  for (const text of [md, md.replace(/\n/g, "\r\n")]) {
+    expect(() => {
+      parseChangelog(text);
+      versionSections(text);
+      sectionEntries(text);
+      versionBodies(text);
+      malformedHeadings(text);
+      inlineLinks(text);
+    }).not.toThrow();
+    expect(parseChangelog(text)).toEqual([]);
+    expect(versionSections(text)).toEqual([]);
+    expect(sectionEntries(text)).toEqual([]);
+    expect(versionBodies(text).size).toBe(0);
+    expect(malformedHeadings(text)).toEqual([]);
+    expect(inlineLinks(text)).toEqual([]);
+  }
+});
+
 test("multiple-section fixture keeps section order and entry membership per version", () => {
   // Sections are deliberately non-alphabetical, and "Fixed"/"Added" repeat across versions.
   const md = read("./__fixtures__/changelog-multi-section.md");
