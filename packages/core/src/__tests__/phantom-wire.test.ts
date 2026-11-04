@@ -67,6 +67,18 @@ describe("ai/phantom-wire", () => {
     expect(fallback).not.toMatch(/\$\{|\{\{|%s|\$\d/);
   });
 
+  it("embeds each placeholder-free hint verbatim in the stub and returns it unchanged on repeat calls", () => {
+    // A template with no placeholders is its own rendering: the hint must be
+    // free of placeholder syntax, identical across calls, and appear
+    // byte-for-byte inside the stub that inlines it.
+    for (const provider of ["stripe", "clerk", "supabase", "github", "zzqhook"]) {
+      const hint = verificationHintFor(provider);
+      expect(hint).not.toMatch(/\$\{|\{\{|%s|\$\d/);
+      expect(verificationHintFor(provider)).toBe(hint);
+      expect(webhookStubFor(provider)).toContain(`//   // ${hint}\n`);
+    }
+  });
+
   it("returns empty results for a recipe with no providers", async () => {
     const recipe: Recipe = { ...STRIPE_RECIPE, providers: [] };
 
