@@ -4720,3 +4720,34 @@ describe("provider name case sensitivity", () => {
     }
   });
 });
+
+describe("webhookStubFor — known placeholder next to a tab", () => {
+  it.each(["stripe", "clerk", "supabase", "github"])(
+    "fills the known %s values exactly and keeps an adjacent tab byte-for-byte",
+    (provider) => {
+      const known = webhookStubFor(provider);
+      // The template has no tabs: a known provider's stub is tab-free.
+      expect(known).not.toContain("\t");
+
+      // A tab right next to the name must not trim, collapse, or turn the
+      // name into the known provider; it only rides along in the name slots.
+      for (const [before, after] of [
+        ["\t", ""],
+        ["", "\t"],
+      ] as const) {
+        const name = `${before}${provider}${after}`;
+        const stub = webhookStubFor(name);
+        expect(stub).toContain(`webhook handler stub for ${before}${provider}${after}.`);
+        expect(stub).toContain(`forge a ${before}${provider}${after} webhook.`);
+        expect(stub).toContain(
+          `phantom reveal ${before}${provider.toUpperCase()}${after}_WEBHOOK_SECRET`,
+        );
+        // Five name slots, one tab each; nothing else in the stub has a tab.
+        expect(stub.split("\t").length - 1).toBe(5);
+        // Not matched as the known provider: generic header, fallback hint.
+        expect(stub).toContain('req.headers.get("x-webhook-signature")');
+        expect(stub).toContain(`// ${verificationHintFor("zzq")}`);
+      }
+    },
+  );
+});
