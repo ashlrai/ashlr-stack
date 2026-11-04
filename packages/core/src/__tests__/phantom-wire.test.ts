@@ -371,6 +371,26 @@ describe("ai/phantom-wire", () => {
     expect(stub).not.toMatch(/\$\{[^U]/);
   });
 
+  it("leaves a repeated unknown placeholder unchanged at every occurrence and site", () => {
+    // The same unknown ${UNKNOWN} appears three times in one provider name,
+    // so every one of the five expansion sites carries three copies. None
+    // may be expanded, collapsed, deduplicated, or case-folded; only the
+    // known secret-name sites upper-case the surrounding text.
+    const name = "a${UNKNOWN}b${UNKNOWN}c${UNKNOWN}d";
+    const stub = webhookStubFor(name);
+
+    expect(stub).toContain(`webhook handler stub for ${name}.`);
+    expect(stub).toContain(`forge a ${name} webhook.`);
+    expect(stub).toContain("handleA${UNKNOWN}b${UNKNOWN}c${UNKNOWN}dWebhook(req: Request)");
+    expect(
+      stub.split("phantom reveal A${UNKNOWN}B${UNKNOWN}C${UNKNOWN}D_WEBHOOK_SECRET").length - 1,
+    ).toBe(2);
+
+    // 5 sites x 3 copies each; no other placeholder-shaped text appears.
+    expect(stub.split("${UNKNOWN}").length - 1).toBe(15);
+    expect(stub).not.toMatch(/\$\{[^U]/);
+  });
+
   it("replaces the last placeholder in the template and leaves all preceding text unchanged", () => {
     // The final placeholder site is the secret name in the closing
     // `phantom reveal` line of the TODO. Render with a sentinel, then with a
