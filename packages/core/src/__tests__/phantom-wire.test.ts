@@ -3186,6 +3186,59 @@ echo "[]"
     expect(harness.callsTo("list")).toEqual([{ cmd: "list", args: ["--json"] }]);
   });
 
+  it("retains a lone unknown placeholder that near-misses a known slot byte-for-byte", async () => {
+    // The whole name is one `${...}` token and nothing else — alone — whose
+    // text almost spells the template's known `${provider}` slot: off by
+    // case (`${PROVIDER}`), by padding (`${ PROVIDER }`), or by a suffix
+    // (`${PROVIDERS}`). Slot lookup compares bytes: a resolver matching
+    // case-insensitively, trimming, or prefix-matching would splice the
+    // provider value into the token's place or resolve it to "" /
+    // "undefined". Carried as data, each token must come through exactly —
+    // and being all-uppercase already, even the `toUpperCase()` secret-key
+    // sites hold the identical bytes, so every `${...}` in the stub is the
+    // carried-in token verbatim, five in total (header, forge line, handler
+    // name, two reveal lines).
+    const baseline = webhookStubFor("zzq");
+    const names = ["${PROVIDER}", "${ PROVIDER }", "${PROVIDERS}"];
+    for (const name of names) {
+      const stub = webhookStubFor(name);
+
+      const tokens = [...stub.matchAll(/\$\{[^}]*\}/g)].map((m) => m[0]);
+      expect(tokens).toHaveLength(5);
+      for (const token of tokens) expect(token).toBe(name);
+      expect(stub.split(name).length - 1).toBe(5);
+
+      // Raw sites carry the name verbatim; `capitalize` folds nothing since
+      // the first byte is `$`, which has no case mapping.
+      expect(stub).toContain(`webhook handler stub for ${name}.`);
+      expect(stub).toContain(`forge a ${name} webhook.`);
+      expect(stub).toContain(`handle${name[0].toUpperCase()}${name.slice(1)}Webhook(req: Request)`);
+      // `webhookSecretKeyFor` sites: the token uppercases to itself in both
+      // reveal lines — byte-exact even at the transforming slots.
+      expect(stub.split(`phantom reveal ${name}_WEBHOOK_SECRET`).length - 1).toBe(2);
+
+      // Nothing resolved the token as a slot: the generic header and
+      // fallback hint apply unchanged, and no template text was spliced in
+      // around it — the stub keeps a plain name's shape.
+      expect(stub).toContain('req.headers.get("x-webhook-signature")');
+      expect(stub).toContain("//   // Verify per the provider's documented signature scheme.");
+      expect(stub.split("\n").length).toBe(baseline.split("\n").length);
+    }
+
+    // Through wiring each solely-token name matches no catalog provider: it
+    // returns in `skipped` byte-for-byte and nothing reaches the stub dir or
+    // the vault.
+    const recipe: Recipe = { ...STRIPE_RECIPE, providers: names.map((name) => ({ name })) };
+    expect(await wirePhantomForRecipe(recipe, { cwd: harness.dir })).toEqual({
+      present: [],
+      missing: [],
+      webhooks: [],
+      skipped: names,
+    });
+    expect(existsSync(join(harness.dir, ".stack/webhooks"))).toBe(false);
+    expect(harness.callsTo("add")).toEqual([]);
+  });
+
   it("leaves every occurrence of a repeated unknown placeholder in a provider name unchanged", async () => {
     // `${HOOK_URL}` matches none of the template's slots — expansion fills
     // `provider`, `capitalize(provider)`, `webhookSecretKeyFor(provider)`, and
