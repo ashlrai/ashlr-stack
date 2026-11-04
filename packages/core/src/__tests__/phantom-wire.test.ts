@@ -2248,6 +2248,33 @@ describe("ai/phantom-wire", () => {
     expect(harness.callsTo("add")).toEqual([]);
   });
 
+  it("matches provider names exactly: extra whitespace around a known name is skipped, not trimmed", async () => {
+    // Current behavior, pinned: `findProviderRef` and the webhook allowlist
+    // compare exact bytes, so padding makes a name unknown. Each padded name
+    // returns byte-for-byte in `skipped`, writes no stub, and does not
+    // suppress the exact `stripe` entry beside it.
+    const padded = [" stripe", "stripe ", "  stripe  ", "str ipe", "\u00a0stripe"];
+    for (const name of padded) {
+      const alone: Recipe = { ...STRIPE_RECIPE, providers: [{ name }] };
+      const result = await wirePhantomForRecipe(alone, { cwd: harness.dir });
+      expect(result).toEqual({ present: [], missing: [], webhooks: [], skipped: [name] });
+      expect(existsSync(join(harness.dir, ".stack/webhooks"))).toBe(false);
+    }
+
+    const mixed: Recipe = {
+      ...STRIPE_RECIPE,
+      providers: [{ name: " stripe" }, { name: "stripe" }, { name: "stripe " }],
+    };
+    expect(await wirePhantomForRecipe(mixed, { cwd: harness.dir })).toEqual({
+      present: [],
+      missing: ["stripe:STRIPE_SECRET_KEY"],
+      webhooks: [join(harness.dir, ".stack/webhooks/stripe.ts")],
+      skipped: [" stripe", "stripe "],
+    });
+    expect(readdirSync(join(harness.dir, ".stack/webhooks"))).toEqual(["stripe.ts"]);
+    expect(harness.callsTo("add")).toEqual([]);
+  });
+
   it("splits a multi-secret provider into present and missing", async () => {
     harness.cleanup();
     harness = setupFakePhantom({ SUPABASE_URL: "https://x.supabase.co", SUPABASE_ANON_KEY: "a" });
