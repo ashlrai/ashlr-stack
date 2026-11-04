@@ -3106,6 +3106,88 @@ echo "[]"
     );
   });
 
+  it("replaces each end-of-line known placeholder and keeps its newline and neighbors exact", () => {
+    // Pin the premise first: exactly two template lines end in a `${...}`
+    // slot, so the slot's `}` is the last byte before that line's `\n` —
+    // `//   phantom reveal ${webhookSecretKeyFor(provider)}` and
+    // `//   // ${verificationHintFor(provider)}`. Substitution must leave
+    // the newline a single 0x0A flush against the replacement — not
+    // consumed, doubled, or rewritten as `\r\n` — and leave the lines on
+    // both sides byte-exact.
+    const source = readFileSync(
+      fileURLToPath(new URL("../ai/phantom-wire.ts", import.meta.url)),
+      "utf-8",
+    );
+    const base = source.match(/const base = `([\s\S]*?)`;\n/)?.[1];
+    if (base === undefined) throw new Error("webhook stub template not found in source");
+    const eolSlots = base
+      .split("\n")
+      .map((line) => line.replaceAll("\\`", "`"))
+      .filter((line) => /\$\{[^}]*\}$/.test(line));
+    expect(eolSlots).toEqual([
+      "//   phantom reveal ${webhookSecretKeyFor(provider)}",
+      "//   // ${verificationHintFor(provider)}",
+    ]);
+
+    const cases = [
+      {
+        p: "stripe",
+        secret: "STRIPE_WEBHOOK_SECRET",
+        hint: "Stripe: `stripe.webhooks.constructEvent` — HMAC-SHA256 with timestamp tolerance.",
+      },
+      {
+        p: "clerk",
+        secret: "CLERK_WEBHOOK_SECRET",
+        hint: "Clerk (svix): `new Webhook(secret).verify(body, headers)`.",
+      },
+      {
+        p: "supabase",
+        secret: "SUPABASE_WEBHOOK_SECRET",
+        hint: "Supabase: `x-supabase-signature` per Supabase's documented webhook scheme.",
+      },
+      {
+        p: "github",
+        secret: "GITHUB_WEBHOOK_SECRET",
+        hint: "GitHub: `x-hub-signature-256` is `sha256=` + HMAC-SHA256 of the raw body.",
+      },
+    ];
+    const baselineLines = webhookStubFor("zzq").split("\n").length;
+    for (const c of cases) {
+      const stub = webhookStubFor(c.p);
+      const lines = stub.split("\n");
+
+      // Site 1: the reveal line. The secret name ends the line and the `\n`
+      // is the next byte; the comment lines around it are the template's own.
+      const reveal = `//   phantom reveal ${c.secret}`;
+      expect(stub.split(`${reveal}\n`).length - 1).toBe(1);
+      const revealIdx = lines.indexOf(reveal);
+      expect(revealIdx).toBeGreaterThan(-1);
+      expect(lines[revealIdx - 1]).toBe(
+        "// The secret lives in Phantom; read it at call time with:",
+      );
+      expect(lines[revealIdx + 1]).toBe("//");
+
+      // Site 2: the hint line — the same newline adjacency, next line exact.
+      const hintLine = `//   // ${c.hint}`;
+      expect(stub.split(`${hintLine}\n`).length - 1).toBe(1);
+      const hintIdx = lines.indexOf(hintLine);
+      expect(hintIdx).toBeGreaterThan(-1);
+      expect(lines[hintIdx + 1]).toBe(
+        "//   // Verify over the exact raw body bytes with the webhook secret",
+      );
+
+      // The newline survived as a lone 0x0A: no `\r`, no literal `\\n`, no
+      // blank line spliced in, no line consumed, and substitution left no
+      // unresolved slot behind.
+      expect(stub).not.toContain("\r");
+      expect(stub).not.toContain("\\n");
+      expect(stub).not.toContain(`${reveal}\n\n`);
+      expect(stub).not.toContain(`${hintLine}\n\n`);
+      expect(lines).toHaveLength(baselineLines);
+      expect(stub).not.toContain("${");
+    }
+  });
+
   it.each([
     [
       "stripe",
