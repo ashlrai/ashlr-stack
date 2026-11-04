@@ -804,6 +804,36 @@ describe("ai/phantom-wire", () => {
     expect(restored).toBe(plain);
   });
 
+  it("preserves a single quote exactly in placeholder replacement text", () => {
+    // `'` is plain data: no escaping to `\'` or `&#39;`, no doubling to `''`,
+    // no curly-quote swap, no stripping, and no `$'` replace-pattern splice.
+    const provider = "o'brien";
+    const stub = webhookStubFor(provider);
+    expect(stub).toContain("webhook handler stub for o'brien.");
+    expect(stub).toContain("forge a o'brien webhook.");
+    expect(stub).toContain("handleO'brienWebhook");
+    expect(stub).toContain("phantom reveal O'BRIEN_WEBHOOK_SECRET");
+    expect(stub).not.toContain("\\'");
+    expect(stub).not.toContain("''");
+    expect(stub).not.toContain("&#39;");
+    expect(stub).not.toMatch(/[‘’]/);
+    // Whole-output check: swapping the name in every slot case restores the
+    // plain stub, so the quote is the only difference.
+    const restored = stub
+      .replaceAll("O'BRIEN", "OBRIEN")
+      .replaceAll("O'brien", "Obrien")
+      .replaceAll("o'brien", "obrien");
+    expect(restored).toBe(webhookStubFor("obrien"));
+    // The quote count is exactly one per slot (five), added to the plain stub's own.
+    const count = (s: string) => s.split("'").length - 1;
+    expect(count(stub) - count(webhookStubFor("obrien"))).toBe(5);
+    // A bare and a doubled quote survive the same way, at the edges too.
+    for (const edge of ["'", "''", "'x", "x'"]) {
+      const edgeStub = webhookStubFor(edge);
+      expect(count(edgeStub) - count(webhookStubFor("x"))).toBe(count(edge) * 5);
+    }
+  });
+
   it("preserves every line and its order throughout a multiline replacement", () => {
     const provider = "alpha\nsecond line\nthird line";
     const expected = webhookStubFor("marker")
