@@ -7,7 +7,7 @@ import {
   realpathSync,
   writeFileSync,
 } from "node:fs";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { verificationHintFor, webhookStubFor, wirePhantomForRecipe } from "../ai/phantom-wire.ts";
 import { type Recipe, readRecipe, writeRecipe } from "../ai/recipe.ts";
@@ -1504,6 +1504,70 @@ echo "[]"
     expect(stub).toContain("//   // (`phantom reveal PAYCO_WEBHOOK_SECRET`) and compare in");
     expect(stub.split("phantom reveal PAYCO_WEBHOOK_SECRET").length - 1).toBe(2);
     expect(stub).not.toContain("${");
+  });
+
+  it.each(["stripe", "clerk", "supabase", "github"])(
+    "expands the placeholder at the start of the stub filename template for %s and keeps the following text in order",
+    async (provider) => {
+      // `writeWebhookStub` builds each stub path from the filename template
+      // `${provider}.ts` — a known placeholder at position 0 followed by the
+      // fixed text `.ts`. Expansion must land the provider name flush at the
+      // start of the basename with the suffix immediately behind it: value
+      // first, following text second, nothing before or between them.
+      const source = readFileSync(
+        fileURLToPath(new URL("../ai/phantom-wire.ts", import.meta.url)),
+        "utf-8",
+      );
+      // Sanity: the template under test really opens with the slot.
+      expect(source).toContain('"webhooks", `${provider}.ts`');
+
+      const recipe: Recipe = { ...STRIPE_RECIPE, providers: [{ name: provider }] };
+      const result = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
+      expect(result.webhooks).toHaveLength(1);
+      const file = basename(result.webhooks[0] as string);
+
+      // The placeholder's value at position 0, then the fixed `.ts` text,
+      // in that order — the whole basename is exactly value + suffix.
+      expect(file.startsWith(provider)).toBe(true);
+      expect(file.indexOf(".ts")).toBe(provider.length);
+      expect(file).toBe(`${provider}.ts`);
+    },
+  );
+
+  it("expands the placeholder at the start of the vault-entry template and keeps the following text in order", async () => {
+    // `wirePhantomForRecipe` classifies secrets through the entry template
+    // `${name}:${secret}` — a known placeholder at position 0 followed by
+    // the fixed `:` separator and the `${secret}` slot's value. Every
+    // `present`/`missing` entry must carry the provider name flush at the
+    // start, then `:` + the secret name, in that order.
+    const source = readFileSync(
+      fileURLToPath(new URL("../ai/phantom-wire.ts", import.meta.url)),
+      "utf-8",
+    );
+    // Sanity: the template under test really opens with the `${name}` slot.
+    expect(source).toContain("`${name}:${secret}`");
+
+    // A vault holding only some of the provider's secrets exercises both
+    // branches: stored names land in `present`, the rest in `missing`.
+    harness.cleanup();
+    harness = setupFakePhantom({ SUPABASE_URL: "https://x.supabase.co" });
+    const recipe: Recipe = { ...STRIPE_RECIPE, providers: [{ name: "supabase" }] };
+    const result = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
+
+    for (const [entries, secrets] of [
+      [result.present, ["SUPABASE_URL"]],
+      [result.missing, ["SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY"]],
+    ] as const) {
+      expect(entries).toHaveLength(secrets.length);
+      for (const [index, secret] of secrets.entries()) {
+        const entry = entries[index] as string;
+        // Value at position 0, then `:` + secret — in order, nothing else.
+        expect(entry.startsWith("supabase")).toBe(true);
+        expect(entry.indexOf(":")).toBe("supabase".length);
+        expect(entry).toBe(`supabase:${secret}`);
+      }
+    }
+    expect(harness.callsTo("add")).toEqual([]);
   });
 
   it("gives the secret-name and signature-header placeholders their own replacement per provider", () => {
