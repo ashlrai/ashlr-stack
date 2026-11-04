@@ -863,6 +863,82 @@ describe("ai/phantom-wire", () => {
     expect(harness.callsTo("add")).toEqual([]);
   });
 
+  it("carries literal braces around a known placeholder through every expansion site", async () => {
+    // `{${provider}}` parks literal `{`/`}` bytes flush against the
+    // template's own slot name; inside a name the token is data and the
+    // braces are plain text — not mustache delimiters to strip, not part of
+    // the placeholder's own opener or closer, and not a nested `${` to
+    // resolve. A `{{name}}`-style pass would eat the braces and re-expand
+    // the token; a `${...}` scan could lend the leading `{` to the opener
+    // or take the trailing `}` as the token's closer. Variants wrap the
+    // token in single and doubled braces, mid-name and as the whole name.
+    const baseline = webhookStubFor("zzq");
+    expect(baseline).not.toContain("${");
+    const baselineOpeners = baseline.split("{").length - 1;
+    const baselineClosers = baseline.split("}").length - 1;
+    const baselineLines = baseline.split("\n").length;
+
+    for (const provider of [
+      "pay{${provider}}ment", // single literal braces flush around the token
+      "{${provider}}", // braces around the token are the whole name
+      "pay{{${provider}}}ment", // doubled literal braces on both sides
+      "a{${provider}}b{${provider}}c", // two wrapped copies in one name
+    ]) {
+      const stub = webhookStubFor(provider);
+
+      // Direct `${provider}` slots: name, braces and all, verbatim.
+      expect(stub).toContain(`webhook handler stub for ${provider}.`);
+      expect(stub).toContain(`forge a ${provider} webhook.`);
+      // `capitalize(provider)` slot: only the name's first letter folds — a
+      // leading `{` has no case mapping, so the name there is unchanged.
+      expect(stub).toContain(
+        `handle${provider[0].toUpperCase()}${provider.slice(1)}Webhook(req: Request)`,
+      );
+      // `webhookSecretKeyFor(provider)` slots: the whole name — braces and
+      // placeholder-shaped text included — uppercases in both reveal lines.
+      expect(stub.split(`phantom reveal ${provider.toUpperCase()}_WEBHOOK_SECRET`).length - 1).toBe(
+        2,
+      );
+
+      // Brace accounting: every `${`, `{` and `}` in the stub is either one
+      // the template contributes itself or one the name carried into its
+      // five expansion sites — none stripped as mustache syntax, none
+      // consumed to open or close a slot, none added.
+      const copies = provider.split("${provider}").length - 1;
+      expect(stub.split("${").length - 1).toBe(copies * 5);
+      expect(stub.split("{").length - 1).toBe(
+        baselineOpeners + (provider.split("{").length - 1) * 5,
+      );
+      expect(stub.split("}").length - 1).toBe(
+        baselineClosers + (provider.split("}").length - 1) * 5,
+      );
+      // The placeholder-shaped text survives once per site: lowercase at
+      // the three mixed-case sites, uppercased at the two secret-key sites.
+      expect(stub.split("${provider}").length - 1).toBe(copies * 3);
+      expect(stub.split("${PROVIDER}").length - 1).toBe(copies * 2);
+      expect(stub.split("\n").length).toBe(baselineLines);
+      // No self-splice: re-expanding the token would nest the name's own
+      // leading fragment inside itself (`pay{pay{${provider}}ment}ment`).
+      expect(stub).not.toContain("pay{pay");
+      expect(stub).not.toContain("a{a{");
+    }
+
+    // Through wiring a brace-wrapped name matches no catalog provider (the
+    // lookup compares exact bytes): it returns in `skipped` byte-for-byte —
+    // both braces and the token intact — and never reaches a stub or disk.
+    const name = "pay{${provider}}ment";
+    const recipe: Recipe = { ...STRIPE_RECIPE, providers: [{ name }] };
+    const result = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
+    expect(result).toEqual({ present: [], missing: [], webhooks: [], skipped: [name] });
+    expect(result.skipped[0]?.charCodeAt(name.indexOf("{"))).toBe(0x7b);
+    expect(result.skipped[0]?.charCodeAt(name.indexOf("}"))).toBe(0x7d);
+    expect(existsSync(join(harness.dir, ".stack/webhooks"))).toBe(false);
+    expect(harness.callsTo("add")).toEqual([]);
+
+    // The hint is a fixed string: a brace-wrapped name never leaks into it.
+    expect(verificationHintFor(name)).toBe(verificationHintFor("zzq"));
+  });
+
   it("preserves the leading zeroes of a numeric-looking name at every expansion site", async () => {
     // A name like "007" must stay a string: no Number() coercion (7), no
     // zero-trimming, no reformatting. Digits have no case mapping, so the
