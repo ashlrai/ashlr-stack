@@ -895,6 +895,72 @@ describe("ai/phantom-wire", () => {
     expect(harness.callsTo("add")).toEqual([]);
   });
 
+  it("preserves leading and trailing spaces in replacement text at every expansion site", async () => {
+    // A U+0020 at an edge of the name is data, not padding: interpolation
+    // must carry each space through untouched — never trimmed, collapsed to
+    // one, or stripped — at all five expansion sites (the header and forge
+    // lines raw, the `capitalize(provider)` handler name, and both
+    // uppercased `webhookSecretKeyFor` reveal lines). Spaces have no case
+    // mapping, so a leading space also blocks the first letter's fold.
+    const plain = webhookStubFor("marker");
+    // Deriving the expected stub from a probe name splices the provider into
+    // the same five slots, so a trim or collapse anywhere — not just at the
+    // checked substrings — would make the whole-stub comparison fail.
+    const expectedFor = (provider: string) =>
+      plain
+        .replaceAll("MARKER", provider.toUpperCase())
+        .replaceAll("Marker", provider[0].toUpperCase() + provider.slice(1))
+        .replaceAll("marker", provider);
+
+    for (const provider of [" svc", "svc ", " svc ", "  svc  ", " ", "a  b"]) {
+      const stub = webhookStubFor(provider);
+      expect(stub).toBe(expectedFor(provider));
+      expect(stub).toContain(`webhook handler stub for ${provider}.`);
+      expect(stub).toContain(`forge a ${provider} webhook.`);
+      expect(stub).toContain(
+        `handle${provider[0].toUpperCase()}${provider.slice(1)}Webhook(req: Request)`,
+      );
+      expect(stub.split(`phantom reveal ${provider.toUpperCase()}_WEBHOOK_SECRET`).length - 1).toBe(
+        2,
+      );
+      // Spaces are not newlines: the stub keeps the plain name's shape.
+      expect(stub.split("\n")).toHaveLength(plain.split("\n").length);
+    }
+
+    // Byte-level edge check: flush against the template's own spaces, an
+    // edge space shows as a doubled 0x20 gap a trimmed expansion would not
+    // produce — and the leading space leaves `svc` lowercase in the
+    // handler name because `capitalize` can only fold the name's first byte.
+    const edged = webhookStubFor(" svc ");
+    expect(edged).toContain("webhook handler stub for  svc .");
+    expect(edged).toContain("forge a  svc  webhook.");
+    expect(edged).toContain("handle svc Webhook(req: Request)");
+    expect(edged.split("phantom reveal  SVC _WEBHOOK_SECRET").length - 1).toBe(2);
+    // `slot` is the name's first byte inside the header line: 0x20, `svc`,
+    // 0x20, then the template's `.` — with the template's own space right
+    // before it, the pair reads as the doubled gap.
+    const slot = edged.indexOf("stub for ") + "stub for ".length;
+    expect(edged.charCodeAt(slot - 1)).toBe(0x20);
+    expect(edged.charCodeAt(slot)).toBe(0x20);
+    expect(edged.charCodeAt(slot + 4)).toBe(0x20);
+    expect(edged.charCodeAt(slot + 5)).toBe(0x2e);
+
+    // Through wiring a space-padded name matches no catalog provider (the
+    // lookup compares exact bytes — no trimming): it returns in `skipped`
+    // byte-for-byte — both edge spaces intact — and never reaches disk.
+    const name = " stripe ";
+    const recipe: Recipe = { ...STRIPE_RECIPE, providers: [{ name }] };
+    const result = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
+    expect(result).toEqual({ present: [], missing: [], webhooks: [], skipped: [name] });
+    expect(result.skipped[0]?.charCodeAt(0)).toBe(0x20);
+    expect(result.skipped[0]?.charCodeAt(name.length - 1)).toBe(0x20);
+    expect(existsSync(join(harness.dir, ".stack/webhooks"))).toBe(false);
+    expect(harness.callsTo("add")).toEqual([]);
+
+    // The hint is a fixed string: a space-padded name never leaks into it.
+    expect(verificationHintFor(" svc ")).toBe(verificationHintFor("zzq"));
+  });
+
   it("preserves a single quote in a provider name literally in the stub and in skipped results", async () => {
     // `'` is inert inside the generated `//` comments, and `$'` is the one
     // String.replace replacement pattern (splice in the text after the match)
