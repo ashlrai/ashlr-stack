@@ -2132,6 +2132,107 @@ echo "[]"
   });
 
   it.each([
+    [
+      "stripe",
+      {
+        cap: "Stripe",
+        secret: "STRIPE_WEBHOOK_SECRET",
+        header: "stripe-signature",
+        hint: "Stripe: `stripe.webhooks.constructEvent` — HMAC-SHA256 with timestamp tolerance.",
+      },
+    ],
+    [
+      "clerk",
+      {
+        cap: "Clerk",
+        secret: "CLERK_WEBHOOK_SECRET",
+        header: "svix-signature",
+        hint: "Clerk (svix): `new Webhook(secret).verify(body, headers)`.",
+      },
+    ],
+    [
+      "supabase",
+      {
+        cap: "Supabase",
+        secret: "SUPABASE_WEBHOOK_SECRET",
+        header: "x-supabase-signature",
+        hint: "Supabase: `x-supabase-signature` per Supabase's documented webhook scheme.",
+      },
+    ],
+    [
+      "github",
+      {
+        cap: "Github",
+        secret: "GITHUB_WEBHOOK_SECRET",
+        header: "x-hub-signature-256",
+        hint: "GitHub: `x-hub-signature-256` is `sha256=` + HMAC-SHA256 of the raw body.",
+      },
+    ],
+  ])(
+    "replaces each known %s placeholder and leaves the punctuation around its slot unchanged",
+    (provider, want) => {
+      // Every `${...}` slot in the `base` template sits inside literal
+      // punctuation: `"` and parens around the signature header, backticks
+      // and parens around the reveal reminder, `.` after the provider
+      // slots, a line break after the reveal and hint slots. Substitution
+      // fills only the slot — the bytes on either side are template text
+      // and must arrive hugging the replacement exactly: none consumed as
+      // syntax, none dropped, duplicated, or reordered.
+      const source = readFileSync(
+        fileURLToPath(new URL("../ai/phantom-wire.ts", import.meta.url)),
+        "utf-8",
+      );
+      const base = source.match(/const base = `([\s\S]*?)`;\n/)?.[1];
+      if (base === undefined) throw new Error("webhook stub template not found in source");
+      // `\`` escapes in the literal are `` ` `` bytes in the template's value.
+      const template = base.replaceAll("\\`", "`");
+
+      const values = new Map([
+        ["${provider}", provider],
+        ["${capitalize(provider)}", want.cap],
+        ["${webhookSecretKeyFor(provider)}", want.secret],
+        ["${signatureHeaderFor(provider)}", want.header],
+        ["${verificationHintFor(provider)}", want.hint],
+      ]);
+
+      // Sanity: the template holds exactly the seven known slots — the raw
+      // provider name twice, the capitalized handler name, the header and
+      // the hint once each, and the secret name twice.
+      const slots = [...template.matchAll(/\$\{[^}]*\}/g)];
+      expect(slots.map((s) => s[0])).toEqual([
+        "${provider}",
+        "${webhookSecretKeyFor(provider)}",
+        "${capitalize(provider)}",
+        "${signatureHeaderFor(provider)}",
+        "${provider}",
+        "${verificationHintFor(provider)}",
+        "${webhookSecretKeyFor(provider)}",
+      ]);
+
+      const stub = webhookStubFor(provider);
+      for (const [index, slot] of slots.entries()) {
+        const value = values.get(slot[0]);
+        if (value === undefined) throw new Error(`template slot ${slot[0]} has no known value`);
+        const at = slot.index ?? 0;
+        const end = at + slot[0].length;
+        // A window of the fixed text on each side of the slot — the slot's
+        // punctuation envelope — must arrive verbatim around the value.
+        // Each window stops at the neighboring slot so it stays fixed
+        // template text (the forge-line and hint slots sit only 18 bytes
+        // apart).
+        const prevEnd =
+          index === 0 ? 0 : (slots[index - 1]?.index ?? 0) + (slots[index - 1]?.[0].length ?? 0);
+        const nextStart = slots[index + 1]?.index ?? template.length;
+        const before = template.slice(Math.max(prevEnd, at - 24), at);
+        const after = template.slice(end, Math.min(nextStart, end + 24));
+        expect(stub).toContain(`${before}${value}${after}`);
+      }
+      // No placeholder syntax survives: every known slot was filled.
+      expect(stub).not.toContain("${");
+    },
+  );
+
+  it.each([
     ["stripe", "Stripe"],
     ["clerk", "Clerk"],
     ["supabase", "Supabase"],
