@@ -668,6 +668,58 @@ describe("ai/phantom-wire", () => {
     expect(harness.callsTo("add")).toEqual([]);
   });
 
+  it("carries a tab adjacent to a known placeholder through every expansion site", async () => {
+    // `${provider}` is the template's own slot name; arriving inside a name
+    // it is data. A 0x09 byte parked against it must survive expansion —
+    // not stripped as stray whitespace, folded to spaces, or lost when a
+    // second substitution pass re-expands the placeholder-shaped text into
+    // `pay\tpay\t${provider}mentment`. Variants put the tab before, after,
+    // and on both sides of the token; each carries exactly one `${provider}`.
+    for (const provider of [
+      "pay\t${provider}ment",
+      "pay${provider}\tment",
+      "pay\t${provider}\tment",
+      "\t${provider}",
+    ]) {
+      const stub = webhookStubFor(provider);
+
+      // Direct `${provider}` slots: name and tab verbatim.
+      expect(stub).toContain(`webhook handler stub for ${provider}.`);
+      expect(stub).toContain(`forge a ${provider} webhook.`);
+      // `capitalize(provider)` slot: only the first letter folds — a leading
+      // tab has no case mapping, so the name there is unchanged.
+      expect(stub).toContain(
+        `handle${provider[0].toUpperCase()}${provider.slice(1)}Webhook(req: Request)`,
+      );
+      // `webhookSecretKeyFor(provider)` slots: the whole name uppercases —
+      // tab and placeholder-shaped text included — in both reveal lines.
+      expect(stub.split(`phantom reveal ${provider.toUpperCase()}_WEBHOOK_SECRET`).length - 1).toBe(
+        2,
+      );
+
+      // The template contributes no tabs and no `${` of its own: every tab
+      // and `${` in the stub is one the name carried into a site — five
+      // sites each — none escaped, collapsed, stripped, or re-expanded.
+      expect(stub.split("\t").length - 1).toBe((provider.split("\t").length - 1) * 5);
+      expect(stub.split("${").length - 1).toBe(5);
+      // The placeholder-shaped text survives once per site: lowercase at the
+      // three mixed-case sites, uppercased at the two secret-key sites.
+      expect(stub.split("${provider}").length - 1).toBe(3);
+      expect(stub.split("${PROVIDER}").length - 1).toBe(2);
+    }
+    expect(webhookStubFor("zzq")).not.toContain("\t");
+
+    // Through wiring the name matches no catalog provider: it returns in
+    // `skipped` byte-for-byte — tab byte intact — and never reaches disk.
+    const provider = "pay\t${provider}ment";
+    const recipe: Recipe = { ...STRIPE_RECIPE, providers: [{ name: provider }] };
+    const result = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
+    expect(result).toEqual({ present: [], missing: [], webhooks: [], skipped: [provider] });
+    expect(result.skipped[0]?.charCodeAt(3)).toBe(0x09);
+    expect(existsSync(join(harness.dir, ".stack/webhooks"))).toBe(false);
+    expect(harness.callsTo("add")).toEqual([]);
+  });
+
   it("preserves the leading zeroes of a numeric-looking name at every expansion site", async () => {
     // A name like "007" must stay a string: no Number() coercion (7), no
     // zero-trimming, no reformatting. Digits have no case mapping, so the
