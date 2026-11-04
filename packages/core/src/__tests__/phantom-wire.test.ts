@@ -1059,6 +1059,31 @@ echo "[]"
     expect(github).not.toContain("stripe-signature");
   });
 
+  it("gives the provider-name and capitalized-name placeholders their own replacement", () => {
+    // `${provider}` and `${capitalize(provider)}` are two distinct slots fed by
+    // one input. Each must receive its own form: the raw name in the prose
+    // slots, the capitalized name only inside the handler identifier.
+    const clerk = webhookStubFor("clerk");
+    const github = webhookStubFor("github");
+
+    expect(clerk).toContain("webhook handler stub for clerk.");
+    expect(clerk).toContain("forge a clerk webhook.");
+    expect(clerk).toContain("export async function handleClerkWebhook(");
+    expect(github).toContain("webhook handler stub for github.");
+    expect(github).toContain("forge a github webhook.");
+    expect(github).toContain("export async function handleGithubWebhook(");
+
+    // No cross-over: the capitalized form never lands in a prose slot, the raw
+    // form never lands in the identifier, and neither provider leaks into the other.
+    expect(clerk).not.toContain("stub for Clerk");
+    expect(clerk).not.toContain("forge a Clerk");
+    expect(clerk).not.toContain("handleclerkWebhook");
+    expect(clerk).not.toMatch(/github/i);
+    expect(github).not.toContain("stub for Github");
+    expect(github).not.toContain("handlegithubWebhook");
+    expect(github).not.toMatch(/clerk/i);
+  });
+
   it("replaces every occurrence of a placeholder that appears more than once in the template", () => {
     // `${webhookSecretKeyFor(provider)}` fills two slots — the reveal
     // instruction line and the TODO's backticked reminder — and `${provider}`
