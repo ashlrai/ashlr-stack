@@ -4738,6 +4738,80 @@ echo "[]"
     expect(harness.callsTo("add")).toEqual([]);
   });
 
+  it("carries ordinary Unicode text adjacent to a known placeholder through every expansion site", async () => {
+    // `${provider}` is the template's own slot name; arriving inside a name
+    // it is data. Ordinary Unicode text parked flush against the token's
+    // braces must survive expansion — a byte-oriented scan for the `${`/`}`
+    // delimiters must not misread a UTF-8 lead or continuation byte as part
+    // of a delimiter, and a second substitution pass must not re-expand the
+    // token into `payépayé${provider}mentment`. Variants put precomposed,
+    // single-code-point text before the opener, after the closer, and at
+    // the name's edges, each time beside plain ASCII on the far side;
+    // every name carries exactly one `${provider}`.
+    const plain = webhookStubFor("zzq");
+    for (const provider of [
+      "payé${provider}ment", // accent flush before the opener, mid-name
+      "pay${provider}日ment", // CJK flush after the closer, mid-name
+      "${provider}日本", // token at the name's start, CJK trailing it
+      "é${provider}", // accent before the opener; token ends the name
+    ]) {
+      const stub = webhookStubFor(provider);
+
+      // Direct `${provider}` slots: name, Unicode and all, verbatim.
+      expect(stub).toContain(`webhook handler stub for ${provider}.`);
+      expect(stub).toContain(`forge a ${provider} webhook.`);
+      // `capitalize(provider)` slot: only the name's first letter folds —
+      // a leading `é` folds to `É` while a `$` has no case mapping; the
+      // token behind the fold stays lowercase data.
+      expect(stub).toContain(
+        `handle${provider[0].toUpperCase()}${provider.slice(1)}Webhook(req: Request)`,
+      );
+      // `webhookSecretKeyFor(provider)` slots: the whole name — Unicode
+      // and placeholder-shaped text included — uppercases in both reveal
+      // lines.
+      expect(stub.split(`phantom reveal ${provider.toUpperCase()}_WEBHOOK_SECRET`).length - 1).toBe(
+        2,
+      );
+
+      // The template contributes no `${` of its own: every `${` in the
+      // stub is one the name carried into a site — five sites — none
+      // escaped, stripped, or re-expanded. The placeholder-shaped text
+      // survives once per site: lowercase at the three mixed-case sites,
+      // uppercased at the two secret-key sites.
+      expect(stub.split("${").length - 1).toBe(5);
+      expect(stub.split("${provider}").length - 1).toBe(3);
+      expect(stub.split("${PROVIDER}").length - 1).toBe(2);
+      // The Unicode text flush against the token is untouched: no
+      // replacement char, no dropped or reordered byte beside the braces,
+      // no extra line, and the template's own Unicode (its em dashes)
+      // unchanged. Each name here is already NFC, so its decomposed form
+      // must never appear.
+      expect(stub).not.toContain("�");
+      expect(stub.split("\n").length).toBe(plain.split("\n").length);
+      expect(stub.split("—").length - 1).toBe(plain.split("—").length - 1);
+      const decomposed = provider.normalize("NFD");
+      if (decomposed !== provider) expect(stub).not.toContain(decomposed);
+      // No self-splice: re-expanding the token would nest the name inside
+      // itself (`payé${provider}ment` → `payépayé${provider}mentment`).
+      expect(stub).not.toContain(provider.replaceAll("${provider}", provider));
+    }
+
+    // Through wiring a Unicode-adjacent name matches no catalog provider
+    // (the lookup compares exact bytes): it returns in `skipped`
+    // byte-for-byte — the multibyte code point flush against the token's
+    // closer intact — and never reaches a stub or disk.
+    const provider = "pay${provider}日ment";
+    const recipe: Recipe = { ...STRIPE_RECIPE, providers: [{ name: provider }] };
+    const result = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
+    expect(result).toEqual({ present: [], missing: [], webhooks: [], skipped: [provider] });
+    expect(result.skipped[0]?.charCodeAt(provider.indexOf("日"))).toBe(0x65e5);
+    expect(existsSync(join(harness.dir, ".stack/webhooks"))).toBe(false);
+    expect(harness.callsTo("add")).toEqual([]);
+
+    // The hint is a fixed string: a Unicode-adjacent name never leaks into it.
+    expect(verificationHintFor(provider)).toBe(verificationHintFor("zzq"));
+  });
+
   it("returns a template with no placeholders unchanged across renders and through the stub", () => {
     // `verificationHintFor` is the module's template with no placeholders:
     // every branch returns one fixed string — the four provider hints and
