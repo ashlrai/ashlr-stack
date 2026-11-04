@@ -2337,6 +2337,76 @@ echo "[]"
     }
   });
 
+  it("leaves a nested placeholder in a provider name unexpanded at every expansion site", async () => {
+    // `pay${${provider}}ment` nests one placeholder-shaped token inside
+    // another: an outer `${` whose contents are themselves `${provider}`.
+    // Carried as data, the whole name lands byte-for-byte at all five
+    // expansion sites. A second substitution pass over the rendered stub
+    // would misread it: `/\$\{[^}]*\}/` matches `${${provider}` — outer
+    // opener to the INNER `}` — leaving the outer `}` stray, while a
+    // fixpoint loop expanding the inner `${provider}` first would splice
+    // the name into itself as `paypay${${provider}}mentment`. Either
+    // re-expansion mangles the inserted text; neither may happen.
+    const provider = "pay${${provider}}ment";
+    const stub = webhookStubFor(provider);
+    const baseline = webhookStubFor("zzq");
+
+    // Raw sites: the header and forge lines carry the name, nested token included.
+    expect(stub).toContain(`webhook handler stub for ${provider}.`);
+    expect(stub).toContain(`forge a ${provider} webhook.`);
+    // `capitalize(provider)` site: only the name's first letter folds.
+    expect(stub).toContain("handlePay${${provider}}mentWebhook(req: Request)");
+    // `webhookSecretKeyFor(provider)` sites: the nested token uppercases
+    // with the rest of the name in both reveal lines.
+    expect(stub.split("phantom reveal PAY${${PROVIDER}}MENT_WEBHOOK_SECRET").length - 1).toBe(2);
+    // The inserted name resolves no slots: the unknown name still takes the
+    // generic header and hint, unchanged.
+    expect(stub).toContain('req.headers.get("x-webhook-signature")');
+    expect(stub).toContain("//   // Verify per the provider's documented signature scheme.");
+
+    // What a re-expansion regex would match at each site — outer `${` to the
+    // inner `}` — survives untouched: three case-preserving sites carry
+    // `${${provider}` and the two reveal sites `${${PROVIDER}`.
+    const matches = [...stub.matchAll(/\$\{[^}]*\}/g)].map((m) => m[0]);
+    expect(matches).toHaveLength(5);
+    expect(matches.filter((t) => t === "${${provider}")).toHaveLength(3);
+    expect(matches.filter((t) => t === "${${PROVIDER}")).toHaveLength(2);
+
+    // Ten `${` openers and ten `}` closers beyond the template's own — the
+    // name's two of each × five sites. Re-expanding the inner token would
+    // consume one `}` per site as its closer and leave the outer one stray;
+    // expanding the outer token would leave zero `${` behind.
+    expect(stub.split("${").length - 1).toBe(10);
+    expect(stub.split("}").length - 1).toBe(baseline.split("}").length - 1 + 10);
+    expect(stub.split("\n").length).toBe(baseline.split("\n").length);
+    // No self-splice: the name never nests into itself and nothing resolves.
+    expect(stub).not.toContain("paypay");
+    expect(stub).not.toContain("mentment");
+
+    // `${{provider}}` misreads the same way — inner text in braces is data,
+    // not a slot; the token survives verbatim at all five sites.
+    const mismatched = "a${{provider}}b";
+    const mStub = webhookStubFor(mismatched);
+    expect(mStub).toContain(`webhook handler stub for ${mismatched}.`);
+    expect(mStub).toContain(`forge a ${mismatched} webhook.`);
+    expect(mStub).toContain("handleA${{provider}}bWebhook(req: Request)");
+    expect(mStub.split("phantom reveal A${{PROVIDER}}B_WEBHOOK_SECRET").length - 1).toBe(2);
+    expect(mStub.split("${").length - 1).toBe(5);
+    expect(mStub.split("}").length - 1).toBe(baseline.split("}").length - 1 + 10);
+
+    // Through wiring the nested name matches no catalog provider: it returns
+    // in `skipped` byte-for-byte and never reaches the stub template or disk.
+    const recipe: Recipe = { ...STRIPE_RECIPE, providers: [{ name: provider }] };
+    expect(await wirePhantomForRecipe(recipe, { cwd: harness.dir })).toEqual({
+      present: [],
+      missing: [],
+      webhooks: [],
+      skipped: [provider],
+    });
+    expect(existsSync(join(harness.dir, ".stack/webhooks"))).toBe(false);
+    expect(harness.callsTo("add")).toEqual([]);
+  });
+
   it("preserves unterminated and empty placeholder-looking text in a provider name without re-expansion", async () => {
     // `pay${HOOK` is an unterminated `${` opener and `pay${}ment` an empty
     // placeholder: both look like substitution syntax, but neither is a
