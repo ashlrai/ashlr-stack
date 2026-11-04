@@ -784,6 +784,31 @@ describe("ai/phantom-wire", () => {
     expect(harness.callsTo("add")).toEqual([]);
   });
 
+  it("treats a known provider name wrapped in tabs as data, not as the known provider", async () => {
+    // "stripe" is a catalog provider; "\tstripe\t" is not. Both tabs must
+    // survive byte-for-byte in the stub and in `skipped` — never trimmed into
+    // a match that would wire real secrets or write a webhook stub to disk.
+    const provider = "\tstripe\t";
+    expect(verificationHintFor(provider)).toBe(verificationHintFor("zzq"));
+    expect(verificationHintFor(provider)).not.toBe(verificationHintFor("stripe"));
+
+    const stub = webhookStubFor(provider);
+    expect(stub).toContain(`webhook handler stub for ${provider}.`);
+    expect(stub).toContain(`forge a ${provider} webhook.`);
+    expect(stub).toContain("handle\tstripe\tWebhook(req: Request)");
+    expect(stub.split("phantom reveal \tSTRIPE\t_WEBHOOK_SECRET").length - 1).toBe(2);
+    // Exactly two tabs per site, five sites; none added, dropped or folded.
+    expect(stub.split("\t").length - 1).toBe(10);
+
+    const recipe: Recipe = { ...STRIPE_RECIPE, providers: [{ name: provider }] };
+    const result = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
+    expect(result).toEqual({ present: [], missing: [], webhooks: [], skipped: [provider] });
+    expect(result.skipped[0]?.charCodeAt(0)).toBe(0x09);
+    expect(result.skipped[0]?.charCodeAt(7)).toBe(0x09);
+    expect(existsSync(join(harness.dir, ".stack/webhooks"))).toBe(false);
+    expect(harness.callsTo("add")).toEqual([]);
+  });
+
   it("carries a tab adjacent to a known placeholder through every expansion site", async () => {
     // `${provider}` is the template's own slot name; arriving inside a name
     // it is data. A 0x09 byte parked against it must survive expansion —
