@@ -594,6 +594,27 @@ describe("ai/phantom-wire", () => {
     expect(harness.callsTo("add")).toEqual([]);
   });
 
+  it("keeps both characters of a CRLF at the edges, doubled, and apart from a lone CR or LF", () => {
+    // Leading, trailing and consecutive pairs must not be trimmed or collapsed,
+    // and a CRLF must stay distinguishable from a lone LF then CR.
+    const plain = webhookStubFor("x");
+    for (const provider of ["\r\nx", "x\r\n", "x\r\n\r\nx"]) {
+      const stub = webhookStubFor(provider);
+      const pairs = (provider.match(/\r\n/g) ?? []).length;
+      expect(stub.split("\r\n").length - 1).toBe(pairs * 5);
+      expect(stub.split("\r").length - 1).toBe(pairs * 5);
+      expect(stub.split("\n").length - plain.split("\n").length).toBe(pairs * 5);
+      expect(stub).toContain(`webhook handler stub for ${provider}.`);
+      expect(stub).toContain(`forge a ${provider} webhook.`);
+    }
+    // LF then CR is not a CRLF pair and must not be reordered into one.
+    const swapped = webhookStubFor("a\n\rb");
+    expect(swapped).toContain("stub for a\n\rb.");
+    expect(swapped).not.toContain("\r\n");
+    // The hint is a fixed string: a CRLF name never leaks into it.
+    expect(verificationHintFor("svc\r\nhooks")).toBe(verificationHintFor("zzq"));
+  });
+
   it("preserves a single quote in a provider name literally in the stub and in skipped results", async () => {
     // `'` is inert inside the generated `//` comments, and `$'` is the one
     // String.replace replacement pattern (splice in the text after the match)
