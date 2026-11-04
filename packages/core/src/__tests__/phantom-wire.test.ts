@@ -3897,3 +3897,22 @@ echo "[]"
     expect(harness.callsTo("add")).toEqual([]);
   });
 });
+
+describe("webhookStubFor — backslash in replacement text", () => {
+  it("renders a provider name containing backslashes byte-for-byte", () => {
+    // Backslash sequences that a regex/String.replace replacement or a
+    // template-literal escape pass would mangle: `\n`, `\\`, `\``, `$&`.
+    for (const provider of ["a\\b", "a\\nb", "a\\\\b", "a\\`b", "C:\\x\\$&"]) {
+      const stub = webhookStubFor(provider);
+      expect(stub).toContain(`webhook handler stub for ${provider}.`);
+      expect(stub).toContain(`forge a ${provider} webhook.`);
+      expect(stub).toContain(`phantom reveal ${provider.toUpperCase()}_WEBHOOK_SECRET`);
+      expect(stub).toContain(
+        `handle${provider.charAt(0).toUpperCase()}${provider.slice(1)}Webhook(`,
+      );
+      // Five slots embed the name (provider x2, key x2, capitalized x1).
+      const count = (t: string) => t.split("\\").length - 1;
+      expect(count(stub)).toBe(count(webhookStubFor("")) + 5 * count(provider));
+    }
+  });
+});
