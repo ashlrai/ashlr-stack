@@ -3075,4 +3075,75 @@ echo "[]"
     expect(webhookStubFor("payco").split("\n")).toContain(`//   // ${fallback}`);
     expect(webhookStubFor("payco")).toBe(webhookStubFor("payco"));
   });
+
+  it("substitutes an empty template: every name slot splices the empty string, and wiring returns it verbatim", async () => {
+    // The module's templates are fixed literals — there is no caller-supplied
+    // template — so the empty case is the empty substitution: a provider name
+    // of "". Each `${provider}` and `${capitalize(provider)}` slot then
+    // splices the empty string, the fixed text on either side lands flush
+    // together, and through wiring the name itself returns in `skipped` as
+    // exactly the empty string — nothing fabricated to fill the blank.
+    const stub = webhookStubFor("");
+
+    // The two raw `${provider}` slots and the `${capitalize(provider)}` slot
+    // each received "": prefix meets suffix with zero bytes between.
+    expect(stub).toContain("webhook handler stub for .\n");
+    expect(stub).toContain("forge a  webhook.");
+    expect(stub).toContain("handleWebhook(req: Request): Promise<Response>");
+    // Derived slots contribute their fixed text alone: the secret-name
+    // template `${provider.toUpperCase()}_WEBHOOK_SECRET` renders
+    // "_WEBHOOK_SECRET" at both reveal sites, and the signature-header and
+    // hint fallbacks carry no name at all.
+    expect(stub.split("phantom reveal _WEBHOOK_SECRET").length - 1).toBe(2);
+    expect(stub).toContain('req.headers.get("x-webhook-signature")');
+    expect(stub).toContain(`// ${verificationHintFor("")}`);
+    // An empty substitution adds no bytes: same shape as a populated stub,
+    // no placeholder residue.
+    expect(stub).not.toContain("${");
+    expect(stub.endsWith("// }\n")).toBe(true);
+    expect(stub.split("\n")).toHaveLength(webhookStubFor("payment").split("\n").length);
+
+    // Replay the substitution out of the extracted `base` template with ""
+    // as the provider value: every name slot maps to the empty string and
+    // the reconstruction must equal webhookStubFor("") byte-for-byte.
+    const source = readFileSync(
+      fileURLToPath(new URL("../ai/phantom-wire.ts", import.meta.url)),
+      "utf-8",
+    );
+    const base = source.match(/const base = `([\s\S]*?)`;\n/)?.[1];
+    if (base === undefined) throw new Error("webhook stub template not found in source");
+    // `\`` escapes in the literal are `` ` `` bytes in the template's value.
+    const template = base.replaceAll("\\`", "`");
+
+    // Guard: the template holds exactly the seven known slots, in order.
+    expect([...template.matchAll(/\$\{[^}]*\}/g)].map((s) => s[0])).toEqual([
+      "${provider}",
+      "${webhookSecretKeyFor(provider)}",
+      "${capitalize(provider)}",
+      "${signatureHeaderFor(provider)}",
+      "${provider}",
+      "${verificationHintFor(provider)}",
+      "${webhookSecretKeyFor(provider)}",
+    ]);
+
+    const rendered = template
+      .replaceAll("${provider}", "")
+      .replaceAll("${capitalize(provider)}", "")
+      .replaceAll("${webhookSecretKeyFor(provider)}", "_WEBHOOK_SECRET")
+      .replaceAll("${signatureHeaderFor(provider)}", "x-webhook-signature")
+      .replaceAll("${verificationHintFor(provider)}", verificationHintFor(""));
+    expect(rendered).toBe(stub);
+
+    // Through wiring the empty name matches no catalog provider and is no
+    // webhook provider, so the `${provider}.ts` filename template is never
+    // instantiated: the name returns in `skipped` as the empty string
+    // byte-for-byte, no stub reaches disk, and the vault stays read-only.
+    const recipe: Recipe = { ...STRIPE_RECIPE, providers: [{ name: "" }] };
+    const result = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
+    expect(result).toEqual({ present: [], missing: [], webhooks: [], skipped: [""] });
+    expect(result.skipped[0]).toBe("");
+    expect(existsSync(join(harness.dir, ".stack/webhooks"))).toBe(false);
+    expect(harness.callsTo("list")).toEqual([{ cmd: "list", args: ["--json"] }]);
+    expect(harness.callsTo("add")).toEqual([]);
+  });
 });
