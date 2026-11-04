@@ -2854,6 +2854,80 @@ echo "[]"
     expect(harness.callsTo("add")).toEqual([]);
   });
 
+  it("substitutes the entry template's trailing placeholder for every recipe provider and preserves the preceding text", async () => {
+    // `wirePhantomForRecipe` renders each `present`/`missing` entry through
+    // `${name}:${secret}` — a template whose last bytes are the known
+    // `${secret}` placeholder, so the substituted value lands flush at the
+    // end of the entry. Ahead of it the expanded `${name}` and the literal
+    // `:` separator are the only text: that preceding `name:` must survive
+    // byte-for-byte — nothing appended after the value, no separator eaten,
+    // no reordering — for every provider in the recipe.
+    const source = readFileSync(
+      fileURLToPath(new URL("../ai/phantom-wire.ts", import.meta.url)),
+      "utf-8",
+    );
+    // Sanity: the template under test really ends with the `${secret}`
+    // slot — its `}` is the last byte before the closing backtick.
+    const template = source.match(/`\$\{name\}:\$\{secret\}`/)?.[0];
+    if (template === undefined) throw new Error("vault entry template not found in source");
+    expect(template.endsWith("${secret}`")).toBe(true);
+
+    // A vault holding only some secrets exercises both branches — stored
+    // names land in `present`, the rest in `missing` — across providers
+    // declaring one secret and providers declaring several, including one
+    // outside the webhook set (its entry still uses the same template).
+    harness.cleanup();
+    harness = setupFakePhantom({
+      STRIPE_SECRET_KEY: "test-value",
+      SUPABASE_URL: "https://x.supabase.co",
+    });
+    const recipe: Recipe = {
+      ...STRIPE_RECIPE,
+      providers: [
+        { name: "stripe" },
+        { name: "clerk" },
+        { name: "supabase" },
+        { name: "github" },
+        { name: "openai" },
+      ],
+    };
+    const result = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
+
+    // Full arrays pinned byte-for-byte: recipe order on the outside,
+    // catalog-secret order inside each provider.
+    expect(result.present).toEqual(["stripe:STRIPE_SECRET_KEY", "supabase:SUPABASE_URL"]);
+    expect(result.missing).toEqual([
+      "clerk:CLERK_SECRET_KEY",
+      "supabase:SUPABASE_ANON_KEY",
+      "supabase:SUPABASE_SERVICE_ROLE_KEY",
+      "github:GITHUB_TOKEN",
+      "openai:OPENAI_API_KEY",
+    ]);
+    expect(result.skipped).toEqual([]);
+    expect(result.webhooks).toHaveLength(4); // openai wires no webhook stub.
+
+    // The same end-of-template boundary parsed back out of each returned
+    // entry: split at the `:` separator, the value occupies the entry's
+    // tail, and the `name:` text ahead of it is intact.
+    const catalogSecrets: Record<string, string[]> = {
+      stripe: ["STRIPE_SECRET_KEY"],
+      clerk: ["CLERK_SECRET_KEY"],
+      supabase: ["SUPABASE_URL", "SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY"],
+      github: ["GITHUB_TOKEN"],
+      openai: ["OPENAI_API_KEY"],
+    };
+    for (const entry of [...result.present, ...result.missing]) {
+      const sep = entry.indexOf(":");
+      expect(sep).toBeGreaterThan(0);
+      const [name, secret] = [entry.slice(0, sep), entry.slice(sep + 1)];
+      expect(catalogSecrets[name]).toContain(secret);
+      expect(entry.endsWith(secret)).toBe(true);
+      expect(entry.slice(0, sep + 1)).toBe(`${name}:`);
+      expect(entry).not.toContain("${");
+    }
+    expect(harness.callsTo("add")).toEqual([]);
+  });
+
   it("gives the secret-name and signature-header placeholders their own replacement per provider", () => {
     // `${webhookSecretKeyFor(provider)}` and `${signatureHeaderFor(provider)}`
     // are separate slots filled by separate lookups. Two providers pin the
