@@ -2046,6 +2046,39 @@ echo "[]"
     expect(harness.callsTo("add")).toEqual([]);
   });
 
+  it("keeps a known provider name intact when Unicode text surrounds it", async () => {
+    // A known name (`stripe`) wrapped in Unicode is a different name: it must
+    // take the generic fallbacks and echo the surrounding text exactly in every
+    // slot, never match the stripe maps and never be trimmed, NFC-folded or
+    // split across a surrogate pair (🚀 is astral).
+    const wrapped = "日本\u{1F680}stripe\u0301-провайдер🚀";
+    const stub = webhookStubFor(wrapped);
+    expect(stub).toContain(`webhook handler stub for ${wrapped}.`);
+    expect(stub).toContain(`forge a ${wrapped} webhook.`);
+    expect(stub).toContain(`handle${wrapped}Webhook(req: Request)`);
+    expect(stub).toContain('req.headers.get("x-webhook-signature")');
+    expect(stub).toContain("Verify per the provider's documented signature scheme.");
+    expect(stub).not.toContain("stripe-signature");
+    expect(stub).not.toContain("constructEvent");
+    expect(stub).not.toContain("�");
+    expect(stub).not.toContain(wrapped.normalize("NFC"));
+
+    // The capitalized slot upper-cases only the first letter; the rest of the
+    // Unicode text is untouched.
+    expect(webhookStubFor("éstripe🚀")).toContain("handleÉstripe🚀Webhook(req: Request)");
+
+    // Through wiring: the wrapped name is skipped, no stub is written for it,
+    // and the plain known name beside it still gets its own.
+    const recipe: Recipe = {
+      ...STRIPE_RECIPE,
+      providers: [{ name: `日本${"stripe"}🚀` }, { name: "stripe" }],
+    };
+    const result = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
+    expect(result.skipped).toEqual(["日本stripe🚀"]);
+    expect(result.webhooks).toEqual([join(harness.dir, ".stack/webhooks/stripe.ts")]);
+    expect(harness.callsTo("add")).toEqual([]);
+  });
+
   it("leaves the rendered stub byte-identical for every map entry the template never uses", async () => {
     // The stub's expansion sites draw only from `providers[].name`: the two
     // raw `${provider}` slots, `capitalize(provider)`, the two
