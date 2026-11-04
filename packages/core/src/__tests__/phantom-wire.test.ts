@@ -5791,3 +5791,89 @@ describe("webhookStubFor — empty replacement value, line by line", () => {
     expect(blanked).toBeGreaterThan(3);
   });
 });
+
+describe("webhookStubFor — a known placeholder token flush against an unknown placeholder", () => {
+  const count = (s: string, needle: string) => s.split(needle).length - 1;
+
+  // Each name carries the verbatim spelling of one of the template's real
+  // slots — `${webhookSecretKeyFor(provider)}` and friends — parked flush
+  // against `${UNKNOWN}`, which spells no slot. The template's own slots
+  // still take their known values (the name at the name sites, the generic
+  // header and fallback hint at theirs); the pair inside the name arrives
+  // as data at all five expansion sites — the known-slot token is never
+  // resolved to a value, the unknown token never filled or dropped, and
+  // nothing is spliced between them.
+  it.each([
+    "${webhookSecretKeyFor(provider)}${UNKNOWN}", // known token, unknown trailing — pair is the whole name
+    "${UNKNOWN}${signatureHeaderFor(provider)}", // unknown leading, known trailing
+    "pay${capitalize(provider)}${UNKNOWN}ment", // the pair parked mid-name
+    "hook${verificationHintFor(provider)}${UNKNOWN}line", // the hint slot's spelling mid-name
+  ])("renders %j with the real slots filled and the flush pair intact", (name) => {
+    const stub = webhookStubFor(name);
+    const known = name.match(
+      /\$\{(?:webhookSecretKeyFor|signatureHeaderFor|capitalize|verificationHintFor)\(provider\)\}/,
+    )?.[0] as string;
+    const pair = name.match(/\$\{[^}]*\}\$\{[^}]*\}/)?.[0] as string;
+
+    // The name — known-slot token and unknown token flush — lands
+    // byte-for-byte at the three case-preserving sites, and whole-name
+    // uppercased at both secret-key sites.
+    expect(stub).toContain(`webhook handler stub for ${name}.`);
+    expect(stub).toContain(`forge a ${name} webhook.`);
+    expect(stub).toContain(`handle${name[0].toUpperCase()}${name.slice(1)}Webhook(req: Request)`);
+    expect(count(stub, `phantom reveal ${name.toUpperCase()}_WEBHOOK_SECRET`)).toBe(2);
+
+    // The adjacent pair survives at every site: exact case at the three
+    // mixed-case sites, uppercased together at the two secret-key sites —
+    // the known token never resolved away, the unknown one unchanged.
+    expect(count(stub, pair)).toBe(3);
+    expect(count(stub, pair.toUpperCase())).toBe(2);
+    expect(count(stub, known)).toBe(3);
+    expect(count(stub, known.toUpperCase())).toBe(2);
+    expect(count(stub, "${UNKNOWN}")).toBe(5);
+    // Two `${` openers per name at five sites; no second pass minted new
+    // ones or resolved any away.
+    expect(count(stub, "${")).toBe(10);
+
+    // The remaining real slots took their own known values, once each:
+    // the generic signature header and the fallback hint.
+    expect(count(stub, 'req.headers.get("x-webhook-signature")')).toBe(1);
+    expect(count(stub, "//   // Verify per the provider's documented signature scheme.")).toBe(1);
+  });
+
+  it("substitutes the known provider beside the pair-carrying name and skips the name unchanged", async () => {
+    const harness = setupFakePhantom();
+    try {
+      const name = "pay${capitalize(provider)}${UNKNOWN}ment";
+      const recipe: Recipe = {
+        id: "known-beside-unknown",
+        query: "payments",
+        createdAt: "2026-04-18T00:00:00.000Z",
+        providers: [{ name: "stripe" }, { name }],
+      };
+      const result = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
+
+      // The pair-carrying name matches no catalog provider: it returns in
+      // `skipped` byte-for-byte — known-slot token and unknown placeholder
+      // flush and intact — and writes no stub of its own.
+      expect(result.skipped).toEqual([name]);
+      expect(existsSync(join(harness.dir, ".stack/webhooks", `${name}.ts`))).toBe(false);
+
+      // The known provider beside it is substituted fully: its declared
+      // secret reports missing and its stub on disk is the expanded
+      // template with no placeholder text left.
+      expect(result.missing).toEqual(["stripe:STRIPE_SECRET_KEY"]);
+      const stubPath = join(harness.dir, ".stack/webhooks/stripe.ts");
+      expect(result.webhooks).toEqual([stubPath]);
+      const stub = readFileSync(stubPath, "utf-8");
+      expect(stub).toBe(webhookStubFor("stripe"));
+      expect(stub).toContain("STRIPE_WEBHOOK_SECRET");
+      expect(stub).toContain("stripe-signature");
+      expect(stub).not.toContain("${");
+      expect(harness.callsTo("add")).toEqual([]);
+      expect(harness.callsTo("list")).toEqual([{ cmd: "list", args: ["--json"] }]);
+    } finally {
+      harness.cleanup();
+    }
+  });
+});
