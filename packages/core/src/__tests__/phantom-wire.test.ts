@@ -2194,6 +2194,18 @@ echo "[]"
     },
   );
 
+  it("keeps the filename suffix intact when Phantom is unavailable", async () => {
+    // A failed version probe takes the missing-Phantom path, which still writes
+    // the stub using the `${provider}.ts` template.
+    writeFileSync(join(harness.dir, "phantom.sh"), "#!/bin/sh\nexit 1\n");
+    const result = await wirePhantomForRecipe(STRIPE_RECIPE, { cwd: harness.dir });
+
+    const stubPath = join(harness.dir, ".stack", "webhooks", "stripe.ts");
+    expect(result).toEqual({ present: [], missing: [], webhooks: [stubPath], skipped: ["stripe"] });
+    expect(basename(result.webhooks[0] as string)).toBe("stripe.ts");
+    expect(readFileSync(stubPath, "utf-8")).toBe(webhookStubFor("stripe"));
+  });
+
   it("expands the placeholder at the start of the vault-entry template and keeps the following text in order", async () => {
     // `wirePhantomForRecipe` classifies secrets through the entry template
     // `${name}:${secret}` — a known placeholder at position 0 followed by
