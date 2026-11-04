@@ -951,6 +951,74 @@ echo "[]"
     expect(github).not.toContain("stripe-signature");
   });
 
+  it("expands the multiline template line for line, leaving unrelated lines and line breaks identical across providers", () => {
+    // Swap each provider's own expansions back to neutral tokens. What remains
+    // is the template with its placeholders unexpanded; if expansion touched
+    // any unrelated line (or added, dropped, or re-terminated one) the
+    // providers' templates would diverge.
+    const cases = [
+      {
+        p: "stripe",
+        cap: "Stripe",
+        secret: "STRIPE_WEBHOOK_SECRET",
+        header: "stripe-signature",
+        hint: "Stripe: `stripe.webhooks.constructEvent` — HMAC-SHA256 with timestamp tolerance.",
+      },
+      {
+        p: "clerk",
+        cap: "Clerk",
+        secret: "CLERK_WEBHOOK_SECRET",
+        header: "svix-signature",
+        hint: "Clerk (svix): `new Webhook(secret).verify(body, headers)`.",
+      },
+      {
+        p: "supabase",
+        cap: "Supabase",
+        secret: "SUPABASE_WEBHOOK_SECRET",
+        header: "x-supabase-signature",
+        hint: "Supabase: `x-supabase-signature` per Supabase's documented webhook scheme.",
+      },
+      {
+        p: "github",
+        cap: "GitHub",
+        secret: "GITHUB_WEBHOOK_SECRET",
+        header: "x-hub-signature-256",
+        hint: "GitHub: `x-hub-signature-256` is `sha256=` + HMAC-SHA256 of the raw body.",
+      },
+    ];
+    const templateOf = (c: (typeof cases)[number]): string[] => {
+      const stub = webhookStubFor(c.p);
+      expect(stub).not.toContain("\r");
+      expect(stub).not.toContain("${");
+      expect(stub.endsWith("\n")).toBe(true);
+      return stub
+        .split("\n")
+        .map((line) => (line === `//   // ${c.hint}` ? "//   // <HINT>" : line))
+        .map((line) =>
+          line
+            .replaceAll(c.secret, "<SECRET>")
+            .replaceAll(`handle${c.p.charAt(0).toUpperCase()}${c.p.slice(1)}Webhook`, "<HANDLER>")
+            .replaceAll(c.header, "<HEADER>")
+            .replaceAll(c.p, "<PROVIDER>"),
+        );
+    };
+    const [first, ...rest] = cases.map(templateOf);
+    expect(first?.length).toBe(26);
+    expect(first).toContain("//   // <HINT>");
+    for (const other of rest) expect(other).toEqual(first);
+
+    // Blank-free comment block: every non-final line is a `//` comment, and
+    // unrelated lines survive verbatim, in order, with their breaks.
+    const lines = webhookStubFor("stripe").split("\n");
+    expect(lines.at(-1)).toBe("");
+    expect(lines.slice(0, -1).every((l) => l.startsWith("//"))).toBe(true);
+    expect(lines[1]).toBe(
+      "// Fill in the secret retrieval + signature verification before deploying.",
+    );
+    expect(lines[5]).toBe("//");
+    expect(lines.indexOf("// The secret lives in Phantom; read it at call time with:")).toBe(6);
+  });
+
   it("expands a line holding only a known placeholder to exactly the replacement", () => {
     // These stub lines are a fixed prefix plus one placeholder and nothing
     // else, so after stripping the prefix the remainder must equal the
