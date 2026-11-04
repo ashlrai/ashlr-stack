@@ -1066,6 +1066,50 @@ echo "[]"
     },
   );
 
+  it.each([
+    ["stripe", "STRIPE_WEBHOOK_SECRET"],
+    ["clerk", "CLERK_WEBHOOK_SECRET"],
+    ["supabase", "SUPABASE_WEBHOOK_SECRET"],
+    ["github", "GITHUB_WEBHOOK_SECRET"],
+  ])(
+    "replaces the template's last placeholder with the %s secret name and keeps the preceding text exact",
+    (provider, secret) => {
+      // The `base` template's final `${...}` slot is the second
+      // `${webhookSecretKeyFor(provider)}`, inside the TODO's backticked
+      // reveal reminder. Every byte before the slot — the "Verify over ...
+      // secret" lead-in line and the `//   // (` + backtick +
+      // `phantom reveal ` opener — is fixed text, and only fixed comment
+      // lines follow it. Expansion must land the provider's secret name at
+      // exactly that position.
+      const source = readFileSync(
+        fileURLToPath(new URL("../ai/phantom-wire.ts", import.meta.url)),
+        "utf-8",
+      );
+      const template = source.match(/const base = `([\s\S]*?)`;\n/)?.[1];
+      if (template === undefined) throw new Error("webhook stub template not found in source");
+      const lastSlot = template.lastIndexOf("${");
+      expect(template.slice(lastSlot)).toMatch(/^\$\{webhookSecretKeyFor\(provider\)\}/);
+
+      const stub = webhookStubFor(provider);
+      // The slot's line byte-for-byte: fixed prefix, the replacement, then
+      // the fixed suffix — anything added, dropped, or reordered breaks it.
+      expect(stub).toContain(`//   // (\`phantom reveal ${secret}\`) and compare in`);
+      // The known placeholder sits at the end of the template: the fixed
+      // lead-in line immediately precedes it and only the template's fixed
+      // closing lines follow — the stub ends exactly here.
+      const tail = [
+        "//   // Verify over the exact raw body bytes with the webhook secret",
+        `//   // (\`phantom reveal ${secret}\`) and compare in`,
+        "//   // constant time; reject missing or invalid signatures, and only then",
+        "//   // parse, trust, or act on the body.",
+        '//   return new Response("ok", { status: 200 });',
+        "// }",
+        "",
+      ].join("\n");
+      expect(stub.endsWith(tail)).toBe(true);
+    },
+  );
+
   it("gives the secret-name and signature-header placeholders their own replacement per provider", () => {
     // `${webhookSecretKeyFor(provider)}` and `${signatureHeaderFor(provider)}`
     // are separate slots filled by separate lookups. Two providers pin the
