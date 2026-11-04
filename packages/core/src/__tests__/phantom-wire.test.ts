@@ -177,6 +177,20 @@ describe("ai/phantom-wire", () => {
     expect(stub).toContain(`handle${provider[0].toUpperCase()}${provider.slice(1)}Webhook`);
   });
 
+  it("preserves a tab in a provider name at every expansion site", () => {
+    // A tab is plain data in the replacement text: it must come through as a
+    // literal tab (not collapsed to spaces or escaped) at all five sites.
+    const stub = webhookStubFor("pay\thook");
+
+    expect(stub).toContain("webhook handler stub for pay\thook.");
+    expect(stub).toContain("forge a pay\thook webhook.");
+    expect(stub).toContain("handlePay\thookWebhook(req: Request)");
+    expect(stub.split("phantom reveal PAY\tHOOK_WEBHOOK_SECRET").length - 1).toBe(2);
+    expect(stub.split("\t").length - 1).toBe(5);
+    expect(stub).not.toContain("pay hook");
+    expect(stub).not.toContain("\\t");
+  });
+
   it("keeps both dollar signs of a `$$` in a provider name at every expansion site", () => {
     // In a String.replace replacement string, `$$` collapses to a single `$`.
     // Carried as data, both signs must survive at all five sites.
