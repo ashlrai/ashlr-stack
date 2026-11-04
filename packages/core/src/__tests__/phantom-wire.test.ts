@@ -1796,6 +1796,16 @@ echo "[]"
     expect(stub).not.toContain("${");
   });
 
+  it("replaces the leading provider name in the fallback secret name once and leaves the following text unchanged", () => {
+    // The name is data, not template: a placeholder-shaped name is
+    // uppercased in place at position 0 and never expanded a second time,
+    // and `_WEBHOOK_SECRET` follows it byte for byte.
+    const stub = webhookStubFor("${x}co");
+    expect(stub).toContain("//   phantom reveal ${X}CO_WEBHOOK_SECRET\n");
+    expect(stub).toContain("//   // (`phantom reveal ${X}CO_WEBHOOK_SECRET`) and compare in\n");
+    expect(stub.split("${X}CO_WEBHOOK_SECRET").length - 1).toBe(2);
+  });
+
   it.each(["stripe", "clerk", "supabase", "github"])(
     "expands the placeholder at the start of the stub filename template for %s and keeps the following text in order",
     async (provider) => {
