@@ -4,6 +4,7 @@ import {
   existsSync,
   mkdirSync,
   readFileSync,
+  readdirSync,
   realpathSync,
   writeFileSync,
 } from "node:fs";
@@ -3420,6 +3421,54 @@ echo "[]"
       expect(result.missing).toEqual([]);
     }
     expect(existsSync(join(harness.dir, ".stack/webhooks"))).toBe(false);
+  });
+
+  it("keeps a differently cased unknown name unchanged while the known spelling expands", async () => {
+    // `findProviderRef`, `WEBHOOK_PROVIDERS` and every stub switch map compare
+    // exact bytes, so a differently cased spelling of a catalog name is a
+    // different name — there is no case folding anywhere in the module.
+    // Wiring `STRIPE` ahead of the known `stripe` in one recipe (unknown
+    // first, so a pass that bails on the first skipped name would leave
+    // stripe unwired): `STRIPE` must come back in `skipped` byte-for-byte —
+    // not folded to `stripe`, not echoed as `Stripe` — while `stripe`
+    // expands: its declared secret reports missing and the stub on disk is
+    // the fully substituted stripe render.
+    const recipe: Recipe = {
+      ...STRIPE_RECIPE,
+      providers: [{ name: "STRIPE" }, { name: "stripe" }],
+    };
+    const result = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
+
+    expect(result.skipped).toEqual(["STRIPE"]);
+    expect(result.missing).toEqual(["stripe:STRIPE_SECRET_KEY"]);
+    expect(result.present).toEqual([]);
+
+    // One stub, for `stripe` only: every slot took the stripe mapping. The
+    // directory holds exactly `stripe.ts` — no `STRIPE.ts` or other case
+    // variant beside it (read via readdir so the check holds on
+    // case-insensitive filesystems too).
+    const stubPath = join(harness.dir, ".stack/webhooks/stripe.ts");
+    expect(result.webhooks).toEqual([stubPath]);
+    expect(readFileSync(stubPath, "utf-8")).toBe(webhookStubFor("stripe"));
+    expect(readdirSync(join(harness.dir, ".stack/webhooks"))).toEqual(["stripe.ts"]);
+    expect(harness.callsTo("add")).toEqual([]);
+
+    // Rendered on its own the unknown casing is unchanged too: its bytes echo
+    // verbatim at the raw and capitalized slots and every lookup takes the
+    // generic branch, while the exact spelling expands to stripe's mappings.
+    const upperStub = webhookStubFor("STRIPE");
+    expect(upperStub).toContain("webhook handler stub for STRIPE.");
+    expect(upperStub).toContain("forge a STRIPE webhook.");
+    expect(upperStub).toContain("handleSTRIPEWebhook(req: Request)");
+    expect(upperStub).toContain('req.headers.get("x-webhook-signature")');
+    expect(upperStub).toContain("Verify per the provider's documented signature scheme.");
+    expect(upperStub).not.toContain("stripe-signature");
+    expect(upperStub).not.toContain("constructEvent");
+
+    // The hint lookup is case-sensitive the same way: the known spelling
+    // expands to the Stripe hint, the unknown casing takes the fallback.
+    expect(verificationHintFor("stripe")).toContain("constructEvent");
+    expect(verificationHintFor("STRIPE")).toBe(verificationHintFor("zzq"));
   });
 
   it("skips a path-traversal provider name without writing any stub", async () => {
