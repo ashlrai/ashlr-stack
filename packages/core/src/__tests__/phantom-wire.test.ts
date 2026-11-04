@@ -4510,6 +4510,25 @@ echo "[]"
     expect(harness.callsTo("add")).toEqual([]);
   });
 
+  it("keeps a literal `$$` in a provider name as two dollar signs at every expansion site", () => {
+    // `$$` is the String.replace escape for a single `$`. The stub is built
+    // from template literals, so a name carrying it must land verbatim —
+    // both dollars — never collapsed to one.
+    const baseline = webhookStubFor("zzq");
+    const baselineDollars = baseline.split("$").length - 1;
+
+    for (const name of ["pay$$ment", "$$", "a$$"]) {
+      const stub = webhookStubFor(name);
+      expect(stub).toContain(`webhook handler stub for ${name}.`);
+      expect(stub).toContain(`forge a ${name} webhook.`);
+      expect(stub).toContain(`handle${name[0].toUpperCase()}${name.slice(1)}Webhook(req: Request)`);
+      expect(stub.split(`phantom reveal ${name.toUpperCase()}_WEBHOOK_SECRET`).length - 1).toBe(2);
+      // Two dollars per occurrence, five expansion sites, none collapsed.
+      expect(stub.split("$").length - 1).toBe(baselineDollars + 2 * 5);
+      expect(stub).not.toContain("$$$");
+    }
+  });
+
   it("leaves a differently cased provider name unchanged in the stub unless it is explicitly defined", () => {
     // Only the lowercase names are defined; `Stripe` / `GITHUB` must take the
     // generic fallbacks and echo the given casing, never the stripe/github maps.
