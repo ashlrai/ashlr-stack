@@ -285,6 +285,106 @@ describe("ai/phantom-wire", () => {
     expect(stub).not.toContain(unusedValue);
   });
 
+  it("leaves each hint template unchanged when extra replacement values are supplied", () => {
+    // Every hint is a fixed string with no placeholder to fill. Values a
+    // caller supplies anyway — including one keyed `provider`, the name the
+    // switch matches on — are unused: the returned text must be the template
+    // byte-for-byte with none of the supplied text in it.
+    const hintWithValues = verificationHintFor as (
+      provider: string,
+      values: Record<string, string>,
+    ) => string;
+    for (const provider of ["stripe", "clerk", "supabase", "github", "zzqhook"]) {
+      const hint = hintWithValues(provider, {
+        unused: "UNUSED_HINT_SENTINEL",
+        provider: "forged provider",
+      });
+      expect(hint).toBe(verificationHintFor(provider));
+      expect(hint).not.toContain("UNUSED_HINT_SENTINEL");
+      expect(hint).not.toContain("forged provider");
+    }
+  });
+
+  it("does not let an extra value keyed like a template input reach the stub", () => {
+    // The stub's expansion sites draw only from the `provider` argument —
+    // there is no `{{provider}}`-style slot a values map could fill. Keys
+    // naming the template's own inputs (the provider, its signature header,
+    // secret key and hint) are unused values: the render must stay
+    // byte-identical to the argument-only call.
+    const renderWithValues = webhookStubFor as (
+      provider: string,
+      values: Record<string, string>,
+    ) => string;
+    const stub = renderWithValues("stripe", {
+      provider: "clerk",
+      signatureHeader: "x-forged-signature",
+      webhookSecretKey: "FORGED_WEBHOOK_SECRET",
+      verificationHint: "a forged hint",
+    });
+    expect(stub).toBe(webhookStubFor("stripe"));
+    expect(stub).toContain("stripe-signature");
+    expect(stub).toContain("STRIPE_WEBHOOK_SECRET");
+    expect(stub).toContain("handleStripeWebhook");
+    for (const unused of [
+      "clerk",
+      "x-forged-signature",
+      "FORGED_WEBHOOK_SECRET",
+      "a forged hint",
+    ]) {
+      expect(stub).not.toContain(unused);
+    }
+  });
+
+  it("ignores extra positional values of any type and arity", () => {
+    // An extra argument is an unused value whatever its shape — a bare
+    // string, a number, an array, a nested map — and however many are
+    // passed. The template has no slot for any of them: every call renders
+    // byte-identically to the argument-only stub.
+    const render = webhookStubFor as (provider: string, ...extra: unknown[]) => string;
+    const baseline = webhookStubFor("stripe");
+    for (const extra of [
+      "forged value",
+      42,
+      ["forged value"],
+      { deep: "forged value" },
+      null,
+      undefined,
+    ]) {
+      const stub = render("stripe", extra);
+      expect(stub).toBe(baseline);
+      expect(stub).not.toContain("forged value");
+    }
+    expect(render("stripe", "forged value", { deep: "forged value" }, ["x"])).toBe(baseline);
+  });
+
+  it("ignores values keyed by placeholder-shaped names the templates lack", () => {
+    // Neither template has `${...}`, `{{...}}` or `%s` slots, so a values
+    // map keyed by those shapes is entirely unused: supplying it must not
+    // splice a value in nor strip placeholder-shaped template text.
+    const values = {
+      "${provider}": "FORGED_A",
+      "{{provider}}": "FORGED_B",
+      "%s": "FORGED_C",
+      "${webhookSecretKeyFor(provider)}": "FORGED_D",
+    };
+    const renderWithValues = webhookStubFor as (
+      provider: string,
+      values: Record<string, string>,
+    ) => string;
+    const hintWithValues = verificationHintFor as (
+      provider: string,
+      values: Record<string, string>,
+    ) => string;
+    const stub = renderWithValues("stripe", values);
+    const hint = hintWithValues("github", values);
+    expect(stub).toBe(webhookStubFor("stripe"));
+    expect(hint).toBe(verificationHintFor("github"));
+    for (const forged of Object.values(values)) {
+      expect(stub).not.toContain(forged);
+      expect(hint).not.toContain(forged);
+    }
+  });
+
   it("leaves the stub's fixed text unchanged when no value is supplied for its placeholders", () => {
     // phantom-wire has no values map; the stub's only inputs are the provider
     // slots. An empty provider supplies nothing: each slot collapses to the
