@@ -197,5 +197,9 @@ function signatureHeaderFor(provider: string): string {
 }
 
 function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
+  // Code-point aware: charAt(0) would take only the high surrogate of an
+  // astral first letter (e.g. Deseret 𐐨) and never upper-case it.
+  if (s === "") return s;
+  const first = String.fromCodePoint(s.codePointAt(0) as number);
+  return first.toUpperCase() + s.slice(first.length);
 }

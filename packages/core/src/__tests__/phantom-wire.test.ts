@@ -3783,6 +3783,12 @@ echo "[]"
     expect(harness.callsTo("add")).toEqual([]);
   });
 
+  it("upper-cases an astral first letter as one code point", () => {
+    // 𐐨 (U+10428) is a surrogate pair whose upper case is 𐐀 (U+10400).
+    expect(webhookStubFor("𐐨x🚀")).toContain("handle𐐀x🚀Webhook(req: Request)");
+    expect(webhookStubFor("🚀x")).toContain("handle🚀xWebhook(req: Request)");
+  });
+
   it("keeps a known provider name intact when Unicode text surrounds it", async () => {
     // A known name (`stripe`) wrapped in Unicode is a different name: it must
     // take the generic fallbacks and echo the surrounding text exactly in every
