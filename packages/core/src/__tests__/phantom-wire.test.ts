@@ -5109,6 +5109,108 @@ echo "[]"
     expect(harness.callsTo("list")).toEqual([{ cmd: "list", args: ["--json"] }]);
     expect(harness.callsTo("add")).toEqual([]);
   });
+
+  it("returns a template with no placeholders unchanged — the hint verbatim, and the stub's fixed text recovered byte-for-byte", async () => {
+    // `verificationHintFor` is the module's zero-placeholder template: every
+    // branch returns one fixed literal, so the caller receives that literal
+    // unchanged — byte-for-byte and stable across calls — whatever the
+    // provider name looks like.
+    const noSlots = /\$\{|\{\{|\$[&'`\d]|%[sdif]/;
+    const hints: Record<string, string> = {
+      stripe: "Stripe: `stripe.webhooks.constructEvent` — HMAC-SHA256 with timestamp tolerance.",
+      clerk: "Clerk (svix): `new Webhook(secret).verify(body, headers)`.",
+      supabase: "Supabase: `x-supabase-signature` per Supabase's documented webhook scheme.",
+      github: "GitHub: `x-hub-signature-256` is `sha256=` + HMAC-SHA256 of the raw body.",
+    };
+    for (const [provider, hint] of Object.entries(hints)) {
+      expect(verificationHintFor(provider)).toBe(hint);
+      expect(verificationHintFor(provider)).toBe(verificationHintFor(provider));
+      expect(hint).not.toMatch(noSlots);
+    }
+    const fallback = "Verify per the provider's documented signature scheme.";
+    expect(fallback).not.toMatch(noSlots);
+    // Unknown names — even ones spelled like a slot or equal to a known
+    // template's value — get the fallback literal unchanged; a name can
+    // never carve a slot into a template that has none.
+    for (const name of ["zzqhook", "${provider}", "{{hint}}", "%s", "stripe-signature"]) {
+      expect(verificationHintFor(name)).toBe(fallback);
+    }
+
+    // The stub template's fixed text is a placeholder-free template too:
+    // the seven `${...}` slots are the only bytes a render may change. Erase
+    // a render's own substituted values — most-enclosing first, since the
+    // secret key contains the upper-cased name, a known hint contains the
+    // header and the display name (supabase's hint embeds
+    // "x-supabase-signature"; github's embeds "x-hub-signature-256"), the
+    // header can contain the raw name ("stripe-signature"), and the
+    // capitalized name contains the name's tail — and the source `base`
+    // template comes back unchanged, for known and unknown names alike.
+    const source = readFileSync(
+      fileURLToPath(new URL("../ai/phantom-wire.ts", import.meta.url)),
+      "utf-8",
+    );
+    const base = source.match(/const base = `([\s\S]*?)`;\n/)?.[1]?.replaceAll("\\`", "`");
+    if (base === undefined) throw new Error("webhook stub template not found in source");
+    expect(base.match(/\$\{/g)).toHaveLength(7);
+
+    const secretKeyFor = (p: string) =>
+      (
+        ({
+          stripe: "STRIPE_WEBHOOK_SECRET",
+          clerk: "CLERK_WEBHOOK_SECRET",
+          supabase: "SUPABASE_WEBHOOK_SECRET",
+          github: "GITHUB_WEBHOOK_SECRET",
+        }) as Record<string, string>
+      )[p] ?? `${p.toUpperCase()}_WEBHOOK_SECRET`;
+    const headerFor = (p: string) =>
+      (
+        ({
+          stripe: "stripe-signature",
+          clerk: "svix-signature",
+          supabase: "x-supabase-signature",
+          github: "x-hub-signature-256",
+        }) as Record<string, string>
+      )[p] ?? "x-webhook-signature";
+    // Mirror of `capitalize`: astral-aware first-letter fold, rest untouched.
+    const cap = (p: string) => {
+      if (p === "") return p;
+      const first = String.fromCodePoint(p.codePointAt(0) as number);
+      return first.toUpperCase() + p.slice(first.length);
+    };
+    const erase = (stub: string, value: string, marker: string) => stub.split(value).join(marker);
+
+    for (const provider of [
+      "stripe", // every known lookup branch
+      "clerk",
+      "supabase",
+      "github",
+      "zzqhook", // every lookup on its fallback branch
+      "pay$&hook", // String.replace-pattern bytes stay data
+      "café-日本", // multi-byte text folds only where the template folds it
+    ]) {
+      let recovered = webhookStubFor(provider);
+      recovered = erase(recovered, secretKeyFor(provider), "${webhookSecretKeyFor(provider)}");
+      recovered = erase(
+        recovered,
+        verificationHintFor(provider),
+        "${verificationHintFor(provider)}",
+      );
+      recovered = erase(recovered, headerFor(provider), "${signatureHeaderFor(provider)}");
+      recovered = erase(recovered, cap(provider), "${capitalize(provider)}");
+      recovered = erase(recovered, provider, "${provider}");
+      expect(recovered).toBe(base);
+    }
+
+    // A provider name that IS a placeholder-free template — the fallback
+    // hint itself — is data like any other: it matches no catalog provider,
+    // so wiring returns it in `skipped` unchanged and writes no stub.
+    const recipe: Recipe = { ...STRIPE_RECIPE, providers: [{ name: fallback }] };
+    const result = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
+    expect(result).toEqual({ present: [], missing: [], webhooks: [], skipped: [fallback] });
+    expect(result.skipped[0]).toBe(fallback);
+    expect(existsSync(join(harness.dir, ".stack/webhooks"))).toBe(false);
+    expect(harness.callsTo("add")).toEqual([]);
+  });
 });
 
 describe("webhookStubFor — placeholder inside parentheses", () => {
