@@ -5689,3 +5689,31 @@ describe("webhookStubFor — empty replacement value, line by line", () => {
     expect(blanked).toBeGreaterThan(3);
   });
 });
+
+describe("webhookStubFor — arbitrary replacement with leading and trailing spaces", () => {
+  it("preserves both sets of spaces at every slot and trims nothing from the template", () => {
+    // Unequal runs (3 leading, 2 trailing) so a trim, a collapse, or a
+    // swapped edge cannot pass by symmetry.
+    const name = "   acme  ";
+    const stub = webhookStubFor(name);
+
+    expect(stub).toContain(`webhook handler stub for ${name}.`);
+    expect(stub).toContain(`forge a ${name} webhook.`);
+    // `capitalize` meets a space first, so nothing is folded and the name rides along whole.
+    expect(stub).toContain(`handle${name}Webhook(req: Request)`);
+    // Upper-cased inside the env-var name at both reveal sites; spaces untouched.
+    expect(stub.split("phantom reveal    ACME  _WEBHOOK_SECRET").length - 1).toBe(2);
+
+    // Five slots add exactly 5 × 5 spaces over the unpadded stub, and removing
+    // them restores that stub byte-for-byte.
+    const plain = webhookStubFor("acme");
+    const spaces = (s: string) => s.split(" ").length - 1;
+    expect(spaces(stub) - spaces(plain)).toBe(25);
+    expect(
+      stub
+        .replaceAll(`handle${name}Webhook`, "handleAcmeWebhook")
+        .replaceAll("   ACME  _", "ACME_")
+        .replaceAll(name, "acme"),
+    ).toBe(plain);
+  });
+});
