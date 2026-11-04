@@ -1845,6 +1845,65 @@ echo "[]"
     }
   });
 
+  it("preserves unterminated and empty placeholder-looking text in a provider name without re-expansion", async () => {
+    // `pay${HOOK` is an unterminated `${` opener and `pay${}ment` an empty
+    // placeholder: both look like substitution syntax, but neither is a
+    // slot the template fills. Carried as data, each must land byte-for-byte
+    // at all five expansion sites (header, forge line, handler name, two
+    // reveal lines). A second substitution pass over the rendered stub would
+    // treat them as syntax instead: resolving the empty `${}` to "" or
+    // "undefined", or pairing the dangling `${` with the template's own next
+    // `}` — `{ status: 200 }` or the closing `// }` — and swallowing the
+    // comment text between them into the "slot".
+    const baseline = webhookStubFor("zzq");
+    expect(baseline).not.toContain("${");
+    const baselineClosers = baseline.split("}").length - 1;
+    const baselineLines = baseline.split("\n").length;
+
+    const dangling = "pay${HOOK";
+    const stub = webhookStubFor(dangling);
+    expect(stub).toContain(`webhook handler stub for ${dangling}.`);
+    expect(stub).toContain(`forge a ${dangling} webhook.`);
+    expect(stub).toContain("handlePay${HOOKWebhook(req: Request)");
+    expect(stub.split("phantom reveal PAY${HOOK_WEBHOOK_SECRET").length - 1).toBe(2);
+    // Five `${` sequences — one per site, all unterminated — and the `}`
+    // count is exactly the template's own: no closer was borrowed to
+    // complete the opener, and nothing after it was consumed.
+    expect(stub.split("${").length - 1).toBe(5);
+    expect(stub.split("}").length - 1).toBe(baselineClosers);
+    expect(stub.split("\n").length).toBe(baselineLines);
+
+    const empty = "pay${}ment";
+    const emptyStub = webhookStubFor(empty);
+    expect(emptyStub).toContain(`webhook handler stub for ${empty}.`);
+    expect(emptyStub).toContain(`forge a ${empty} webhook.`);
+    expect(emptyStub).toContain("handlePay${}mentWebhook(req: Request)");
+    expect(emptyStub.split("phantom reveal PAY${}MENT_WEBHOOK_SECRET").length - 1).toBe(2);
+    // `/\$\{[^}]*\}/` matches `${}` — the only placeholder-shaped tokens in
+    // the stub are the five the name carried in, each preserved verbatim.
+    // A re-substitution pass would resolve the empty slot to "" or
+    // "undefined"; neither happens.
+    const tokens = [...emptyStub.matchAll(/\$\{[^}]*\}/g)].map((m) => m[0]);
+    expect(tokens).toHaveLength(5);
+    for (const token of tokens) expect(token).toBe("${}");
+    expect(emptyStub).not.toContain("undefined");
+    expect(emptyStub).not.toContain("handlePaymentWebhook");
+    expect(emptyStub.split("}").length - 1).toBe(baselineClosers + 5);
+
+    // Through wiring a name carrying the dangling opener matches no catalog
+    // provider: it returns in `skipped` byte-for-byte and never reaches the
+    // stub template or disk.
+    const recipe: Recipe = { ...STRIPE_RECIPE, providers: [{ name: dangling }] };
+    expect(await wirePhantomForRecipe(recipe, { cwd: harness.dir })).toEqual({
+      present: [],
+      missing: [],
+      webhooks: [],
+      skipped: [dangling],
+    });
+    expect(existsSync(join(harness.dir, ".stack/webhooks"))).toBe(false);
+    expect(harness.callsTo("add")).toEqual([]);
+  });
+
   it("leaves a differently cased provider name unchanged in the stub unless it is explicitly defined", () => {
     // Only the lowercase names are defined; `Stripe` / `GITHUB` must take the
     // generic fallbacks and echo the given casing, never the stripe/github maps.
