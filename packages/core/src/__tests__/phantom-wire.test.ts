@@ -4338,6 +4338,69 @@ echo "[]"
     expect(harness.callsTo("add")).toEqual([]);
   });
 
+  it("leaves an unmatched opening placeholder delimiter after a closed placeholder in a provider name unchanged", async () => {
+    // `pay${HOOK}ment${SVC` carries a complete `${HOOK}` followed later by a
+    // `${SVC` whose closer never arrives: the `${` opens a slot the rest of
+    // the name can't finish. It is incomplete text, not a placeholder — and
+    // its closed sibling makes the "unchanged" claim meaningful: a scanner
+    // that pairs delimiters left-to-right must not hand the earlier `}` to
+    // the later opener, and a second substitution pass over the rendered
+    // stub must not complete `${SVC` against the template's own next `}`
+    // (`{ status: 400 }`, `{ status: 200 }`, the closing `// }`) and swallow
+    // the lines between. Carried as data, both tokens land byte-for-byte at
+    // all five expansion sites.
+    const baseline = webhookStubFor("zzq");
+    expect(baseline).not.toContain("${");
+    const baselineClosers = baseline.split("}").length - 1;
+    const baselineLines = baseline.split("\n").length;
+
+    const name = "pay${HOOK}ment${SVC";
+    const stub = webhookStubFor(name);
+
+    // Raw sites: the header and forge lines carry the name — closed token
+    // and dangling opener both intact — byte-for-byte.
+    expect(stub).toContain(`webhook handler stub for ${name}.`);
+    expect(stub).toContain(`forge a ${name} webhook.`);
+    // `capitalize(provider)` site: only the name's first letter folds.
+    expect(stub).toContain("handlePay${HOOK}ment${SVCWebhook(req: Request)");
+    // `webhookSecretKeyFor(provider)` sites: the whole name — both tokens
+    // included — uppercases in both reveal lines.
+    expect(stub.split(`phantom reveal ${name.toUpperCase()}_WEBHOOK_SECRET`).length - 1).toBe(2);
+
+    // Token accounting: one `${HOOK}` and one `${SVC` per expansion site —
+    // none resolved, dropped, or merged across the delimiter boundary.
+    expect(stub.split("${HOOK}").length - 1).toBe(5);
+    expect(stub.split("${SVC").length - 1).toBe(5);
+    expect(stub.split("${").length - 1).toBe(10);
+    // The stub's `}`s are the template's own plus the single one each name
+    // occurrence carries in `${HOOK}` — the dangling `${SVC` never borrowed
+    // a closer — and the line count never shrank, so no text was swallowed
+    // between the unmatched opener and a misread template `}`.
+    expect(stub.split("}").length - 1).toBe(baselineClosers + 5);
+    expect(stub.split("\n").length).toBe(baselineLines);
+
+    // An unmatched delimiter resolves no slot: the generic signature header
+    // and the fallback hint apply, unchanged.
+    expect(stub).toContain('req.headers.get("x-webhook-signature")');
+    expect(verificationHintFor(name)).toBe(
+      "Verify per the provider's documented signature scheme.",
+    );
+
+    // Through wiring the name matches no catalog provider: it returns in
+    // `skipped` byte-for-byte and never reaches the stub template or disk,
+    // and the vault stays read-only.
+    const recipe: Recipe = { ...STRIPE_RECIPE, providers: [{ name }] };
+    expect(await wirePhantomForRecipe(recipe, { cwd: harness.dir })).toEqual({
+      present: [],
+      missing: [],
+      webhooks: [],
+      skipped: [name],
+    });
+    expect(existsSync(join(harness.dir, ".stack/webhooks"))).toBe(false);
+    expect(harness.callsTo("list")).toEqual([{ cmd: "list", args: ["--json"] }]);
+    expect(harness.callsTo("add")).toEqual([]);
+  });
+
   it("leaves a differently cased provider name unchanged in the stub unless it is explicitly defined", () => {
     // Only the lowercase names are defined; `Stripe` / `GITHUB` must take the
     // generic fallbacks and echo the given casing, never the stripe/github maps.
