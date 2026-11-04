@@ -94,6 +94,32 @@ describe("ai/phantom-wire", () => {
     expect(stub).toContain(`handle${provider[0].toUpperCase()}${provider.slice(1)}Webhook`);
   });
 
+  it("keeps the verification warning ahead of any use of the unverified body", () => {
+    for (const provider of ["stripe", "clerk", "supabase", "github"]) {
+      const stub = webhookStubFor(provider);
+      const bodyRead = stub.indexOf("const body = await req.text()");
+      const warning = stub.indexOf("TODO(security): signature verification is NOT implemented");
+      const unauthenticated = stub.indexOf("unauthenticated, attacker-controlled input");
+      const verifyThenTrust = stub.indexOf("and only then");
+      const ok = stub.indexOf('return new Response("ok"');
+
+      expect(bodyRead).toBeGreaterThan(-1);
+      // The warning lands right after the body is read, before the stub returns.
+      expect(warning).toBeGreaterThan(bodyRead);
+      expect(unauthenticated).toBeGreaterThan(warning);
+      expect(verifyThenTrust).toBeGreaterThan(unauthenticated);
+      expect(ok).toBeGreaterThan(verifyThenTrust);
+      // Header-level notice: the whole example is inert and does not verify.
+      expect(stub).toContain("does not verify signatures");
+      expect(stub).toContain("constant time");
+      expect(stub).toContain("raw body");
+      // Every code line stays commented out, so nothing runs unverified.
+      for (const line of stub.split("\n").filter((l) => l.trim())) {
+        expect(line.startsWith("//")).toBe(true);
+      }
+    }
+  });
+
   it("replaces an existing webhook stub when wiring is repeated", async () => {
     const first = await wirePhantomForRecipe(STRIPE_RECIPE, { cwd: harness.dir });
     const stubPath = first.webhooks[0];
