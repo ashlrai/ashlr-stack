@@ -1057,6 +1057,61 @@ describe("ai/phantom-wire", () => {
     expect(verificationHintFor(provider)).toBe(verificationHintFor("zzq"));
   });
 
+  it("carries a digit preceding a known placeholder through every expansion site", async () => {
+    // Mirror of the trailing-digit case: the digit sits against the token's
+    // opener (`2${provider}`). It must not be read as a `$2` replacement
+    // reference, merged into the preceding text, or dropped, and the token
+    // after it is data — not expanded into the name a second time.
+    const plain = webhookStubFor("zzq");
+    const baseDigits = plain.match(/[0-9]/g)?.length ?? 0;
+    for (const provider of [
+      "pay2${provider}ment",
+      "2${provider}",
+      "a42${provider}b",
+      "1${provider}2",
+    ]) {
+      const stub = webhookStubFor(provider);
+
+      // Raw sites carry the name verbatim, digit and token intact.
+      expect(stub).toContain(`webhook handler stub for ${provider}.`);
+      expect(stub).toContain(`forge a ${provider} webhook.`);
+      expect(stub).toContain(
+        `handle${provider[0].toUpperCase()}${provider.slice(1)}Webhook(req: Request)`,
+      );
+      expect(stub.split(`phantom reveal ${provider.toUpperCase()}_WEBHOOK_SECRET`).length - 1).toBe(
+        2,
+      );
+
+      // The placeholder text survives once per site and the digit stays
+      // flush against its opener: three lowercase sites, two uppercased.
+      for (const run of provider.matchAll(/[0-9]+\$\{provider\}/g)) {
+        expect(stub.split(run[0]).length - 1).toBe(3);
+        expect(stub.split(run[0].toUpperCase()).length - 1).toBe(2);
+      }
+      expect(stub.split("${provider}").length - 1).toBe(3);
+      expect(stub.split("${PROVIDER}").length - 1).toBe(2);
+      // Digits: the template's own plus the name's × five sites.
+      expect(stub.match(/[0-9]/g)?.length).toBe(
+        baseDigits + (provider.match(/[0-9]/g)?.length ?? 0) * 5,
+      );
+      // No self-splice of the token into the name.
+      expect(stub).not.toContain(provider.replaceAll("${provider}", provider));
+    }
+
+    // Through wiring the name matches no catalog provider: it lands in
+    // `skipped` byte-for-byte and never reaches a stub or disk.
+    const provider = "pay2${provider}ment";
+    const recipe: Recipe = { ...STRIPE_RECIPE, providers: [{ name: provider }] };
+    expect(await wirePhantomForRecipe(recipe, { cwd: harness.dir })).toEqual({
+      present: [],
+      missing: [],
+      webhooks: [],
+      skipped: [provider],
+    });
+    expect(existsSync(join(harness.dir, ".stack/webhooks"))).toBe(false);
+    expect(harness.callsTo("add")).toEqual([]);
+  });
+
   it("carries literal braces around a known placeholder through every expansion site", async () => {
     // `{${provider}}` parks literal `{`/`}` bytes flush against the
     // template's own slot name; inside a name the token is data and the
