@@ -2144,6 +2144,25 @@ echo "[]"
     expect(harness.callsTo("add")).toEqual([]);
   });
 
+  it("leaves every occurrence of a repeated slot-named placeholder in a provider name unchanged", () => {
+    // `${provider}` repeated twice, back to back and apart: the token is
+    // named like a real template slot, but arriving inside the name it is
+    // data. Two tokens × five expansion sites → ten occurrences, none
+    // expanded, merged, or dropped. Adjacent tokens are the case most likely
+    // to be collapsed by a global-replace pass.
+    for (const provider of ["a${provider}${provider}b", "x${provider}y${provider}z"]) {
+      const stub = webhookStubFor(provider);
+      const tokens = [...stub.matchAll(/\$\{[^}]*\}/g)].map((m) => m[0]);
+      expect(tokens).toHaveLength(10);
+      // The two secret-key sites uppercase the whole name; the rest keep case.
+      for (const token of tokens) expect(token.toLowerCase()).toBe("${provider}");
+      expect(tokens.filter((t) => t === "${PROVIDER}")).toHaveLength(4);
+      expect(stub).toContain(`${provider.toUpperCase()}_WEBHOOK_SECRET`);
+      expect(stub).toContain(`webhook handler stub for ${provider}.`);
+      expect(stub).toContain(`forge a ${provider} webhook.`);
+    }
+  });
+
   it("substitutes a known placeholder and leaves an unknown placeholder beside it intact", async () => {
     // A known provider (`stripe`) wired next to an unknown placeholder-shaped
     // name (`${HOOK_URL}`), both in one recipe and both as one adjacent name.
