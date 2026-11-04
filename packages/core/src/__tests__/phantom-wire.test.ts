@@ -2264,4 +2264,31 @@ echo "[]"
     }
     expect(harness.callsTo("add")).toEqual([]);
   });
+
+  it("substitutes the provider placeholder amid Unicode text and keeps that text intact", () => {
+    const provider = "stripe";
+    const stub = webhookStubFor(provider);
+
+    // Surrounding Unicode (em dash in the header) is preserved verbatim.
+    expect(stub).toContain("`stack apply` — webhook handler stub for stripe.");
+
+    // A provider name that is itself Unicode is substituted in place and the
+    // fixed text on either side of every occurrence is unchanged.
+    const uni = webhookStubFor("café-日本");
+    expect(uni).toContain("`stack apply` — webhook handler stub for café-日本.");
+    expect(uni).toContain("anyone who can POST");
+    expect(uni).toContain("forge a café-日本 webhook.");
+    expect(uni).not.toContain("stripe");
+
+    // Replacing the placeholder back yields the known stub for the same provider.
+    const sentinel = webhookStubFor("zzq");
+    expect(uni.replaceAll("café-日本", "zzq")).toContain("stub for zzq.");
+    expect(uni.split("\n").length).toBe(sentinel.split("\n").length);
+    expect(
+      uni
+        .replaceAll("café-日本", "zzq")
+        .replaceAll("CAFÉ-日本", "ZZQ")
+        .replaceAll("Café-日本", "Zzq"),
+    ).toBe(sentinel);
+  });
 });
