@@ -12,7 +12,7 @@ import { basename, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { verificationHintFor, webhookStubFor, wirePhantomForRecipe } from "../ai/phantom-wire.ts";
 import { type Recipe, readRecipe, writeRecipe } from "../ai/recipe.ts";
-import { exec, listSecrets } from "../phantom.ts";
+import { __resetPhantomCache, exec, listSecrets } from "../phantom.ts";
 import { type Harness, setupFakePhantom } from "./_harness.ts";
 
 // Every test spawns the fake `phantom` shim (bash + several python3 calls),
@@ -4935,6 +4935,82 @@ describe("webhookStubFor — backslash in replacement text", () => {
       expect(verificationHintFor(name)).toBe(verificationHintFor("zzq"));
     } finally {
       harness.cleanup();
+    }
+  });
+
+  it("keeps a backslash name byte-for-byte in `skipped` when Phantom is not installed", async () => {
+    // With no `phantom` on PATH, wiring takes the PhantomNotInstalledError
+    // branch: every provider name lands in `skipped` through a different push
+    // site than the installed path, and webhook-capable providers still get
+    // stub files (they are just files). The backslash name must reach
+    // `skipped` verbatim — the 0x5C byte intact — and must not poison the
+    // loop for the provider listed after it.
+    const harness = setupFakePhantom();
+    try {
+      // Point PATH at a directory with no `phantom` binary so the install
+      // probe fails deterministically even on machines with a real Phantom
+      // further down their own PATH. cleanup() restores PATH and resets the
+      // detection cache either way.
+      const emptyBin = join(harness.dir, "empty-bin");
+      mkdirSync(emptyBin);
+      process.env.PATH = emptyBin;
+      __resetPhantomCache();
+
+      const name = "pay\\hook";
+      const recipe: Recipe = {
+        id: "backslash-missing-phantom",
+        query: "payments",
+        createdAt: "2026-04-18T00:00:00.000Z",
+        providers: [{ name }, { name: "stripe" }],
+      };
+      const stubPath = join(harness.dir, ".stack/webhooks/stripe.ts");
+      const result = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
+
+      expect(result).toEqual({
+        present: [],
+        missing: [],
+        webhooks: [stubPath],
+        skipped: [name, "stripe"],
+      });
+      expect(result.skipped[0]).toHaveLength(8);
+      expect(result.skipped[0]?.charCodeAt(3)).toBe(0x5c);
+
+      // The known provider's stub still landed, the backslash name produced
+      // no file, and binary resolution threw before any spawn — zero phantom
+      // invocations were ever logged.
+      expect(readFileSync(stubPath, "utf-8")).toContain("stripe-signature");
+      expect(readdirSync(join(harness.dir, ".stack/webhooks"))).toEqual(["stripe.ts"]);
+      expect(harness.calls()).toEqual([]);
+    } finally {
+      harness.cleanup();
+    }
+  });
+
+  it("keeps the backslash literal while a neighboring letter expands under case folding", () => {
+    // `webhookSecretKeyFor` falls through to `provider.toUpperCase()`; `ß`
+    // folds to two characters ("SS"), growing the name at the key sites. The
+    // backslash has no case mapping and must stay a single 0x5C byte at all
+    // five expansion sites — never consumed as an escape, never folded.
+    for (const provider of ["pay\\ß", "\\ß"]) {
+      const stub = webhookStubFor(provider);
+      expect(stub).toContain(`webhook handler stub for ${provider}.`);
+      expect(stub).toContain(`forge a ${provider} webhook.`);
+      // `capitalize` folds only the first code point: `pay\ß` → `Pay\ß`,
+      // `\ß` → `\ß` (the leading backslash cannot fold).
+      expect(stub).toContain(
+        `handle${provider[0].toUpperCase()}${provider.slice(1)}Webhook(req: Request)`,
+      );
+      // The key sites carry the EXPANDED fold: `ß` → `SS` lengthens the name
+      // by one char while the backslash stays put between the folded halves.
+      const key = `${provider.toUpperCase()}_WEBHOOK_SECRET`;
+      expect(key).toContain("\\SS");
+      expect(stub.split(`phantom reveal ${key}`).length - 1).toBe(2);
+      // The un-folded spelling (`ß` surviving at the key site) appears nowhere.
+      expect(stub).not.toContain(
+        `phantom reveal ${provider.toUpperCase().replace("SS", "ß")}_WEBHOOK_SECRET`,
+      );
+      // Exactly one backslash per slot; the template contributes none.
+      expect(stub.split("\\").length - 1).toBe(5);
     }
   });
 });
