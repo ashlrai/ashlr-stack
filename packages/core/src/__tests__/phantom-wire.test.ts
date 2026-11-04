@@ -711,6 +711,26 @@ describe("ai/phantom-wire", () => {
     expect(verificationHintFor("svc\r\nhooks")).toBe(verificationHintFor("zzq"));
   });
 
+  it("keeps a CRLF pair whole beside String.replace patterns and splits only at the pair", () => {
+    // A CRLF next to `$&`, `$$` or `$1` is still plain data: the `$` text and
+    // both line-ending characters all survive, in order, in every slot.
+    const plain = webhookStubFor("x");
+    for (const provider of ["a$&\r\nb", "a\r\n$$b", "$1\r\n$'", "a\r\n$`b"]) {
+      const stub = webhookStubFor(provider);
+      expect(stub).toContain(`webhook handler stub for ${provider}.`);
+      expect(stub).toContain(`forge a ${provider} webhook.`);
+      expect(stub.split("\r\n").length - 1).toBe(5);
+      expect(stub.split("\r").length - 1).toBe(5);
+      expect(stub.split("\n").length - plain.split("\n").length).toBe(5);
+    }
+    // Splitting the stub on CRLF yields the name's two halves around each
+    // pair, with the first half ending the line the pair interrupts.
+    const parts = webhookStubFor("left\r\nright").split("\r\n");
+    expect(parts).toHaveLength(6);
+    expect(parts[0]?.endsWith("webhook handler stub for left")).toBe(true);
+    expect(parts[1]?.startsWith("right.")).toBe(true);
+  });
+
   it("retains a standalone carriage return exactly wherever it lands in a replacement", async () => {
     // A `\r` with no `\n` attached — alone as the whole value, at the edges,
     // or doubled — is data, not a line ending. Each one must land as a lone
