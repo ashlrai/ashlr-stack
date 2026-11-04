@@ -497,6 +497,29 @@ describe("ai/phantom-wire", () => {
     expect(empty.length).toBeGreaterThan(0);
   });
 
+  it("replaces each known slot with an empty string and keeps the text on both sides exact", () => {
+    // Every provider slot sits between fixed text. With an empty provider each
+    // one collapses to "" and the neighbouring characters must close up with
+    // no stray space, default name, or dropped punctuation.
+    const stub = webhookStubFor("");
+    expect(stub).toContain("webhook handler stub for .\n// Fill in the secret retrieval");
+    expect(stub).toContain("anyone who can POST\n//   // to this endpoint can forge a  webhook.\n");
+    expect(stub).toContain("(`phantom reveal _WEBHOOK_SECRET`) and compare in\n");
+    expect(stub).toContain("// export async function handleWebhook(req: Request)");
+    // Both `phantom reveal` sites carry the same blank-keyed name: nothing
+    // else was blanked, and nothing was left filled.
+    expect(stub.split("phantom reveal _WEBHOOK_SECRET").length - 1).toBe(2);
+    // A known provider only adds text at those slots: removing its values
+    // from the known-provider stub yields the empty stub's slots plus the
+    // provider-specific hint and header, which are not placeholders.
+    const known = webhookStubFor("stripe")
+      .replaceAll("STRIPE", "")
+      .replaceAll("Stripe", "")
+      .replaceAll("stripe", "");
+    expect(known).toContain("webhook handler stub for .\n");
+    expect(known).toContain("handleWebhook(req: Request)");
+  });
+
   it("substitutes an empty provider to an empty string without throwing", () => {
     // Every provider-derived slot must collapse to "", not "undefined" and
     // not an exception, and the helpers must agree with the rendered stub.
