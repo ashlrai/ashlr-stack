@@ -147,9 +147,11 @@ export function webhookStubFor(provider: string): string {
 /**
  * One-line pointer to the provider's documented signature scheme, inlined into
  * the stub's TODO so the implementer starts at the right verification API.
+ * Template strings carry no placeholders — each known provider returns a
+ * fixed, self-contained hint.
  * Falls back to a generic instruction for providers added later.
  */
-function verificationHintFor(provider: string): string {
+export function verificationHintFor(provider: string): string {
   switch (provider) {
     case "stripe":
       return "Stripe: `stripe.webhooks.constructEvent` — HMAC-SHA256 with timestamp tolerance.";
