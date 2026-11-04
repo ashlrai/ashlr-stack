@@ -3009,6 +3009,80 @@ echo "[]"
     expect(harness.callsTo("add")).toEqual([]);
   });
 
+  it("leaves an incomplete opening placeholder in a provider name unchanged at every expansion site", async () => {
+    // `${`, `{{`, and `{` open a placeholder only when a closer completes
+    // them; on their own — trailing a name, leading it, stacked, or as the
+    // whole name — each is incomplete text with no slot to fill. Carried as
+    // data, every dangling opener lands byte-for-byte at all five expansion
+    // sites (header, forge line, handler name, two reveal lines). A second
+    // substitution pass over the rendered stub would treat them as syntax
+    // instead: pairing a dangling `${` with the template's own next `}`
+    // (`{ status: 400 }`, `{ status: 200 }`, the closing `// }`) and
+    // swallowing the lines between into a "slot", or resolving the opener
+    // to "" or "undefined".
+    const baseline = webhookStubFor("zzq");
+    expect(baseline).not.toContain("${");
+    const baselineOpeners = baseline.split("{").length - 1;
+    const baselineClosers = baseline.split("}").length - 1;
+    const baselineLines = baseline.split("\n").length;
+
+    for (const name of [
+      "pay${", // trailing bare opener — the name ends inside the slot
+      "${", // the name is nothing but an opener
+      "${HOOK", // opener leading the name, never closed
+      "pay${HOOK${", // an unclosed opener mid-name and another trailing
+      "${${", // stacked openers, still never closed
+      "pay{{HOOK", // `{{`-syntax opening, never closed
+      "{{", // the whole name is a `{{` opener
+      "{HOOK", // a lone `{` opening
+    ]) {
+      const stub = webhookStubFor(name);
+
+      // Raw sites: the header and forge lines carry the name — incomplete
+      // opening included — byte-for-byte.
+      expect(stub).toContain(`webhook handler stub for ${name}.`);
+      expect(stub).toContain(`forge a ${name} webhook.`);
+      // `capitalize(provider)` site: only the name's first letter folds.
+      expect(stub).toContain(`handle${name[0].toUpperCase()}${name.slice(1)}Webhook(req: Request)`);
+      // `webhookSecretKeyFor(provider)` sites: the whole name — opener
+      // included — uppercases in both reveal lines.
+      expect(stub.split(`phantom reveal ${name.toUpperCase()}_WEBHOOK_SECRET`).length - 1).toBe(2);
+
+      // Opener accounting: every `${` and `{` in the stub is one the name
+      // carried into its five expansion sites — none consumed as syntax and
+      // none completed by a template `}`. The `}` count stays exactly the
+      // template's own (no closer was borrowed), and the line count never
+      // shrinks (no text was swallowed between a dangling opener and a
+      // misread closer).
+      expect(stub.split("${").length - 1).toBe((name.split("${").length - 1) * 5);
+      expect(stub.split("{").length - 1).toBe(baselineOpeners + (name.split("{").length - 1) * 5);
+      expect(stub.split("}").length - 1).toBe(baselineClosers);
+      expect(stub.split("\n").length).toBe(baselineLines);
+
+      // An incomplete name resolves no slot: the generic signature header
+      // and the fallback hint apply, unchanged.
+      expect(stub).toContain('req.headers.get("x-webhook-signature")');
+      expect(verificationHintFor(name)).toBe(
+        "Verify per the provider's documented signature scheme.",
+      );
+    }
+
+    // Through wiring every incomplete-opening name matches no catalog
+    // provider: each returns in `skipped` byte-for-byte and never reaches
+    // the stub template or disk, and the vault stays read-only.
+    const names = ["pay${", "${", "pay{{HOOK", "{{"];
+    const recipe: Recipe = { ...STRIPE_RECIPE, providers: names.map((name) => ({ name })) };
+    expect(await wirePhantomForRecipe(recipe, { cwd: harness.dir })).toEqual({
+      present: [],
+      missing: [],
+      webhooks: [],
+      skipped: names,
+    });
+    expect(existsSync(join(harness.dir, ".stack/webhooks"))).toBe(false);
+    expect(harness.callsTo("list")).toEqual([{ cmd: "list", args: ["--json"] }]);
+    expect(harness.callsTo("add")).toEqual([]);
+  });
+
   it("leaves a differently cased provider name unchanged in the stub unless it is explicitly defined", () => {
     // Only the lowercase names are defined; `Stripe` / `GITHUB` must take the
     // generic fallbacks and echo the given casing, never the stripe/github maps.
