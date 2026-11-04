@@ -371,6 +371,23 @@ describe("ai/phantom-wire", () => {
     expect(stub).not.toMatch(/\$\{[^U]/);
   });
 
+  it("replaces known placeholders beside punctuation and keeps that punctuation", () => {
+    const stub = webhookStubFor("stripe");
+
+    // Each placeholder is followed or preceded by punctuation in the template:
+    // `.`, `(`, `:`, backtick, `"`, `);`
+    expect(stub).toContain("webhook handler stub for stripe.");
+    expect(stub).toContain("phantom reveal STRIPE_WEBHOOK_SECRET\n");
+    expect(stub).toContain("(`phantom reveal STRIPE_WEBHOOK_SECRET`)");
+    expect(stub).toContain('req.headers.get("stripe-signature");');
+    expect(stub).toContain("handleStripeWebhook(req: Request)");
+    expect(stub).toContain("forge a stripe webhook.");
+    expect(stub).toContain("// Stripe: `stripe.webhooks.constructEvent`");
+
+    // Nothing is left unreplaced.
+    expect(stub).not.toContain("${");
+  });
+
   it("leaves a repeated unknown placeholder unchanged at every occurrence and site", () => {
     // The same unknown ${UNKNOWN} appears three times in one provider name,
     // so every one of the five expansion sites carries three copies. None
