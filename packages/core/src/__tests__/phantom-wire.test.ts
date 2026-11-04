@@ -1374,6 +1374,27 @@ echo "[]"
     },
   );
 
+  it.each([
+    ["stripe", "STRIPE_WEBHOOK_SECRET"],
+    ["clerk", "CLERK_WEBHOOK_SECRET"],
+    ["supabase", "SUPABASE_WEBHOOK_SECRET"],
+    ["github", "GITHUB_WEBHOOK_SECRET"],
+    ["acme", "ACME_WEBHOOK_SECRET"],
+  ])(
+    "replaces the placeholder that ends the `phantom reveal` line with the %s secret name and keeps the preceding text exact",
+    (provider, secret) => {
+      // `//   phantom reveal ${webhookSecretKeyFor(provider)}` ends its line
+      // with the slot. Everything before it is fixed text, and the
+      // replacement is the last thing on the line, with nothing trailing.
+      const lines = webhookStubFor(provider).split("\n");
+      const at = lines.indexOf(`//   phantom reveal ${secret}`);
+      expect(at).toBeGreaterThan(0);
+      expect(lines[at - 1]).toBe("// The secret lives in Phantom; read it at call time with:");
+      expect(lines[at + 1]).toBe("//");
+      expect(lines[at]).not.toContain("${");
+    },
+  );
+
   it("expands the placeholder at the start of the secret-name template and keeps the following text exact", () => {
     // `webhookSecretKeyFor`'s fallback template is
     // `${provider.toUpperCase()}_WEBHOOK_SECRET` — the slot opens the
