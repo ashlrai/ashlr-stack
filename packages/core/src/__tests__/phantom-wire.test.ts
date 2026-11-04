@@ -1330,6 +1330,89 @@ echo "[]"
     }
   });
 
+  it.each([
+    [
+      "stripe",
+      {
+        cap: "Stripe",
+        secret: "STRIPE_WEBHOOK_SECRET",
+        header: "stripe-signature",
+        hint: "Stripe: `stripe.webhooks.constructEvent` — HMAC-SHA256 with timestamp tolerance.",
+      },
+    ],
+    [
+      "clerk",
+      {
+        cap: "Clerk",
+        secret: "CLERK_WEBHOOK_SECRET",
+        header: "svix-signature",
+        hint: "Clerk (svix): `new Webhook(secret).verify(body, headers)`.",
+      },
+    ],
+    [
+      "supabase",
+      {
+        cap: "Supabase",
+        secret: "SUPABASE_WEBHOOK_SECRET",
+        header: "x-supabase-signature",
+        hint: "Supabase: `x-supabase-signature` per Supabase's documented webhook scheme.",
+      },
+    ],
+    [
+      "github",
+      {
+        cap: "Github",
+        secret: "GITHUB_WEBHOOK_SECRET",
+        header: "x-hub-signature-256",
+        hint: "GitHub: `x-hub-signature-256` is `sha256=` + HMAC-SHA256 of the raw body.",
+      },
+    ],
+  ])(
+    "expands the multiline template for %s byte-for-byte, preserving line breaks and other text",
+    (provider, want) => {
+      // Build the expected stub straight from the source template: each known
+      // `${...}` slot is filled with this provider's value and `\`` escapes
+      // unescape to `` ` `` — everything else (every `\n`, every comment
+      // byte) must come through untouched. Comparing the whole stub to this
+      // independently expanded template proves replacement changed only the
+      // placeholder slots: a dropped line, a CRLF, a reordered comment, or a
+      // modified character anywhere fails the equality.
+      const source = readFileSync(
+        fileURLToPath(new URL("../ai/phantom-wire.ts", import.meta.url)),
+        "utf-8",
+      );
+      const base = source.match(/const base = `([\s\S]*?)`;\n/)?.[1];
+      if (base === undefined) throw new Error("webhook stub template not found in source");
+      // Sanity: the template under test really is multiline with known slots.
+      expect(base.split("\n").length).toBeGreaterThan(1);
+      for (const slot of [
+        "${provider}",
+        "${capitalize(provider)}",
+        "${webhookSecretKeyFor(provider)}",
+        "${signatureHeaderFor(provider)}",
+        "${verificationHintFor(provider)}",
+      ]) {
+        expect(base).toContain(slot);
+      }
+
+      const expected = base
+        .replaceAll("\\`", "`")
+        .replaceAll("${capitalize(provider)}", want.cap)
+        .replaceAll("${webhookSecretKeyFor(provider)}", want.secret)
+        .replaceAll("${signatureHeaderFor(provider)}", want.header)
+        .replaceAll("${verificationHintFor(provider)}", want.hint)
+        // `${provider}` last: it is not a substring of the longer slots, but
+        // filling it first would still be correct only because of that — the
+        // order here never depends on it.
+        .replaceAll("${provider}", provider);
+      expect(expected).not.toContain("${");
+      // Substitution adds no line breaks: slot count differs, line count does not.
+      expect(expected.split("\n")).toHaveLength(base.split("\n").length);
+
+      expect(webhookStubFor(provider)).toBe(expected);
+    },
+  );
+
   it("expands a line holding only a known placeholder to exactly the replacement", () => {
     // These stub lines are a fixed prefix plus one placeholder and nothing
     // else, so after stripping the prefix the remainder must equal the
