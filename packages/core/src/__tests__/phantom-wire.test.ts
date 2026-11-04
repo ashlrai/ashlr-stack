@@ -151,6 +151,50 @@ describe("ai/phantom-wire", () => {
     expect(stub).not.toMatch(/pay\$hook|PAY\$HOOK/);
   });
 
+  it("keeps both signs of every `$$` pair at the edges, doubled, and beside other dollar patterns", async () => {
+    // `$$` is the String.replace replacement escape for one literal `$`:
+    // under replace semantics each pair in the name would halve to a
+    // single sign at every slot (`pay$$$hook` → `pay$$hook`), and `a$$&b`
+    // would come out `a$&b` — the escape consumed, the `&` left plain.
+    // Carried as data, both signs land at all five expansion sites
+    // wherever the pair sits: leading, trailing, doubled in one name,
+    // tripled (pair + lone sign), or beside another `$` pattern.
+    for (const provider of ["$$hook", "hook$$", "a$$b$$c", "pay$$$hook", "a$$&b"]) {
+      const stub = webhookStubFor(provider);
+      expect(stub).toContain(`webhook handler stub for ${provider}.`);
+      expect(stub).toContain(`forge a ${provider} webhook.`);
+      expect(stub).toContain(
+        `handle${provider[0].toUpperCase()}${provider.slice(1)}Webhook(req: Request)`,
+      );
+      expect(stub.split(`phantom reveal ${provider.toUpperCase()}_WEBHOOK_SECRET`).length - 1).toBe(
+        2,
+      );
+
+      // The template contributes no `$` of its own: each sign in the stub
+      // is one the name carried into a slot — none consumed by pair
+      // escaping, none added — and no `${` residue is left behind.
+      expect(stub.split("$").length - 1).toBe((provider.split("$").length - 1) * 5);
+      expect(stub).not.toContain("${");
+    }
+
+    // A `$$` name matches no catalog provider (the lookup compares exact
+    // bytes): through wiring it returns in `skipped` byte-for-byte — both
+    // dollar signs adjacent and intact — and never reaches the stub
+    // template or disk.
+    const name = "stripe$$";
+    const recipe: Recipe = { ...STRIPE_RECIPE, providers: [{ name }] };
+    const result = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
+    expect(result).toEqual({ present: [], missing: [], webhooks: [], skipped: [name] });
+    expect(result.skipped[0]?.charCodeAt(6)).toBe(0x24);
+    expect(result.skipped[0]?.charCodeAt(7)).toBe(0x24);
+    expect(result.skipped[0]?.split("$").length - 1).toBe(2);
+    expect(existsSync(join(harness.dir, ".stack/webhooks"))).toBe(false);
+    expect(harness.callsTo("add")).toEqual([]);
+
+    // The hint is a fixed string: a `$$` name never leaks into it.
+    expect(verificationHintFor("pay$$hook")).toBe(verificationHintFor("zzq"));
+  });
+
   it("inserts a `$'` in a provider name literally at every expansion site", () => {
     // In a String.replace replacement string, `$'` splices in the text AFTER
     // the match — the rest of the template. If expansion ever ran through
