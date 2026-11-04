@@ -2121,6 +2121,38 @@ echo "[]"
     );
   });
 
+  it.each([
+    ["stripe", "STRIPE_WEBHOOK_SECRET", "Stripe"],
+    ["clerk", "CLERK_WEBHOOK_SECRET", "Clerk"],
+  ])(
+    "expands both %s secret-name placeholders and keeps the ordinary text between them exact",
+    (provider, secret, cap) => {
+      // The secret-name placeholder repeats: once in the reveal instruction and
+      // once in the TODO reminder. Slice the stub from the first replacement to
+      // the second; the template text in between must come through byte for
+      // byte, with the provider-name slots inside it expanded and no extra copy
+      // of the secret name.
+      const stub = webhookStubFor(provider);
+      const first = stub.indexOf(secret);
+      const second = stub.indexOf(secret, first + secret.length);
+      expect(first).toBeGreaterThan(-1);
+      expect(second).toBeGreaterThan(first);
+      expect(stub.indexOf(secret, second + secret.length)).toBe(-1);
+
+      const between = stub.slice(first + secret.length, second);
+      expect(between.startsWith("\n//\n// export async function handle")).toBe(true);
+      expect(
+        between.endsWith(
+          "\n//   // Verify over the exact raw body bytes with the webhook secret\n//   // (`phantom reveal ",
+        ),
+      ).toBe(true);
+      expect(between).not.toContain(secret);
+      expect(between).toContain(`handle${cap}Webhook(req: Request)`);
+      expect(between).toContain(`forge a ${provider} webhook.`);
+      expect(between).not.toContain("${");
+    },
+  );
+
   it("keeps punctuation inside an expanded provider name verbatim beside the template's marks", () => {
     // `.`, `(`, and `)` in the name are data, not syntax: they expand
     // byte-for-byte next to the template's own `.`, `(`, and backticks.
