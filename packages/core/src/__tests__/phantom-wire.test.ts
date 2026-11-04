@@ -4670,6 +4670,106 @@ describe("webhookStubFor — backslash in replacement text", () => {
       expect(count(stub)).toBe(count(webhookStubFor("")) + 5 * count(provider));
     }
   });
+
+  it("never decodes escape-shaped backslash sequences in a provider name", () => {
+    // The real mangling risk for a backslash is an unescape pass — a
+    // template-literal re-parse, a JSON round-trip, or a `\\n → newline`
+    // decode — not String.replace (whose replacement-string specials are
+    // `$` sequences only). Carried as data, each sequence lands literally:
+    // the backslash byte and the character bytes after it, at all five
+    // expansion sites, and the decoded form appears nowhere.
+    const names: Array<{ raw: string; decoded: string }> = [
+      { raw: "a\\nb", decoded: "a\nb" }, // \n → line feed
+      { raw: "a\\tb", decoded: "a\tb" }, // \t → tab
+      { raw: "a\\rb", decoded: "a\rb" }, // \r → carriage return
+      { raw: "a\\0b", decoded: "a\0b" }, // \0 → NUL
+      { raw: "a\\x41b", decoded: "aAb" }, // \x41 → A
+      { raw: "a\\u0041b", decoded: "aAb" }, // \u0041 → A
+      { raw: "a\\$b", decoded: "a$b" }, // \$ → $
+      { raw: "a\\\\nb", decoded: "a\\nb" }, // \\ halves to \, leaving a\nb
+    ];
+    for (const { raw, decoded } of names) {
+      const stub = webhookStubFor(raw);
+      expect(stub).toContain(`webhook handler stub for ${raw}.`);
+      expect(stub).toContain(`forge a ${raw} webhook.`);
+      expect(stub).toContain(`handle${raw[0].toUpperCase()}${raw.slice(1)}Webhook(req: Request)`);
+      expect(stub.split(`phantom reveal ${raw.toUpperCase()}_WEBHOOK_SECRET`).length - 1).toBe(2);
+      expect(stub).not.toContain(decoded);
+    }
+
+    // A decoded `\n` would split "a" from "b" across five new line breaks —
+    // one per site — so the line shape must match a plain-name stub exactly.
+    expect(webhookStubFor("a\\nb").split("\n")).toHaveLength(
+      webhookStubFor("zzq").split("\n").length,
+    );
+    // No tab, carriage return, or NUL byte reaches the render at all.
+    for (const raw of ["a\\tb", "a\\rb", "a\\0b"]) {
+      expect(webhookStubFor(raw)).not.toMatch(/[\t\r\0]/);
+    }
+  });
+
+  it("keeps a trailing backslash literal ahead of each following template character", () => {
+    // A name ending in `\` puts the backslash flush against the fixed text
+    // after each slot — `.`, ` `, `W`, `_`. An escape pass would eat it
+    // (`\.` → `.`, `\ ` → ` `, `\W` → `W`, `\_` → `_`); literal substitution
+    // keeps both bytes, backslash then character.
+    const stub = webhookStubFor("pay\\");
+    expect(stub).toContain("webhook handler stub for pay\\.");
+    expect(stub).toContain("forge a pay\\ webhook.");
+    expect(stub).toContain("handlePay\\Webhook(req: Request)");
+    expect(stub.split("phantom reveal PAY\\_WEBHOOK_SECRET").length - 1).toBe(2);
+    // Exactly the five slot backslashes; the template contributes none.
+    expect(stub.split("\\").length - 1).toBe(5);
+    // Had the backslash been eaten, the bare text would appear instead.
+    expect(stub).not.toContain("stub for pay.");
+    expect(stub).not.toContain("handlePayWebhook");
+  });
+
+  it("keeps a leading backslash and a lone-backslash name literal at every slot", () => {
+    // `capitalize` has no case mapping for `\`: a leading backslash lands
+    // mid-identifier unchanged instead of being dropped or folded.
+    const leading = webhookStubFor("\\abc");
+    expect(leading).toContain("webhook handler stub for \\abc.");
+    expect(leading).toContain("forge a \\abc webhook.");
+    expect(leading).toContain("handle\\abcWebhook(req: Request)");
+    expect(leading.split("phantom reveal \\ABC_WEBHOOK_SECRET").length - 1).toBe(2);
+    expect(leading.split("\\").length - 1).toBe(5);
+
+    // The whole name is one backslash: every slot is `\` plus fixed text.
+    const lone = webhookStubFor("\\");
+    expect(lone).toContain("webhook handler stub for \\.");
+    expect(lone).toContain("forge a \\ webhook.");
+    expect(lone).toContain("handle\\Webhook(req: Request)");
+    expect(lone.split("phantom reveal \\_WEBHOOK_SECRET").length - 1).toBe(2);
+    expect(lone.split("\\").length - 1).toBe(5);
+  });
+
+  it("returns a backslash-containing provider name in `skipped` byte-for-byte through wiring", async () => {
+    // `pay\hook` matches no catalog provider (the lookup compares exact
+    // bytes) and no WEBHOOK_PROVIDERS entry, so wiring reports it in
+    // `skipped` untouched — the backslash byte intact — and writes no stub.
+    const harness = setupFakePhantom();
+    try {
+      const name = "pay\\hook";
+      const recipe: Recipe = {
+        id: "backslash",
+        query: "payments",
+        createdAt: "2026-04-18T00:00:00.000Z",
+        providers: [{ name }],
+      };
+      const result = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
+      expect(result).toEqual({ present: [], missing: [], webhooks: [], skipped: [name] });
+      expect(result.skipped[0]).toHaveLength(8);
+      expect(result.skipped[0]?.charCodeAt(3)).toBe(0x5c);
+      expect(existsSync(join(harness.dir, ".stack/webhooks"))).toBe(false);
+      expect(harness.callsTo("list")).toEqual([{ cmd: "list", args: ["--json"] }]);
+      expect(harness.callsTo("add")).toEqual([]);
+      // The hint is a fixed string: a backslash name never leaks into it.
+      expect(verificationHintFor(name)).toBe(verificationHintFor("zzq"));
+    } finally {
+      harness.cleanup();
+    }
+  });
 });
 
 describe("provider name case sensitivity", () => {
