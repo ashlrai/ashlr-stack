@@ -94,6 +94,21 @@ describe("ai/phantom-wire", () => {
     expect(stub).toContain(`handle${provider[0].toUpperCase()}${provider.slice(1)}Webhook`);
   });
 
+  it("preserves a tab character exactly in placeholder replacement text", () => {
+    // Template literal interpolation must carry the tab through untouched —
+    // no escaping, no collapsing to spaces, no stripping.
+    const provider = "pay\tment";
+    const stub = webhookStubFor(provider);
+    expect(stub).toContain("webhook handler stub for pay\tment.");
+    expect(stub).toContain("forge a pay\tment webhook.");
+    expect(stub).toContain("handlePay\tmentWebhook");
+    // The tab is a single 0x09 byte, not two spaces or any surrogate.
+    const tabIndex = stub.indexOf("\t");
+    expect(tabIndex).toBeGreaterThan(-1);
+    // The raw bytes around the tab are exactly the surrounding text.
+    expect(stub.slice(tabIndex - 3, tabIndex + 5)).toBe("pay\tment");
+  });
+
   it("keeps the verification warning ahead of any use of the unverified body", () => {
     for (const provider of ["stripe", "clerk", "supabase", "github"]) {
       const stub = webhookStubFor(provider);
