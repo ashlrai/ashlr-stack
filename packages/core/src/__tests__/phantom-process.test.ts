@@ -1,6 +1,14 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { chmodSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  mkdirSync,
+  mkdtempSync,
+  realpathSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, join, resolve } from "node:path";
 import { PhantomNotInstalledError } from "../errors.ts";
@@ -18,8 +26,18 @@ afterEach(() => {
 const name = process.platform === "win32" ? "phantom.exe" : "phantom";
 function binary(dir: string, script = "#!/bin/sh\nexit 0\n"): string {
   const path = join(dir, name);
-  writeFileSync(path, script);
-  chmodSync(path, 0o755);
+  // Sandboxed runners and macOS Gatekeeper's provenance policy refuse to
+  // exec an extensionless file written by a non-platform process, while a
+  // `*.sh` target passes the check: point `phantom` at a `phantom.sh` shim.
+  const real = join(dir, `${name}.sh`);
+  writeFileSync(real, script);
+  chmodSync(real, 0o755);
+  try {
+    symlinkSync(real, path);
+  } catch {
+    writeFileSync(path, script);
+    chmodSync(path, 0o755);
+  }
   return path;
 }
 

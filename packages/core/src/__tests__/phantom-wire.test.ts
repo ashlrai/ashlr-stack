@@ -1348,6 +1348,38 @@ echo "[]"
     },
   );
 
+  it("expands the placeholder at the start of the secret-name template and keeps the following text exact", () => {
+    // `webhookSecretKeyFor`'s fallback template is
+    // `${provider.toUpperCase()}_WEBHOOK_SECRET` — the slot opens the
+    // template with nothing before it, and the literal `_WEBHOOK_SECRET`
+    // is the text that follows. Expansion must land the uppercased name
+    // flush at position 0: no prefix inserted, no byte of the suffix
+    // eaten, padded, or reordered.
+    const source = readFileSync(
+      fileURLToPath(new URL("../ai/phantom-wire.ts", import.meta.url)),
+      "utf-8",
+    );
+    // Sanity: in the source the template really does start with the slot,
+    // and `_WEBHOOK_SECRET` is the only text after it.
+    const slot = source.match(/`(\$\{provider\.toUpperCase\(\)\})([^`]*)`/);
+    expect(slot?.[1]).toBe("${provider.toUpperCase()}");
+    expect(slot?.[2]).toBe("_WEBHOOK_SECRET");
+
+    // A name outside the four-case switch takes the fallback branch; the
+    // expansion surfaces in the stub's two reveal sites. Everything after
+    // the reveal line's fixed prefix is the slot's output, byte-exact:
+    // the substituted name at the start plus the following text behind it.
+    const stub = webhookStubFor("payco");
+    const revealLine = stub.split("\n").find((l) => l.startsWith("//   phantom reveal "));
+    const key = revealLine?.slice("//   phantom reveal ".length);
+    expect(key).toBe("PAYCO_WEBHOOK_SECRET");
+    expect(key?.startsWith("PAYCO")).toBe(true);
+    expect(key?.slice("PAYCO".length)).toBe("_WEBHOOK_SECRET");
+    expect(stub).toContain("//   // (`phantom reveal PAYCO_WEBHOOK_SECRET`) and compare in");
+    expect(stub.split("phantom reveal PAYCO_WEBHOOK_SECRET").length - 1).toBe(2);
+    expect(stub).not.toContain("${");
+  });
+
   it("gives the secret-name and signature-header placeholders their own replacement per provider", () => {
     // `${webhookSecretKeyFor(provider)}` and `${signatureHeaderFor(provider)}`
     // are separate slots filled by separate lookups. Two providers pin the
