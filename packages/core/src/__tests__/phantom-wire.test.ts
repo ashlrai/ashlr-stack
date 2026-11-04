@@ -2912,6 +2912,44 @@ echo "[]"
     },
   );
 
+  it.each([
+    ["stripe", "Stripe", "STRIPE_WEBHOOK_SECRET", "stripe-signature"],
+    ["clerk", "Clerk", "CLERK_WEBHOOK_SECRET", "svix-signature"],
+    ["supabase", "Supabase", "SUPABASE_WEBHOOK_SECRET", "x-supabase-signature"],
+    ["github", "Github", "GITHUB_WEBHOOK_SECRET", "x-hub-signature-256"],
+    ["acme", "Acme", "ACME_WEBHOOK_SECRET", "x-webhook-signature"],
+  ])(
+    "gives each repeated placeholder of %s its own value on its own line, interleaved with other providers",
+    (name, handler, secret, header) => {
+      // Render every other provider between two renders of this one: each
+      // occurrence must carry this provider's value, and renders must not
+      // share state.
+      const all = ["stripe", "clerk", "supabase", "github", "acme"];
+      const first = webhookStubFor(name);
+      const foreign = all.filter((p) => p !== name).map((p) => ({ p, stub: webhookStubFor(p) }));
+      expect(webhookStubFor(name)).toBe(first);
+
+      const lines = first.split("\n");
+      expect(lines.filter((l) => l.includes(secret))).toEqual([
+        `//   phantom reveal ${secret}`,
+        `//   // (\`phantom reveal ${secret}\`) and compare in`,
+      ]);
+      expect(lines).toContain(
+        `// export async function handle${handler}Webhook(req: Request): Promise<Response> {`,
+      );
+      expect(lines).toContain(`//   const signature = req.headers.get("${header}");`);
+      expect(lines).toContain(`//   // ${verificationHintFor(name)}`);
+      expect(lines).toContain(`//   // to this endpoint can forge a ${name} webhook.`);
+
+      // Different replacement values stay apart: no foreign secret name in
+      // this stub, and this secret name in no foreign stub.
+      for (const { p, stub } of foreign) {
+        expect(first).not.toContain(`${p.toUpperCase()}_WEBHOOK_SECRET`);
+        expect(stub).not.toContain(secret);
+      }
+    },
+  );
+
   it("expands the multiline template line for line, leaving unrelated lines and line breaks identical across providers", () => {
     // Swap each provider's own expansions back to neutral tokens. What remains
     // is the template with its placeholders unexpanded; if expansion touched
