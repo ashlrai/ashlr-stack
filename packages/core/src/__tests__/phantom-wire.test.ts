@@ -686,6 +686,51 @@ describe("ai/phantom-wire", () => {
     expect(verificationHintFor("svc\r\nhooks")).toBe(verificationHintFor("zzq"));
   });
 
+  it("retains a standalone carriage return exactly wherever it lands in a replacement", async () => {
+    // A `\r` with no `\n` attached — alone as the whole value, at the edges,
+    // or doubled — is data, not a line ending. Each one must land as a lone
+    // 0x0D byte at every expansion site: never paired into `\r\n`, never
+    // translated to `\n`, never trimmed, collapsed, or dropped.
+    const plain = webhookStubFor("x");
+    expect(plain).not.toContain("\r");
+    for (const provider of ["\r", "\rx", "x\r", "x\r\rx"]) {
+      const stub = webhookStubFor(provider);
+      expect(stub).toContain(`webhook handler stub for ${provider}.`);
+      expect(stub).toContain(`forge a ${provider} webhook.`);
+      expect(stub).toContain(
+        `handle${provider[0].toUpperCase()}${provider.slice(1)}Webhook(req: Request)`,
+      );
+      expect(stub.split(`phantom reveal ${provider.toUpperCase()}_WEBHOOK_SECRET`).length - 1).toBe(
+        2,
+      );
+
+      // Exactly the name's CRs times the five expansion sites, and each one
+      // stays standalone: the stub's LF count is the plain stub's (no CR was
+      // turned into an LF) and no CR gained an LF neighbor in either order.
+      const crs = provider.split("\r").length - 1;
+      expect(stub.split("\r").length - 1).toBe(crs * 5);
+      expect(stub).not.toContain("\r\n");
+      expect(stub).not.toContain("\n\r");
+      expect(stub.split("\n")).toHaveLength(plain.split("\n").length);
+      for (let i = stub.indexOf("\r"); i !== -1; i = stub.indexOf("\r", i + 1)) {
+        expect(stub.charCodeAt(i)).toBe(0x0d);
+        expect(stub.charCodeAt(i - 1)).not.toBe(0x0a);
+        expect(stub.charCodeAt(i + 1)).not.toBe(0x0a);
+      }
+    }
+
+    // Through wiring a name ending in a lone CR matches no catalog provider
+    // (the lookup compares exact bytes — no trimming): it returns in
+    // `skipped` with the CR byte intact and never reaches a stub or disk.
+    const name = "stripe\r";
+    const recipe: Recipe = { ...STRIPE_RECIPE, providers: [{ name }] };
+    const result = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
+    expect(result).toEqual({ present: [], missing: [], webhooks: [], skipped: [name] });
+    expect(result.skipped[0]?.charCodeAt(6)).toBe(0x0d);
+    expect(existsSync(join(harness.dir, ".stack/webhooks"))).toBe(false);
+    expect(harness.callsTo("add")).toEqual([]);
+  });
+
   it("preserves a single quote in a provider name literally in the stub and in skipped results", async () => {
     // `'` is inert inside the generated `//` comments, and `$'` is the one
     // String.replace replacement pattern (splice in the text after the match)
