@@ -305,6 +305,18 @@ describe("ai/phantom-wire", () => {
     expect(stub.endsWith("// }\n")).toBe(true);
   });
 
+  it("substitutes an empty provider to an empty string without throwing", () => {
+    // Every provider-derived slot must collapse to "", not "undefined" and
+    // not an exception, and the helpers must agree with the rendered stub.
+    expect(() => webhookStubFor("")).not.toThrow();
+    const stub = webhookStubFor("");
+    expect(stub).toContain("webhook handler stub for .\n");
+    expect(stub).toContain("forge a  webhook.");
+    expect(stub).toContain("phantom reveal _WEBHOOK_SECRET");
+    expect(verificationHintFor("")).toBe("Verify per the provider's documented signature scheme.");
+    expect(stub).toContain(`// ${verificationHintFor("")}`);
+  });
+
   it("preserves a tab character exactly in placeholder replacement text", () => {
     // Template literal interpolation must carry the tab through untouched —
     // no escaping, no collapsing to spaces, no stripping.
