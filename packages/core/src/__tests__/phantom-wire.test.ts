@@ -4413,6 +4413,23 @@ echo "[]"
     expect(harness.callsTo("add")).toEqual([]);
   });
 
+  it("preserves Unicode replacement text exactly at every template slot", () => {
+    // Decomposed accents, an astral character, and replacement syntax must
+    // remain data; the template intentionally uppercases two derived slots.
+    const provider = "𐐨-e\u0301-ß-日本-💡-$&-${provider}";
+    const sentinel = "zzqunique";
+    const expected = webhookStubFor(sentinel)
+      .replaceAll("ZZQUNIQUE", () => "𐐀-E\u0301-SS-日本-💡-$&-${PROVIDER}")
+      .replaceAll("Zzqunique", () => "𐐀-e\u0301-ß-日本-💡-$&-${provider}")
+      .replaceAll(sentinel, () => provider);
+    const actual = webhookStubFor(provider);
+
+    expect(actual).toBe(expected);
+    expect(actual).toContain(`webhook handler stub for ${provider}.`);
+    expect(actual).toContain(`forge a ${provider} webhook.`);
+    expect(actual).not.toContain(provider.normalize("NFC"));
+  });
+
   it("substitutes the provider placeholder amid Unicode text and keeps that text intact", () => {
     const provider = "stripe";
     const stub = webhookStubFor(provider);
