@@ -1328,6 +1328,45 @@ echo "[]"
     expect(harness.callsTo("add")).toEqual([]);
   });
 
+  it("leaves every occurrence of a repeated unknown placeholder in a provider name unchanged", async () => {
+    // `${HOOK_URL}` matches none of the template's slots — expansion fills
+    // `provider`, `capitalize(provider)`, `webhookSecretKeyFor(provider)`, and
+    // `signatureHeaderFor(provider)`; a `${...}` arriving inside the name has
+    // no substitution and is pure data. Carried twice, it reaches all five
+    // expansion sites → ten occurrences. A pass that resolved, dropped, or
+    // merged only the first occurrence would change that count, and a
+    // re-substitution pass would leave zero `${` sequences behind.
+    const provider = "pay${HOOK_URL}me${HOOK_URL}nt";
+    const stub = webhookStubFor(provider);
+
+    // Every `${...}` in the stub is one of the ten carried-in occurrences of
+    // the same unknown token — unchanged, byte-for-byte, at every site.
+    const placeholders = [...stub.matchAll(/\$\{[^}]*\}/g)].map((m) => m[0]);
+    expect(placeholders).toHaveLength(10);
+    for (const token of placeholders) expect(token).toBe("${HOOK_URL}");
+
+    // Raw sites: the header and forge lines carry the name, tokens included.
+    expect(stub).toContain("webhook handler stub for pay${HOOK_URL}me${HOOK_URL}nt.");
+    expect(stub).toContain("forge a pay${HOOK_URL}me${HOOK_URL}nt webhook.");
+    // `capitalize(provider)` site: only the name's first letter folds.
+    expect(stub).toContain("handlePay${HOOK_URL}me${HOOK_URL}ntWebhook(req: Request)");
+    // `webhookSecretKeyFor(provider)` sites: uppercasing leaves the already
+    // uppercase token untouched in both reveal lines.
+    expect(stub.split("PAY${HOOK_URL}ME${HOOK_URL}NT_WEBHOOK_SECRET").length - 1).toBe(2);
+
+    // Through wiring the name matches no catalog provider: it returns in
+    // `skipped` byte-for-byte and never reaches the stub template or disk.
+    const recipe: Recipe = { ...STRIPE_RECIPE, providers: [{ name: provider }] };
+    expect(await wirePhantomForRecipe(recipe, { cwd: harness.dir })).toEqual({
+      present: [],
+      missing: [],
+      webhooks: [],
+      skipped: [provider],
+    });
+    expect(existsSync(join(harness.dir, ".stack/webhooks"))).toBe(false);
+    expect(harness.callsTo("add")).toEqual([]);
+  });
+
   it("leaves a differently cased provider name unchanged in the stub unless it is explicitly defined", () => {
     // Only the lowercase names are defined; `Stripe` / `GITHUB` must take the
     // generic fallbacks and echo the given casing, never the stripe/github maps.
