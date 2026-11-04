@@ -4443,6 +4443,73 @@ echo "[]"
     expect(harness.callsTo("add")).toEqual([]);
   });
 
+  it("preserves balanced braces holding ordinary text in a provider name literally at every expansion site", async () => {
+    // `pay{hook}ment` carries a complete `{name}`-style slot: an opener AND
+    // a closer with plain text between and no `$` anywhere. To a `{name}`/
+    // ICU-format or `{{name}}`-mustache pass that token names a slot to
+    // fill — resolve it to a value, strip it to empty, or throw on the
+    // unknown key. Carried as data, every pair lands byte-for-byte at all
+    // five expansion sites (header, forge line, handler name, two reveal
+    // lines): none opened, closed, or resolved against the template's own
+    // `{ status: 400 }` / `{ status: 200 }` / `// }` braces.
+    const baseline = webhookStubFor("zzq");
+    expect(baseline).not.toContain("${");
+    const baselineOpeners = baseline.split("{").length - 1;
+    const baselineClosers = baseline.split("}").length - 1;
+    const baselineLines = baseline.split("\n").length;
+
+    for (const name of [
+      "pay{hook}ment", // a complete `{name}`-style slot mid-name
+      "{svc}", // a brace pair is the whole name
+      "pay{}ment", // an empty pair
+      "a{b}c{d}e", // two pairs in one name
+      "pay{{hook}}ment", // a balanced mustache-shaped pair, still no `$`
+    ]) {
+      const stub = webhookStubFor(name);
+
+      // Raw sites: the header and forge lines carry the name — every pair
+      // and the text inside — byte-for-byte.
+      expect(stub).toContain(`webhook handler stub for ${name}.`);
+      expect(stub).toContain(`forge a ${name} webhook.`);
+      // `capitalize(provider)` site: only the name's first letter folds — a
+      // leading `{` has no case mapping, so `{svc}` arrives unchanged.
+      expect(stub).toContain(`handle${name[0].toUpperCase()}${name.slice(1)}Webhook(req: Request)`);
+      // `webhookSecretKeyFor(provider)` sites: the whole name — braces
+      // included — uppercases in both reveal lines.
+      expect(stub.split(`phantom reveal ${name.toUpperCase()}_WEBHOOK_SECRET`).length - 1).toBe(2);
+
+      // Brace accounting: every `{` and `}` in the stub is either one the
+      // template contributes itself or one the name carried into its five
+      // expansion sites — none stripped as `{name}`-slot or mustache
+      // syntax, none resolved to a value, none added.
+      expect(stub.split("{").length - 1).toBe(baselineOpeners + (name.split("{").length - 1) * 5);
+      expect(stub.split("}").length - 1).toBe(baselineClosers + (name.split("}").length - 1) * 5);
+      expect(stub.split("\n").length).toBe(baselineLines);
+
+      // Carrying no `$`, the name leaves no `${` behind and resolves no
+      // slot: the generic signature header and the fallback hint apply.
+      expect(stub).not.toContain("${");
+      expect(stub).toContain('req.headers.get("x-webhook-signature")');
+      expect(verificationHintFor(name)).toBe(
+        "Verify per the provider's documented signature scheme.",
+      );
+    }
+
+    // Through wiring a brace-carrying name matches no catalog provider (the
+    // lookup compares exact bytes): it returns in `skipped` byte-for-byte —
+    // both braces and the text inside intact — never reaches a stub or
+    // disk, and the vault stays read-only.
+    const name = "pay{hook}ment";
+    const recipe: Recipe = { ...STRIPE_RECIPE, providers: [{ name }] };
+    const result = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
+    expect(result).toEqual({ present: [], missing: [], webhooks: [], skipped: [name] });
+    expect(result.skipped[0]?.charCodeAt(name.indexOf("{"))).toBe(0x7b);
+    expect(result.skipped[0]?.charCodeAt(name.indexOf("}"))).toBe(0x7d);
+    expect(existsSync(join(harness.dir, ".stack/webhooks"))).toBe(false);
+    expect(harness.callsTo("list")).toEqual([{ cmd: "list", args: ["--json"] }]);
+    expect(harness.callsTo("add")).toEqual([]);
+  });
+
   it("leaves a differently cased provider name unchanged in the stub unless it is explicitly defined", () => {
     // Only the lowercase names are defined; `Stripe` / `GITHUB` must take the
     // generic fallbacks and echo the given casing, never the stripe/github maps.
