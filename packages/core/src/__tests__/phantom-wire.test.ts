@@ -2535,6 +2535,48 @@ echo "[]"
     expect(harness.callsTo("add")).toEqual([]);
   });
 
+  it("expands the placeholder at the end of the vault-entry template and keeps the preceding text unchanged", async () => {
+    // `wirePhantomForRecipe` builds each `present`/`missing` entry through the
+    // entry template `${name}:${secret}` — the `${secret}` slot is the
+    // template's last bytes: the provider name, the `:` separator, and the
+    // expanded name all precede it, and nothing follows. Expansion must land
+    // the secret name flush at the end of the entry with the `name:` prose
+    // ahead of it byte-for-byte — no suffix appended, no separator eaten, no
+    // reordering.
+    const source = readFileSync(
+      fileURLToPath(new URL("../ai/phantom-wire.ts", import.meta.url)),
+      "utf-8",
+    );
+    // Sanity: the template under test really ends with the `${secret}` slot —
+    // its `}` sits immediately before the closing backtick.
+    const template = source.match(/`\$\{name\}:\$\{secret\}`/)?.[0];
+    if (template === undefined) throw new Error("vault entry template not found in source");
+    expect(template.endsWith("${secret}`")).toBe(true);
+
+    // A vault holding only some of the provider's secrets exercises both
+    // branches: stored names land in `present`, the rest in `missing`.
+    harness.cleanup();
+    harness = setupFakePhantom({ SUPABASE_URL: "https://x.supabase.co" });
+    const recipe: Recipe = { ...STRIPE_RECIPE, providers: [{ name: "supabase" }] };
+    const result = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
+
+    for (const [entries, secrets] of [
+      [result.present, ["SUPABASE_URL"]],
+      [result.missing, ["SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY"]],
+    ] as const) {
+      expect(entries).toHaveLength(secrets.length);
+      for (const [index, secret] of secrets.entries()) {
+        const entry = entries[index] as string;
+        // The slot's value closes the entry; everything before it is the
+        // fixed `supabase:` prose — expanded name plus `:` — byte-for-byte.
+        expect(entry.endsWith(secret)).toBe(true);
+        expect(entry.slice(0, entry.length - secret.length)).toBe("supabase:");
+        expect(entry).toBe(`supabase:${secret}`);
+      }
+    }
+    expect(harness.callsTo("add")).toEqual([]);
+  });
+
   it("gives the secret-name and signature-header placeholders their own replacement per provider", () => {
     // `${webhookSecretKeyFor(provider)}` and `${signatureHeaderFor(provider)}`
     // are separate slots filled by separate lookups. Two providers pin the
