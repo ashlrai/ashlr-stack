@@ -1188,6 +1188,84 @@ describe("ai/phantom-wire", () => {
     expect(verificationHintFor(name)).toBe(verificationHintFor("zzq"));
   });
 
+  it("substitutes each known slot and leaves an unknown placeholder beside a known slot token unchanged", async () => {
+    // `${provider}` is the template's own slot name — a known placeholder;
+    // `${UNKNOWN}` matches no slot — an unknown placeholder. Parked flush
+    // beside each other inside a name, both arrive as data while the
+    // template's real slots still take their known values: the name at the
+    // name sites, the fallback header and hint at theirs. The pair must
+    // survive byte-for-byte — the unknown token unchanged right beside the
+    // known slot token, neither token re-expanded, split apart, or merged.
+    // Variants put the unknown token before and after the known one,
+    // mid-name and as the whole name.
+    for (const provider of [
+      "${provider}${UNKNOWN}", // pair is the whole name, unknown trailing
+      "${UNKNOWN}${provider}", // pair is the whole name, unknown leading
+      "pay${provider}${UNKNOWN}ment", // pair mid-name
+      "hook${UNKNOWN}${provider}line", // unknown-then-known mid-name
+    ]) {
+      const stub = webhookStubFor(provider);
+      const pair = provider.match(/\$\{[^}]*\}\$\{[^}]*\}/)?.[0] as string;
+
+      // The known slots were substituted: the name lands at the two raw
+      // `${provider}` sites and the `capitalize(provider)` site, and the
+      // whole name uppercases into both `webhookSecretKeyFor(provider)`
+      // sites' `<NAME>_WEBHOOK_SECRET` fallback.
+      expect(stub).toContain(`webhook handler stub for ${provider}.`);
+      expect(stub).toContain(`forge a ${provider} webhook.`);
+      expect(stub).toContain(
+        `handle${provider[0].toUpperCase()}${provider.slice(1)}Webhook(req: Request)`,
+      );
+      expect(stub.split(`phantom reveal ${provider.toUpperCase()}_WEBHOOK_SECRET`).length - 1).toBe(
+        2,
+      );
+      // The remaining known slots took their own known values — once each,
+      // at their own sites, not re-spliced into a name site.
+      expect(stub.split("x-webhook-signature").length - 1).toBe(1);
+      expect(stub.split("Verify per the provider's documented signature scheme.").length - 1).toBe(
+        1,
+      );
+
+      // The adjacent pair survives at every site: exact case at the three
+      // mixed-case sites, uppercased together at the two secret-key sites —
+      // nothing spliced between the tokens, neither token resolved away.
+      expect(stub.split(pair).length - 1).toBe(3);
+      expect(stub.split(pair.toUpperCase()).length - 1).toBe(2);
+      // The unknown token is byte-identical at all five sites (already
+      // uppercase, so even the secret-key sites carry the same bytes); the
+      // known slot token changes case only where the name itself does.
+      expect(stub.split("${UNKNOWN}").length - 1).toBe(5);
+      expect(stub.split("${provider}").length - 1).toBe(3);
+      expect(stub.split("${PROVIDER}").length - 1).toBe(2);
+      // Two tokens per name at five sites — and no second substitution pass
+      // spliced the name into itself or minted new `${` openers.
+      expect(stub.split("${").length - 1).toBe(10);
+      expect(stub).not.toContain(provider.replaceAll("${provider}", provider));
+    }
+
+    // Through wiring a pair-carrying name matches no catalog provider: it
+    // returns in `skipped` byte-for-byte — both tokens and their adjacency
+    // intact — while the known provider beside it in the recipe is
+    // substituted fully and alone writes a stub.
+    const unknown = "pay${provider}${UNKNOWN}ment";
+    const recipe: Recipe = {
+      ...STRIPE_RECIPE,
+      providers: [{ name: "stripe" }, { name: unknown }],
+    };
+    const result = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
+    expect(result.skipped).toEqual([unknown]);
+    expect(result.missing).toEqual(["stripe:STRIPE_SECRET_KEY"]);
+    const stubPath = join(harness.dir, ".stack/webhooks/stripe.ts");
+    expect(result.webhooks).toEqual([stubPath]);
+    const stub = readFileSync(stubPath, "utf-8");
+    expect(stub).toBe(webhookStubFor("stripe"));
+    expect(stub).toContain("STRIPE_WEBHOOK_SECRET");
+    expect(stub).toContain("stripe-signature");
+    expect(stub).not.toContain("${");
+    expect(existsSync(join(harness.dir, ".stack/webhooks", `${unknown}.ts`))).toBe(false);
+    expect(harness.callsTo("add")).toEqual([]);
+  });
+
   it("preserves the leading zeroes of a numeric-looking name at every expansion site", async () => {
     // A name like "007" must stay a string: no Number() coercion (7), no
     // zero-trimming, no reformatting. Digits have no case mapping, so the
