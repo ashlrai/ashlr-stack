@@ -112,6 +112,21 @@ describe("ai/phantom-wire", () => {
     expect(harness.callsTo("add")).toEqual([]);
   });
 
+  it("gives every repeated provider slot in the stub the same supplied value", () => {
+    // The provider shows up verbatim in the title and the forgery warning,
+    // capitalized in the handler name, and as the secret key in both
+    // `phantom reveal` lines. Each site must carry the same supplied value.
+    const stub = webhookStubFor("acme");
+    const count = (needle: string) => stub.split(needle).length - 1;
+    expect(count("webhook handler stub for acme.")).toBe(1);
+    expect(count("forge a acme webhook.")).toBe(1);
+    expect(count("handleAcmeWebhook")).toBe(1);
+    expect(count("phantom reveal ACME_WEBHOOK_SECRET")).toBe(2);
+    // Every occurrence of the value, in any case, is one of the sites above.
+    expect(stub.match(/acme/gi)?.length).toBe(5);
+    expect(stub).not.toMatch(/\$\{|\{provider\}/);
+  });
+
   it("expands a provider name containing dollar signs literally in the webhook stub", () => {
     // `$&`, `$1`, `$$` and `` $` `` are special in String.replace replacement
     // strings; the stub must carry them through verbatim.
