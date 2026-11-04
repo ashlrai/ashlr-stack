@@ -94,6 +94,27 @@ describe("ai/phantom-wire", () => {
     expect(stub).toContain(`handle${provider[0].toUpperCase()}${provider.slice(1)}Webhook`);
   });
 
+  it("inserts a `$'` in a provider name literally at every expansion site", () => {
+    // In a String.replace replacement string, `$'` splices in the text AFTER
+    // the match — the rest of the template. If expansion ever ran through
+    // replace, each site would swallow the trailing stub text instead of
+    // keeping the two characters. Carried as data, `$'` is just the name.
+    const provider = "pay$'hook";
+    const stub = webhookStubFor(provider);
+
+    expect(stub).toContain("webhook handler stub for pay$'hook.");
+    expect(stub).toContain("forge a pay$'hook webhook.");
+    expect(stub).toContain("handlePay$'hookWebhook(req: Request)");
+    expect(stub.split("phantom reveal PAY$'HOOK_WEBHOOK_SECRET").length - 1).toBe(2);
+
+    // One `$'` per expansion site (header, forge, handler name, two reveals);
+    // the template itself has none. Line count matches a plain name, so no
+    // trailing template text was spliced in.
+    expect(stub.split("$'").length - 1).toBe(5);
+    expect(stub).not.toContain("${");
+    expect(stub.split("\n").length).toBe(webhookStubFor("zzqhook").split("\n").length);
+  });
+
   it("carries the `$&` match token in a provider name literally through every expansion site", async () => {
     // In a String.replace replacement string, `$&` splices in the matched
     // substring — `${provider}` here. If expansion ever ran through replace,
