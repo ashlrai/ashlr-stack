@@ -722,6 +722,38 @@ describe("ai/phantom-wire", () => {
     }
   });
 
+  it("keeps a leading and a trailing newline together in every slot, and the template's own edges fixed", () => {
+    // Both edge newlines at once: `\nx\n` must expand to `\nx\n` at all five
+    // slots (upper- and capitalized forms included) with neither trimmed.
+    const provider = "\npay\n";
+    const stub = webhookStubFor(provider);
+    expect(stub).toContain("webhook handler stub for \npay\n.");
+    expect(stub).toContain("forge a \npay\n webhook.");
+    expect(stub).toContain("handle\npay\nWebhook(req: Request)");
+    expect(stub.split("phantom reveal \nPAY\n_WEBHOOK_SECRET").length - 1).toBe(2);
+    expect(stub).not.toContain("\r");
+
+    // Each slot adds exactly two line breaks over the newline-free stub, and
+    // stripping the name's newlines restores that stub exactly.
+    const plain = webhookStubFor("pay");
+    expect(stub.split("\n").length - plain.split("\n").length).toBe(10);
+    // `capitalize` sees `\n` first, so the handler name keeps a lowercase `p`.
+    const restored = stub
+      .replaceAll("\nPAY\n", "PAY")
+      .replaceAll("handle\npay\nWebhook", "handlePayWebhook")
+      .replaceAll("\npay\n", "pay");
+    expect(restored).toBe(plain);
+
+    // The template's own edges do not depend on the name: it never opens with
+    // a newline and always closes with exactly one.
+    for (const p of ["pay", provider, "x\n"]) {
+      const s = webhookStubFor(p);
+      expect(s.startsWith("// Auto-generated")).toBe(true);
+      expect(s.endsWith("// }\n")).toBe(true);
+      expect(s.endsWith("\n\n")).toBe(false);
+    }
+  });
+
   it("carries a tab through every expansion site and the skipped result byte-for-byte", async () => {
     // The name fills five slots: two raw `${provider}` (the generated-by and
     // forge lines), one `capitalize(provider)` (the handler name), and two
