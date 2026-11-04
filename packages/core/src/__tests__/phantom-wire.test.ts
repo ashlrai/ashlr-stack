@@ -271,6 +271,20 @@ describe("ai/phantom-wire", () => {
     expect(hintWithMap).toBe("Verify per the provider's documented signature scheme.");
   });
 
+  it("does not render an unused replacement-map value", () => {
+    // Extra arguments are ignored: the public renderer only accepts a provider.
+    const renderWithExtraMap = webhookStubFor as (
+      provider: string,
+      map: Record<string, string>,
+    ) => string;
+    const unusedValue = "UNUSED_REPLACEMENT_SENTINEL";
+    const stub = renderWithExtraMap("stripe", { unused: unusedValue });
+
+    expect(stub).toBe(webhookStubFor("stripe"));
+    expect(stub).toContain("stripe-signature");
+    expect(stub).not.toContain(unusedValue);
+  });
+
   it("leaves the stub's fixed text unchanged when no value is supplied for its placeholders", () => {
     // phantom-wire has no values map; the stub's only inputs are the provider
     // slots. An empty provider supplies nothing: each slot collapses to the

@@ -35,7 +35,7 @@ The following excerpt is from the generated Stripe example:
   succeeds, without authenticating the request.
 - **Verification reminder:** The [TODO template](../packages/core/src/ai/phantom-wire.ts#L131)
   warns that the body is attacker-controlled and signature verification is not
-  implemented. The [provider hint](../packages/core/src/ai/phantom-wire.ts#L152)
+  implemented. The [provider hint](../packages/core/src/ai/phantom-wire.ts#L154)
   is a starting point, not executable verification. Before deployment, implement
   the provider's current scheme, preserve the required raw body, retrieve the
   secret securely, and reject invalid requests before trusting or acting on the
