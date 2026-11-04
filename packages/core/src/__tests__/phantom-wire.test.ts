@@ -2372,4 +2372,40 @@ echo "[]"
         .replaceAll("Café-日本", "Zzq"),
     ).toBe(sentinel);
   });
+
+  it("returns a template with no placeholders unchanged across renders and through the stub", () => {
+    // `verificationHintFor` is the module's template with no placeholders:
+    // every branch returns one fixed string — the four provider hints and
+    // the fallback — and none carries a `${`-slot of its own, so there is
+    // nothing to expand and no slot a provider name could leak into.
+    // "Unchanged" pins down three ways: the returned text holds no
+    // placeholder-shaped bytes; repeated renders — even interleaved with
+    // stub renders for other names — return the identical string; and
+    // spliced into the outer stub template the hint lands as the whole line
+    // `//   // ` + the template, byte-exact.
+    const noSlots = /\$\{|\{\{|\$[&'`\d]|%[sdif]/;
+    const hints: Record<string, string> = {
+      stripe: "Stripe: `stripe.webhooks.constructEvent` — HMAC-SHA256 with timestamp tolerance.",
+      clerk: "Clerk (svix): `new Webhook(secret).verify(body, headers)`.",
+      supabase: "Supabase: `x-supabase-signature` per Supabase's documented webhook scheme.",
+      github: "GitHub: `x-hub-signature-256` is `sha256=` + HMAC-SHA256 of the raw body.",
+    };
+    for (const [provider, hint] of Object.entries(hints)) {
+      expect(hint).not.toMatch(noSlots);
+      webhookStubFor("unrelated");
+      expect(verificationHintFor(provider)).toBe(hint);
+      expect(verificationHintFor(provider)).toBe(verificationHintFor(provider));
+      expect(webhookStubFor(provider).split("\n")).toContain(`//   // ${hint}`);
+    }
+
+    // The fallback is a no-placeholder template on the same terms: returned
+    // unchanged for any unknown name — placeholder-shaped ones included —
+    // and the stub's hint line is byte-exact.
+    const fallback = verificationHintFor("payco");
+    expect(fallback).toBe("Verify per the provider's documented signature scheme.");
+    expect(fallback).not.toMatch(noSlots);
+    expect(verificationHintFor("${provider}")).toBe(fallback);
+    expect(webhookStubFor("payco").split("\n")).toContain(`//   // ${fallback}`);
+    expect(webhookStubFor("payco")).toBe(webhookStubFor("payco"));
+  });
 });
