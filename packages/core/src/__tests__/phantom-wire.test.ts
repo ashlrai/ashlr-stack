@@ -1446,6 +1446,26 @@ echo "[]"
     expect(harness.callsTo("add")).toEqual([]);
   });
 
+  it("leaves a repeated unknown placeholder in other syntaxes unchanged at every expansion site", () => {
+    // `{{x}}`, `%s`, `$&` and `$1` are placeholder/replacement syntaxes other
+    // than `${...}`. None is a template slot here, so each repeated token must
+    // come through verbatim — in particular `$&` / `$1` must not be read as
+    // String.replace patterns that splice in matched text.
+    for (const token of ["{{HOOK_URL}}", "%s", "$&", "$1"]) {
+      const provider = `ab${token}cd${token}ef`;
+      const stub = webhookStubFor(provider);
+      // Raw sites (header + forge line) carry the name, both tokens included.
+      expect(stub).toContain(`webhook handler stub for ${provider}.`);
+      expect(stub).toContain(`forge a ${provider} webhook.`);
+      // Capitalized site: only the first letter folds.
+      expect(stub).toContain(`handleAb${token}cd${token}efWebhook(req: Request)`);
+      // The template carries no token of its own, and the raw and capitalized
+      // sites are the case-preserving ones: three sites, two tokens each.
+      expect(stub.split(token).length - 1).toBeGreaterThanOrEqual(6);
+      expect(webhookStubFor("abcdef").split(token).length - 1).toBe(0);
+    }
+  });
+
   it("leaves a differently cased provider name unchanged in the stub unless it is explicitly defined", () => {
     // Only the lowercase names are defined; `Stripe` / `GITHUB` must take the
     // generic fallbacks and echo the given casing, never the stripe/github maps.
