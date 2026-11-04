@@ -577,6 +577,58 @@ describe("ai/phantom-wire", () => {
     expect(harness.callsTo("add")).toEqual([]);
   });
 
+  it("preserves single and double quotes in a provider name literally at every expansion site", async () => {
+    // `'` and `"` are both inert inside the generated `//` comments: neither
+    // can end a line comment, and the stub holds no string literal a quote
+    // could escape out of. Interpolation must carry each through untouched —
+    // no `\"`/`\'` escaping, no `&quot;`-style entity encoding, no stripping
+    // or doubling — at all five expansion sites (header line, forge line,
+    // capitalized handler name, two uppercased reveal lines).
+    const baseline = webhookStubFor("zzq");
+    const templateDoubles = baseline.split('"').length - 1;
+    const templateSingles = baseline.split("'").length - 1;
+    for (const provider of ['pay"ment', '"quoted"', "it's", `a'b"c`, `'pay"co'`]) {
+      const stub = webhookStubFor(provider);
+      expect(stub).toContain(`webhook handler stub for ${provider}.`);
+      expect(stub).toContain(`forge a ${provider} webhook.`);
+      expect(stub).toContain(
+        `handle${provider[0].toUpperCase()}${provider.slice(1)}Webhook(req: Request)`,
+      );
+      expect(stub.split(`phantom reveal ${provider.toUpperCase()}_WEBHOOK_SECRET`).length - 1).toBe(
+        2,
+      );
+
+      // The stub holds exactly the template's own quotes plus the ones the
+      // name carried into its five sites — none escaped, encoded, or dropped.
+      expect(stub.split('"').length - 1).toBe(
+        templateDoubles + (provider.split('"').length - 1) * 5,
+      );
+      expect(stub.split("'").length - 1).toBe(
+        templateSingles + (provider.split("'").length - 1) * 5,
+      );
+      expect(stub).not.toContain('\\"');
+      expect(stub).not.toContain("\\'");
+      expect(stub).not.toContain("&quot;");
+      expect(stub).not.toContain("&apos;");
+      expect(stub).not.toContain("&#34;");
+      expect(stub).not.toContain("&#39;");
+      // Every line stays a comment: a quote can never break out into code.
+      expect(stub.split("\n").every((line) => line === "" || line.startsWith("//"))).toBe(true);
+    }
+
+    // Through wiring a name carrying both quote kinds matches no catalog
+    // provider: it returns in `skipped` byte-for-byte — U+0027 then U+0022 —
+    // and never reaches the stub template or disk.
+    const name = `stripe'"`;
+    const recipe: Recipe = { ...STRIPE_RECIPE, providers: [{ name }] };
+    const result = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
+    expect(result).toEqual({ present: [], missing: [], webhooks: [], skipped: [name] });
+    expect(result.skipped[0]?.charCodeAt(6)).toBe(0x27);
+    expect(result.skipped[0]?.charCodeAt(7)).toBe(0x22);
+    expect(existsSync(join(harness.dir, ".stack/webhooks"))).toBe(false);
+    expect(harness.callsTo("add")).toEqual([]);
+  });
+
   it("keeps the verification warning ahead of any use of the unverified body", () => {
     for (const provider of ["stripe", "clerk", "supabase", "github"]) {
       const stub = webhookStubFor(provider);
