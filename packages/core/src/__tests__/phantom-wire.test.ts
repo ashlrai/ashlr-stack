@@ -1136,6 +1136,42 @@ echo "[]"
     expect(stub).not.toContain("${");
   });
 
+  it("leaves an unmatched closing placeholder delimiter in a provider name unchanged", async () => {
+    // `}` ends a `${...}` placeholder only when a `${` opened one; on its own
+    // it is incomplete text. Expansion must carry it byte-for-byte — never
+    // pair it with the template's own braces, consume it as syntax, or
+    // duplicate it.
+    // `}`s the template itself contributes (the `{ status: ... }` literals and
+    // the closing `// }`), measured on a name that carries none.
+    const templateClosers = webhookStubFor("zzq").split("}").length - 1;
+    for (const name of ["pay}ment", "hooks}}", "}"]) {
+      const stub = webhookStubFor(name);
+      expect(stub).toContain(`webhook handler stub for ${name}.`);
+      expect(stub).toContain(`forge a ${name} webhook.`);
+      expect(stub).toContain(`handle${name[0].toUpperCase()}${name.slice(1)}Webhook(req: Request)`);
+      expect(stub).toContain(`phantom reveal ${name.toUpperCase()}_WEBHOOK_SECRET`);
+      // No stray closer completes a placeholder, and the stub holds exactly
+      // the template's own `}`s plus the ones the name carried into its five
+      // expansion sites (header, forge line, handler name, two reveal lines).
+      expect(stub).not.toContain("${");
+      const closers = name.split("}").length - 1;
+      expect(stub.split("}").length - 1).toBe(templateClosers + closers * 5);
+    }
+
+    // Through wiring the same name matches no catalog provider: it returns in
+    // `skipped` byte-for-byte and never reaches the stub template or disk.
+    const name = "stripe}";
+    const recipe: Recipe = { ...STRIPE_RECIPE, providers: [{ name }] };
+    expect(await wirePhantomForRecipe(recipe, { cwd: harness.dir })).toEqual({
+      present: [],
+      missing: [],
+      webhooks: [],
+      skipped: [name],
+    });
+    expect(existsSync(join(harness.dir, ".stack/webhooks"))).toBe(false);
+    expect(harness.callsTo("add")).toEqual([]);
+  });
+
   it("leaves a differently cased provider name unchanged in the stub unless it is explicitly defined", () => {
     // Only the lowercase names are defined; `Stripe` / `GITHUB` must take the
     // generic fallbacks and echo the given casing, never the stripe/github maps.
