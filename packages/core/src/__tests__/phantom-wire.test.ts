@@ -179,6 +179,35 @@ describe("ai/phantom-wire", () => {
     expect(harness.callsTo("add")).toEqual([]);
   });
 
+  it("inserts placeholder-like text in a provider name literally and never expands it again", () => {
+    // The name is data. Text that looks like another slot (`${provider}`,
+    // `{{provider}}`, `%s`, a call to a template helper) must land as typed at
+    // all five sites, not be substituted a second time.
+    for (const provider of [
+      "a${provider}b",
+      "a{{provider}}b",
+      "a%sb",
+      "a${webhookSecretKeyFor(provider)}b",
+      "a${capitalize(provider)}b",
+    ]) {
+      const stub = webhookStubFor(provider);
+      expect(stub).toContain(`webhook handler stub for ${provider}.`);
+      expect(stub).toContain(`forge a ${provider} webhook.`);
+      expect(stub).toContain(
+        `handle${provider[0].toUpperCase()}${provider.slice(1)}Webhook(req: Request)`,
+      );
+      expect(stub.split(`phantom reveal ${provider.toUpperCase()}_WEBHOOK_SECRET`).length - 1).toBe(
+        2,
+      );
+      // Exactly one copy of the placeholder text per site: five in total.
+      const token = provider.slice(1, -1);
+      expect(stub.split(token).length - 1).toBe(3);
+      expect(stub.split(token.toUpperCase()).length - 1).toBe(
+        token === token.toUpperCase() ? 5 : 2,
+      );
+    }
+  });
+
   it("preserves a literal dollar sign in a provider name at every expansion site", async () => {
     // A `$` followed by no special character — not `&`, `` ` ``, `'`, a
     // digit, or another `$` — matches no String.replace replacement
