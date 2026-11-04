@@ -82,7 +82,7 @@ verifier unwritten: it names the comparison to make (raw body bytes, webhook
 secret, constant-time compare, reject before parsing) but nothing in the source
 or its tests runs one. Which documented scheme and tested implementation will
 replace each stub before a handler is deployed? The per-provider hints at
-lines 152-165 are one-line pointers, and the Supabase hint only says "per
+lines 154-167 are one-line pointers, and the Supabase hint only says "per
 Supabase's documented webhook scheme", so that scheme must be confirmed from
 current Supabase documentation rather than from this file.
 
@@ -90,5 +90,5 @@ current Supabase documentation rather than from this file.
 | --------- | ----- | ------ |
 | Verification is a TODO, not code. | 131-135 | `TODO(security): signature verification is NOT` |
 | Required checks are described, not implemented. | 137-140 | `constant time` |
-| Provider hints are pointers, not verifiers. | 152-165 | `function verificationHintFor` |
-| Supabase scheme is unspecified in the source. | 158-159 | `per Supabase's documented webhook scheme` |
+| Provider hints are pointers, not verifiers. | 154-167 | `function verificationHintFor` |
+| Supabase scheme is unspecified in the source. | 160-161 | `per Supabase's documented webhook scheme` |

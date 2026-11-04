@@ -9,7 +9,7 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { webhookStubFor, wirePhantomForRecipe } from "../ai/phantom-wire.ts";
+import { verificationHintFor, webhookStubFor, wirePhantomForRecipe } from "../ai/phantom-wire.ts";
 import { type Recipe, readRecipe, writeRecipe } from "../ai/recipe.ts";
 import { exec, listSecrets } from "../phantom.ts";
 import { type Harness, setupFakePhantom } from "./_harness.ts";
@@ -34,6 +34,24 @@ describe("ai/phantom-wire", () => {
     createdAt: "2026-04-18T00:00:00.000Z",
     providers: [{ name: "stripe" }],
   };
+
+  it("returns the verification hint template unchanged for each known provider", () => {
+    // `verificationHintFor` returns a fixed string per provider with no
+    // placeholders to interpolate. The template must arrive at the caller
+    // byte-for-byte — no mutation, no case folding, no escaping.
+    expect(verificationHintFor("stripe")).toBe(
+      "Stripe: `stripe.webhooks.constructEvent` — HMAC-SHA256 with timestamp tolerance.",
+    );
+    expect(verificationHintFor("clerk")).toBe(
+      "Clerk (svix): `new Webhook(secret).verify(body, headers)`.",
+    );
+    expect(verificationHintFor("supabase")).toBe(
+      "Supabase: `x-supabase-signature` per Supabase's documented webhook scheme.",
+    );
+    expect(verificationHintFor("github")).toBe(
+      "GitHub: `x-hub-signature-256` is `sha256=` + HMAC-SHA256 of the raw body.",
+    );
+  });
 
   it("returns empty results for a recipe with no providers", async () => {
     const recipe: Recipe = { ...STRIPE_RECIPE, providers: [] };
