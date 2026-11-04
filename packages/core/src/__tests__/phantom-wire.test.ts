@@ -296,6 +296,53 @@ describe("ai/phantom-wire", () => {
     expect(stub).toContain("handleBefore${UNKNOWN}afterWebhook(req: Request)");
   });
 
+  it("replaces the last placeholder in the template and leaves all preceding text unchanged", () => {
+    // The final placeholder site is the secret name in the closing
+    // `phantom reveal` line of the TODO. Render with a sentinel, then with a
+    // real name: everything before that site must match once the earlier
+    // sites are normalized, the site itself must hold the new value, and the
+    // fixed tail after it must be identical.
+    const sentinel = "zzqsentinel";
+    const lastSite = (s: string, p: string) =>
+      s.lastIndexOf(`phantom reveal ${p.toUpperCase()}_WEBHOOK_SECRET`);
+
+    for (const provider of ["acme", "pay-hook", "stripe", "github"]) {
+      const marked = webhookStubFor(sentinel);
+      const real = webhookStubFor(provider);
+
+      const markedAt = lastSite(marked, sentinel);
+      const realAt = lastSite(real, provider);
+      expect(markedAt).toBeGreaterThan(0);
+      expect(realAt).toBeGreaterThan(0);
+
+      // The sentinel is gone from the real render: every site was replaced.
+      expect(real).not.toContain(sentinel);
+
+      // The fixed tail after the last placeholder is byte-identical.
+      const tail = (s: string, at: number, p: string) =>
+        s.slice(at + `phantom reveal ${p.toUpperCase()}_WEBHOOK_SECRET`.length);
+      expect(tail(real, realAt, provider)).toBe(tail(marked, markedAt, sentinel));
+      expect(tail(real, realAt, provider).endsWith("// }\n")).toBe(true);
+
+      // Text before the last site is the sentinel render with only
+      // placeholder values swapped. Known-provider secret names differ from
+      // the `<NAME>_WEBHOOK_SECRET` fallback, so compare the prose lines that
+      // carry no placeholder.
+      const proseOf = (s: string, at: number) =>
+        s
+          .slice(0, at)
+          .split("\n")
+          .filter((line) => !line.includes(provider) && !line.includes(sentinel))
+          .filter(
+            (line) =>
+              !/WEBHOOK_SECRET|signature|[Ww]ebhook\(|verif|Stripe|Clerk|Supabase|GitHub/.test(
+                line,
+              ),
+          );
+      expect(proseOf(real, realAt)).toEqual(proseOf(marked, markedAt));
+    }
+  });
+
   it("inserts placeholder-like text in a provider name literally and never expands it again", () => {
     // The name is data. Text that looks like another slot (`${provider}`,
     // `{{provider}}`, `%s`, a call to a template helper) must land as typed at
