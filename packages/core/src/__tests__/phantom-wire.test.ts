@@ -174,6 +174,46 @@ describe("ai/phantom-wire", () => {
     expect(harness.callsTo("add")).toEqual([]);
   });
 
+  it("carries a carriage return through every expansion site and the skipped result byte-for-byte", async () => {
+    // U+000D in the name is data, not a line ending: interpolation must
+    // carry it through untouched — no conversion to `\n`, no `\r\n`
+    // pairing, no stripping. The name fills five slots: two raw
+    // `${provider}` (the generated-by and forge lines), one
+    // `capitalize(provider)` (the handler name), and two
+    // `webhookSecretKeyFor(provider)`, which uppercases the whole name —
+    // U+000D has no case mapping, so the CR survives there too.
+    const provider = "svc\rhooks";
+    const stub = webhookStubFor(provider);
+
+    expect(stub).toContain("webhook handler stub for svc\rhooks.");
+    expect(stub).toContain("forge a svc\rhooks webhook.");
+    expect(stub).toContain("handleSvc\rhooksWebhook(req: Request)");
+    expect(stub.split("phantom reveal SVC\rHOOKS_WEBHOOK_SECRET").length - 1).toBe(2);
+
+    // The template contributes no `\r` of its own, so the stub's carriage
+    // returns are exactly the five the name carried into its sites — each a
+    // lone 0x0D byte, never a `\r\n` pair or a translated `\n` (the `\n`
+    // count stays identical to a name carrying no CR).
+    expect(webhookStubFor("zzq")).not.toContain("\r");
+    expect(stub.split("\r").length - 1).toBe(5);
+    expect(stub).not.toContain("\r\n");
+    expect(stub.split("\n")).toHaveLength(webhookStubFor("zzq").split("\n").length);
+    const crIndex = stub.indexOf("\r");
+    expect(stub.charCodeAt(crIndex)).toBe(0x0d);
+    expect(stub.slice(crIndex - 3, crIndex + 6)).toBe("svc\rhooks");
+
+    // Through wiring the name matches no catalog provider: it returns in
+    // `skipped` with the CR byte intact and never reaches a stub or disk,
+    // where a `\r` would end the `//` comment line for tools that treat it
+    // as a line terminator.
+    const recipe: Recipe = { ...STRIPE_RECIPE, providers: [{ name: provider }] };
+    const result = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
+    expect(result).toEqual({ present: [], missing: [], webhooks: [], skipped: [provider] });
+    expect(result.skipped[0]?.charCodeAt(3)).toBe(0x0d);
+    expect(existsSync(join(harness.dir, ".stack/webhooks"))).toBe(false);
+    expect(harness.callsTo("add")).toEqual([]);
+  });
+
   it("preserves a single quote in a provider name literally in the stub and in skipped results", async () => {
     // `'` is inert inside the generated `//` comments, and `$'` is the one
     // String.replace replacement pattern (splice in the text after the match)
