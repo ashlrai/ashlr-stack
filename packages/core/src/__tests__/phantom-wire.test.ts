@@ -1282,6 +1282,57 @@ echo "[]"
     expect(harness.callsTo("add")).toEqual([]);
   });
 
+  it("keeps two adjacent known placeholders in a provider name in order without added characters", async () => {
+    // `${provider}` and `${webhookSecretKeyFor(provider)}` are both real slots
+    // in the template; carried adjacent inside a provider name they are data,
+    // not one double-width placeholder. Expansion must return the pair exactly
+    // as written — `${provider}` first, then `${webhookSecretKeyFor(provider)}`
+    // — with nothing inserted between them, no reordering, no merge into a
+    // single slot, and no second pass resolving them.
+    const provider = "pay${provider}${webhookSecretKeyFor(provider)}ment";
+    const stub = webhookStubFor(provider);
+
+    // Both values appear adjacent, in order, at every raw site; anything
+    // added between them (or a swap) breaks these exact substrings.
+    expect(stub).toContain(
+      "webhook handler stub for pay${provider}${webhookSecretKeyFor(provider)}ment.",
+    );
+    expect(stub).toContain("forge a pay${provider}${webhookSecretKeyFor(provider)}ment webhook.");
+    // `capitalize(provider)` site: only the name's first letter folds; the
+    // adjacent pair carries through untouched right after it.
+    expect(stub).toContain(
+      "handlePay${provider}${webhookSecretKeyFor(provider)}mentWebhook(req: Request)",
+    );
+    // `webhookSecretKeyFor(provider)` sites: the pair is uppercased with the
+    // rest of the name — still adjacent, still in order — in both reveal lines.
+    expect(
+      stub.split("PAY${PROVIDER}${WEBHOOKSECRETKEYFOR(PROVIDER)}MENT_WEBHOOK_SECRET").length - 1,
+    ).toBe(2);
+
+    // Exactly ten `${` sequences survive — two tokens at the name's five
+    // expansion sites. Merging the pair into one slot, dropping a token, or
+    // resolving them on a second pass would change that count; the swapped
+    // order never appears.
+    expect(stub.split("${").length - 1).toBe(10);
+    expect(stub).not.toContain("${webhookSecretKeyFor(provider)}${provider}");
+
+    // The name's other slots still take the generic fallbacks.
+    expect(stub).toContain('req.headers.get("x-webhook-signature")');
+    expect(stub).toContain("Verify per the provider's documented signature scheme.");
+
+    // Through wiring the same name matches no catalog provider: it returns in
+    // `skipped` byte-for-byte and never reaches the stub template or disk.
+    const recipe: Recipe = { ...STRIPE_RECIPE, providers: [{ name: provider }] };
+    expect(await wirePhantomForRecipe(recipe, { cwd: harness.dir })).toEqual({
+      present: [],
+      missing: [],
+      webhooks: [],
+      skipped: [provider],
+    });
+    expect(existsSync(join(harness.dir, ".stack/webhooks"))).toBe(false);
+    expect(harness.callsTo("add")).toEqual([]);
+  });
+
   it("leaves a differently cased provider name unchanged in the stub unless it is explicitly defined", () => {
     // Only the lowercase names are defined; `Stripe` / `GITHUB` must take the
     // generic fallbacks and echo the given casing, never the stripe/github maps.
