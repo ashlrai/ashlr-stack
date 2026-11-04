@@ -3613,6 +3613,90 @@ echo "[]"
     }
   });
 
+  it("carries a known placeholder separated from another occurrence by spaces through every expansion site", async () => {
+    // `${provider}` is the template's own slot name; arriving inside a name
+    // it is data. Two copies of the token with a space run between them
+    // must survive expansion together: the template's slots are all
+    // substituted with the name, both occurrences land at every site, and
+    // the spaces remain — never collapsed to one, stripped, or spliced
+    // around by a second substitution pass re-expanding the tokens.
+    // Variants put the spaced pair mid-name and as the whole name, with a
+    // single space, a doubled run, and a tripled run beside edge spaces.
+    const plain = webhookStubFor("zzq");
+    const plainSpaces = plain.split(" ").length - 1;
+    for (const provider of [
+      "pay${provider} ${provider}ment",
+      "${provider} ${provider}",
+      "${provider}  ${provider}",
+      "svc ${provider}   ${provider} hook",
+    ]) {
+      const stub = webhookStubFor(provider);
+      // The run under test: first occurrence, the space run, second occurrence.
+      const pair = provider.match(/\$\{provider\} +\$\{provider\}/)?.[0] as string;
+
+      // The known slots were substituted: the name — both occurrences,
+      // spaces and all — lands verbatim at the two raw `${provider}` sites
+      // and at the `capitalize(provider)` site (a leading `$` or space has
+      // no case mapping, so only a letter first byte folds).
+      expect(stub).toContain(`webhook handler stub for ${provider}.`);
+      expect(stub).toContain(`forge a ${provider} webhook.`);
+      expect(stub).toContain(
+        `handle${provider[0].toUpperCase()}${provider.slice(1)}Webhook(req: Request)`,
+      );
+      // `webhookSecretKeyFor(provider)` sites: the whole name — both
+      // occurrences and the spaces between them — uppercases into both
+      // reveal lines' `<NAME>_WEBHOOK_SECRET` fallback.
+      expect(stub.split(`phantom reveal ${provider.toUpperCase()}_WEBHOOK_SECRET`).length - 1).toBe(
+        2,
+      );
+
+      // Both occurrences land with their space run intact at every site:
+      // the pair appears exact-case at the three mixed-case sites and
+      // uppercased — the spaces untouched, having no case mapping — at
+      // the two secret-key sites.
+      expect(stub.split(pair).length - 1).toBe(3);
+      expect(stub.split(pair.toUpperCase()).length - 1).toBe(2);
+      // Two tokens per name × five sites: lowercase at the raw and handler
+      // sites, uppercased at the reveal sites. No `${` is minted or lost.
+      expect(stub.split("${provider}").length - 1).toBe(6);
+      expect(stub.split("${PROVIDER}").length - 1).toBe(4);
+      expect(stub.split("${").length - 1).toBe(10);
+
+      // The spaces remain: every 0x20 between the pair's occurrences is one
+      // the name carried. Stub spaces are the template's own plus the
+      // name's × five sites — none collapsed, stripped, or turned into
+      // line breaks.
+      expect(stub.split(" ").length - 1).toBe(plainSpaces + (provider.split(" ").length - 1) * 5);
+      expect(stub.split("\n").length).toBe(plain.split("\n").length);
+      // Byte-level: the gap between the pair's `}` and `${` holds only
+      // 0x20 bytes — nothing folded to or padded with another character.
+      const at = stub.indexOf(pair);
+      expect(at).toBeGreaterThan(-1);
+      const gapStart = at + "${provider}".length;
+      for (let i = gapStart; i < at + pair.length - "${provider}".length; i++) {
+        expect(stub.charCodeAt(i)).toBe(0x20);
+      }
+      // No self-splice: re-expanding each token would nest the name inside
+      // itself — `${provider} ${provider}` → a four-token run.
+      expect(stub).not.toContain(provider.replaceAll("${provider}", provider));
+    }
+
+    // Through wiring a name carrying the spaced pair matches no catalog
+    // provider (the lookup compares exact bytes): it returns in `skipped`
+    // byte-for-byte — both occurrences and the space between them intact —
+    // and never reaches a stub or disk.
+    const provider = "pay${provider} ${provider}ment";
+    const recipe: Recipe = { ...STRIPE_RECIPE, providers: [{ name: provider }] };
+    const result = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
+    expect(result).toEqual({ present: [], missing: [], webhooks: [], skipped: [provider] });
+    expect(result.skipped[0]?.charCodeAt(provider.indexOf("} ") + 1)).toBe(0x20);
+    expect(existsSync(join(harness.dir, ".stack/webhooks"))).toBe(false);
+    expect(harness.callsTo("add")).toEqual([]);
+
+    // The hint is a fixed string: a spaced-pair name never leaks into it.
+    expect(verificationHintFor(provider)).toBe(verificationHintFor("zzq"));
+  });
+
   it("keeps a known placeholder used as the whole replacement text literal at every expansion site", async () => {
     // Each of the template's slots is a known placeholder: `${provider}`,
     // `${capitalize(provider)}`, `${webhookSecretKeyFor(provider)}`,
