@@ -166,6 +166,31 @@ describe("ai/phantom-wire", () => {
     expect(stub.slice(tabIndex - 3, tabIndex + 5)).toBe("pay\tment");
   });
 
+  it("preserves a newline exactly in placeholder replacement text", () => {
+    // Direct template call: the replacement is spliced in verbatim, so the
+    // newline stays a single 0x0A byte — no escaping to `\\n`, no `\r\n`,
+    // no collapsing to a space, no stripping.
+    const provider = "pay\nment";
+    const stub = webhookStubFor(provider);
+    expect(stub).toContain("webhook handler stub for pay\nment.");
+    expect(stub).toContain("forge a pay\nment webhook.");
+    expect(stub).toContain("handlePay\nmentWebhook");
+    expect(stub).not.toContain("\r");
+    expect(stub).not.toContain("\\n");
+    // Five slots carry the name: two raw `${provider}`, one capitalized, and
+    // two upper-cased secret names. Each adds exactly one line break over the
+    // newline-free stub.
+    const plain = webhookStubFor("payment");
+    expect(stub.split("\n").length - plain.split("\n").length).toBe(5);
+    // Joining the split pieces restores the plain stub, so nothing but the
+    // newline itself differs.
+    const restored = stub
+      .replaceAll("PAY\nMENT", "PAYMENT")
+      .replaceAll("Pay\nment", "Payment")
+      .replaceAll("pay\nment", "payment");
+    expect(restored).toBe(plain);
+  });
+
   it("carries a tab through every expansion site and the skipped result byte-for-byte", async () => {
     // The name fills five slots: two raw `${provider}` (the generated-by and
     // forge lines), one `capitalize(provider)` (the handler name), and two
