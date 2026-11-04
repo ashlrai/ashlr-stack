@@ -109,6 +109,35 @@ describe("ai/phantom-wire", () => {
     expect(stub.slice(tabIndex - 3, tabIndex + 5)).toBe("pay\tment");
   });
 
+  it("carries a tab through every expansion site and the skipped result byte-for-byte", async () => {
+    // The name fills five slots: two raw `${provider}` (the generated-by and
+    // forge lines), one `capitalize(provider)` (the handler name), and two
+    // `webhookSecretKeyFor(provider)`, which uppercases the whole name —
+    // U+0009 has no case mapping, so the tab must survive there too.
+    const provider = "svc\thooks";
+    const stub = webhookStubFor(provider);
+
+    expect(stub).toContain("webhook handler stub for svc\thooks.");
+    expect(stub).toContain("forge a svc\thooks webhook.");
+    expect(stub).toContain("handleSvc\thooksWebhook(req: Request)");
+    expect(stub.split("phantom reveal SVC\tHOOKS_WEBHOOK_SECRET").length - 1).toBe(2);
+
+    // The template contributes no tabs of its own, so the stub's tabs are
+    // exactly the five the name carried into its sites — none escaped,
+    // collapsed to spaces, duplicated, or dropped.
+    expect(webhookStubFor("zzq")).not.toContain("\t");
+    expect(stub.split("\t").length - 1).toBe(5);
+
+    // Through wiring the name matches no catalog provider: it returns in
+    // `skipped` with the tab byte intact and never reaches a stub or disk.
+    const recipe: Recipe = { ...STRIPE_RECIPE, providers: [{ name: provider }] };
+    const result = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
+    expect(result).toEqual({ present: [], missing: [], webhooks: [], skipped: [provider] });
+    expect(result.skipped[0]?.charCodeAt(3)).toBe(0x09);
+    expect(existsSync(join(harness.dir, ".stack/webhooks"))).toBe(false);
+    expect(harness.callsTo("add")).toEqual([]);
+  });
+
   it("preserves a single quote in a provider name literally in the stub and in skipped results", async () => {
     // `'` is inert inside the generated `//` comments, and `$'` is the one
     // String.replace replacement pattern (splice in the text after the match)
