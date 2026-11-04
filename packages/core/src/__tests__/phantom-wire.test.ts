@@ -179,6 +179,14 @@ describe("ai/phantom-wire", () => {
     expect(harness.callsTo("add")).toEqual([]);
   });
 
+  it("preserves an unknown placeholder and surrounding ordinary text in the stub", () => {
+    const stub = webhookStubFor("before${UNKNOWN}after");
+
+    expect(stub).toContain("webhook handler stub for before${UNKNOWN}after.");
+    expect(stub).toContain("forge a before${UNKNOWN}after webhook.");
+    expect(stub).toContain("handleBefore${UNKNOWN}afterWebhook(req: Request)");
+  });
+
   it("inserts placeholder-like text in a provider name literally and never expands it again", () => {
     // The name is data. Text that looks like another slot (`${provider}`,
     // `{{provider}}`, `%s`, a call to a template helper) must land as typed at
