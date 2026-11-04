@@ -127,6 +127,42 @@ describe("ai/phantom-wire", () => {
     expect(stub).not.toMatch(/\$\{|\{provider\}/);
   });
 
+  it("fills two known providers' placeholders with their own values and never each other's", () => {
+    // Each known provider maps to its own secret name, signature header,
+    // handler name, and verification hint. Rendering one must not pick up
+    // the other's values.
+    const cases = [
+      {
+        provider: "stripe",
+        secret: "STRIPE_WEBHOOK_SECRET",
+        header: "stripe-signature",
+        handler: "handleStripeWebhook",
+      },
+      {
+        provider: "github",
+        secret: "GITHUB_WEBHOOK_SECRET",
+        header: "x-hub-signature-256",
+        handler: "handleGithubWebhook",
+      },
+    ];
+    for (const [self, other] of [
+      [cases[0], cases[1]],
+      [cases[1], cases[0]],
+    ] as const) {
+      const stub = webhookStubFor(self.provider);
+      expect(stub).toContain(`webhook handler stub for ${self.provider}.`);
+      expect(stub).toContain(`phantom reveal ${self.secret}`);
+      expect(stub).toContain(`req.headers.get("${self.header}")`);
+      expect(stub).toContain(self.handler);
+      expect(stub).toContain(verificationHintFor(self.provider));
+      expect(stub).not.toContain(other.provider);
+      expect(stub).not.toContain(other.secret);
+      expect(stub).not.toContain(other.header);
+      expect(stub).not.toContain(other.handler);
+      expect(stub).not.toContain(verificationHintFor(other.provider));
+    }
+  });
+
   it("expands a provider name containing dollar signs literally in the webhook stub", () => {
     // `$&`, `$1`, `$$` and `` $` `` are special in String.replace replacement
     // strings; the stub must carry them through verbatim.
