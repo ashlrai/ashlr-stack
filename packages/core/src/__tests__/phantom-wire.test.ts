@@ -1034,6 +1034,37 @@ echo "[]"
     expect(lines.indexOf("// The secret lives in Phantom; read it at call time with:")).toBe(6);
   });
 
+  it("returns the template's placeholder-free lines unchanged for every provider", () => {
+    // The `base` template literal mixes `${...}` placeholder slots with static
+    // comment text. A line carrying no `${` is the template without
+    // placeholders: expansion must return it unchanged — same bytes, in the
+    // same order — no matter which provider name fills the slots. Escaped
+    // backticks in the source (\`) unescape to ` in the literal's value.
+    const source = readFileSync(
+      fileURLToPath(new URL("../ai/phantom-wire.ts", import.meta.url)),
+      "utf-8",
+    );
+    const base = source.match(/const base = `([\s\S]*?)`;\n/)?.[1];
+    if (base === undefined) throw new Error("webhook stub template not found in source");
+    const staticLines = base
+      .split("\n")
+      .filter((line) => !line.includes("${"))
+      .map((line) => line.replaceAll("\\`", "`"));
+    // 26 template lines total; 7 carry placeholders, leaving 19 static lines.
+    expect(staticLines).toHaveLength(19);
+
+    for (const provider of ["stripe", "clerk", "supabase", "github"]) {
+      const stubLines = webhookStubFor(provider).split("\n");
+      expect(stubLines).toHaveLength(26); // 25 comment lines + trailing "" after the final \n
+      let at = 0;
+      for (const line of staticLines) {
+        const found = stubLines.indexOf(line, at);
+        expect(found).toBeGreaterThanOrEqual(at);
+        at = found + 1;
+      }
+    }
+  });
+
   it("expands a line holding only a known placeholder to exactly the replacement", () => {
     // These stub lines are a fixed prefix plus one placeholder and nothing
     // else, so after stripping the prefix the remainder must equal the
