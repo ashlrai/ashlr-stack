@@ -5106,4 +5106,21 @@ describe("webhookStubFor — empty template", () => {
     expect(splice("", "stripe")).toBe("");
     expect(splice("", "")).toBe("");
   });
+
+  it("substitutes the template's final placeholder and keeps the text before it intact", () => {
+    // The last `${...}` in the template is the webhook secret key inside the
+    // closing "Verify over the exact raw body bytes" paragraph.
+    for (const [provider, key] of [
+      ["stripe", "STRIPE_WEBHOOK_SECRET"],
+      ["acme", "ACME_WEBHOOK_SECRET"],
+    ] as const) {
+      const lines = webhookStubFor(provider).split("\n");
+      const idx = lines.findLastIndex((l) => l.includes("(`phantom reveal"));
+      expect(lines[idx]).toBe(`//   // (\`phantom reveal ${key}\`) and compare in`);
+      expect(lines[idx - 1]).toBe(
+        "//   // Verify over the exact raw body bytes with the webhook secret",
+      );
+      expect(lines[idx]).not.toContain("${");
+    }
+  });
 });
