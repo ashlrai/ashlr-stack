@@ -2535,6 +2535,54 @@ echo "[]"
     expect(harness.callsTo("add")).toEqual([]);
   });
 
+  it.each([
+    ["stripe", "STRIPE_WEBHOOK_SECRET"],
+    ["clerk", "CLERK_WEBHOOK_SECRET"],
+    ["supabase", "SUPABASE_WEBHOOK_SECRET"],
+    ["github", "GITHUB_WEBHOOK_SECRET"],
+    ["zzq", "ZZQ_WEBHOOK_SECRET"],
+  ])(
+    "expands the placeholder at the start of the verification-hint line for %s and keeps the following prose unchanged",
+    (provider, secret) => {
+      // The `base` template's hint line is `//   // ${verificationHintFor(provider)}`:
+      // after the `//   // ` comment prefix the slot is the first thing on the
+      // line, and the template's fixed "Verify over ..." closing paragraph is
+      // the prose that follows it. Expansion must land the provider's hint
+      // flush against the prefix and leave every following line untouched —
+      // including the reveal reminder, whose own `${webhookSecretKeyFor(provider)}`
+      // slot fills with the provider's secret name.
+      const source = readFileSync(
+        fileURLToPath(new URL("../ai/phantom-wire.ts", import.meta.url)),
+        "utf-8",
+      );
+      // Sanity: in the source the line's prose really does start with the
+      // slot — the comment prefix, then the placeholder, then end of line.
+      expect(source).toContain("//   // ${verificationHintFor(provider)}\n");
+
+      const hint = verificationHintFor(provider);
+      const lines = webhookStubFor(provider).split("\n");
+      const idx = lines.indexOf(`//   // ${hint}`);
+
+      // The slot's line byte-for-byte: the fixed `//   // ` prefix, then the
+      // expanded hint, then end of line — nothing before or between them.
+      expect(idx).toBeGreaterThan(-1);
+      expect(lines[idx]).toBe(`//   // ${hint}`);
+
+      // Every line after the slot is the template's fixed closing text,
+      // identical for all providers except the reveal reminder's own
+      // secret-name value.
+      expect(lines.slice(idx + 1)).toEqual([
+        "//   // Verify over the exact raw body bytes with the webhook secret",
+        `//   // (\`phantom reveal ${secret}\`) and compare in`,
+        "//   // constant time; reject missing or invalid signatures, and only then",
+        "//   // parse, trust, or act on the body.",
+        '//   return new Response("ok", { status: 200 });',
+        "// }",
+        "",
+      ]);
+    },
+  );
+
   it("gives the secret-name and signature-header placeholders their own replacement per provider", () => {
     // `${webhookSecretKeyFor(provider)}` and `${signatureHeaderFor(provider)}`
     // are separate slots filled by separate lookups. Two providers pin the
