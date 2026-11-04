@@ -1005,6 +1005,52 @@ echo "[]"
     expect(github).not.toContain("stripe-signature");
   });
 
+  it("replaces every occurrence of a placeholder that appears more than once in the template", () => {
+    // `${webhookSecretKeyFor(provider)}` fills two slots — the reveal
+    // instruction line and the TODO's backticked reminder — and `${provider}`
+    // fills two more (the generated-by line and the forge warning). Expansion
+    // is per occurrence: stopping after a first match would leave a live
+    // `${...}` slot or drop a site entirely.
+    const source = readFileSync(
+      fileURLToPath(new URL("../ai/phantom-wire.ts", import.meta.url)),
+      "utf-8",
+    );
+    const template = source.match(/const base = `([\s\S]*?)`;\n/)?.[1];
+    if (template === undefined) throw new Error("webhook stub template not found in source");
+    const count = (text: string, needle: string): number => text.split(needle).length - 1;
+
+    const secretSlots = count(template, "${webhookSecretKeyFor(provider)}");
+    const nameSlots = count(template, "${provider}");
+    expect(secretSlots).toBeGreaterThan(1);
+    expect(nameSlots).toBeGreaterThan(1);
+
+    // Each provider's secret name lands at all of its slots: nothing
+    // duplicates it, no slot is left unexpanded, no `${` survives.
+    for (const [provider, secret] of [
+      ["stripe", "STRIPE_WEBHOOK_SECRET"],
+      ["clerk", "CLERK_WEBHOOK_SECRET"],
+      ["supabase", "SUPABASE_WEBHOOK_SECRET"],
+      ["github", "GITHUB_WEBHOOK_SECRET"],
+    ] as const) {
+      const stub = webhookStubFor(provider);
+      expect(count(stub, secret)).toBe(secretSlots);
+      expect(stub).not.toContain("${");
+    }
+
+    // The same for `${provider}`: a name that collides with nothing else in
+    // the template keeps the count honest — every match is an expansion site.
+    const stub = webhookStubFor("payco");
+    expect(count(stub, "payco")).toBe(nameSlots);
+    expect(count(stub, "PAYCO_WEBHOOK_SECRET")).toBe(secretSlots);
+    // Each repeated site kept its own surrounding text, so both occurrences
+    // were expanded in place rather than one dropped or copied.
+    expect(stub).toContain("webhook handler stub for payco.");
+    expect(stub).toContain("forge a payco webhook.");
+    expect(stub).toContain("//   phantom reveal PAYCO_WEBHOOK_SECRET\n");
+    expect(stub).toContain("//   // (`phantom reveal PAYCO_WEBHOOK_SECRET`) and compare in");
+    expect(stub).not.toContain("${");
+  });
+
   it("expands the multiline template line for line, leaving unrelated lines and line breaks identical across providers", () => {
     // Swap each provider's own expansions back to neutral tokens. What remains
     // is the template with its placeholders unexpanded; if expansion touched
