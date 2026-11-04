@@ -137,6 +137,20 @@ describe("ai/phantom-wire", () => {
     expect(stub).toContain(`handle${provider[0].toUpperCase()}${provider.slice(1)}Webhook`);
   });
 
+  it("keeps both dollar signs of a `$$` in a provider name at every expansion site", () => {
+    // In a String.replace replacement string, `$$` collapses to a single `$`.
+    // Carried as data, both signs must survive at all five sites.
+    const stub = webhookStubFor("pay$$hook");
+
+    expect(stub).toContain("webhook handler stub for pay$$hook.");
+    expect(stub).toContain("forge a pay$$hook webhook.");
+    expect(stub).toContain("handlePay$$hookWebhook(req: Request)");
+    expect(stub.split("phantom reveal PAY$$HOOK_WEBHOOK_SECRET").length - 1).toBe(2);
+    // Five sites, two signs each; the template itself has no `$`.
+    expect(stub.split("$").length - 1).toBe(10);
+    expect(stub).not.toMatch(/pay\$hook|PAY\$HOOK/);
+  });
+
   it("inserts a `$'` in a provider name literally at every expansion site", () => {
     // In a String.replace replacement string, `$'` splices in the text AFTER
     // the match — the rest of the template. If expansion ever ran through
