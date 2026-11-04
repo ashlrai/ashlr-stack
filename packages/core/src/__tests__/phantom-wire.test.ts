@@ -302,6 +302,18 @@ describe("ai/phantom-wire", () => {
     expect(restored).toBe(plain);
   });
 
+  it("preserves leading, trailing and consecutive newlines in a replacement", () => {
+    // Edge positions must not be trimmed, and a blank line must not collapse.
+    const plain = webhookStubFor("x");
+    for (const provider of ["\nx", "x\n", "x\n\nx"]) {
+      const stub = webhookStubFor(provider);
+      const extra = (provider.match(/\n/g) ?? []).length * 5;
+      expect(stub.split("\n").length - plain.split("\n").length).toBe(extra);
+      expect(stub).toContain(`webhook handler stub for ${provider}.`);
+      expect(stub).not.toContain("\r");
+    }
+  });
+
   it("carries a tab through every expansion site and the skipped result byte-for-byte", async () => {
     // The name fills five slots: two raw `${provider}` (the generated-by and
     // forge lines), one `capitalize(provider)` (the handler name), and two
