@@ -5287,3 +5287,38 @@ describe("wirePhantomForRecipe — phantom missing, unknown placeholder beside a
     expect(readdirSync(join(dir, ".stack/webhooks")).sort()).toEqual(["github.ts", "stripe.ts"]);
   });
 });
+
+describe("webhookStubFor — known placeholder between line breaks", () => {
+  const count = (s: string, needle: string) => s.split(needle).length - 1;
+
+  it.each(["stripe", "clerk", "supabase", "github"])(
+    "keeps both line breaks around %s at every name slot, byte-for-byte",
+    (provider) => {
+      const baseline = webhookStubFor(provider);
+      for (const eol of ["\n", "\r\n"]) {
+        const name = `${eol}${provider}${eol}`;
+        const stub = webhookStubFor(name);
+        const upper = provider.toUpperCase();
+
+        // Each slot keeps the break before AND after the name.
+        expect(stub).toContain(`webhook handler stub for ${name}.`);
+        expect(stub).toContain(`forge a ${name} webhook.`);
+        expect(stub).toContain(`phantom reveal ${eol}${upper}${eol}_WEBHOOK_SECRET`);
+        expect(count(stub, `${eol}${upper}${eol}_WEBHOOK_SECRET`)).toBe(2);
+        // capitalize() sees the leading break, so the name rides along as-is.
+        expect(stub).toContain(`handle${name}Webhook(`);
+
+        // Five slots, two breaks each: exactly ten breaks added over the
+        // known provider's stub, and nothing else is rewritten.
+        const added =
+          eol === "\n" ? count(stub, "\n") - count(baseline, "\n") : count(stub, "\r\n");
+        expect(added).toBe(10);
+        expect(count(stub, "\r")).toBe(eol === "\r\n" ? 5 * 2 : 0);
+
+        // Not matched as the known provider: generic header, fallback hint.
+        expect(stub).toContain('req.headers.get("x-webhook-signature")');
+        expect(stub).toContain(`// ${verificationHintFor("zzq")}`);
+      }
+    },
+  );
+});
