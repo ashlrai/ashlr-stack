@@ -3,11 +3,14 @@ import {
   chmodSync,
   existsSync,
   mkdirSync,
+  mkdtempSync,
   readFileSync,
   readdirSync,
   realpathSync,
+  rmSync,
   writeFileSync,
 } from "node:fs";
+import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { verificationHintFor, webhookStubFor, wirePhantomForRecipe } from "../ai/phantom-wire.ts";
@@ -5105,5 +5108,48 @@ describe("webhookStubFor — empty template", () => {
     expect(splice(template, "")).toBe(empty);
     expect(splice("", "stripe")).toBe("");
     expect(splice("", "")).toBe("");
+  });
+});
+
+describe("wirePhantomForRecipe — phantom missing, unknown placeholder beside a known provider", () => {
+  let dir: string;
+  let previousPath: string | undefined;
+
+  beforeEach(() => {
+    dir = realpathSync(mkdtempSync(join(tmpdir(), "stack-wire-nophantom-")));
+    // An empty PATH directory guarantees no `phantom` binary resolves.
+    previousPath = process.env.PATH;
+    process.env.PATH = dir;
+  });
+  afterEach(() => {
+    if (previousPath === undefined) process.env.PATH = undefined;
+    else process.env.PATH = previousPath;
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("writes the known provider's stub and skips the unknown placeholder-shaped name untouched", async () => {
+    const unknown = "${UNKNOWN}";
+    const recipe: Recipe = {
+      id: "no-phantom",
+      query: "payments",
+      createdAt: "2026-04-18T00:00:00.000Z",
+      providers: [{ name: "stripe" }, { name: unknown }, { name: "github" }],
+    };
+    const result = await wirePhantomForRecipe(recipe, { cwd: dir });
+
+    // Every provider is reported skipped, the unknown one byte-for-byte.
+    expect(result.skipped).toEqual(["stripe", unknown, "github"]);
+    expect(result.present).toEqual([]);
+    expect(result.missing).toEqual([]);
+
+    // Known neighbours get fully substituted stubs; the unknown name neither
+    // gets a stub nor leaks a placeholder into its neighbours' stubs.
+    const stripePath = join(dir, ".stack/webhooks/stripe.ts");
+    const githubPath = join(dir, ".stack/webhooks/github.ts");
+    expect(result.webhooks).toEqual([stripePath, githubPath]);
+    expect(readFileSync(stripePath, "utf-8")).toBe(webhookStubFor("stripe"));
+    expect(readFileSync(githubPath, "utf-8")).toBe(webhookStubFor("github"));
+    expect(readFileSync(stripePath, "utf-8")).not.toContain("${");
+    expect(readdirSync(join(dir, ".stack/webhooks")).sort()).toEqual(["github.ts", "stripe.ts"]);
   });
 });
