@@ -1242,6 +1242,46 @@ echo "[]"
     expect(harness.callsTo("add")).toEqual([]);
   });
 
+  it("preserves a placeholder-shaped provider name without a second substitution", async () => {
+    // `pay${provider}ment` carries text shaped exactly like a template
+    // placeholder. Expansion runs once, so the inserted `${provider}` is data
+    // and must come back byte-for-byte at every site the name fills. A second
+    // substitution pass would re-expand it — nesting the name into itself as
+    // `paypay${provider}mentment` — resolve it to an unrelated value, or
+    // throw on the unresolvable slot.
+    const provider = "pay${provider}ment";
+    const stub = webhookStubFor(provider);
+
+    // Direct `${provider}` slots: verbatim.
+    expect(stub).toContain("webhook handler stub for pay${provider}ment.");
+    expect(stub).toContain("forge a pay${provider}ment webhook.");
+    // `capitalize(provider)` slot: only the first letter folds.
+    expect(stub).toContain("handlePay${provider}mentWebhook(req: Request)");
+    // `webhookSecretKeyFor(provider)` slot: uppercases the whole name,
+    // placeholder-shaped text included, in both reveal lines.
+    expect(stub.split("PAY${PROVIDER}MENT_WEBHOOK_SECRET").length - 1).toBe(2);
+
+    // Exactly five `${` sequences survive — the ones the name carried into
+    // its five expansion sites. Re-substituting would leave zero, and a
+    // fixpoint loop re-expanding `${provider}` would double the surrounding
+    // text into `paypay…mentment`.
+    expect(stub.split("${").length - 1).toBe(5);
+    expect(stub).not.toContain("paypay");
+    expect(stub).not.toContain("mentment");
+
+    // Through wiring the same name matches no catalog provider: it returns in
+    // `skipped` byte-for-byte and never reaches the stub template or disk.
+    const recipe: Recipe = { ...STRIPE_RECIPE, providers: [{ name: provider }] };
+    expect(await wirePhantomForRecipe(recipe, { cwd: harness.dir })).toEqual({
+      present: [],
+      missing: [],
+      webhooks: [],
+      skipped: [provider],
+    });
+    expect(existsSync(join(harness.dir, ".stack/webhooks"))).toBe(false);
+    expect(harness.callsTo("add")).toEqual([]);
+  });
+
   it("leaves a differently cased provider name unchanged in the stub unless it is explicitly defined", () => {
     // Only the lowercase names are defined; `Stripe` / `GITHUB` must take the
     // generic fallbacks and echo the given casing, never the stripe/github maps.
