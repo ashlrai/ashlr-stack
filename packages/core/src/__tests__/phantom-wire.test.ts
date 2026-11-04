@@ -348,11 +348,27 @@ describe("ai/phantom-wire", () => {
   });
 
   it("preserves an unknown placeholder and surrounding ordinary text in the stub", () => {
+    // The stub's template has two known ${webhookSecretKeyFor(provider)}
+    // placeholders (the two `phantom reveal` lines). With a provider name
+    // carrying an unknown ${UNKNOWN} between "before" and "after", those
+    // knowns expand while the unknown stays in its original casing.
+    // `webhookSecretKeyFor` falls through to `provider.toUpperCase()_WEBHOOK_SECRET`,
+    // so both reveal lines get `BEFORE${UNKNOWN}AFTER_WEBHOOK_SECRET`.
     const stub = webhookStubFor("before${UNKNOWN}after");
 
     expect(stub).toContain("webhook handler stub for before${UNKNOWN}after.");
     expect(stub).toContain("forge a before${UNKNOWN}after webhook.");
     expect(stub).toContain("handleBefore${UNKNOWN}afterWebhook(req: Request)");
+
+    // Both known ${webhookSecretKeyFor(provider)} placeholders are replaced:
+    // `toUpperCase()` leaves the unknown ${UNKNOWN} casing intact, and the
+    // fallback secret-key template appends `_WEBHOOK_SECRET`.
+    expect(stub.split("phantom reveal BEFORE${UNKNOWN}AFTER_WEBHOOK_SECRET").length - 1).toBe(2);
+
+    // The unknown ${UNKNOWN} survives in its original form between the two
+    // known reveal lines; no other unresolved placeholders appear.
+    expect(stub.split("${UNKNOWN}").length - 1).toBe(5);
+    expect(stub).not.toMatch(/\$\{[^U]/);
   });
 
   it("replaces the last placeholder in the template and leaves all preceding text unchanged", () => {
