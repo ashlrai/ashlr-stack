@@ -525,6 +525,26 @@ describe("ai/phantom-wire", () => {
     expect(harness.callsTo("add")).toEqual([]);
   });
 
+  it("preserves the leading zeroes of a numeric-looking name at every expansion site", async () => {
+    // A name like "007" must stay a string: no Number() coercion (7), no
+    // zero-trimming, no reformatting. Digits have no case mapping, so the
+    // capitalized and upper-cased slots carry it unchanged too.
+    for (const provider of ["007", "0042", "00", "0.50", "0x10", "1e3"]) {
+      const stub = webhookStubFor(provider);
+      expect(stub).toContain(`webhook handler stub for ${provider}.`);
+      expect(stub).toContain(`forge a ${provider} webhook.`);
+      expect(stub).toContain(`handle${provider}Webhook(req: Request)`);
+      expect(stub.split(`phantom reveal ${provider.toUpperCase()}_WEBHOOK_SECRET`).length - 1).toBe(
+        2,
+      );
+
+      const recipe: Recipe = { ...STRIPE_RECIPE, providers: [{ name: provider }] };
+      const result = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
+      expect(result).toEqual({ present: [], missing: [], webhooks: [], skipped: [provider] });
+      expect(typeof result.skipped[0]).toBe("string");
+    }
+  });
+
   it("carries a carriage return through every expansion site and the skipped result byte-for-byte", async () => {
     // U+000D in the name is data, not a line ending: interpolation must
     // carry it through untouched — no conversion to `\n`, no `\r\n`
