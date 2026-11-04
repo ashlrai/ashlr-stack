@@ -4067,3 +4067,52 @@ describe("webhookStubFor — backslash in replacement text", () => {
     }
   });
 });
+
+describe("provider name case sensitivity", () => {
+  const fallbackHint = "Verify per the provider's documented signature scheme.";
+  const known = ["stripe", "clerk", "supabase", "github"];
+
+  it("treats a differently cased known provider as unknown: fallback hint, no known-provider mapping", () => {
+    for (const name of known) {
+      const variants = [name.toUpperCase(), name.charAt(0).toUpperCase() + name.slice(1)];
+      for (const variant of variants) {
+        expect(verificationHintFor(variant)).toBe(fallbackHint);
+        expect(verificationHintFor(variant)).not.toBe(verificationHintFor(name));
+        const stub = webhookStubFor(variant);
+        // Generic signature header, not the provider's own.
+        expect(stub).toContain('req.headers.get("x-webhook-signature")');
+        expect(stub).not.toContain(verificationHintFor(name));
+        // The name itself is rendered unchanged.
+        expect(stub).toContain(`webhook handler stub for ${variant}.`);
+        expect(stub).toContain(`forge a ${variant} webhook.`);
+        expect(stub).toContain(
+          `handle${variant.charAt(0).toUpperCase()}${variant.slice(1)}Webhook(`,
+        );
+      }
+    }
+  });
+
+  it("keeps the exact lowercase known name on its own mapping", () => {
+    expect(webhookStubFor("stripe")).toContain('req.headers.get("stripe-signature")');
+    expect(webhookStubFor("Stripe")).not.toContain("stripe-signature");
+    expect(webhookStubFor("stripe")).toContain("phantom reveal STRIPE_WEBHOOK_SECRET");
+  });
+
+  it("wirePhantomForRecipe skips a differently cased provider name unchanged", async () => {
+    const harness = setupFakePhantom();
+    try {
+      const recipe: Recipe = {
+        id: "cased",
+        query: "payments",
+        createdAt: "2026-04-18T00:00:00.000Z",
+        providers: [{ name: "Stripe" }],
+      };
+      const result = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
+      expect(result.skipped).toEqual(["Stripe"]);
+      expect(result.webhooks).toEqual([]);
+      expect(existsSync(join(harness.dir, ".stack/webhooks"))).toBe(false);
+    } finally {
+      harness.cleanup();
+    }
+  });
+});
