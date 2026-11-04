@@ -325,6 +325,28 @@ describe("ai/phantom-wire", () => {
     expect(harness.callsTo("add")).toEqual([]);
   });
 
+  it("replaces the closing secret-name placeholder byte-exactly and leaves the preceding lines unchanged", () => {
+    // The last placeholder in the template is the secret name in the final
+    // `phantom reveal` line; pin the exact closing lines for a known provider.
+    const stub = webhookStubFor("stripe");
+    expect(stub).not.toMatch(/\$\{[^}]*\}/);
+    const lines = stub.split("\n");
+    const idx = lines.findLastIndex((l) => l.includes("phantom reveal STRIPE_WEBHOOK_SECRET"));
+    expect(lines[idx]).toBe("//   // (`phantom reveal STRIPE_WEBHOOK_SECRET`) and compare in");
+    expect(lines.slice(idx + 1)).toEqual([
+      "//   // constant time; reject missing or invalid signatures, and only then",
+      "//   // parse, trust, or act on the body.",
+      '//   return new Response("ok", { status: 200 });',
+      "// }",
+      "",
+    ]);
+    // Everything before that line matches the unknown-provider render except
+    // lines that carry a provider-specific value.
+    const generic = webhookStubFor("zzq").split("\n");
+    const same = (l: string) => !/stripe|STRIPE|Stripe|zzq|ZZQ|Zzq|signature/.test(l);
+    expect(lines.slice(0, idx).filter(same)).toEqual(generic.slice(0, idx).filter(same));
+  });
+
   it("preserves an unknown placeholder and surrounding ordinary text in the stub", () => {
     const stub = webhookStubFor("before${UNKNOWN}after");
 
