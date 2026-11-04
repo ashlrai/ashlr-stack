@@ -53,6 +53,16 @@ describe("ai/phantom-wire", () => {
     );
   });
 
+  it("returns the fallback hint template unchanged for any unknown provider, placeholder-shaped names included", () => {
+    // The fallback template has no placeholders, so the provider name must
+    // never leak into it or be interpolated, whatever it looks like.
+    const fallback = "Verify per the provider's documented signature scheme.";
+    for (const name of ["zzqhook", "", "${provider}", "{{provider}}", "%s", "$1", "Stripe"]) {
+      expect(verificationHintFor(name)).toBe(fallback);
+    }
+    expect(fallback).not.toMatch(/\$\{|\{\{|%s|\$\d/);
+  });
+
   it("returns empty results for a recipe with no providers", async () => {
     const recipe: Recipe = { ...STRIPE_RECIPE, providers: [] };
 
