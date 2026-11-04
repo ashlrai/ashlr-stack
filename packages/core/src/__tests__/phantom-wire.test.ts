@@ -538,6 +538,35 @@ describe("ai/phantom-wire", () => {
     expect(harness.callsTo("add")).toEqual([]);
   });
 
+  it("preserves a CRLF pair exactly in every expansion site and the skipped result", async () => {
+    // U+000D U+000A in the name is data: both bytes survive as a pair — no
+    // collapsing to `\n`, no splitting, no stripping of either character.
+    const provider = "svc\r\nhooks";
+    const stub = webhookStubFor(provider);
+    const plain = webhookStubFor("zzq");
+
+    expect(stub).toContain("webhook handler stub for svc\r\nhooks.");
+    expect(stub).toContain("forge a svc\r\nhooks webhook.");
+    expect(stub).toContain("handleSvc\r\nhooksWebhook(req: Request)");
+    expect(stub.split("phantom reveal SVC\r\nHOOKS_WEBHOOK_SECRET").length - 1).toBe(2);
+
+    // Five slots carry the name, so exactly five CRs and five LFs were added,
+    // and every CR is immediately followed by its LF.
+    expect(plain).not.toContain("\r");
+    expect(stub.split("\r").length - 1).toBe(5);
+    expect(stub.split("\r\n").length - 1).toBe(5);
+    expect(stub.split("\n").length - plain.split("\n").length).toBe(5);
+    // Removing the pairs restores the stub for the joined name.
+    expect(stub.replaceAll("\r\n", "")).toBe(webhookStubFor("svchooks"));
+
+    const recipe: Recipe = { ...STRIPE_RECIPE, providers: [{ name: provider }] };
+    const result = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
+    expect(result).toEqual({ present: [], missing: [], webhooks: [], skipped: [provider] });
+    expect(result.skipped[0]?.slice(3, 5)).toBe("\r\n");
+    expect(existsSync(join(harness.dir, ".stack/webhooks"))).toBe(false);
+    expect(harness.callsTo("add")).toEqual([]);
+  });
+
   it("preserves a single quote in a provider name literally in the stub and in skipped results", async () => {
     // `'` is inert inside the generated `//` comments, and `$'` is the one
     // String.replace replacement pattern (splice in the text after the match)
