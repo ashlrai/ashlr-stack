@@ -1188,6 +1188,89 @@ describe("ai/phantom-wire", () => {
     expect(verificationHintFor(name)).toBe(verificationHintFor("zzq"));
   });
 
+  it("keeps the punctuation surrounding a known placeholder unchanged at every expansion site", async () => {
+    // `${provider}` is the template's own slot name; arriving inside a name
+    // it is data, and the punctuation hugging it is plain text — not part
+    // of the slot's opener or closer, not a regex group, not quoting to
+    // strip. Expansion must fill the template's slots with the whole name
+    // and leave the marks flush against the carried token untouched:
+    // `(${provider})` must not come out `(${provider}` with the closer
+    // eaten into the token, nor `${provider})` with the opener dropped.
+    // Variants wrap the token in paired marks mid-name and as the whole
+    // name, and put different marks on each side.
+    const baseline = webhookStubFor("zzq");
+    expect(baseline).not.toContain("${");
+    const baselineLines = baseline.split("\n").length;
+    const count = (s: string, mark: string) => s.split(mark).length - 1;
+
+    for (const [provider, wrapped, marks] of [
+      ["pay(${provider})ment", "(${provider})", "()"], // parens flush around the token, mid-name
+      ["(${provider})!", "(${provider})!", "()!"], // marks around the token are the whole name
+      ["!${provider}?", "!${provider}?", "!?"], // different marks on each side, whole name
+      ["a,${provider};b", ",${provider};", ",;"], // asymmetric marks mid-name
+      ["pay<${provider}>ment", "<${provider}>", "<>"], // angle brackets mid-name
+    ] as const) {
+      const stub = webhookStubFor(provider);
+
+      // Direct `${provider}` slots: name, marks and all, verbatim.
+      expect(stub).toContain(`webhook handler stub for ${provider}.`);
+      expect(stub).toContain(`forge a ${provider} webhook.`);
+      // `capitalize(provider)` slot: only the name's first letter folds —
+      // a leading mark has no case mapping, so the name there is unchanged.
+      expect(stub).toContain(
+        `handle${provider[0].toUpperCase()}${provider.slice(1)}Webhook(req: Request)`,
+      );
+      // `webhookSecretKeyFor(provider)` slots: the whole name — marks and
+      // placeholder-shaped text included — uppercases in both reveal lines.
+      expect(stub.split(`phantom reveal ${provider.toUpperCase()}_WEBHOOK_SECRET`).length - 1).toBe(
+        2,
+      );
+
+      // The template contributes no `${` of its own: every `${` in the stub
+      // is one the name carried into a site — five sites — none escaped,
+      // stripped, or re-expanded.
+      expect(count(stub, "${")).toBe(5);
+      // The placeholder-shaped text survives once per site: lowercase at
+      // the three mixed-case sites, uppercased at the two secret-key sites.
+      expect(count(stub, "${provider}")).toBe(3);
+      expect(count(stub, "${PROVIDER}")).toBe(2);
+      // The token together with its adjacent marks lands unchanged: the
+      // wrapped run three times as written, its uppercased form at the two
+      // secret-key sites — adjacent punctuation never consumed, split from
+      // the token, or duplicated.
+      expect(count(stub, wrapped)).toBe(3);
+      expect(count(stub, wrapped.toUpperCase())).toBe(2);
+      // Mark accounting: every mark in the stub is either one the template
+      // contributes itself or one the name carried into its five sites.
+      for (const mark of marks) {
+        expect(count(stub, mark)).toBe(count(baseline, mark) + count(provider, mark) * 5);
+      }
+      expect(stub.split("\n").length).toBe(baselineLines);
+      // No self-splice: re-expanding the token would nest the name inside
+      // itself (`pay(${provider})ment` → `pay(pay(${provider})ment)ment`).
+      expect(stub).not.toContain(provider.replaceAll("${provider}", provider));
+      // The template's own slots still expanded inside their punctuation
+      // envelopes: the fallback header keeps its `get("...")` wrapper.
+      expect(stub).toContain('req.headers.get("x-webhook-signature")');
+    }
+
+    // Through wiring a punctuation-wrapped name matches no catalog provider
+    // (the lookup compares exact bytes): it returns in `skipped`
+    // byte-for-byte — marks and token intact — and never reaches a stub or
+    // disk.
+    const name = "pay(${provider})ment";
+    const recipe: Recipe = { ...STRIPE_RECIPE, providers: [{ name }] };
+    const result = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
+    expect(result).toEqual({ present: [], missing: [], webhooks: [], skipped: [name] });
+    expect(result.skipped[0]?.charCodeAt(3)).toBe(0x28);
+    expect(result.skipped[0]?.charCodeAt(15)).toBe(0x29);
+    expect(existsSync(join(harness.dir, ".stack/webhooks"))).toBe(false);
+    expect(harness.callsTo("add")).toEqual([]);
+
+    // The hint is a fixed string: a mark-wrapped name never leaks into it.
+    expect(verificationHintFor(name)).toBe(verificationHintFor("zzq"));
+  });
+
   it("substitutes each known slot and leaves an unknown placeholder beside a known slot token unchanged", async () => {
     // `${provider}` is the template's own slot name — a known placeholder;
     // `${UNKNOWN}` matches no slot — an unknown placeholder. Parked flush
