@@ -94,6 +94,42 @@ describe("ai/phantom-wire", () => {
     expect(stub).toContain(`handle${provider[0].toUpperCase()}${provider.slice(1)}Webhook`);
   });
 
+  it("carries the `$&` match token in a provider name literally through every expansion site", async () => {
+    // In a String.replace replacement string, `$&` splices in the matched
+    // substring — `${provider}` here. If expansion ever ran through replace,
+    // `pay$&hook` would come out as `pay${provider}hook`: the token gone and
+    // placeholder-shaped residue left in its place. Carried as data, the
+    // name lands byte-for-byte at all five expansion sites instead.
+    const provider = "pay$&hook";
+    const stub = webhookStubFor(provider);
+
+    // Raw `${provider}` sites: the header and forge lines.
+    expect(stub).toContain("webhook handler stub for pay$&hook.");
+    expect(stub).toContain("forge a pay$&hook webhook.");
+    // `capitalize(provider)` site: only the name's first letter folds.
+    expect(stub).toContain("handlePay$&hookWebhook(req: Request)");
+    // `webhookSecretKeyFor(provider)` sites: neither `$` nor `&` has a case
+    // mapping, so the token survives uppercasing in both reveal lines.
+    expect(stub.split("phantom reveal PAY$&HOOK_WEBHOOK_SECRET").length - 1).toBe(2);
+
+    // Exactly five `$&` sequences survive — one per expansion site. Splicing
+    // the match would leave zero `$&` and inject `${provider}` text instead.
+    expect(stub.split("$&").length - 1).toBe(5);
+    expect(stub).not.toContain("${");
+
+    // Through wiring the name matches no catalog provider: it returns in
+    // `skipped` byte-for-byte and never reaches the stub template or disk.
+    const recipe: Recipe = { ...STRIPE_RECIPE, providers: [{ name: provider }] };
+    expect(await wirePhantomForRecipe(recipe, { cwd: harness.dir })).toEqual({
+      present: [],
+      missing: [],
+      webhooks: [],
+      skipped: [provider],
+    });
+    expect(existsSync(join(harness.dir, ".stack/webhooks"))).toBe(false);
+    expect(harness.callsTo("add")).toEqual([]);
+  });
+
   it("preserves a tab character exactly in placeholder replacement text", () => {
     // Template literal interpolation must carry the tab through untouched —
     // no escaping, no collapsing to spaces, no stripping.
