@@ -1544,6 +1544,51 @@ echo "[]"
     expect(lines).toContain(want.forgeLine);
   });
 
+  it.each([
+    ["stripe", "Stripe"],
+    ["clerk", "Clerk"],
+    ["supabase", "Supabase"],
+    ["github", "Github"],
+  ])("substitutes the %s placeholder between the ordinary words flanking it", (provider, cap) => {
+    // `handle${capitalize(provider)}Webhook` is the template's one slot
+    // bounded on both sides by plain word characters: `handle` before and
+    // `Webhook` after, with no whitespace or punctuation separating the
+    // slot from either word. Expansion must land the capitalized name
+    // flush between them — nothing inserted, no part of either neighbor
+    // consumed.
+    const source = readFileSync(
+      fileURLToPath(new URL("../ai/phantom-wire.ts", import.meta.url)),
+      "utf-8",
+    );
+    const base = source.match(/const base = `([\s\S]*?)`;\n/)?.[1];
+    if (base === undefined) throw new Error("webhook stub template not found in source");
+    // Sanity: in the template the slot really does sit between the words.
+    expect(base).toContain("handle${capitalize(provider)}Webhook");
+
+    const stub = webhookStubFor(provider);
+    const handlerLine = stub.split("\n").find((l) => l.includes("export async function"));
+    // Both surrounding words preserved verbatim, the replacement flush
+    // between them — the whole line is byte-exact, not a loose match.
+    expect(handlerLine).toBe(
+      `// export async function handle${cap}Webhook(req: Request): Promise<Response> {`,
+    );
+    // Taking the replacement back out leaves the neighbors joined:
+    // `handle` and `Webhook` each came through untouched on their side
+    // of the slot, with nothing left between them.
+    expect(handlerLine?.split(cap).join("")).toBe(
+      "// export async function handleWebhook(req: Request): Promise<Response> {",
+    );
+
+    // The same holds for a slot between space-separated words:
+    // `forge a ${provider} webhook.` keeps `a` and `webhook` exactly one
+    // space from the expanded name on each side.
+    const forgeLine = stub.split("\n").find((l) => l.includes("forge a"));
+    expect(forgeLine).toBe(`//   // to this endpoint can forge a ${provider} webhook.`);
+    expect(forgeLine?.split(` ${provider} `).join(" ")).toBe(
+      "//   // to this endpoint can forge a webhook.",
+    );
+  });
+
   it("keeps punctuation inside an expanded provider name verbatim beside the template's marks", () => {
     // `.`, `(`, and `)` in the name are data, not syntax: they expand
     // byte-for-byte next to the template's own `.`, `(`, and backticks.
