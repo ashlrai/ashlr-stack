@@ -1,4 +1,4 @@
-import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { __resetPhantomCache } from "../phantom.ts";
@@ -149,8 +149,19 @@ print(v.get(sys.argv[2], ""))
 esac
 `;
   const binPath = join(dir, "phantom");
-  writeFileSync(binPath, script);
-  chmodSync(binPath, 0o755);
+  // Sandboxed runners and macOS Gatekeeper's provenance policy refuse to
+  // exec an extensionless file written by a non-platform process, while a
+  // `*.sh` target passes the check. Write the shim as `phantom.sh` and link
+  // `phantom` at it; fall back to the direct file where symlinks fail.
+  const realPath = join(dir, "phantom.sh");
+  writeFileSync(realPath, script);
+  chmodSync(realPath, 0o755);
+  try {
+    symlinkSync(realPath, binPath);
+  } catch {
+    writeFileSync(binPath, script);
+    chmodSync(binPath, 0o755);
+  }
 
   const previousPath = process.env.PATH ?? "";
   process.env.PATH = `${dir}:${previousPath}`;
