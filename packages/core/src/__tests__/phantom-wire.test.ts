@@ -4851,3 +4851,54 @@ describe("webhookStubFor — known placeholder next to a tab", () => {
     },
   );
 });
+
+describe("webhookStubFor — empty template", () => {
+  it("renders an empty template to an empty string, and an empty name to empty strings at every slot", () => {
+    // webhookStubFor renders one fixed template (`base`) with the provider
+    // name spliced in as data; callers cannot hand it a template, empty or
+    // otherwise. The substitution rule is plain template-literal splicing:
+    // emit the template's fixed bytes plus String(value) at each slot — so
+    // the empty template emits "" and an empty value emits "" at its slot.
+    // Nothing else may be fabricated.
+    const empty = webhookStubFor("");
+
+    // Value level: a probe name occupies five slots (two raw `${provider}`,
+    // one `${capitalize(provider)}`, two upper-cased inside
+    // `${webhookSecretKeyFor(provider)}`). ASCII keeps byte length under
+    // folding, so the populated render is exactly 5·n bytes longer than
+    // the empty one — the empty render contributed zero bytes per slot.
+    const probe = "payx";
+    expect(webhookStubFor(probe).length - empty.length).toBe(5 * probe.length);
+    expect(empty).not.toContain(probe.toLowerCase());
+    expect(empty).not.toMatch(/\$\{|\{\{/);
+
+    // `capitalize`'s empty-in → empty-out guard, observable through the
+    // stub: `handle` meets `Webhook` with no first letter folded in.
+    expect(empty).toContain("handleWebhook(req: Request)");
+
+    // Template level: replay the module's substitution rules over its own
+    // extracted `base` with the empty name. Matching webhookStubFor("")
+    // byte-for-byte proves the replay IS the module's machinery; the same
+    // machinery applied to the empty template then returns "".
+    const source = readFileSync(
+      fileURLToPath(new URL("../ai/phantom-wire.ts", import.meta.url)),
+      "utf-8",
+    );
+    const base = source.match(/const base = `([\s\S]*?)`;\n/)?.[1];
+    if (base === undefined) throw new Error("webhook stub template not found in source");
+    const template = base.replaceAll("\\`", "`");
+    const splice = (t: string, name: string) =>
+      t
+        .replaceAll("${provider}", name)
+        .replaceAll(
+          "${capitalize(provider)}",
+          name === "" ? "" : `${name[0].toUpperCase()}${name.slice(1)}`,
+        )
+        .replaceAll("${webhookSecretKeyFor(provider)}", `${name.toUpperCase()}_WEBHOOK_SECRET`)
+        .replaceAll("${signatureHeaderFor(provider)}", "x-webhook-signature")
+        .replaceAll("${verificationHintFor(provider)}", verificationHintFor(name));
+    expect(splice(template, "")).toBe(empty);
+    expect(splice("", "stripe")).toBe("");
+    expect(splice("", "")).toBe("");
+  });
+});
