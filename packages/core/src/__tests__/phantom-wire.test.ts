@@ -109,6 +109,45 @@ describe("ai/phantom-wire", () => {
     expect(stub.slice(tabIndex - 3, tabIndex + 5)).toBe("pay\tment");
   });
 
+  it("preserves a single quote in a provider name literally in the stub and in skipped results", async () => {
+    // `'` is inert inside the generated `//` comments, and `$'` is the one
+    // String.replace replacement pattern (splice in the text after the match)
+    // the dollar-signs test above does not exercise: if expansion ever ran
+    // through replace, `$'` would pull trailing template text into the name.
+    // Carried verbatim, the quote is just data at every expansion site.
+    const provider = "pay'ment$'s";
+    const stub = webhookStubFor(provider);
+    expect(stub).toContain(`webhook handler stub for ${provider}.`);
+    expect(stub).toContain(`forge a ${provider} webhook.`);
+    expect(stub).toContain(
+      `handle${provider[0].toUpperCase()}${provider.slice(1)}Webhook(req: Request)`,
+    );
+    expect(stub).toContain(`phantom reveal ${provider.toUpperCase()}_WEBHOOK_SECRET`);
+    // The quote never escapes into live code: every line stays a comment.
+    expect(stub.split("\n").every((line) => line === "" || line.startsWith("//"))).toBe(true);
+    expect(stub).not.toContain("${");
+
+    // The name's quotes land at all five expansion sites — raw in the header
+    // and forge lines, capitalized in the handler name, uppercased in the two
+    // reveal lines — on top of the template's own apostrophe ("provider's").
+    const nameQuotes = provider.split("'").length - 1;
+    const templateQuotes = webhookStubFor("zzq").split("'").length - 1;
+    expect(stub.split("'").length - 1).toBe(templateQuotes + nameQuotes * 5);
+
+    // Through wiring a quoted name matches no catalog provider: it returns in
+    // `skipped` byte-for-byte and never reaches the stub template or disk.
+    const name = "stripe'";
+    const recipe: Recipe = { ...STRIPE_RECIPE, providers: [{ name }] };
+    expect(await wirePhantomForRecipe(recipe, { cwd: harness.dir })).toEqual({
+      present: [],
+      missing: [],
+      webhooks: [],
+      skipped: [name],
+    });
+    expect(existsSync(join(harness.dir, ".stack/webhooks"))).toBe(false);
+    expect(harness.callsTo("add")).toEqual([]);
+  });
+
   it("keeps the verification warning ahead of any use of the unverified body", () => {
     for (const provider of ["stripe", "clerk", "supabase", "github"]) {
       const stub = webhookStubFor(provider);
