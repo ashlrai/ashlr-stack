@@ -413,6 +413,25 @@ describe("ai/phantom-wire", () => {
     expect(stub.endsWith("// }\n")).toBe(true);
   });
 
+  it("renders an empty provider as the template with every provider slot blank", () => {
+    // phantom-wire has no standalone template renderer: webhookStubFor is the
+    // only template. Rendering it with nothing to substitute must equal the
+    // rendering of a probe provider with that probe's text removed, byte for
+    // byte, so no slot is missed, doubled, or filled with a default.
+    const probe = "zzprobe";
+    const empty = webhookStubFor("");
+    const probed = webhookStubFor(probe);
+    expect(probed).toContain(probe);
+    // Derived slots (secret key, handler name, hint) embed the probe in
+    // upper- or title-case; strip every casing before comparing.
+    const stripped = probed
+      .replaceAll(probe, "")
+      .replaceAll(probe.toUpperCase(), "")
+      .replaceAll("Zzprobe", "");
+    expect(stripped).toBe(empty);
+    expect(empty.length).toBeGreaterThan(0);
+  });
+
   it("substitutes an empty provider to an empty string without throwing", () => {
     // Every provider-derived slot must collapse to "", not "undefined" and
     // not an exception, and the helpers must agree with the rendered stub.
