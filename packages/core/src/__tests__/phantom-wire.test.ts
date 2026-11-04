@@ -4014,6 +4014,92 @@ echo "[]"
     expect(stub).toContain("handleStraße-日本Webhook(req: Request)");
   });
 
+  it("carries Unicode prose around a known placeholder through every expansion site", async () => {
+    // `${provider}` is the template's own slot name; arriving inside a name
+    // it is data. Multi-byte prose parked flush against the token's braces
+    // must survive expansion — not NFC-folded (the decomposed é below), not
+    // clipped mid-codepoint by a byte-oriented scan for the `${`/`}`
+    // delimiters, not split at a surrogate pair (🚀 is astral), and never
+    // re-expanded into the slot's own value. Variants put CJK, a combining
+    // mark, an astral emoji and case-mapped Latin before, after, and on
+    // both sides of the token; each name carries exactly one `${...}`.
+    const plain = webhookStubFor("zzq");
+    expect(plain).not.toContain("${");
+    for (const provider of [
+      "日本${provider}語", // CJK prose on both sides of the token
+      "café${provider}后", // decomposed é before, CJK after
+      "🚀${provider}한국", // astral emoji before, Hangul after
+      "ß${provider}ü", // non-ASCII with case mappings on both sides
+      "日${webhookSecretKeyFor(provider)}本", // a different known token, CJK-wrapped
+    ]) {
+      const stub = webhookStubFor(provider);
+      const token = provider.match(/\$\{[^}]*\}/)?.[0];
+      if (token === undefined) throw new Error("variant carries no placeholder token");
+
+      // Direct `${provider}` slots: the slot is replaced by the name —
+      // prose, token and all — byte-for-byte.
+      expect(stub).toContain(`webhook handler stub for ${provider}.`);
+      expect(stub).toContain(`forge a ${provider} webhook.`);
+      // `capitalize(provider)` slot: only the first letter folds. A leading
+      // CJK char or emoji has no case mapping and keeps its surrogate pair
+      // whole; `ß` folds to `SS` and the token behind it stays lowercase
+      // data.
+      expect(stub).toContain(
+        `handle${provider.charAt(0).toUpperCase()}${provider.slice(1)}Webhook(req: Request)`,
+      );
+      // `webhookSecretKeyFor(provider)` slots: the whole name uppercases —
+      // Unicode prose and placeholder-shaped text included — in both
+      // reveal lines. `toUpperCase` never composes: the decomposed é and
+      // the carried token ride through while `ß`→`SS` and `ü`→`Ü`.
+      expect(stub.split(`phantom reveal ${provider.toUpperCase()}_WEBHOOK_SECRET`).length - 1).toBe(
+        2,
+      );
+
+      // Exactly one `${` per expansion site — five in total — each one the
+      // token the name carried in: never resolved away, never duplicated
+      // by a second substitution pass.
+      expect(stub.split("${").length - 1).toBe(5);
+      // The token survives once per site: lowercase at the three
+      // mixed-case sites, uppercased at the two secret-key sites.
+      expect(stub.split(token).length - 1).toBe(3);
+      expect(stub.split(token.toUpperCase()).length - 1).toBe(2);
+
+      // The Unicode prose itself is untouched: no replacement char, no
+      // NFC-folded copy of the name, no extra line breaks, and the
+      // template's own non-ASCII prose (its em dashes) is unchanged —
+      // each known placeholder was replaced, the prose around it intact.
+      expect(stub).not.toContain("�");
+      if (provider.normalize("NFC") !== provider) {
+        expect(stub).not.toContain(provider.normalize("NFC"));
+      }
+      expect(stub.split("\n").length).toBe(plain.split("\n").length);
+      expect(stub.split("—").length - 1).toBe(plain.split("—").length - 1);
+    }
+
+    // Through wiring a Unicode-wrapped token matches no catalog provider:
+    // it returns in `skipped` byte-for-byte — the astral emoji's full code
+    // point, the decomposed é's two-code-point form — and nothing reaches
+    // the stub template or disk.
+    const decomposed = "café${provider}后";
+    const astral = "🚀${provider}한국";
+    const recipe: Recipe = {
+      ...STRIPE_RECIPE,
+      providers: [{ name: decomposed }, { name: astral }],
+    };
+    const result = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
+    expect(result).toEqual({
+      present: [],
+      missing: [],
+      webhooks: [],
+      skipped: [decomposed, astral],
+    });
+    expect(result.skipped[0]).toBe(decomposed);
+    expect(result.skipped[0]).not.toBe(decomposed.normalize("NFC"));
+    expect(result.skipped[1]?.codePointAt(0)).toBe(0x1f680);
+    expect(existsSync(join(harness.dir, ".stack/webhooks"))).toBe(false);
+    expect(harness.callsTo("add")).toEqual([]);
+  });
+
   it("returns a template with no placeholders unchanged across renders and through the stub", () => {
     // `verificationHintFor` is the module's template with no placeholders:
     // every branch returns one fixed string — the four provider hints and
