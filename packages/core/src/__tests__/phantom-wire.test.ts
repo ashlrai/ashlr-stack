@@ -5258,6 +5258,47 @@ describe("provider name case sensitivity", () => {
 });
 
 describe("webhookStubFor — known placeholder next to a tab", () => {
+  it.each([
+    ["\t", ""],
+    ["", "\t"],
+    ["\t", "\t"],
+  ])("preserves template tabs before %j and after %j a substituted provider", (before, after) => {
+    const source = readFileSync(
+      fileURLToPath(new URL("../ai/phantom-wire.ts", import.meta.url)),
+      "utf-8",
+    );
+    const literal = source.match(/const base = (`[\s\S]*?`);\n/)?.[1];
+    if (literal === undefined) throw new Error("webhook stub template not found in source");
+    const slot = "webhook handler stub for ${provider}.";
+    expect(literal.split(slot)).toHaveLength(2);
+    const withTabs = literal.replace(
+      slot,
+      `webhook handler stub for ${before}\${provider}${after}.`,
+    );
+    // Evaluate the real template literal with the same helper results as stripe.
+    const render = new Function(
+      "provider",
+      "webhookSecretKeyFor",
+      "capitalize",
+      "signatureHeaderFor",
+      "verificationHintFor",
+      `return ${withTabs};`,
+    );
+    const rendered = render(
+      "stripe",
+      () => "STRIPE_WEBHOOK_SECRET",
+      () => "Stripe",
+      () => "stripe-signature",
+      verificationHintFor,
+    );
+    expect(rendered).toBe(
+      webhookStubFor("stripe").replace(
+        "webhook handler stub for stripe.",
+        `webhook handler stub for ${before}stripe${after}.`,
+      ),
+    );
+  });
+
   it.each(["stripe", "clerk", "supabase", "github"])(
     "fills the known %s values exactly and keeps an adjacent tab byte-for-byte",
     (provider) => {
