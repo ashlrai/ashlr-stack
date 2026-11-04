@@ -2386,6 +2386,45 @@ echo "[]"
     expect(existsSync(join(harness.dir, ".stack/webhooks", `${unknown}.ts`))).toBe(false);
   });
 
+  it("leaves an unknown placeholder unchanged and still substitutes the known provider listed after it", async () => {
+    // `${HOOK_URL}` is an unknown placeholder-shaped provider name wired
+    // BEFORE a known provider (`stripe`) in one recipe — the reverse of the
+    // ordering above. A pass that bails on the first skipped name (early
+    // return, break, or a cursor that consumes two entries per step) wires
+    // stripe fine when it leads the list but leaves it unwired here. The
+    // unknown name must come back in `skipped` byte-for-byte while stripe is
+    // fully substituted.
+    const unknown = "${HOOK_URL}";
+    const recipe: Recipe = {
+      ...STRIPE_RECIPE,
+      providers: [{ name: unknown }, { name: "stripe" }],
+    };
+    const result = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
+
+    // The unknown placeholder leads `skipped` unchanged; the vault is
+    // readable here, so stripe is processed rather than skipped.
+    expect(result.skipped).toEqual([unknown]);
+    expect(result.skipped[0]).toBe("${HOOK_URL}");
+    // The known provider is replaced: its declared secret reports missing
+    // and its stub is the fully expanded template — every slot filled, no
+    // placeholder text left.
+    expect(result.present).toEqual([]);
+    expect(result.missing).toEqual(["stripe:STRIPE_SECRET_KEY"]);
+    const stubPath = join(harness.dir, ".stack/webhooks/stripe.ts");
+    expect(result.webhooks).toEqual([stubPath]);
+    const stub = readFileSync(stubPath, "utf-8");
+    expect(stub).toBe(webhookStubFor("stripe"));
+    expect(stub).toContain("STRIPE_WEBHOOK_SECRET");
+    expect(stub).toContain("stripe-signature");
+    expect(stub).not.toContain("${");
+
+    // The unknown placeholder writes nothing of its own — no stub file and
+    // no vault writes — and wiring reads the vault inventory exactly once.
+    expect(existsSync(join(harness.dir, ".stack/webhooks", `${unknown}.ts`))).toBe(false);
+    expect(harness.callsTo("add")).toEqual([]);
+    expect(harness.callsTo("list")).toEqual([{ cmd: "list", args: ["--json"] }]);
+  });
+
   it("leaves a repeated unknown placeholder in other syntaxes unchanged at every expansion site", () => {
     // `{{x}}`, `%s`, `$&` and `$1` are placeholder/replacement syntaxes other
     // than `${...}`. None is a template slot here, so each repeated token must
