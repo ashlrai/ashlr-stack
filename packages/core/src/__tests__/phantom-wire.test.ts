@@ -5641,3 +5641,32 @@ describe("webhookStubFor — known placeholder surrounded by spaces", () => {
     },
   );
 });
+
+describe("webhookStubFor — empty replacement value, line by line", () => {
+  it("blanks the placeholder on each line it appears and leaves every other line identical", () => {
+    const probe = "zzprobe";
+    const empty = webhookStubFor("").split("\n");
+    const probed = webhookStubFor(probe).split("\n");
+    expect(empty.length).toBe(probed.length);
+
+    let blanked = 0;
+    probed.forEach((line, i) => {
+      if (!line.toLowerCase().includes(probe)) {
+        // No placeholder on this line: empty and probed renders match exactly.
+        expect(empty[i]).toBe(line);
+        return;
+      }
+      blanked++;
+      // Placeholder line: removing the value (any casing) from the probed
+      // line yields the empty line, so the surrounding text is untouched.
+      const removed = line
+        .replaceAll(probe, "")
+        .replaceAll(probe.toUpperCase(), "")
+        .replaceAll("Zzprobe", "");
+      expect(empty[i]).toBe(removed);
+      expect(empty[i].toLowerCase()).not.toContain(probe);
+    });
+    // The placeholder is used on more than one line, so this is not vacuous.
+    expect(blanked).toBeGreaterThan(3);
+  });
+});
