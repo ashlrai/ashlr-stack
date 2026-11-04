@@ -1496,6 +1496,19 @@ describe("ai/phantom-wire", () => {
     expect(parts[1]?.startsWith("right.")).toBe(true);
   });
 
+  it("preserves mixed carriage returns and newlines throughout the complete stub", () => {
+    const provider = "a\rb\nc\r\nd\n\re";
+    const expected = webhookStubFor("marker")
+      .split("MARKER")
+      .join("A\rB\nC\r\nD\n\rE")
+      .split("Marker")
+      .join("A\rb\nc\r\nd\n\re")
+      .split("marker")
+      .join(provider);
+
+    expect(webhookStubFor(provider)).toBe(expected);
+  });
+
   it("retains a standalone carriage return exactly wherever it lands in a replacement", async () => {
     // A `\r` with no `\n` attached — alone as the whole value, at the edges,
     // or doubled — is data, not a line ending. Each one must land as a lone
