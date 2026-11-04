@@ -169,6 +169,53 @@ describe("ai/phantom-wire", () => {
     expect(harness.callsTo("add")).toEqual([]);
   });
 
+  it("preserves a literal dollar sign in a provider name at every expansion site", async () => {
+    // A `$` followed by no special character — not `&`, `` ` ``, `'`, a
+    // digit, or another `$` — matches no String.replace replacement
+    // pattern, and `$0` / `$<name>` match none either without numbered or
+    // named captures. Every variant is plain text to carry, but an
+    // expansion that special-cased `$` anyway could eat it as a pattern
+    // prefix, splice neighboring template text in around it, or strip it.
+    expect(webhookStubFor("zzq")).not.toContain("$");
+    for (const provider of ["pay$hook", "cost$", "$hook", "$", "pay$0hook", "pay$<name>hook"]) {
+      const stub = webhookStubFor(provider);
+
+      // Raw sites: the header and forge lines carry the name verbatim.
+      expect(stub).toContain(`webhook handler stub for ${provider}.`);
+      expect(stub).toContain(`forge a ${provider} webhook.`);
+      // `capitalize(provider)` site: only the first letter folds — `$` has
+      // no case mapping, so a name that starts with one lands unchanged.
+      expect(stub).toContain(
+        `handle${provider[0].toUpperCase()}${provider.slice(1)}Webhook(req: Request)`,
+      );
+      // `webhookSecretKeyFor(provider)` sites: every dollar survives
+      // uppercasing in both reveal lines.
+      expect(stub.split(`phantom reveal ${provider.toUpperCase()}_WEBHOOK_SECRET`).length - 1).toBe(
+        2,
+      );
+
+      // The template contributes no `$` of its own: each one in the stub is
+      // a dollar the name carried into its five expansion sites — none
+      // consumed as pattern syntax, none added — and no `${` residue.
+      expect(stub.split("$").length - 1).toBe((provider.split("$").length - 1) * 5);
+      expect(stub).not.toContain("${");
+    }
+
+    // Through wiring a name ending in a literal dollar matches no catalog
+    // provider: it returns in `skipped` byte-for-byte and never reaches
+    // the stub template or disk.
+    const name = "stripe$";
+    const recipe: Recipe = { ...STRIPE_RECIPE, providers: [{ name }] };
+    expect(await wirePhantomForRecipe(recipe, { cwd: harness.dir })).toEqual({
+      present: [],
+      missing: [],
+      webhooks: [],
+      skipped: [name],
+    });
+    expect(existsSync(join(harness.dir, ".stack/webhooks"))).toBe(false);
+    expect(harness.callsTo("add")).toEqual([]);
+  });
+
   it("preserves a tab character exactly in placeholder replacement text", () => {
     // Template literal interpolation must carry the tab through untouched —
     // no escaping, no collapsing to spaces, no stripping.
