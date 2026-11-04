@@ -4882,6 +4882,44 @@ describe("webhookStubFor — known placeholder next to a tab", () => {
   );
 });
 
+describe("webhookStubFor — known placeholder next to square brackets", () => {
+  const count = (s: string, ch: string) => s.split(ch).length - 1;
+
+  it.each(["stripe", "clerk", "supabase", "github"])(
+    "keeps square brackets around %s byte-for-byte in every name slot",
+    (provider) => {
+      const known = webhookStubFor(provider);
+      const baseOpen = count(known, "[");
+      const baseClose = count(known, "]");
+
+      for (const [before, after] of [
+        ["[", "]"],
+        ["[", ""],
+        ["", "]"],
+        ["", "[0]"],
+      ] as const) {
+        const name = `${before}${provider}${after}`;
+        const stub = webhookStubFor(name);
+        expect(stub).toContain(`webhook handler stub for ${name}.`);
+        expect(stub).toContain(`forge a ${name} webhook.`);
+        expect(stub).toContain(
+          `phantom reveal ${before}${provider.toUpperCase()}${after}_WEBHOOK_SECRET`,
+        );
+        // capitalize() leaves a leading "[" alone and only folds letters.
+        const cap = before === "" ? provider[0].toUpperCase() + provider.slice(1) : provider;
+        expect(stub).toContain(`handle${before}${cap}${after}Webhook(req: Request)`);
+        // Five name slots: each bracket in the name lands exactly five times
+        // on top of whatever the fixed template already carries.
+        expect(count(stub, "[") - baseOpen).toBe(5 * count(name, "["));
+        expect(count(stub, "]") - baseClose).toBe(5 * count(name, "]"));
+        // A bracketed name is not the known provider: generic header and hint.
+        expect(stub).toContain('req.headers.get("x-webhook-signature")');
+        expect(stub).toContain(`// ${verificationHintFor("zzq")}`);
+      }
+    },
+  );
+});
+
 describe("webhookStubFor — empty template", () => {
   it("renders an empty template to an empty string, and an empty name to empty strings at every slot", () => {
     // webhookStubFor renders one fixed template (`base`) with the provider
