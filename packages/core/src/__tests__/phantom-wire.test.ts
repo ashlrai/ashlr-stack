@@ -3040,6 +3040,37 @@ echo "[]"
     ).toBe(sentinel);
   });
 
+  it("keeps text around a known placeholder exact, line by line, in the string and on disk", async () => {
+    // Every line of a known provider's stub is compared against the same
+    // template rendered for a sentinel: only the placeholder slots may differ,
+    // so all surrounding text (em dashes included) is preserved exactly.
+    const known = webhookStubFor("stripe").split("\n");
+    const sentinel = webhookStubFor("zzq").split("\n");
+    expect(known.length).toBe(sentinel.length);
+    const changed = known.filter((line, i) => line !== sentinel[i]);
+    expect(changed.length).toBeGreaterThan(0);
+    for (const line of changed) {
+      expect(line).toMatch(/stripe|Stripe|STRIPE/);
+    }
+
+    // The em dash is written as UTF-8 bytes E2 80 94, with no BOM, mojibake
+    // or replacement character, and the file reads back identical to the
+    // rendered string.
+    const recipe: Recipe = { ...STRIPE_RECIPE, providers: [{ name: "stripe" }] };
+    await wirePhantomForRecipe(recipe, { cwd: harness.dir });
+    const bytes = readFileSync(join(harness.dir, ".stack/webhooks/stripe.ts"));
+    expect(bytes.subarray(0, 2).toString("latin1")).toBe("//");
+    expect(bytes.includes(Buffer.from([0xe2, 0x80, 0x94]))).toBe(true);
+    expect(bytes.toString("utf-8")).toBe(webhookStubFor("stripe"));
+
+    // Case mapping reaches the secret-key slot: `ß` upper-cases to `SS`, and
+    // the Unicode text on each side of the placeholder is otherwise unchanged.
+    const stub = webhookStubFor("straße-日本");
+    expect(stub).toContain("phantom reveal STRASSE-日本_WEBHOOK_SECRET");
+    expect(stub).toContain("webhook handler stub for straße-日本.");
+    expect(stub).toContain("handleStraße-日本Webhook(req: Request)");
+  });
+
   it("returns a template with no placeholders unchanged across renders and through the stub", () => {
     // `verificationHintFor` is the module's template with no placeholders:
     // every branch returns one fixed string — the four provider hints and
