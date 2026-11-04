@@ -976,6 +976,41 @@ echo "[]"
     );
   });
 
+  it("leaves a differently cased provider name unchanged in the stub unless it is explicitly defined", () => {
+    // Only the lowercase names are defined; `Stripe` / `GITHUB` must take the
+    // generic fallbacks and echo the given casing, never the stripe/github maps.
+    const mixed = webhookStubFor("Stripe");
+    expect(mixed).toContain("webhook handler stub for Stripe.");
+    expect(mixed).toContain("phantom reveal STRIPE_WEBHOOK_SECRET"); // fallback uppercases the name
+    expect(mixed).toContain('req.headers.get("x-webhook-signature")');
+    expect(mixed).toContain("handleStripeWebhook");
+    expect(mixed).toContain("Verify per the provider's documented signature scheme.");
+    expect(mixed).not.toContain("stripe-signature");
+    expect(mixed).not.toContain("constructEvent");
+
+    const upper = webhookStubFor("GITHUB");
+    expect(upper).toContain("webhook handler stub for GITHUB.");
+    expect(upper).toContain('req.headers.get("x-webhook-signature")');
+    expect(upper).toContain("handleGITHUBWebhook");
+    expect(upper).not.toContain("x-hub-signature-256");
+    expect(upper).not.toContain("sha256=");
+
+    // The explicitly defined lowercase name still takes its own mapping.
+    expect(webhookStubFor("github")).toContain('req.headers.get("x-hub-signature-256")');
+  });
+
+  it("writes no webhook stub for a differently cased provider name", async () => {
+    for (const name of ["Stripe", "STRIPE", "sTrIpE"]) {
+      const recipe: Recipe = { ...STRIPE_RECIPE, providers: [{ name }] };
+      const result = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
+      expect(result.webhooks).toEqual([]);
+      expect(result.skipped).toEqual([name]);
+      expect(result.present).toEqual([]);
+      expect(result.missing).toEqual([]);
+    }
+    expect(existsSync(join(harness.dir, ".stack/webhooks"))).toBe(false);
+  });
+
   it("skips a path-traversal provider name without writing any stub", async () => {
     const recipe: Recipe = { ...STRIPE_RECIPE, providers: [{ name: "../../evil" }] };
 
