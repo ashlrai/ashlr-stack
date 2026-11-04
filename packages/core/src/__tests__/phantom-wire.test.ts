@@ -1697,4 +1697,71 @@ echo "[]"
     expect(stub).not.toContain("�");
     expect(harness.callsTo("add")).toEqual([]);
   });
+
+  it("leaves the rendered stub byte-identical for every map entry the template never uses", async () => {
+    // The stub's expansion sites draw only from `providers[].name`: the two
+    // raw `${provider}` slots, `capitalize(provider)`, the two
+    // `webhookSecretKeyFor(provider)` slots, and the `signatureHeaderFor` /
+    // `verificationHintFor` lookups keyed by that same name. Every other
+    // entry in the maps reaching wiring is an unused value — the recipe's
+    // metadata fields, a provider's `rationale` and stray keys, extra `opts`
+    // entries, and vault inventory entries the recipe never declares. None
+    // may reach the rendered template: the stub must come out byte-for-byte
+    // identical to the bare recipe's.
+    harness.cleanup();
+    harness = setupFakePhantom({
+      UNUSED_VAULT_ENTRY: "stored value the recipe never names",
+      SECOND_UNUSED_ENTRY: "another unused stored value",
+    });
+
+    const stubPath = join(harness.dir, ".stack/webhooks/stripe.ts");
+    const baseline = await wirePhantomForRecipe(STRIPE_RECIPE, { cwd: harness.dir });
+    expect(baseline.webhooks).toEqual([stubPath]);
+    const baselineStub = readFileSync(stubPath, "utf-8");
+    expect(baselineStub).toBe(webhookStubFor("stripe"));
+
+    // Same used entries (`providers[].name`), different unused ones.
+    const loaded = {
+      id: "a-different-recipe-id",
+      query: "an unused query entry",
+      createdAt: "2031-05-06T07:08:09.000Z",
+      providers: [
+        {
+          name: "stripe",
+          rationale: "an unused rationale entry",
+          stray: "an unused entry value",
+        },
+      ],
+      guidance: "an unused guidance entry",
+      projectContext: { unused: { nested: ["entry", "values"] } },
+      strayRecipeKey: "an unused recipe entry",
+    };
+    const opts = { cwd: harness.dir, unusedOpt: "an unused opts entry" };
+    const result = await wirePhantomForRecipe(loaded, opts);
+
+    // The result and the rendered bytes are identical to the bare recipe's
+    // run: undeclared vault names were never classified, and no unused entry
+    // changed what the template renders.
+    expect(result).toEqual(baseline);
+    const stub = readFileSync(stubPath, "utf-8");
+    expect(stub).toBe(baselineStub);
+    expect(stub).not.toContain("${");
+
+    // No unused entry's text leaked into the render.
+    for (const unused of [
+      "a-different-recipe-id",
+      "an unused query entry",
+      "an unused rationale entry",
+      "an unused entry value",
+      "an unused guidance entry",
+      "an unused recipe entry",
+      "an unused opts entry",
+      "UNUSED_VAULT_ENTRY",
+      "SECOND_UNUSED_ENTRY",
+      "stored value the recipe never names",
+    ]) {
+      expect(stub).not.toContain(unused);
+    }
+    expect(harness.callsTo("add")).toEqual([]);
+  });
 });
