@@ -226,6 +226,22 @@ describe("ai/phantom-wire", () => {
     expect(harness.callsTo("add")).toEqual([]);
   });
 
+  it("ignores a replacement map: an empty provider still yields the empty-slot stub", () => {
+    // phantom-wire takes no replacement map. A caller that passes one anyway
+    // (e.g. `{ provider: "stripe" }`) must not change the empty-provider output.
+    const withMap = (webhookStubFor as (p: string, map: Record<string, string>) => string)("", {
+      provider: "stripe",
+      "": "stripe",
+    });
+    expect(withMap).toBe(webhookStubFor(""));
+    expect(withMap).not.toContain("stripe");
+    const hintWithMap = (verificationHintFor as (p: string, map: Record<string, string>) => string)(
+      "",
+      { "": "stripe" },
+    );
+    expect(hintWithMap).toBe("Verify per the provider's documented signature scheme.");
+  });
+
   it("leaves the stub's fixed text unchanged when no value is supplied for its placeholders", () => {
     // phantom-wire has no values map; the stub's only inputs are the provider
     // slots. An empty provider supplies nothing: each slot collapses to the
