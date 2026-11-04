@@ -5459,3 +5459,35 @@ describe("webhookStubFor — known placeholder between line breaks", () => {
     },
   );
 });
+
+describe("webhookStubFor — known placeholder surrounded by spaces", () => {
+  const count = (s: string, needle: string) => s.split(needle).length - 1;
+
+  it.each(["stripe", "clerk", "supabase", "github"])(
+    "keeps the space before and after %s at every name slot, byte-for-byte",
+    (provider) => {
+      // The padded name falls through to the generic stub, so the unpadded
+      // generic stub is the baseline (known providers carry other hint text).
+      const baseline = webhookStubFor(provider.replace(/./g, "z"));
+      const name = ` ${provider} `;
+      const stub = webhookStubFor(name);
+      const upper = provider.toUpperCase();
+
+      // Both surrounding spaces survive at the prose slots.
+      expect(stub).toContain(`webhook handler stub for ${name}.`);
+      expect(stub).toContain(`forge a ${name} webhook.`);
+      // And inside the env-var name, at both reveal sites.
+      expect(count(stub, `phantom reveal  ${upper} _WEBHOOK_SECRET`)).toBe(2);
+      // capitalize() sees the leading space, so the name rides along as-is.
+      expect(stub).toContain(`handle${name}Webhook(`);
+
+      // Five slots, two spaces each: exactly ten spaces added over the
+      // generic stub; nothing is trimmed, collapsed, or rewritten.
+      expect(count(stub, " ") - count(baseline, " ")).toBe(10);
+
+      // Not matched as the known provider: generic header, fallback hint.
+      expect(stub).toContain('req.headers.get("x-webhook-signature")');
+      expect(stub).toContain(`// ${verificationHintFor("zzq")}`);
+    },
+  );
+});
