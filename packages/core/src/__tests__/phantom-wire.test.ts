@@ -4293,6 +4293,24 @@ echo "[]"
   });
 });
 
+describe("webhookStubFor — placeholder inside parentheses", () => {
+  it.each([
+    ["stripe", "STRIPE_WEBHOOK_SECRET", "stripe-signature"],
+    ["github", "GITHUB_WEBHOOK_SECRET", "x-hub-signature-256"],
+    ["acme", "ACME_WEBHOOK_SECRET", "x-webhook-signature"],
+  ])("keeps both parentheses around the %s secret name and header", (provider, key, header) => {
+    const stub = webhookStubFor(provider);
+    // The secret-name placeholder is wrapped as "(`phantom reveal <KEY>`)".
+    expect(stub).toContain(`(\`phantom reveal ${key}\`)`);
+    // The header placeholder sits inside `get("<header>")`.
+    expect(stub).toContain(`req.headers.get("${header}")`);
+    // Each replaced line stays paren-balanced.
+    for (const line of stub.split("\n").filter((l) => l.includes(key) || l.includes(header))) {
+      expect(line.split("(").length).toBe(line.split(")").length);
+    }
+  });
+});
+
 describe("webhookStubFor — backslash in replacement text", () => {
   it("renders a provider name containing backslashes byte-for-byte", () => {
     // Backslash sequences that a regex/String.replace replacement or a
