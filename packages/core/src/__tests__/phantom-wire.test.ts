@@ -535,6 +535,17 @@ describe("ai/phantom-wire", () => {
     expect(restored).toBe(plain);
   });
 
+  it("preserves every line and its order throughout a multiline replacement", () => {
+    const provider = "alpha\nsecond line\nthird line";
+    const expected = webhookStubFor("marker")
+      .replaceAll("MARKER", "ALPHA\nSECOND LINE\nTHIRD LINE")
+      .replaceAll("Marker", "Alpha\nsecond line\nthird line")
+      .replaceAll("marker", "alpha\nsecond line\nthird line");
+
+    // Compare the entire output, including the text around all five slots.
+    expect(webhookStubFor(provider)).toBe(expected);
+  });
+
   it("preserves leading, trailing and consecutive newlines in a replacement", () => {
     // Edge positions must not be trimmed, and a blank line must not collapse.
     const plain = webhookStubFor("x");
