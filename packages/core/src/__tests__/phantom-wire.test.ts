@@ -2502,6 +2502,64 @@ echo "[]"
     expect(harness.callsTo("add")).toEqual([]);
   });
 
+  it("leaves a provider name consisting solely of an unknown placeholder unchanged", async () => {
+    // The whole name is one placeholder token with no ordinary text around
+    // it — the degenerate case of the lone `${HOOK_URL}` above, extended to
+    // every placeholder syntax this template does not define: `{{...}}`,
+    // `%...%`, `%s`, `$1`, `$&`, plus an unknown token in the `${...}` syntax
+    // it does use. With nothing else in the name, a pass that tried to
+    // resolve the token would leave an empty name, substitute an unrelated
+    // value, or throw on the unresolvable slot; carried as data, each name
+    // lands at every expansion site byte-for-byte instead.
+    const names = ["{{UNKNOWN}}", "%UNKNOWN%", "%s", "$1", "$&", "${unknownName}"];
+    for (const name of names) {
+      const stub = webhookStubFor(name);
+
+      // The template contributes none of these tokens itself, so every
+      // occurrence in the stub is one the name carried in.
+      expect(webhookStubFor("zzq")).not.toContain(name);
+      // Raw sites: the header and forge lines carry the name byte-for-byte.
+      expect(stub).toContain(`webhook handler stub for ${name}.`);
+      expect(stub).toContain(`forge a ${name} webhook.`);
+      // `capitalize(provider)` site: each token starts with a non-letter, so
+      // capitalize folds nothing and this site is verbatim too.
+      expect(stub).toContain(`handle${name[0].toUpperCase()}${name.slice(1)}Webhook(req: Request)`);
+      // `webhookSecretKeyFor(provider)` sites: the only transform — the whole
+      // name uppercases, token included, in both reveal lines.
+      expect(stub.split(`phantom reveal ${name.toUpperCase()}_WEBHOOK_SECRET`).length - 1).toBe(2);
+
+      // Occurrence accounting: three case-preserving sites (header, forge,
+      // handler) hold the token verbatim; the two reveal lines hold its
+      // uppercased form. A resolver that emptied or re-expanded the token
+      // would leave zero behind.
+      expect(stub.split(name).length - 1).toBe(name === name.toUpperCase() ? 5 : 3);
+      if (name !== name.toUpperCase()) {
+        expect(stub.split(name.toUpperCase()).length - 1).toBe(2);
+      }
+
+      // An unknown name gets the generic signature header and the fallback
+      // hint — nothing provider-specific leaked in alongside the token.
+      expect(stub).toContain('req.headers.get("x-webhook-signature")');
+      expect(verificationHintFor(name)).toBe(
+        "Verify per the provider's documented signature scheme.",
+      );
+    }
+
+    // Through wiring every solely-placeholder name matches no catalog
+    // provider: each returns in `skipped` byte-for-byte and nothing reaches
+    // the stub dir or the vault.
+    const recipe: Recipe = { ...STRIPE_RECIPE, providers: names.map((name) => ({ name })) };
+    expect(await wirePhantomForRecipe(recipe, { cwd: harness.dir })).toEqual({
+      present: [],
+      missing: [],
+      webhooks: [],
+      skipped: names,
+    });
+    expect(existsSync(join(harness.dir, ".stack/webhooks"))).toBe(false);
+    expect(harness.callsTo("add")).toEqual([]);
+    expect(harness.callsTo("list")).toEqual([{ cmd: "list", args: ["--json"] }]);
+  });
+
   it("leaves every occurrence of a repeated unknown placeholder in a provider name unchanged", async () => {
     // `${HOOK_URL}` matches none of the template's slots — expansion fills
     // `provider`, `capitalize(provider)`, `webhookSecretKeyFor(provider)`, and
