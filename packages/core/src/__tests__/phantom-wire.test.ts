@@ -2329,6 +2329,48 @@ echo "[]"
     expect(harness.callsTo("add")).toEqual([]);
   });
 
+  it("leaves two different adjacent unknown placeholders in a provider name unchanged", async () => {
+    // Two distinct unknown tokens touching each other, with no text between
+    // them and with ordinary text on either side. Each token reaches all five
+    // expansion sites → five of each, ten in total, in order and unmerged.
+    const first = "${HOOK_URL}";
+    const second = "${API_BASE}";
+    for (const provider of [`pay${first}${second}ment`, `${first}${second}`, `${second}${first}`]) {
+      const stub = webhookStubFor(provider);
+
+      const tokens = [...stub.matchAll(/\$\{[^}]*\}/g)].map((m) => m[0]);
+      expect(tokens).toHaveLength(10);
+      expect(tokens.filter((t) => t === first)).toHaveLength(5);
+      // Uppercasing at the secret-key sites leaves both already-uppercase tokens intact.
+      expect(tokens.filter((t) => t === second)).toHaveLength(5);
+
+      // Raw sites carry the name byte-for-byte, tokens in their original order.
+      expect(stub).toContain(`webhook handler stub for ${provider}.`);
+      expect(stub).toContain(`forge a ${provider} webhook.`);
+      expect(stub).toContain(
+        `handle${provider[0].toUpperCase()}${provider.slice(1)}Webhook(req: Request)`,
+      );
+      expect(stub.split(`${provider.toUpperCase()}_WEBHOOK_SECRET`).length - 1).toBe(2);
+      // Neither token resolves a slot: the generic signature header applies.
+      expect(stub).toContain('req.headers.get("x-webhook-signature")');
+    }
+
+    // Through wiring both names match no catalog provider: each returns in
+    // `skipped` unchanged and nothing is written or added.
+    const recipe: Recipe = {
+      ...STRIPE_RECIPE,
+      providers: [{ name: first }, { name: second }, { name: `${first}${second}` }],
+    };
+    expect(await wirePhantomForRecipe(recipe, { cwd: harness.dir })).toEqual({
+      present: [],
+      missing: [],
+      webhooks: [],
+      skipped: [first, second, `${first}${second}`],
+    });
+    expect(existsSync(join(harness.dir, ".stack/webhooks"))).toBe(false);
+    expect(harness.callsTo("add")).toEqual([]);
+  });
+
   it("leaves every occurrence of a repeated slot-named placeholder in a provider name unchanged", () => {
     // `${provider}` repeated twice, back to back and apart: the token is
     // named like a real template slot, but arriving inside the name it is
