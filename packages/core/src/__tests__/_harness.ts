@@ -148,20 +148,7 @@ print(v.get(sys.argv[2], ""))
     ;;
 esac
 `;
-  const binPath = join(dir, "phantom");
-  // Sandboxed runners and macOS Gatekeeper's provenance policy refuse to
-  // exec an extensionless file written by a non-platform process, while a
-  // `*.sh` target passes the check. Write the shim as `phantom.sh` and link
-  // `phantom` at it; fall back to the direct file where symlinks fail.
-  const realPath = join(dir, "phantom.sh");
-  writeFileSync(realPath, script);
-  chmodSync(realPath, 0o755);
-  try {
-    symlinkSync(realPath, binPath);
-  } catch {
-    writeFileSync(binPath, script);
-    chmodSync(binPath, 0o755);
-  }
+  writeShimmedExecutable(dir, "phantom", script);
 
   const previousPath = process.env.PATH ?? "";
   process.env.PATH = `${dir}:${previousPath}`;
@@ -191,6 +178,36 @@ esac
       }
     },
   };
+}
+
+/**
+ * Write an executable shim that survives macOS Gatekeeper's provenance
+ * policy: sandboxed runners and Gatekeeper refuse to exec an extensionless
+ * file written by a non-platform process, while a `*.sh` target passes the
+ * check. The body goes into `<name>.<ext>` and `<name>` is a symlink to it;
+ * falls back to the direct file where symlinks fail. Returns the `<name>`
+ * path to put on PATH.
+ *
+ * `ext` defaults to `sh`; pass `mjs` for `#!bun`/`#!node` bodies — bun
+ * dispatches `*.sh` files to its own shell instead of running the JS.
+ */
+export function writeShimmedExecutable(
+  dir: string,
+  name: string,
+  script: string,
+  ext = "sh",
+): string {
+  const binPath = join(dir, name);
+  const realPath = join(dir, `${name}.${ext}`);
+  writeFileSync(realPath, script);
+  chmodSync(realPath, 0o755);
+  try {
+    symlinkSync(realPath, binPath);
+  } catch {
+    writeFileSync(binPath, script);
+    chmodSync(binPath, 0o755);
+  }
+  return binPath;
 }
 
 export async function readVault(dir: string): Promise<Record<string, string>> {

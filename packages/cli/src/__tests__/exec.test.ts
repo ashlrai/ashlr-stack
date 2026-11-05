@@ -1,9 +1,10 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawn, spawnSync } from "node:child_process";
-import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { writeShimmedExecutable } from "../../../core/src/__tests__/_harness.ts";
 
 import { shouldRelaySignal } from "../commands/exec.ts";
 
@@ -23,9 +24,9 @@ function tmp(prefix: string): string {
 /** A `phantom` that answers --version and runs `exec -- cmd` directly. */
 function fakePhantomDir(): string {
   const dir = tmp("stack-exec-phantom-");
-  const bin = join(dir, "phantom");
-  writeFileSync(
-    bin,
+  writeShimmedExecutable(
+    dir,
+    "phantom",
     `#!/bin/sh
 case "$1" in
   --version) echo "phantom fake 0.0.1" ;;
@@ -34,7 +35,6 @@ case "$1" in
 esac
 `,
   );
-  chmodSync(bin, 0o755);
   return dir;
 }
 
