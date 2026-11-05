@@ -37,3 +37,16 @@ it("preserves a single quote after a dollar sign in replacement text", () => {
     "//   // (`phantom reveal PAY$'CO_WEBHOOK_SECRET`) and compare in",
   ]);
 });
+
+it.each([
+  ["payco", "PAYCO_WEBHOOK_SECRET"],
+  ["pay$'co", "PAY$'CO_WEBHOOK_SECRET"],
+])("expands the leading provider slot and preserves its suffix for %s", (provider, expected) => {
+  // The fallback secret-name template starts with the provider interpolation,
+  // followed immediately by the literal _WEBHOOK_SECRET suffix.
+  const revealLines = webhookStubFor(provider)
+    .split("\n")
+    .filter((line) => line.startsWith("//   phantom reveal "));
+
+  expect(revealLines).toEqual([`//   phantom reveal ${expected}`]);
+});
