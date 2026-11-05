@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { writeShimmedExecutable } from "../../../core/src/__tests__/_harness.ts";
 import { HANDSHAKE_CONTRACT } from "../lib/ecosystem.ts";
 import { checkDoctor } from "../lib/handshake-conformance.ts";
 
@@ -19,7 +20,7 @@ afterEach(() => rmSync(home, { recursive: true, force: true }));
 
 // Absolute interpreter and an exclusive PATH keep real companions out of the run.
 function companion(command: string, body: string) {
-  writeFileSync(join(bin, command), `#!${process.execPath}\n${body}\n`, { mode: 0o755 });
+  writeShimmedExecutable(bin, command, `#!${process.execPath}\n${body}\n`, "mjs");
 }
 
 function phantom() {

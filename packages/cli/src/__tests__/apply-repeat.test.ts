@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it, setDefaultTimeout } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
-  chmodSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -13,6 +12,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { writeShimmedExecutable } from "../../../core/src/__tests__/_harness.ts";
 
 /**
  * Regression: running `stack apply` twice with a secret missing from Phantom
@@ -54,8 +54,9 @@ describe("stack apply repeated runs", () => {
     const calls = join(home, "phantom-calls");
     mkdirSync(bin);
     // Fake vault: empty, and records every subcommand so writes are detectable.
-    writeFileSync(
-      join(bin, "phantom"),
+    writeShimmedExecutable(
+      bin,
+      "phantom",
       `#!/bin/sh
 echo "$@" >> '${calls}'
 case "$1" in
@@ -65,7 +66,6 @@ case "$1" in
 esac
 `,
     );
-    chmodSync(join(bin, "phantom"), 0o700);
     mkdirSync(join(dir, ".stack", "recipes"), { recursive: true });
     writeFileSync(join(dir, ".stack.toml"), "");
     writeFileSync(
@@ -117,9 +117,12 @@ for (let i = 0; i < 2; i++) {
     }
     expect(result.stdout + result.stderr).not.toContain(MARKER);
 
-    // The vault was only read, never written.
+    // The vault was only read, never written: the log records "$@" per call,
+    // so a write would surface as an `add`/`remove` subcommand.
     const phantomCalls = readFileSync(calls, "utf8").trim().split("\n");
-    expect(phantomCalls.every((call) => ["--version", "list"].includes(call))).toBe(true);
+    expect(phantomCalls.every((call) => ["--version", "list"].includes(call.split(" ")[0]))).toBe(
+      true,
+    );
     expect(phantomCalls.join("\n")).not.toContain(MARKER);
 
     // Nothing on disk (project or HOME) contains the placeholder, except the
