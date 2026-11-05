@@ -8,6 +8,7 @@ import {
   readdirSync,
   rmSync,
   statSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -54,18 +55,25 @@ describe("stack apply repeated runs", () => {
     const calls = join(home, "phantom-calls");
     mkdirSync(bin);
     // Fake vault: empty, and records every subcommand so writes are detectable.
-    writeFileSync(
-      join(bin, "phantom"),
-      `#!/bin/sh
+    // Written as `phantom.sh` + a `phantom` symlink like core's _harness.ts:
+    // macOS Gatekeeper's provenance policy refuses to exec an extensionless
+    // file written by a non-platform process.
+    const stub = `#!/bin/sh
 echo "$@" >> '${calls}'
 case "$1" in
  --version) echo fixture;;
  list) echo '[]';;
  *) exit 1;;
 esac
-`,
-    );
-    chmodSync(join(bin, "phantom"), 0o700);
+`;
+    writeFileSync(join(bin, "phantom.sh"), stub);
+    chmodSync(join(bin, "phantom.sh"), 0o755);
+    try {
+      symlinkSync(join(bin, "phantom.sh"), join(bin, "phantom"));
+    } catch {
+      writeFileSync(join(bin, "phantom"), stub);
+      chmodSync(join(bin, "phantom"), 0o755);
+    }
     mkdirSync(join(dir, ".stack", "recipes"), { recursive: true });
     writeFileSync(join(dir, ".stack.toml"), "");
     writeFileSync(
@@ -119,14 +127,20 @@ for (let i = 0; i < 2; i++) {
 
     // The vault was only read, never written.
     const phantomCalls = readFileSync(calls, "utf8").trim().split("\n");
-    expect(phantomCalls.every((call) => ["--version", "list"].includes(call))).toBe(true);
+    expect(phantomCalls.every((call) => ["--version", "list --json"].includes(call))).toBe(true);
     expect(phantomCalls.join("\n")).not.toContain(MARKER);
 
     // Nothing on disk (project or HOME) contains the placeholder, except the
     // fixture files this test wrote itself.
     for (const root of [dir, home]) {
       for (const file of walk(root)) {
-        if (file === script || file === join(bin, "phantom") || file === calls) continue;
+        if (
+          file === script ||
+          file === join(bin, "phantom") ||
+          file === join(bin, "phantom.sh") ||
+          file === calls
+        )
+          continue;
         expect(readFileSync(file, "utf8")).not.toContain(MARKER);
       }
     }

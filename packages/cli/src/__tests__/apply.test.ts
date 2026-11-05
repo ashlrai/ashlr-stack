@@ -8,6 +8,7 @@ import {
   readFileSync,
   readdirSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -51,6 +52,23 @@ afterEach(() => {
   }
 });
 
+// Like core's _harness.ts: macOS Gatekeeper's provenance policy refuses to
+// exec an extensionless file written by a non-platform process, while a
+// `*.sh` target passes the check. Write the stub as `phantom.sh` and link
+// `phantom` at it; fall back to the direct file where symlinks fail.
+function writeStubPhantom(bin: string, script: string): void {
+  const realPath = join(bin, "phantom.sh");
+  const binPath = join(bin, "phantom");
+  writeFileSync(realPath, script);
+  chmodSync(realPath, 0o755);
+  try {
+    symlinkSync(realPath, binPath);
+  } catch {
+    writeFileSync(binPath, script);
+    chmodSync(binPath, 0o755);
+  }
+}
+
 function mkTmp(): string {
   const dir = mkdtempSync(join(tmpdir(), "stack-apply-"));
   createdDirs.push(dir);
@@ -69,8 +87,7 @@ describe("stack apply", () => {
       const bin = join(home, "bin");
       const calls = join(home, "phantom-calls");
       mkdirSync(bin);
-      writeFileSync(join(bin, "phantom"), `#!/bin/sh\necho "$1" >> '${calls}'\nexit 1\n`);
-      chmodSync(join(bin, "phantom"), 0o700);
+      writeStubPhantom(bin, `#!/bin/sh\necho "$1" >> '${calls}'\nexit 1\n`);
       const recipes = join(dir, ".stack", "recipes");
       mkdirSync(recipes, { recursive: true });
       const recipe =
@@ -148,8 +165,8 @@ describe("stack apply", () => {
     const bin = join(home, "bin");
     mkdirSync(bin);
     // Inert Phantom: initialized, nothing stored, reveal refused (as headless).
-    writeFileSync(
-      join(bin, "phantom"),
+    writeStubPhantom(
+      bin,
       `#!/bin/sh
 case "$1" in
  --version) echo fixture;;
@@ -159,7 +176,6 @@ case "$1" in
 esac
 `,
     );
-    chmodSync(join(bin, "phantom"), 0o700);
     mkdirSync(join(dir, ".stack", "recipes"), { recursive: true });
     writeFileSync(
       join(dir, ".stack", "recipes", "two-ai.toml"),
@@ -192,8 +208,8 @@ esac
     const bin = join(home, "bin");
     const calls = join(home, "phantom-calls");
     mkdirSync(bin);
-    writeFileSync(
-      join(bin, "phantom"),
+    writeStubPhantom(
+      bin,
       `#!/bin/sh
 echo "$1" >> '${calls}'
 case "$1" in
@@ -203,7 +219,6 @@ case "$1" in
 esac
 `,
     );
-    chmodSync(join(bin, "phantom"), 0o700);
     mkdirSync(join(dir, ".stack", "recipes"), { recursive: true });
     writeFileSync(join(dir, ".stack.toml"), "");
     writeFileSync(
