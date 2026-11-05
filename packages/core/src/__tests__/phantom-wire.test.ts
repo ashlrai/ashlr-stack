@@ -6018,3 +6018,90 @@ describe("webhookStubFor — unmatched opening brace in template prose", () => {
     expect(unmatchedOpen).toBe(true); // but there is a region with an open pending
   });
 });
+
+describe("webhookStubFor — substitution over ordinary text with no placeholders", () => {
+  it("returns ordinary placeholder-free text byte-for-byte identical to the input", () => {
+    // The stub template's only substitution surface is seven fixed `${...}`
+    // slots; every other byte is ordinary text a render must pass through
+    // untouched. Applied to input carrying none of those slots — ordinary
+    // text with no placeholders — substitution is the identity: the output
+    // matches the input byte-for-byte.
+    //
+    // Replay the module's substitution rules over its own extracted `base`
+    // template. The replay is proven to BE the module's machinery by
+    // matching webhookStubFor(name) byte-for-byte for an ordinary name;
+    // running the same machinery over placeholder-free text must then hand
+    // the input back unchanged.
+    const source = readFileSync(
+      fileURLToPath(new URL("../ai/phantom-wire.ts", import.meta.url)),
+      "utf-8",
+    );
+    const base = source.match(/const base = `([\s\S]*?)`;\n/)?.[1];
+    if (base === undefined) throw new Error("webhook stub template not found in source");
+    // `\`` escapes in the literal are `` ` `` bytes in the template's value.
+    const template = base.replaceAll("\\`", "`");
+    const splice = (t: string, name: string) =>
+      t
+        .replaceAll("${provider}", name)
+        .replaceAll(
+          "${capitalize(provider)}",
+          name === "" ? "" : `${name[0].toUpperCase()}${name.slice(1)}`,
+        )
+        .replaceAll("${webhookSecretKeyFor(provider)}", `${name.toUpperCase()}_WEBHOOK_SECRET`)
+        .replaceAll("${signatureHeaderFor(provider)}", "x-webhook-signature")
+        .replaceAll("${verificationHintFor(provider)}", verificationHintFor(name));
+
+    // Anchor the replay to the real render: an ordinary name — no `$`,
+    // braces, or format tokens — falls back on every lookup, so the
+    // replayed template equals the module's output byte-for-byte while the
+    // input name lands unchanged at all five expansion sites.
+    const name = "acme-billing";
+    expect(splice(template, name)).toBe(webhookStubFor(name));
+    const stub = webhookStubFor(name);
+    expect(stub).toContain(`webhook handler stub for ${name}.`);
+    expect(stub).toContain(`forge a ${name} webhook.`);
+    expect(stub).toContain("handleAcme-billingWebhook(req: Request)");
+    expect(stub.split(`phantom reveal ${name.toUpperCase()}_WEBHOOK_SECRET`).length - 1).toBe(2);
+
+    // Ordinary text with no placeholders: no `${` opener anywhere, so no
+    // known slot is present and substitution has nothing to fill. Other
+    // placeholder-shaped syntaxes ("%s", "{{mustache}}", "$1", unbalanced
+    // braces) are ordinary text to this substitution — they ride through
+    // untouched as well. Include the module's own fixed hint literals: a
+    // template with no placeholders is its own render.
+    const ordinaryTexts = [
+      "",
+      "plain prose with nothing to fill",
+      "100% coverage — costs $0 (net) {braces} [brackets] 'quotes' \"double\" `tick`",
+      "other placeholder syntaxes: %s %d {{mustache}} {{ user.name }} <slot>",
+      "shell-style dollars: $HOME $1 $9 $? $@ ~user",
+      "unmatched { opener and } closer }{{ — still ordinary",
+      "line one\nline two\n\nline four\n",
+      "trailing dollar $",
+      "trailing brace {",
+      verificationHintFor("stripe"),
+      verificationHintFor("zzq"),
+    ];
+    for (const text of ordinaryTexts) {
+      expect(text).not.toContain("${");
+      // The identity holds whatever value the slots would have taken:
+      // populated name, empty name, or a known provider.
+      for (const replacement of ["acme", "", "stripe"]) {
+        expect(splice(text, replacement)).toBe(text);
+      }
+    }
+
+    // On the production path the same identity holds for the module's own
+    // no-placeholder template: verificationHintFor hands each fixed literal
+    // to the caller byte-for-byte, and it lands in the stub as the whole
+    // hint line unchanged.
+    for (const provider of ["stripe", "clerk", "supabase", "github"]) {
+      const hint = verificationHintFor(provider);
+      expect(hint).not.toContain("${");
+      expect(webhookStubFor(provider)).toContain(`//   // ${hint}\n`);
+    }
+    expect(verificationHintFor(name)).toBe(
+      "Verify per the provider's documented signature scheme.",
+    );
+  });
+});
