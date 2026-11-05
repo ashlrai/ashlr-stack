@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it, setDefaultTimeout } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
-  chmodSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -13,6 +12,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { writePhantomShim } from "./_phantom-shim.ts";
 
 /**
  * Regression: running `stack apply` twice with a secret missing from Phantom
@@ -118,8 +118,8 @@ try {
     const calls = join(home, "phantom-calls");
     mkdirSync(bin);
     // Fake vault: empty, and records every subcommand so writes are detectable.
-    writeFileSync(
-      join(bin, "phantom"),
+    writePhantomShim(
+      bin,
       `#!/bin/sh
 echo "$@" >> '${calls}'
 case "$1" in
@@ -129,7 +129,6 @@ case "$1" in
 esac
 `,
     );
-    chmodSync(join(bin, "phantom"), 0o700);
     mkdirSync(join(dir, ".stack", "recipes"), { recursive: true });
     writeFileSync(join(dir, ".stack.toml"), "");
     writeFileSync(
