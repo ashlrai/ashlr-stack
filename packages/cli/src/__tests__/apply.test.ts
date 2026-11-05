@@ -247,6 +247,61 @@ await applyCommand.run({ args: { recipeId: "example", noWire: false, noRollback:
     expect(phantomCalls.every((call) => ["--version", "list"].includes(call))).toBe(true);
   });
 
+  it("does not populate any of multiple wiring entries with the former placeholder", () => {
+    const dir = mkTmp();
+    const home = mkTmp();
+    const cliDir = dirname(CLI_ENTRY);
+    mkdirSync(join(dir, ".stack", "recipes"), { recursive: true });
+    writeFileSync(join(dir, ".stack.toml"), "");
+    writeFileSync(
+      join(dir, ".stack", "recipes", "multiple.toml"),
+      'id = "multiple"\nquery = "database and ai"\ncreatedAt = "2026-10-17T00:00:00.000Z"\n\n[[providers]]\nname = "neon"\n\n[[providers]]\nname = "openai"\n',
+    );
+    const script = join(dir, "run-apply.ts");
+    writeFileSync(
+      script,
+      `import { mock } from "bun:test";
+import { copyFileSync } from "node:fs";
+import { setupFakePhantom } from ${JSON.stringify(join(cliDir, "../../core/src/__tests__/_harness.ts"))};
+const h = setupFakePhantom({ NEON_API_KEY: "existing-test-value" });
+try {
+  mock.module(${JSON.stringify(join(cliDir, "lib/provision-loop.ts"))}, () => ({
+    provisionProviders: async () => ({ succeeded: ["neon", "openai"], failures: [] }),
+  }));
+  mock.module(${JSON.stringify(join(cliDir, "lib/phantom-preflight.ts"))}, () => ({ requirePhantom: async () => {} }));
+  mock.module(${JSON.stringify(join(cliDir, "commands/doctor.ts"))}, () => ({ doctorCommand: { run: async () => {} } }));
+  const { applyCommand } = await import(${JSON.stringify(join(cliDir, "commands/apply.ts"))});
+  await applyCommand.run({ args: { recipeId: "multiple", noWire: false, noRollback: false } });
+  copyFileSync(h.vaultPath, "vault-result.json");
+  copyFileSync(h.logPath, "phantom-calls.jsonl");
+} finally { h.cleanup(); }
+`,
+    );
+    const result = spawnSync("bun", [script], {
+      cwd: dir,
+      encoding: "utf8",
+      env: { ...process.env, HOME: home, NO_COLOR: "1", CI: "1" },
+      timeout: 20_000,
+    });
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("secrets in vault 1");
+    expect(result.stdout).toContain("missing 2");
+    expect(result.stdout).toContain("DATABASE_URL, OPENAI_API_KEY");
+    const vault = JSON.parse(readFileSync(join(dir, "vault-result.json"), "utf8"));
+    expect(vault).toEqual({ NEON_API_KEY: "existing-test-value" });
+    for (const name of ["NEON_API_KEY", "DATABASE_URL", "OPENAI_API_KEY"]) {
+      expect(vault[name]).not.toBe("TODO_STACK_APPLY");
+    }
+    const calls = readFileSync(join(dir, "phantom-calls.jsonl"), "utf8")
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line) as { cmd: string; args: string[] });
+    expect(calls.filter((call) => call.cmd === "list")).toEqual([
+      { cmd: "list", args: ["--json"] },
+    ]);
+    expect(calls.filter((call) => ["add", "remove"].includes(call.cmd))).toEqual([]);
+  });
+
   it("reports valid recipe ids headlessly and surfaces an invalid recipe by id before init", () => {
     const dir = mkTmp();
     const home = mkTmp();
