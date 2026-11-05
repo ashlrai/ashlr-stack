@@ -102,7 +102,13 @@ export const applyCommand = defineCommand({
       }
     }
 
-    await requirePhantom();
+    // The Phantom preflight guards the provisioning loop and the vault
+    // wiring check below — both are no-ops when the recipe names no
+    // providers. For that empty wiring plan, skip the probe so a no-op apply
+    // never spawns `phantom` (or demands it be installed) for nothing.
+    if (recipe.providers.length > 0) {
+      await requirePhantom();
+    }
 
     console.log();
     console.log(`  ${colors.bold("recipe")}   ${recipe.id}`);
