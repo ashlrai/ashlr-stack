@@ -7,6 +7,17 @@ import { normalizeKebabFlags } from "../lib/normalize-args.ts";
  * the raw argv so the documented kebab spelling maps onto the declared key.
  */
 describe("normalizeKebabFlags", () => {
+  it("returns a new empty array without mutating an empty input", () => {
+    const input: string[] = [];
+    Object.freeze(input);
+
+    const result = normalizeKebabFlags(input);
+
+    expect(result).toEqual([]);
+    expect(result).not.toBe(input);
+    expect(input).toEqual([]);
+  });
+
   it("rewrites a multi-word kebab flag to camelCase", () => {
     expect(normalizeKebabFlags(["add", "supabase", "--dry-run"])).toEqual([
       "add",
