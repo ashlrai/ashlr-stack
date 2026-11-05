@@ -74,15 +74,15 @@ row when the source moves.
 | A5 | Recipe manifests are unsigned; catalog name checks prove nothing about origin or integrity, so callers must supply trusted recipes. | 19-21 | `Recipe manifests are unsigned` |
 | A6 | A missing Phantom CLI skips the vault check but stubs are still written, because they are only files. | 61-63 | `they're just files` |
 | A7 | The vault inventory (`phantom list --json`) exposes names and metadata only, and an unreadable vault means "unknown", not "empty". | 98-101 | `names and metadata only, never values` |
-| A8 | The webhook secret is read at call time with `phantom reveal`; it is not one of the catalog secrets the inventory checks. | 124-125 | `phantom reveal` |
+| A8 | The webhook secret is read at call time with `phantom reveal`; it is not one of the catalog secrets the inventory checks. | 125-126 | `phantom reveal` |
 | A9 | Unexpected recipe providers are skipped rather than rejected; names outside the webhook list never reach the filesystem path. | 37-38, 88-91 | `if (WEBHOOK_PROVIDERS.has(name))` |
 
-**Open verification question.** The `TODO(security)` at lines 131-140 leaves the
+**Open verification question.** The `TODO(security)` at lines 132-141 leaves the
 verifier unwritten: it names the comparison to make (raw body bytes, webhook
 secret, constant-time compare, reject before parsing) but nothing in the source
 or its tests runs one. Which documented scheme and tested implementation will
 replace each stub before a handler is deployed? The per-provider hints at
-lines 154-167 are one-line pointers, and the Supabase hint only says "per
+lines 155-168 are one-line pointers, and the Supabase hint only says "per
 Supabase's documented webhook scheme", so that scheme must be confirmed from
 current Supabase documentation rather than from this file.
 
@@ -91,4 +91,4 @@ current Supabase documentation rather than from this file.
 | Verification is a TODO, not code. | 131-135 | `TODO(security): signature verification is NOT` |
 | Required checks are described, not implemented. | 137-140 | `constant time` |
 | Provider hints are pointers, not verifiers. | 154-167 | `function verificationHintFor` |
-| Supabase scheme is unspecified in the source. | 160-161 | `per Supabase's documented webhook scheme` |
+| Supabase scheme is unspecified in the source. | 162 | `per Supabase's documented webhook scheme` |
