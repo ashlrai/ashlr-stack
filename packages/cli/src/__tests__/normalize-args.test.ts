@@ -135,4 +135,40 @@ describe("normalizeKebabFlags", () => {
       "--keepFrom=a-b-c",
     ]);
   });
+
+  it("keeps a positional argument with spaces as one element", () => {
+    const argv = ["add", "my project name", "--dry-run"];
+    const out = normalizeKebabFlags(argv);
+    expect(out).toEqual(["add", "my project name", "--dryRun"]);
+    expect(out).toHaveLength(3);
+  });
+
+  it("keeps a space-separated flag value as one element", () => {
+    expect(normalizeKebabFlags(["swap", "--keep-from", "clerk and auth0"])).toEqual([
+      "swap",
+      "--keepFrom",
+      "clerk and auth0",
+    ]);
+  });
+
+  it("preserves spaces in a `--flag=value` value while rewriting the name", () => {
+    expect(normalizeKebabFlags(["swap", "--keep-from=a b  c"])).toEqual([
+      "swap",
+      "--keepFrom=a b  c",
+    ]);
+  });
+
+  it("does not rewrite or split a token with spaces that merely starts like a flag", () => {
+    // The whole token is one argv element; the space keeps it from matching the flag shape.
+    expect(normalizeKebabFlags(["exec", "--dry-run now"])).toEqual(["exec", "--dry-run now"]);
+  });
+
+  it("preserves spaces (and leading/trailing whitespace) after a bare `--`", () => {
+    expect(normalizeKebabFlags(["exec", "--", "echo", " hello  world "])).toEqual([
+      "exec",
+      "--",
+      "echo",
+      " hello  world ",
+    ]);
+  });
 });
