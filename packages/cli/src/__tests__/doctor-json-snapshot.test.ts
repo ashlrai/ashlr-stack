@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { HANDSHAKE_CONTRACT } from "../lib/ecosystem.ts";
 import { checkDoctor } from "../lib/handshake-conformance.ts";
+import { linkPhantomShim } from "./_phantom-shim.ts";
 
 const entry = join(import.meta.dir, "..", "index.ts");
 let home: string;
@@ -23,12 +24,15 @@ function companion(command: string, body: string) {
 }
 
 function phantom() {
-  companion(
-    "phantom",
-    `const args = process.argv.slice(2);
+  linkPhantomShim(
+    bin,
+    `#!${process.execPath}
+const args = process.argv.slice(2);
 if (args[0] === "--version") console.log("phantom 0.7.9");
 else if (args[0] === "list") console.log("[]");
-else process.exit(1);`,
+else process.exit(1);
+`,
+    "phantom.mjs",
   );
 }
 
@@ -96,7 +100,12 @@ console.log(${JSON.stringify(JSON.stringify(value))});`;
     }),
   );
   companion("lexicon", answer({ kind: "ashlr.handshake", schema_version: 1, version: "0.1.0" }));
-  companion("phantom", 'console.log("unknown option --ashlr-handshake"); process.exitCode = 1;');
+  // `phantom` resolves but refuses --ashlr-handshake: "too old", not missing.
+  linkPhantomShim(
+    bin,
+    `#!${process.execPath}\nconsole.log("unknown option --ashlr-handshake"); process.exitCode = 1;\n`,
+    "phantom.mjs",
+  );
 }
 
 describe("doctor CLI output snapshots", () => {

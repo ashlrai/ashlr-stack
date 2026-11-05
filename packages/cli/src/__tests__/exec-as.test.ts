@@ -4,6 +4,7 @@ import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { linkPhantomShim } from "./_phantom-shim.ts";
 
 import {
   expectRefusal,
@@ -169,8 +170,8 @@ describe.skipIf(process.platform === "win32")("stack exec --as end to end", () =
     const bin = tmp("stack-exec-as-bin-");
     const phantomRan = join(cwd, "phantom-ran");
     const envDump = join(cwd, "locus-env");
-    writeFileSync(
-      join(bin, "phantom"),
+    linkPhantomShim(
+      bin,
       `#!/bin/sh
 case "$1" in
   --version) echo "phantom fake 0.0.1" ;;
@@ -179,7 +180,6 @@ case "$1" in
 esac
 `,
     );
-    chmodSync(join(bin, "phantom"), 0o755);
     if (locusScript !== null) {
       writeFileSync(
         join(bin, "locus"),

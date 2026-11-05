@@ -1,9 +1,10 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { linkPhantomShim } from "./_phantom-shim.ts";
 
 const CLI_ENTRY = join(dirname(fileURLToPath(import.meta.url)), "..", "index.ts");
 
@@ -42,9 +43,7 @@ function binDir(phantom: { removable: string[] } | false): string {
       "exit 1",
       "",
     ].join("\n");
-    const fake = join(dir, "phantom");
-    writeFileSync(fake, script);
-    chmodSync(fake, 0o755);
+    linkPhantomShim(dir, script);
   }
   return dir;
 }

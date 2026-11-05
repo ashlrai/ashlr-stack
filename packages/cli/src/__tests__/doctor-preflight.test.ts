@@ -1,9 +1,10 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { linkPhantomShim } from "./_phantom-shim.ts";
 
 /** `stack doctor` with the opt-in STACK_PHANTOM_PREFLIGHT, against a fake phantom. */
 
@@ -39,8 +40,8 @@ function doctor(
 ) {
   const bin = tmp("stack-docpf-bin-");
   writeFileSync(join(bin, "pf.json"), json);
-  writeFileSync(
-    join(bin, "phantom"),
+  linkPhantomShim(
+    bin,
     `#!/bin/sh
 case "$1" in
   --version) echo "phantom 0.7.9" ;;
@@ -49,7 +50,6 @@ case "$1" in
 esac
 `,
   );
-  chmodSync(join(bin, "phantom"), 0o755);
   const cwd = tmp("stack-docpf-proj-");
   writeFileSync(join(cwd, ".stack.toml"), '[stack]\nversion = "1"\n\n[services]\n');
   writeFileSync(join(cwd, ".stack.local.toml"), '[stack]\nproject_id = "stk_test01"\n');

@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it, setDefaultTimeout } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
-  chmodSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -13,6 +12,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { linkPhantomShim } from "./_phantom-shim.ts";
 
 /**
  * End-to-end test for `stack apply` — specifically the auto-init behaviour.
@@ -115,8 +115,8 @@ describe("stack apply", () => {
     const bin = join(home, "bin");
     mkdirSync(bin);
     // Inert Phantom: initialized, nothing stored, reveal refused (as headless).
-    writeFileSync(
-      join(bin, "phantom"),
+    linkPhantomShim(
+      bin,
       `#!/bin/sh
 case "$1" in
  --version) echo fixture;;
@@ -126,7 +126,6 @@ case "$1" in
 esac
 `,
     );
-    chmodSync(join(bin, "phantom"), 0o700);
     mkdirSync(join(dir, ".stack", "recipes"), { recursive: true });
     writeFileSync(
       join(dir, ".stack", "recipes", "two-ai.toml"),
@@ -159,8 +158,8 @@ esac
     const bin = join(home, "bin");
     const calls = join(home, "phantom-calls");
     mkdirSync(bin);
-    writeFileSync(
-      join(bin, "phantom"),
+    linkPhantomShim(
+      bin,
       `#!/bin/sh
 echo "$1" >> '${calls}'
 case "$1" in
@@ -170,7 +169,6 @@ case "$1" in
 esac
 `,
     );
-    chmodSync(join(bin, "phantom"), 0o700);
     mkdirSync(join(dir, ".stack", "recipes"), { recursive: true });
     writeFileSync(join(dir, ".stack.toml"), "");
     writeFileSync(

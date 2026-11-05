@@ -4,6 +4,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { linkPhantomShim } from "./_phantom-shim.ts";
 
 const CLI_ENTRY = join(dirname(fileURLToPath(import.meta.url)), "..", "index.ts");
 
@@ -207,10 +208,7 @@ print(v.get(sys.argv[2],""))
   *)       echo "fake: unknown: \${1:-}" >&2; exit 0 ;;
 esac
 `;
-    const binPath = join(phantomDir, "phantom");
-    writeFileSync(binPath, script);
-    // chmod +x
-    spawnSync("chmod", ["+x", binPath]);
+    linkPhantomShim(phantomDir, script);
 
     process.env.PATH = `${phantomDir}:${originalPath}`;
 
