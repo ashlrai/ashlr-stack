@@ -53,6 +53,14 @@ describe("ai/phantom-wire empty set of requested values", () => {
     expect(readdirSync(dir)).toEqual([]);
   });
 
+  it("makes no external process calls for a recipe with no providers", async () => {
+    const result = await wirePhantomForRecipe(recipe(), { cwd: dir });
+
+    // Not even the `--version` install probe or `list --json` may run.
+    expect(result).toEqual(EMPTY_RESULT);
+    expect(harness.calls()).toEqual([]);
+  });
+
   it("leaves a populated vault byte-identical when nothing is requested", async () => {
     writeFileSync(
       harness.vaultPath,
