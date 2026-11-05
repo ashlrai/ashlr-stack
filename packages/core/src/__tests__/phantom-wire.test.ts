@@ -88,8 +88,9 @@ describe("ai/phantom-wire", () => {
       webhooks: [],
       skipped: [],
     });
-    expect(harness.callsTo("list")).toEqual([{ cmd: "list", args: ["--json"] }]);
-    expect(harness.callsTo("add")).toEqual([]);
+    // The providerless early return spawns nothing: no `--version` probe,
+    // no `list`, and certainly no `add`.
+    expect(harness.calls()).toEqual([]);
     expect(existsSync(join(harness.dir, ".stack/webhooks"))).toBe(false);
   });
 
