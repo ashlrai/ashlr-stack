@@ -81,6 +81,43 @@ describe("normalizeKebabFlags", () => {
     ]);
   });
 
+  it("preserves ordinary positionals' order and spelling", () => {
+    // Hyphenated, camelCase, mixed-case and numeric positionals are not flags.
+    const argv = ["swap", "my-resource", "fooBar", "Some-Name", "a-b-c", "42", "x_y", "-v"];
+    expect(normalizeKebabFlags(argv)).toEqual([
+      "swap",
+      "my-resource",
+      "fooBar",
+      "Some-Name",
+      "a-b-c",
+      "42",
+      "x_y",
+      "-v",
+    ]);
+  });
+
+  it("keeps positionals in place when interleaved with rewritten flags", () => {
+    expect(
+      normalizeKebabFlags(["add", "--dry-run", "supabase", "--keep-from=clerk", "my-db", "--force"]),
+    ).toEqual(["add", "--dryRun", "supabase", "--keepFrom=clerk", "my-db", "--force"]);
+  });
+
+  it("preserves duplicate positionals", () => {
+    expect(normalizeKebabFlags(["swap", "a-b", "a-b", "a-b"])).toEqual(["swap", "a-b", "a-b", "a-b"]);
+  });
+
+  it("does not mutate the input array", () => {
+    const argv = ["add", "my-db", "--dry-run", "--keep-from=clerk", "--", "--inner-flag"];
+    const snapshot = [...argv];
+    const out = normalizeKebabFlags(argv);
+    expect(argv).toEqual(snapshot);
+    expect(out).not.toBe(argv);
+  });
+
+  it("returns an empty array for empty argv", () => {
+    expect(normalizeKebabFlags([])).toEqual([]);
+  });
+
   it("rewrites a kebab flag with a hyphenated value", () => {
     expect(normalizeKebabFlags(["swap", "--keep-from=a-b-c"])).toEqual([
       "swap",
