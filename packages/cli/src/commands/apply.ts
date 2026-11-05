@@ -1,5 +1,6 @@
 import {
   type Recipe,
+  findProviderRef,
   hasConfig,
   listRecipes,
   readRecipe,
@@ -43,6 +44,11 @@ export const applyCommand = defineCommand({
       description:
         "On partial failure, leave successfully-added services in .stack.toml instead of rolling them back.",
     },
+    dryRun: {
+      type: "boolean",
+      default: false,
+      description: "Preview provisioning and wiring without making changes.",
+    },
   },
   async run({ args }) {
     intro(`stack apply${args.noWire ? colors.dim(" (no-wire)") : ""}`);
@@ -51,6 +57,21 @@ export const applyCommand = defineCommand({
     // and a registry entry behind.
     const recipe = await pickRecipe(args.recipeId ? String(args.recipeId) : undefined);
     if (!recipe) return; // pickRecipe already surfaced the error.
+
+    if (args.dryRun) {
+      console.log(`  recipe   ${recipe.id}`);
+      await provisionProviders(recipe.providers, { rollback: false, dryRun: true });
+      if (!args.noWire) {
+        console.log("  Would check these secrets in Phantom and create applicable webhook stubs:");
+        for (const { name } of recipe.providers) {
+          const ref = findProviderRef(name);
+          if (!ref) console.log(`    ${name}: unknown provider`);
+          else for (const secret of ref.secrets) console.log(`    ${name}: ${secret}`);
+        }
+      }
+      outro("Dry run complete — no changes made.");
+      return;
+    }
 
     // The marketed golden path is `stack recommend --save && stack apply <id>`,
     // which must work from a blank directory. Auto-init if no .stack.toml so
