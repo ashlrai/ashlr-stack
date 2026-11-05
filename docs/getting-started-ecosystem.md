@@ -8,8 +8,8 @@ This guide sets up four tools side by side: Phantom (`phm`), Locus (`locus`), St
 |---|---|---|---|
 | Phantom `@ashlr/phantom` | 3.29.15 | 3.29.15 | `npm view @ashlr/phantom version` |
 | Locus `locus-cli` | 0.5.0 | 0.5.1 | `npm view locus-cli version` |
-| Stack `@ashlr/stack` | 0.3.1 | <!-- fresh:begin version-pin -->0.3.0<!-- fresh:end --> | `npm view @ashlr/stack version` |
-| Stack MCP `ashlr-stack-mcp` | 0.3.1 | <!-- fresh:begin version-pin -->0.3.0<!-- fresh:end --> | `npm view ashlr-stack-mcp version` |
+| Stack `@ashlr/stack` | 0.3.1 | <!-- fresh:begin version-pin -->0.3.2<!-- fresh:end --> | `npm view @ashlr/stack version` |
+| Stack MCP `ashlr-stack-mcp` | 0.3.1 | <!-- fresh:begin version-pin -->0.3.2<!-- fresh:end --> | `npm view ashlr-stack-mcp version` |
 
 The Phantom observations below are from the October 25 run: `phm fleet receipt` (the published 3.29.15 answered `unknown fleet subcommand: receipt`) and `--ashlr-handshake` on `phm` were not in that build. The locus 0.5.0 npm build has a known `locus --version` loop; see the locus README. To try the newer features, build from source as shown below.
 
@@ -93,7 +93,7 @@ The order follows the first-run measurements: Node 22.15+ is checked first, then
 One command previews the repairs every installed tool offers. It runs each tool's own `doctor --fix --json` (only for tools whose handshake advertises the `doctor-fix` capability) and changes nothing:
 
 ```bash
-stack doctor --ecosystem --fix   # available in this 0.3.0 source checkout; absent from the historical 0.1.1 build
+stack doctor --ecosystem --fix   # available in this 0.3.2 source checkout; absent from the historical 0.1.1 build
 ```
 
 Then make the repairs with each tool's own command. Run them yourself, directly in your shell:
