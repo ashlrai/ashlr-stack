@@ -109,12 +109,24 @@ describe("normalizeKebabFlags", () => {
 
   it("keeps positionals in place when interleaved with rewritten flags", () => {
     expect(
-      normalizeKebabFlags(["add", "--dry-run", "supabase", "--keep-from=clerk", "my-db", "--force"]),
+      normalizeKebabFlags([
+        "add",
+        "--dry-run",
+        "supabase",
+        "--keep-from=clerk",
+        "my-db",
+        "--force",
+      ]),
     ).toEqual(["add", "--dryRun", "supabase", "--keepFrom=clerk", "my-db", "--force"]);
   });
 
   it("preserves duplicate positionals", () => {
-    expect(normalizeKebabFlags(["swap", "a-b", "a-b", "a-b"])).toEqual(["swap", "a-b", "a-b", "a-b"]);
+    expect(normalizeKebabFlags(["swap", "a-b", "a-b", "a-b"])).toEqual([
+      "swap",
+      "a-b",
+      "a-b",
+      "a-b",
+    ]);
   });
 
   it("does not mutate the input array", () => {
