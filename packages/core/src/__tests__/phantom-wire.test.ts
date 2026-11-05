@@ -4051,3 +4051,70 @@ describe("webhookStubFor — backslash in replacement text", () => {
     }
   });
 });
+
+describe("webhookStubFor — unmatched opening brace in template prose", () => {
+  it("preserves the unmatched opening brace from the function-body line and the lone closing brace, leaving surrounding prose intact", () => {
+    // The raw template literal in phantom-wire.ts carries an unmatched opening
+    // brace on the function-body line (template line 10): the `// export async
+    // function` line ends with `{` and has no `}` on that line. The matching
+    // `}` lives on template line 25 (the final `// }`). In between, every
+    // line that has a literal `{` also has a literal `}` on the same line.
+    //
+    // This test verifies that the rendered stub preserves this structure:
+    // - the function-body line has `{` without `}` on the same line,
+    // - the closing `// }` line has `}` without `{` on the same line,
+    // - and the prose between them (the `new Response` line with `{ status: 200 }`)
+    //   remains unchanged.
+
+    const stub = webhookStubFor("stripe");
+    const lines = stub.split("\n");
+
+    // Find the function-body line: it must contain `{` and no `}`
+    const funcLineIdx = lines.findIndex(
+      (l) => l.includes("export async function") && l.includes("{") && !l.includes("}"),
+    );
+    expect(funcLineIdx).toBeGreaterThanOrEqual(0);
+    // The function-body line ends with `{` — the unmatched opening brace
+    expect(lines[funcLineIdx].trimEnd()).toMatch(/\{$/);
+
+    // Find the closing `// }` line: it must contain `}` and no `{`
+    const closeLineIdx = lines.findIndex((l) => l.trim() === "// }");
+    expect(closeLineIdx).toBeGreaterThanOrEqual(0);
+
+    // The unmatched `{` on the function line and the lone `}` on the close
+    // line are separated by prose — the new Response line with { status: 200 }
+    // must appear between them, unchanged.
+    expect(closeLineIdx).toBeGreaterThan(funcLineIdx);
+    const proseLines = lines.slice(funcLineIdx, closeLineIdx);
+    expect(proseLines.join("\n")).toContain("{ status: 200 }");
+
+    // The `{ status: 200 }` line is self-balanced: both `{` and `}` present
+    const statusLineIdx = proseLines.findIndex((l) => l.includes("new Response"));
+    expect(statusLineIdx).toBeGreaterThanOrEqual(0);
+    const statusLine = proseLines[statusLineIdx];
+    expect(statusLine).toContain("{");
+    expect(statusLine).toContain("}");
+
+    // The final `// }` line carries only `}`, no `{` — it closes the function
+    // body whose `{` sits on the function-declaration line above.
+    expect(lines[closeLineIdx]).not.toContain("{");
+    expect(lines[closeLineIdx]).toContain("}");
+
+    // Count literal braces in the rendered stub (all lines after template
+    // interpolation). There are exactly 3 `{` and 3 `}`, but the structural
+    // matching shows the function-body `{` pairs with the final `}`, not with
+    // the `}` inside `{ status: 200 }`.
+    let braceDelta = 0;
+    let unmatchedOpen = false;
+    for (const line of lines) {
+      const opens = (line.match(/{/g) || []).length;
+      const closes = (line.match(/}/g) || []).length;
+      braceDelta += opens - closes;
+      // After the function-body line, braceDelta goes positive (1 unmatched open)
+      // It stays positive until the final `// }` line brings it back to 0
+      if (braceDelta > 0) unmatchedOpen = true;
+    }
+    expect(braceDelta).toBe(0); // all braces eventually match
+    expect(unmatchedOpen).toBe(true); // but there is a region with an open pending
+  });
+});
