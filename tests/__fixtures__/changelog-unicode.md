@@ -1,13 +1,21 @@
 # Changelog
 
-## 0.2.0 (2026-04-23)
+## Unreleased
+
+- Café ☕ — naïve, “smart quotes”, ‘ticks’
+
+## 0.3.0 (2026-10-31)
 
 ### Added
 
-- Café-style naïve “smart quotes” and an em dash — kept intact.
-- CJK 日本語のテキスト and Cyrillic Привет, мир.
-- Emoji 🚀 and a ZWJ sequence 👩‍💻 stay whole; combining é (e + U+0301) is not normalised.
+- 日本語のメモ: プロバイダーを追加 🚀 👩‍💻
+- مرحبا بالعالم — שלום עולם
+- Ελληνικά: αβγδ → ✓ done
 
-## [0.1.0] — 2026-04-19
+### Fixed
 
-- Plain ASCII entry.
+- NFC é (U+00E9) vs NFD é (e + U+0301), Ω ≠ µ
+
+## [0.2.0] — 2026-04-23
+
+- Привет, мир — 你好，世界 🎉

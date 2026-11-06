@@ -309,3 +309,42 @@ test("openFleetFile returns a handle for regular files and refuses links and dir
     for (const path of [join(dir, "sub"), join(dir, "link"), join(dir, "absent")])
       await expect(openFleetFile(path)).rejects.toThrow();
   }));
+
+test("initial-size option rejects a real truncation while the default remains unchanged", () =>
+  fixture(
+    { strict: '{"event":"tick"}\n', default: '{"event":"tick"}\n', empty: "" },
+    async (dir) => {
+      const moduleUrl = new URL("./fleet-jsonl.ts", import.meta.url).href;
+      const source = `
+      const { open } = await import("node:fs/promises");
+      const { truncateSync } = await import("node:fs");
+      const { readFleetJsonl } = await import(${JSON.stringify(moduleUrl)});
+      const strict = ${JSON.stringify(join(dir, "strict"))};
+      const ordinary = ${JSON.stringify(join(dir, "default"))};
+      const empty = ${JSON.stringify(join(dir, "empty"))};
+      const h = await open(strict, "r");
+      const proto = Object.getPrototypeOf(h); await h.close();
+      const read = proto.read;
+      let target = "";
+      proto.read = async function(...args) {
+        if (target) { truncateSync(target, 0); target = ""; }
+        return read.apply(this, args);
+      };
+      const complete = await readFleetJsonl(strict, { requireInitialSize: true });
+      const initiallyEmpty = await readFleetJsonl(empty, { requireInitialSize: true });
+      target = strict;
+      const refused = await readFleetJsonl(strict, { requireInitialSize: true });
+      target = ordinary;
+      const unchanged = await readFleetJsonl(ordinary);
+      console.log(JSON.stringify({ complete, initiallyEmpty, refused, unchanged }));
+    `;
+      const child = spawnSync(process.execPath, ["--eval", source], { encoding: "utf8", timeout: 10_000 });
+      expect(child.status).toBe(0);
+      expect(JSON.parse(child.stdout)).toEqual({
+        complete: { status: "ok", rows: [{ event: "tick" }] },
+        initiallyEmpty: { status: "ok", rows: [] },
+        refused: { status: "invalid", rows: [] },
+        unchanged: { status: "ok", rows: [] },
+      });
+    },
+  ));

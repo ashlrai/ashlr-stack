@@ -1361,7 +1361,7 @@ export const CLI_COMMANDS: CliCommand[] = [
     name: "stack apply",
     description:
       "Apply a saved recipe: provision each provider, check its secrets in Phantom, and add webhook stubs.",
-    synopsis: "stack apply [id] [--noWire] [--noRollback]",
+    synopsis: "stack apply [id] [--noWire] [--noRollback] [--dryRun]",
     flags: [
       {
         name: "recipeId",
@@ -1384,6 +1384,13 @@ export const CLI_COMMANDS: CliCommand[] = [
         default: false,
         description:
           "On partial failure, leave successfully-added services in .stack.toml instead of rolling them back.",
+      },
+      {
+        name: "dryRun",
+        synopsis: "--dryRun",
+        type: "boolean",
+        default: false,
+        description: "Preview provisioning and wiring without making changes.",
       },
     ],
     examples: [{ command: "stack apply" }, { command: "stack apply my-recipe" }],

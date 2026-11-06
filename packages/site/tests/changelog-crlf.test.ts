@@ -1,4 +1,6 @@
 import { expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { marked, type Token } from "marked";
 
 const VERSION = /^(?:\[\d+\.\d+\.\d+\]|\d+\.\d+\.\d+)(?:\s|$)/;
@@ -84,4 +86,20 @@ test("site-facts release heading regex matches a CRLF changelog", () => {
   const m = crlf.match(/^## (\d+\.\d+\.\d+) \((\d{4}-\d{2}-\d{2})\)/m);
   expect(m?.[1]).toBe("0.2.0");
   expect(m?.[2]).toBe("2026-02-02");
+});
+
+test("the published CHANGELOG.md parses the same when converted to CRLF", async () => {
+  const real = readFileSync(join(import.meta.dir, "../src/data/CHANGELOG.md"), "utf8").replace(/\r\n/g, "\n");
+  const real_crlf = real.replace(/\n/g, "\r\n");
+  expect(real_crlf).toContain("\r\n");
+
+  const fromLf = parseVersions(real);
+  const fromCrlf = parseVersions(real_crlf);
+  expect(fromLf.length).toBeGreaterThan(0);
+  expect(fromCrlf.map((v) => v.heading)).toEqual(fromLf.map((v) => v.heading));
+  expect(fromCrlf.map((v) => v.raw)).toEqual(fromLf.map((v) => v.raw));
+  expect(await marked.parse(real_crlf)).toBe(await marked.parse(real));
+  expect(real_crlf.match(/^## (\d+\.\d+\.\d+) \((\d{4}-\d{2}-\d{2})\)/m)?.slice(1)).toEqual(
+    real.match(/^## (\d+\.\d+\.\d+) \((\d{4}-\d{2}-\d{2})\)/m)?.slice(1),
+  );
 });
