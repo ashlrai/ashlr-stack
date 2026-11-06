@@ -261,3 +261,22 @@ test("heading-only fixture returns each version with no fabricated body or entri
   expect(versionSections("## 0.1.0 (2026-04-19)").map((s) => s.heading)).toEqual(["## 0.1.0 (2026-04-19)"]);
   expect(sectionEntries("## 0.1.0 (2026-04-19)")).toEqual([]);
 });
+
+
+test("Original PR 758: whitespace-only changelog fixture parses with no results from every parser function", () => {
+  const fixture = readFileSync(new URL("./__fixtures__/changelog-whitespace-only.md", import.meta.url), "utf8");
+  expect(fixture.length).toBeGreaterThan(0);
+  expect(fixture.trim()).toBe("");
+  for (const text of [fixture, fixture.replace(/\n/g, "\r\n"), " \t\n\n  "]) {
+    expect(() => {
+      malformedHeadings(text);
+      versionSections(text);
+      sectionEntries(text);
+      inlineLinks(text);
+    }).not.toThrow();
+    expect(malformedHeadings(text)).toEqual([]);
+    expect(versionSections(text)).toEqual([]);
+    expect(sectionEntries(text)).toEqual([]);
+    expect(inlineLinks(text)).toEqual([]);
+  }
+});
