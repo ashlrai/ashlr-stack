@@ -78,6 +78,7 @@ function applyDriver(
   provisionResult: string,
   vaultJson: string,
   trapExit: boolean,
+  noWire = false,
 ): string {
   const mocks = `
 mock.module(${JSON.stringify(join(CLI_DIR, "lib/provision-loop.ts"))}, () => ({
@@ -95,12 +96,12 @@ const { applyCommand } = await import(${JSON.stringify(join(CLI_DIR, "commands/a
       // post-failure vault and filesystem state stay inspectable.
       `process.exit = ((code?: number) => { throw new Error("EXIT " + code); }) as typeof process.exit;
 try {
-  await applyCommand.run({ args: { recipeId: ${JSON.stringify(recipeId)}, noWire: false, noRollback: false } });
+  await applyCommand.run({ args: { recipeId: ${JSON.stringify(recipeId)}, noWire: ${noWire}, noRollback: false } });
   console.log("APPLY-RETURNED");
 } catch (err) {
   console.log("APPLY-EXIT " + (err as Error).message);
 }`
-    : `await applyCommand.run({ args: { recipeId: ${JSON.stringify(recipeId)}, noWire: false, noRollback: false } });`;
+    : `await applyCommand.run({ args: { recipeId: ${JSON.stringify(recipeId)}, noWire: ${noWire}, noRollback: false } });`;
   return `import { mock } from "bun:test";
 import { copyFileSync } from "node:fs";
 import { setupFakePhantom } from ${JSON.stringify(join(CLI_DIR, "../../core/src/__tests__/_harness.ts"))};
@@ -208,5 +209,63 @@ describe("stack apply — missing vault value", () => {
       { cmd: "list", args: ["--json"] },
     ]);
     expect(stdout + stderr).not.toContain(MARKER);
+  });
+
+  it("does not fail apply for a missing name alone", () => {
+    const dir = mkTmp();
+    const home = mkTmp();
+    seedProject(dir, "billing", ["stripe"]);
+
+    const body = applyDriver("billing", '{ succeeded: ["stripe"], failures: [] }', "{}", true);
+    const { stdout, status } = runApplyScript(dir, home, body);
+
+    expect(status).toBe(0);
+    expect(stdout).toContain("missing 1");
+    expect(stdout).toContain("APPLY-RETURNED");
+    expect(stdout).not.toContain("APPLY-EXIT");
+  });
+
+  it("does not wire when no provider succeeded", () => {
+    const dir = mkTmp();
+    const home = mkTmp();
+    seedProject(dir, "all-failed", ["stripe"]);
+
+    const body = applyDriver(
+      "all-failed",
+      '{ succeeded: [], failures: [{ name: "stripe", message: "oauth declined" }] }',
+      "{}",
+      true,
+    );
+    const { stdout, stderr, status } = runApplyScript(dir, home, body);
+
+    expect(status).toBe(0);
+    expect(stdout).toContain("APPLY-EXIT EXIT 1");
+    expect(stdout + stderr).toContain("Some providers failed: stripe");
+    expect(stdout).not.toContain("secrets in vault");
+    expect(existsSync(join(dir, ".stack", "webhooks"))).toBe(false);
+    expect(readCalls(dir)).toEqual([]);
+    expect(JSON.parse(readFileSync(join(dir, "vault-result.json"), "utf8"))).toEqual({});
+  });
+
+  it("skips both the inventory check and webhook stubs with --noWire", () => {
+    const dir = mkTmp();
+    const home = mkTmp();
+    seedProject(dir, "billing", ["stripe"]);
+
+    const body = applyDriver(
+      "billing",
+      '{ succeeded: ["stripe"], failures: [] }',
+      "{}",
+      true,
+      true,
+    );
+    const { stdout, status } = runApplyScript(dir, home, body);
+
+    expect(status).toBe(0);
+    expect(stdout).toContain("APPLY-RETURNED");
+    expect(stdout).not.toContain("secrets in vault");
+    expect(existsSync(join(dir, ".stack", "webhooks"))).toBe(false);
+    expect(readCalls(dir)).toEqual([]);
+    expect(JSON.parse(readFileSync(join(dir, "vault-result.json"), "utf8"))).toEqual({});
   });
 });
