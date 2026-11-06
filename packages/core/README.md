@@ -2,7 +2,7 @@
 
 > Shared library behind the [Ashlr Stack](https://stack.ashlr.ai) CLI and MCP server. Provider adapters, `.stack.toml` config, Phantom integration, source/env detection.
 
-This workspace package shares source between the [`@ashlr/stack`](https://www.npmjs.com/package/@ashlr/stack) CLI and [`ashlr-stack-mcp`](https://www.npmjs.com/package/ashlr-stack-mcp) server. Its export points at TypeScript source. The examples below target the reviewed workspace; they do not establish a separately published core package or Node-only execution support.
+This package shares source between the [`@ashlr/stack`](https://www.npmjs.com/package/@ashlr/stack) CLI and [`ashlr-stack-mcp`](https://www.npmjs.com/package/ashlr-stack-mcp) server. Its exports point at TypeScript source. The examples below describe workspace use; installing the package does not by itself establish Node-only execution support.
 
 ## Use in this workspace
 
@@ -13,8 +13,8 @@ bun install
 ```
 
 Use the selected CLI/MCP artifact and its documented runtime when installing
-those products. Source version `0.2.1` is distinct from recorded public
-CLI/MCP `0.1.1` packages; verify actual package contents separately.
+those products. Verify installed versions, package contents and runtime
+requirements separately.
 
 ## Public API
 

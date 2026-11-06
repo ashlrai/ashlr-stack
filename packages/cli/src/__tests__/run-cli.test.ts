@@ -63,6 +63,21 @@ describe("command errors", () => {
     expect(`${r.stdout}${r.stderr}`).toContain("USAGE stack info");
   });
 
+  test("an unknown nested command exits 1 and identifies the command", () => {
+    const r = stack(["templates", "definitely-not-a-stack-command"]);
+    expect(r.code).toBe(1);
+    expect(r.stderr).toContain("Unknown command definitely-not-a-stack-command");
+    expect(`${r.stdout}${r.stderr}`).toContain("USAGE stack templates");
+  }, 25_000);
+
+  test("an unknown command under --json reports the command as a JSON error", () => {
+    const r = stack(["definitely-not-a-stack-command", "--json"]);
+    expect(r.code).toBe(1);
+    const parsed = JSON.parse(r.stdout) as { error: string };
+    expect(parsed.error).toContain("Unknown command `definitely-not-a-stack-command`");
+    expect(r.stderr).toContain("Unknown command");
+  }, 25_000);
+
   test("a usage error under --json is one JSON error on stdout, no usage text", () => {
     const r = stack(["info", "--json"]);
     expect(r.code).toBe(1);

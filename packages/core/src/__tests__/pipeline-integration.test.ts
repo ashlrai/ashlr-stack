@@ -119,3 +119,33 @@ describe("addService full loop", () => {
     expect(await readVault(h.dir)).toEqual(vault);
   });
 });
+
+test("apply wiring preserves an existing value and leaves missing values absent", async () => {
+  const initialVault = {
+    NEON_API_KEY: "existing-test-value",
+    UNRELATED_KEY: "unrelated-test-value",
+  };
+  const h = setupFakePhantom(initialVault);
+  try {
+    const recipe = {
+      id: "preserve-existing-value",
+      query: "database",
+      createdAt: "2026-04-18T00:00:00.000Z",
+      providers: [{ name: "neon" }],
+    };
+    await writeRecipe(recipe, h.dir);
+    const loaded = await readRecipe(recipe.id, h.dir);
+
+    // This is the vault-wiring phase used by stack apply after provisioning.
+    const result = await wirePhantomForRecipe(loaded, { cwd: h.dir });
+    expect(result.present).toEqual(["neon:NEON_API_KEY"]);
+    expect(result.missing).toEqual(["neon:DATABASE_URL"]);
+    expect(result.skipped).toEqual([]);
+    expect(h.callsTo("list")).toEqual([{ cmd: "list", args: ["--json"] }]);
+    expect(h.callsTo("add")).toEqual([]);
+    expect(h.callsTo("remove")).toEqual([]);
+    expect(await readVault(h.dir)).toEqual(initialVault);
+  } finally {
+    h.cleanup();
+  }
+});

@@ -37,6 +37,61 @@ const BEGIN_INLINE = /<!--\s*fresh:begin\s+([a-z0-9][a-z0-9-]*)\s*-->/;
 const END_INLINE = /<!--\s*fresh:end\s*-->/;
 const RELEASE_HEADING = /^## (\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)\s*\((\d{4}-\d{2}-\d{2})\)/m;
 
+/** Blank out fenced code (``` or ~~~) so heading-like lines inside it never match a heading regex. */
+export function stripFencedCode(text) {
+  let fence = null;
+  return text
+    .split('\n')
+    .map((line) => {
+      const m = line.match(/^\s*(`{3,}|~{3,})/);
+      if (!fence) {
+        if (m) fence = m[1];
+        return m ? '' : line;
+      }
+      if (m && m[1][0] === fence[0] && m[1].length >= fence.length && /^\s*[`~]+\s*$/.test(line)) fence = null;
+      return '';
+    })
+    .join('\n');
+}
+
+/**
+ * Latest released section of a CHANGELOG: { version, date, heading, entry }.
+ * `entry` is the trimmed body between that heading and the next `## ` heading.
+ * Headings inside fenced code are ignored. Returns null when none is found.
+ */
+export function parseLatestRelease(text) {
+  const lines = text.replace(/\r\n?/g, '\n').split('\n');
+  const stripped = stripFencedCode(lines.join('\n')).split('\n');
+  const start = stripped.findIndex((l) => RELEASE_HEADING.test(l));
+  if (start < 0) return null;
+  const [, version, date] = stripped[start].match(RELEASE_HEADING);
+  let end = stripped.findIndex((l, i) => i > start && l.startsWith('## '));
+  if (end < 0) end = lines.length;
+  return { version, date, heading: `${version} (${date})`, entry: lines.slice(start + 1, end).join('\n').trim() };
+}
+
+/**
+ * Bullet entries of a release body (see parseLatestRelease), one string per
+ * top-level `- ` item, in file order. Indented continuation lines stay with
+ * their entry; subsection headings and blank lines separate entries and are
+ * dropped. Duplicates are kept.
+ */
+export function parseReleaseEntries(body) {
+  const entries = [];
+  let current = null;
+  for (const line of body.replace(/\r\n?/g, '\n').split('\n')) {
+    if (line.startsWith('- ')) {
+      current = [line];
+      entries.push(current);
+    } else if (current && /^\s+\S/.test(line)) {
+      current.push(line);
+    } else {
+      current = null;
+    }
+  }
+  return entries.map((lines) => lines.join('\n'));
+}
+
 function readJson(path) {
   try {
     return JSON.parse(readFileSync(path, 'utf8'));
@@ -73,13 +128,13 @@ export function buildContext(root) {
   let changelog = null;
   try {
     const changelogText = readFileSync(join(root, 'CHANGELOG.md'), 'utf8');
-    const match = changelogText.match(RELEASE_HEADING);
-    if (!match) {
+    const latest = parseLatestRelease(changelogText);
+    if (!latest) {
       errors.push('CHANGELOG.md has no released "## x.y.z (date)" section');
     } else {
-      changelog = { version: match[1], date: match[2], heading: `${match[1]} (${match[2]})` };
-      if (release && match[1] !== release) {
-        errors.push(`latest released CHANGELOG.md section is ${match[1]} but packages/cli/package.json is ${release}`);
+      changelog = { version: latest.version, date: latest.date, heading: latest.heading };
+      if (release && latest.version !== release) {
+        errors.push(`latest released CHANGELOG.md section is ${latest.version} but packages/cli/package.json is ${release}`);
       }
     }
   } catch (err) {
@@ -462,7 +517,7 @@ export const GENERATORS = {
         ...rows,
         root,
         '',
-        `Latest released CHANGELOG section: ${released}.`,
+        `Latest dated CHANGELOG section: ${released}.`,
       ].join('\n');
     },
   },
