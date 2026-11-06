@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { appendFile, mkdtemp, rename, rm, writeFile } from "node:fs/promises";
+import { connect } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { FleetLines, fleetEvents, parseFleetEvent, serveFleet } from "../commands/fleet-stream.ts";
@@ -76,7 +77,31 @@ test("files replay, append partial lines, rotate, truncate, and serve localhost 
     const server = serveFleet(paths, 0);
     try {
       expect(server.hostname).toBe("127.0.0.1");
-      expect((await fetch(`http://127.0.0.1:${server.port}/missing`)).status).toBe(404);
+      const url = `http://127.0.0.1:${server.port}`;
+      const status = (path: string, host: string) =>
+        new Promise<number>((resolve, reject) => {
+          const socket = connect(server.port!, "127.0.0.1", () => {
+            socket.write(`GET ${path} HTTP/1.1\r\nHost: ${host}\r\nConnection: close\r\n\r\n`);
+          });
+          socket.once("data", (data) => {
+            resolve(Number(data.toString().match(/^HTTP\/1\.1 (\d+)/)?.[1]));
+            socket.destroy();
+          });
+          socket.on("error", reject);
+        });
+      for (const host of [
+        "evil.example",
+        `evil.example:${server.port}`,
+        `localhost.evil.example:${server.port}`,
+        `127.0.0.1.evil.example:${server.port}`,
+        "localhost",
+        "127.0.0.1:1",
+      ]) {
+        expect(await status("/events", host)).toBe(403);
+        expect(await status("/missing", host)).toBe(403);
+      }
+      expect(await status("/missing", `localhost:${server.port}`)).toBe(404);
+      expect((await fetch(`${url}/missing`)).status).toBe(404);
       const response = await fetch(`http://127.0.0.1:${server.port}/events`);
       expect(response.headers.get("content-type")).toBe("text/event-stream");
       const reader = response.body!.getReader();

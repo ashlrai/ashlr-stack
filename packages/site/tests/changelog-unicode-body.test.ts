@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { marked } from "marked";
+import { marked, type Tokens } from "marked";
 
 const root = join(import.meta.dir, "../../..");
 
@@ -79,4 +79,34 @@ test("site changelog keeps its non-ASCII text, unreplaced, in a version body", (
   expect(withUnicode.length).toBeGreaterThan(0);
   // The `✗ No .stack.toml` message is documented under 0.2.1.
   expect(bodies.get("0.2.1 (2026-10-16)")).toContain("✗ No .stack.toml at <path>");
+});
+
+/** Each list entry's parsed source text under the `##` heading with this exact text. */
+function entryTexts(markdown: string, version: string): string[] {
+  const tokens = marked.lexer(markdown);
+  const start = tokens.findIndex((t) => t.type === "heading" && t.depth === 2 && t.text === version);
+  expect(start).toBeGreaterThanOrEqual(0);
+  const end = tokens.findIndex((t, i) => i > start && t.type === "heading" && t.depth <= 2);
+  return tokens
+    .slice(start + 1, end === -1 ? undefined : end)
+    .filter((t): t is Tokens.List => t.type === "list")
+    .flatMap((list) => list.items.map((item) => item.text));
+}
+
+test("fixture: each parsed entry retains its Unicode characters exactly", () => {
+  const fixtureFile = readFileSync(join(import.meta.dir, "__fixtures__/changelog-unicode-body-entries.md"), "utf8");
+  expect(entryTexts(fixtureFile, "0.2.0 (2026-05-01)")).toEqual([
+    "Café ☕ — naïve résumé: `✗ No .stack.toml` stays intact.",
+    "日本語のメモ: プロバイダーを追加 🚀 👩‍💻",
+    "**مرحبا** بالعالم — שלום עולם",
+    "Combining é (not é), Ω ≠ µ, “quotes”",
+  ]);
+  expect(entryTexts(fixtureFile, "0.1.0 (2026-04-19)")).toEqual(["Ελληνικά: αβγ 🎉"]);
+});
+
+test("published changelog: the `✗ No .stack.toml` entry keeps its Unicode in the parsed entry text", () => {
+  const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
+  const entry = entryTexts(published, "0.2.1 (2026-10-16)").filter((text) => text.includes("Command errors are one line"));
+  expect(entry).toHaveLength(1);
+  expect(entry[0]).toContain("✗ No .stack.toml at <path>");
 });

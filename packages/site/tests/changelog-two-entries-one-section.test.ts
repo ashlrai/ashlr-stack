@@ -5,21 +5,43 @@ import { marked, type Tokens } from "marked";
 
 const fixture = readFileSync(join(import.meta.dir, "__fixtures__/changelog-two-entries-one-section.md"), "utf8");
 
-/** Entry texts under the `###` section named `name`, in source order. */
-function entriesIn(markdown: string, name: string): string[] {
-  const tokens = marked.lexer(markdown);
-  const start = tokens.findIndex((t) => t.type === "heading" && t.depth === 3 && t.text === name);
-  expect(start).toBeGreaterThanOrEqual(0);
-  const end = tokens.findIndex((t, i) => i > start && t.type === "heading" && t.depth <= 3);
-  return tokens
-    .slice(start + 1, end === -1 ? undefined : end)
-    .flatMap((t) => (t.type === "list" ? (t as Tokens.List).items.map((i) => i.text) : []));
+type Section = { heading: string; entries: string[] };
+
+/** Each `###` section with its list entries, in source order. */
+function parseSections(markdown: string): Section[] {
+  const sections: Section[] = [];
+  let current: Section | null = null;
+  for (const token of marked.lexer(markdown)) {
+    if (token.type === "heading") {
+      current = token.depth === 3 ? { heading: token.text, entries: [] } : null;
+      if (current) sections.push(current);
+    } else if (token.type === "list" && current) {
+      current.entries.push(...(token as Tokens.List).items.map((item) => item.text));
+    }
+  }
+  return sections;
 }
 
-test("both entries appear once, in source order, under their section", () => {
-  expect(entriesIn(fixture, "Added")).toEqual(["First entry in the section.", "Second entry in the section."]);
+test("both entries appear once, in source order, under the one section", () => {
+  expect(parseSections(fixture)).toEqual([
+    { heading: "Added", entries: ["First entry in the section.", "Second entry in the section."] },
+  ]);
 });
 
-test("a neighbouring section does not receive those entries", () => {
-  expect(entriesIn(fixture, "Fixed")).toEqual(["Entry in a different section."]);
+test("each entry is counted exactly once", () => {
+  const [section] = parseSections(fixture);
+  for (const entry of section?.entries ?? []) {
+    expect(section?.entries.filter((e) => e === entry)).toHaveLength(1);
+  }
+});
+
+test("the real site changelog keeps a multi-entry section in source order", () => {
+  const real = readFileSync(join(import.meta.dir, "../src/data/CHANGELOG.md"), "utf8");
+  const [version] = real.split(/^## /m).slice(1, 2);
+  const changed = parseSections(`## ${version}`).find((s) => s.heading === "Fixed");
+  expect(changed?.entries.length).toBeGreaterThanOrEqual(2);
+  const lines = real.split("\n").filter((l) => l.startsWith("- "));
+  const positions = (changed?.entries ?? []).map((e) => lines.findIndex((l) => l.slice(2).startsWith(e.slice(0, 40))));
+  expect(positions.every((p) => p >= 0)).toBe(true);
+  expect([...positions].sort((a, b) => a - b)).toEqual(positions);
 });
