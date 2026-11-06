@@ -108,7 +108,7 @@ The following examples are a subset. This source registers 39 providers across 1
 - `stack deps` - show provider dependency graph.
 - `stack ci init` - currently exits nonzero without writing or overwriting a workflow; `--force` is a compatibility flag, not permission to generate one.
 - `stack login <provider>` - explicitly refresh credentials for that provider; no registered logout command.
-- `stack upgrade` - check registry metadata and print an update hint; it does not install the update.
+- `stack upgrade [--apply] [--dryRun]` - check npm for an update; `--apply` can upgrade an eligible npm global CLI install with health checks and rollback. `--dryRun` prevents installation. The `stack_upgrade` MCP tool only checks.
 - `stack completion <shell>` - emit shell completions (bash, zsh, fish).
 - `stack recommend "<brief>" [--k N] [--category <name>] [--save] [--synth] [--json]` - free-text → curated providers (BM25 retrieval by default; `--synth` invokes a local SLM for rationales).
 - `stack apply <recipe-id> [--noWire]` - Provision recipe providers, then report which declared secrets are already in the Phantom vault and which are missing (names only; apply never writes to the vault), and write webhook stub files. Inspect failures and skipped entries. Use `--noWire` to skip the vault check and stubs.
