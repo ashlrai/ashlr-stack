@@ -73,3 +73,27 @@ test("a section name shared by several releases never leaks entries between them
     }
   }
 });
+
+test("in the shipped site changelog entries only skip a section heading in releases that have none", () => {
+  const real = readFileSync(join(import.meta.dir, "../src/data/CHANGELOG.md"), "utf8");
+  const withSections = new Set<string>();
+  const sectionless = new Set<string>();
+  let release = "";
+  let section = "";
+  let entries = 0;
+  for (const token of marked.lexer(real)) {
+    if (token.type === "heading" && token.depth === 2) {
+      release = token.text;
+      section = "";
+    } else if (token.type === "heading" && token.depth === 3) {
+      section = token.text;
+      withSections.add(release);
+    } else if (token.type === "list" && release) {
+      entries += token.items.length;
+      if (!section) sectionless.add(release);
+    }
+  }
+  expect(entries).toBeGreaterThan(0);
+  expect(withSections.has("Unreleased")).toBe(true);
+  for (const name of sectionless) expect(withSections.has(name)).toBe(false);
+});

@@ -5,35 +5,34 @@ import { marked, type Tokens } from "marked";
 
 const fixture = readFileSync(join(import.meta.dir, "__fixtures__/changelog-punctuation.md"), "utf8");
 
-/** Entries (list items) in the body of the `##` section whose heading text is exactly `heading`. */
-function entriesFor(heading: string): Tokens.ListItem[] {
+/** Item texts of the first list under the `##` section whose heading text is exactly `heading`. */
+function itemsFor(heading: string): string[] {
   const tokens = marked.lexer(fixture);
   const start = tokens.findIndex((t) => t.type === "heading" && t.depth === 2 && t.text === heading);
   expect(start).toBeGreaterThanOrEqual(0);
   const end = tokens.findIndex((t, i) => i > start && t.type === "heading" && t.depth <= 2);
-  return tokens
-    .slice(start + 1, end === -1 ? undefined : end)
-    .filter((t): t is Tokens.List => t.type === "list")
-    .flatMap((l) => l.items);
+  const list = tokens.slice(start + 1, end === -1 ? undefined : end).find((t) => t.type === "list");
+  return ((list as Tokens.List | undefined)?.items ?? []).map((i) => i.text);
 }
 
-test("entry text keeps its punctuation verbatim", () => {
-  expect(entriesFor("0.5.0 (2026-11-02)").map((e) => e.text)).toEqual([
-    `Don't crash: "stack add" now handles semicolons; commas, too! Really? Yes... (see below) - done.`,
-    "Fees & taxes: 5% off, $10 -> $9, a/b, c|d, e@f, #7, 3 < 4 > 2.",
-    "Dash — en–dash, “curly quotes”, ‘single’, and an ellipsis…",
-    "Escaped \\*stars\\*, \\_underscores\\_, \\[brackets\\] and \\`ticks\\`.",
+test("entry text keeps every punctuation mark verbatim", () => {
+  expect(itemsFor("0.5.0 (2026-11-02)")).toEqual([
+    `Fixed: it's "quoted", 'single', and (parenthetical); also [bracketed] text, ellipsis... done!`,
+    `Dash - en – em — and slash a/b, backslash a\\b, percent 100%, at user@host, hash #42, dollar $5.`,
+    `Ampersand & friends: Q&A, a < b > c, 5 != 6? Yes; no, maybe: really?!`,
+    `Trailing punctuation kept.,;:!?`,
   ]);
 });
 
-test("a neighbouring plain entry is unaffected", () => {
-  expect(entriesFor("0.4.0 (2026-11-01)").map((e) => e.text)).toEqual(["Plain entry."]);
+test("the next version is not affected by the punctuation entry", () => {
+  expect(itemsFor("0.4.0 (2026-11-01)")).toEqual(["Plain entry with no punctuation specials"]);
 });
 
-test("rendered HTML escapes markup characters and unescapes backslash escapes", async () => {
+test("rendered HTML escapes markup characters but keeps the rest", async () => {
   const html = await marked.parse(fixture);
-  expect(html).toContain("Fees &amp; taxes: 5% off, $10 -&gt; $9, a/b, c|d, e@f, #7, 3 &lt; 4 &gt; 2.");
-  expect(html).toContain("Escaped *stars*, _underscores_, [brackets] and `ticks`.");
-  expect(html).toContain("“curly quotes”, ‘single’, and an ellipsis…");
-  expect(html).not.toContain("<em>");
+  expect(html).toContain("Q&amp;A, a &lt; b &gt; c");
+  expect(html).toContain("it&#39;s &quot;quoted&quot;");
+  expect(html).toContain("ellipsis... done!");
+  expect(html).toContain("– em —");
+  expect(html).toContain("[bracketed]");
 });

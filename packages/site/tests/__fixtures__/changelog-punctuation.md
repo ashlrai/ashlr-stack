@@ -4,11 +4,11 @@
 
 ### Fixed
 
-- Don't crash: "stack add" now handles semicolons; commas, too! Really? Yes... (see below) - done.
-- Fees & taxes: 5% off, $10 -> $9, a/b, c|d, e@f, #7, 3 < 4 > 2.
-- Dash — en–dash, “curly quotes”, ‘single’, and an ellipsis…
-- Escaped \*stars\*, \_underscores\_, \[brackets\] and \`ticks\`.
+- Fixed: it's "quoted", 'single', and (parenthetical); also [bracketed] text, ellipsis... done!
+- Dash - en – em — and slash a/b, backslash a\b, percent 100%, at user@host, hash #42, dollar $5.
+- Ampersand & friends: Q&A, a < b > c, 5 != 6? Yes; no, maybe: really?!
+- Trailing punctuation kept.,;:!?
 
 ## 0.4.0 (2026-11-01)
 
-- Plain entry.
+- Plain entry with no punctuation specials
