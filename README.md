@@ -19,7 +19,7 @@ New projects stall on account setup, copied keys, and agent config. Stack turns 
 
 Agents: read [llms.txt](https://stack.ashlr.ai/llms.txt) (short index) and [llms-full.txt](https://stack.ashlr.ai/llms-full.txt) (full reference). In this repo those files are [packages/site/public/llms.txt](packages/site/public/llms.txt) and [packages/site/public/llms-full.txt](packages/site/public/llms-full.txt).
 
-These four commands are read-only. They need no account and no API key. They print JSON and write nothing. Node.js 20 or newer is what the published 0.3.1 packages declare. More copy-paste blocks: [docs/examples.md](docs/examples.md).
+These four commands are read-only. They need no account and no API key. They print JSON and write nothing. Node.js 20 or newer is what the published 0.3.6 packages declare. More copy-paste blocks: [docs/examples.md](docs/examples.md).
 
 ```bash
 npx -y -p @ashlr/stack stack providers --json
@@ -111,7 +111,7 @@ The one-liner above is the fastest path. Two more:
 
 npm / bun registry:
 
-> On November 1, 2026, npm reported 0.3.1 for all three Stack packages; the 0.3.1 CLI and MCP packages declare Node.js 20 or newer. Check `npm view @ashlr/stack-core version`, `npm view @ashlr/stack version` and `npm view ashlr-stack-mcp version` for current versions. This checkout declares the source version shown above and contains changes not in the v0.3.1 release tag; its version does not establish what is published. Source development uses Bun.
+> Verified November 6, 2026: npm serves 0.3.6 for all three Stack packages, and the [v0.3.6 GitHub release](https://github.com/ashlrai/ashlr-stack/releases/tag/v0.3.6) provides macOS/Linux arm64/x64 binaries and checksum sidecars. The published 0.3.6 CLI and MCP manifests declare Node.js 20 or newer. Check `npm view @ashlr/stack-core version`, `npm view @ashlr/stack version` and `npm view ashlr-stack-mcp version` for current versions. This checkout declares the source version shown above; a source version alone does not establish publication. Source development uses Bun.
 
 ```bash
 npm i -g @ashlr/stack ashlr-stack-mcp
