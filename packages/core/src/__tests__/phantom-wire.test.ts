@@ -6106,3 +6106,55 @@ describe("webhookStubFor — substitution over ordinary text with no placeholder
     );
   });
 });
+
+describe("webhookStubFor — $1 in replacement text", () => {
+  const count = (s: string, needle: string) => s.split(needle).length - 1;
+
+  it("preserves $1 literally at every expansion site when it appears in a provider name", () => {
+    // $1 is a replacement directive for String.prototype.replace/replaceAll:
+    // it splices the first capture group. Template-literal interpolation does
+    // NOT interpret $1, so provider names carrying it must land in the stub
+    // as inert characters — exactly the bytes the caller passed in.
+    const name = "svc$1pay";
+    const stub = webhookStubFor(name);
+
+    // The name appears literally at the two case-preserving sites.
+    expect(stub).toContain(`webhook handler stub for ${name}.`);
+    expect(stub).toContain(`forge a ${name} webhook.`);
+
+    // At the handler name site the first character is upper-cased; $ is
+    // ASCII so toUpperCase is the identity, leaving $1 intact.
+    expect(stub).toContain("handleSvc$1payWebhook(req: Request)");
+
+    // At the reveal sites the entire name is upper-cased; $1 is
+    // toUpperCase-invariant, so it survives unchanged.
+    expect(count(stub, "phantom reveal SVC$1PAY_WEBHOOK_SECRET")).toBe(2);
+
+    // Dollar census: the name carries exactly one $ (in $1), and it appears
+    // at five sites in the stub. No $ was dropped by $$ collapse and none
+    // was minted by capture-group substitution.
+    expect(count(stub, "$")).toBe(5);
+    expect(count(stub, "$1")).toBe(5);
+
+    // No ${ opener leaked in — that would indicate the template was parsed
+    // as a replace pattern and $1 was interpreted as a capture reference.
+    expect(stub).not.toContain("${");
+  });
+
+  it("preserves a bare $1 provider name through the capitalize path", () => {
+    // $1 as the entire name exercises the capitalize() function: the first
+    // codepoint is $, which toUpperCase leaves as $. The remaining `1` is
+    // never touched. The name stays $1 at every expansion site.
+    const name = "$1";
+    const stub = webhookStubFor(name);
+
+    expect(stub).toContain(`webhook handler stub for ${name}.`);
+    expect(stub).toContain(`forge a ${name} webhook.`);
+    // capitalize("$1") = "$1" ($ is already uppercase, 1 stays 1)
+    expect(stub).toContain("handle$1Webhook(req: Request)");
+    expect(count(stub, "phantom reveal $1_WEBHOOK_SECRET")).toBe(2);
+
+    // Each $1 is a standalone $ at its own site — five total.
+    expect(count(stub, "$1")).toBe(5);
+  });
+});
