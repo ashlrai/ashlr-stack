@@ -4,174 +4,153 @@
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/ashlrai/ashlr-stack/badge)](https://scorecard.dev/viewer/?uri=github.com/ashlrai/ashlr-stack)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 [![npm version](https://img.shields.io/npm/v/@ashlr/stack.svg)](https://www.npmjs.com/package/@ashlr/stack)
+[![Stars](https://img.shields.io/github/stars/ashlrai/ashlr-stack?style=flat&label=stars)](https://github.com/ashlrai/ashlr-stack/stargazers)
 <!-- fresh:begin version-badge -->
-[![source v0.2.2](https://img.shields.io/badge/source-v0.2.2-blue.svg)](CHANGELOG.md)
+[![source v0.3.3](https://img.shields.io/badge/source-v0.3.3-blue.svg)](CHANGELOG.md)
 <!-- fresh:end -->
 
 **Configure supported services from your terminal or your AI agent.** Stack uses provider-specific OAuth or supplied credentials, provisions where the adapter supports it, and records selected credentials in [Phantom Secrets](https://phm.dev/secrets), Stack configuration and provider MCP entries. Vercel requires an existing personal access token; Stack does not create that token. Export an empty `.env.example` separately with `stack env export --example`.
 
-**Status:** pre-alpha, active development. The 0.2 release line adds a Node-compatible CLI, expanded providers and headless workflows; this checkout is version <!-- fresh:begin version-pin -->0.2.2<!-- fresh:end -->. See [CHANGELOG.md](./CHANGELOG.md) for the 0.2.0 baseline and subsequent fixes. Source versions do not establish npm publication or provider readiness. Check `npm view @ashlr/stack version`, `npm view ashlr-stack-mcp version`, and your installed `stack --version` before relying on release-specific commands.
+New projects stall on account setup, copied keys, and agent config. Stack turns the supported part of that work into commands an agent can run and parse.
 
-<!-- Demo GIF: record with vhs, see docs/ -->
+![An agent runs read-only Stack commands and gets JSON back](docs/assets/readme-hero.svg)
 
-## Try it in 30 seconds
+## Start in 60 seconds
 
-Read-only, no accounts or API keys needed:
+Agents: read [llms.txt](https://stack.ashlr.ai/llms.txt) (short index) and [llms-full.txt](https://stack.ashlr.ai/llms-full.txt) (full reference). In this repo those files are [packages/site/public/llms.txt](packages/site/public/llms.txt) and [packages/site/public/llms-full.txt](packages/site/public/llms-full.txt).
 
-```bash
-npx -y -p @ashlr/stack stack providers                                         # the provider catalog
-npx -y -p @ashlr/stack stack recommend "B2B SaaS with auth, AI, and payments"  # ranked picks with rationales
-npx -y -p @ashlr/stack stack scan                                              # detect services in an existing repo (writes nothing; add --json in agents and CI)
-```
-
-To provision a real service, install Stack (below) and run `stack add <provider>`.
-
-## Connect your agent (MCP)
-
-Every MCP tool runs the `stack` CLI. Resolution checks `STACK_BIN` first, then the installed `@ashlr/stack` dependency's binary, then `stack` on PATH. These snippets request both packages explicitly:
+These four commands are read-only. They need no account and no API key. They print JSON and write nothing. Node.js 20 or newer is what the published 0.3.1 packages declare. More copy-paste blocks: [docs/examples.md](docs/examples.md).
 
 ```bash
-claude mcp add ashlr-stack -- npx -y -p @ashlr/stack -p ashlr-stack-mcp ashlr-stack-mcp   # Claude Code
-codex mcp add ashlr-stack -- npx -y -p @ashlr/stack -p ashlr-stack-mcp ashlr-stack-mcp    # Codex
+npx -y -p @ashlr/stack stack providers --json
+npx -y -p @ashlr/stack stack recommend "B2B SaaS with auth, AI, and payments" --json
+npx -y -p @ashlr/stack stack scan --json
+npx -y -p @ashlr/stack stack templates list --json
 ```
 
-Cursor (`~/.cursor/mcp.json`):
+The recommend JSON has `query`, `hits`, `byCategory`, and `guidance`. `stack scan --json` returns `{ "hits": [] }` in an empty directory.
 
-```json
-{ "mcpServers": { "ashlr-stack": { "command": "npx", "args": ["-y", "-p", "@ashlr/stack", "-p", "ashlr-stack-mcp", "ashlr-stack-mcp"] } } }
-```
-
-The current MCP package depends on `@ashlr/stack`. If no runnable CLI is available, the server can still list tools, but tool calls return "Could not run the 'stack' CLI". For source development, build the CLI or point `STACK_BIN` at its executable source entry.
-
-### One command for every agent
-
-`stack onboard` is available in this source checkout. Older registry releases may lack it; check `stack onboard --help` and use the dev install below if needed.
+One command installs Stack on macOS or Linux. It also installs Phantom Secrets if that CLI is missing:
 
 ```bash
-stack onboard            # plan: shows which of Codex, Claude Code, Cursor, Gemini CLI would be wired
-stack onboard --apply    # write the Phantom gateway entry (backups saved first)
-stack onboard --undo     # restore the files exactly as they were
-```
-
-Only the `ashlr-hub` entry is added; an existing entry that differs is reported and left alone. Use `--client gemini,cursor` to limit it and `--json` for scripts.
-
-## Why Stack
-
-- **One workflow for supported services.** Stack authenticates, provisions where supported, and updates vault entries, Stack configuration and MCP wiring.
-- **Phantom-backed credentials.** Stack handles credentials during setup and persists selected entries through Phantom Secrets. Provider requests, project files and CLI output have their own data boundaries.
-- **Agent-native.** MCP exposes selected catalog and setup actions for Claude Code, Codex and Cursor.
-
-## Install
-
-Three ways, pick one:
-
-```bash
-# One-liner, macOS / Linux (also installs Phantom Secrets if missing)
 curl -fsSL stack.ashlr.ai/install.sh | bash
 ```
 
+Windows (PowerShell):
+
 ```powershell
-# One-liner, Windows (PowerShell)
 irm https://stack.ashlr.ai/install.ps1 | iex
 ```
 
+After install, this prints a plan and writes nothing:
+
+```bash
+stack onboard --json
+```
+
+### MCP server
+
+The same stdio server works for Claude Code, Codex, and Cursor. Each tool runs the `stack` CLI. If no CLI can be launched, the server can still list tools, and tool calls return `Could not run the 'stack' CLI`.
+
+Claude Code:
+
+```bash
+claude mcp add ashlr-stack -- npx -y -p @ashlr/stack -p ashlr-stack-mcp ashlr-stack-mcp
+```
+
+Codex:
+
+```bash
+codex mcp add ashlr-stack -- npx -y -p @ashlr/stack -p ashlr-stack-mcp ashlr-stack-mcp
+```
+
+Cursor, in `~/.cursor/mcp.json` or the project `.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "ashlr-stack": {
+      "command": "npx",
+      "args": ["-y", "-p", "@ashlr/stack", "-p", "ashlr-stack-mcp", "ashlr-stack-mcp"]
+    }
+  }
+}
+```
+
+Claude Code can also install the plugin. Paste these in the Claude session:
+
+```text
+/plugin marketplace add ashlrai/ashlr-stack
+/plugin install stack@ashlr
+```
+
+That adds `/stack:add`, `/stack:apply`, `/stack:doctor`, `/stack:list`, `/stack:recommend`, and `/stack:status`.
+
+## How it works
+
+![Read JSON, authorize a provider, then Stack records config and selected secrets](docs/assets/readme-how-it-works.svg)
+
+1. **Read.** The four commands in the start block only print data.
+2. **Authorize.** A later write uses that provider's OAuth, a personal access token, or an API key you supply. Vercel does not get a new token from Stack.
+3. **Record.** When you ask Stack to add a service, it stores selected secrets in Phantom, writes `.stack.toml` (committed shape) and `.stack.local.toml` (gitignored ids), and can add provider MCP entries. It does not generate your app or a filled `.env`. `stack env export --example` writes an empty `KEY=` file at `.env.example`.
+
+## Features
+
+![JSON CLI, one MCP server, and the llms.txt indexes](docs/assets/readme-features.svg)
+
+- **JSON for agents.** Put `--json` after the subcommand: `stack providers --json`. A flag the command does not declare exits 1 and names the closest real option.
+- **One MCP server.** Claude Code, Cursor, and Codex share the snippet above. The server declares <!-- fresh:begin tool-count -->19<!-- fresh:end --> tools, a subset of the CLI. Tool results are CLI text plus an `isError` flag. They are not a secret-redaction boundary.
+- **Phantom holds selected secrets.** Stack handles credential values in memory during setup. Persistent entries go through Phantom. Talk about slot names, not secret values.
+- **Fleet diagnostics.** `stack fleet` and the `stack fleet-*` commands report fleet state from local data or GitHub. `stack fleet-act --apply` appends an audit request; a separate dispatcher must consume it. See [fleet commands](docs/fleet-commands.md).
+- **Updates on request.** `stack upgrade` checks npm; `stack upgrade --apply` can upgrade an eligible npm global installation with health checks and rollback. `--dryRun` prevents installation. The MCP upgrade tool only checks.
+- **Catalog in this checkout.** It registers <!-- fresh:begin provider-count -->39<!-- fresh:end --> providers across <!-- fresh:begin category-count -->13<!-- fresh:end --> categories. Registration is not provider acceptance. Run `stack providers --json` for the install you have.
+
+## Install
+
+The one-liner above is the fastest path. Two more:
+
 npm / bun registry:
 
-<!-- fresh:begin install-snippet -->
+> On November 1, 2026, npm reported 0.3.1 for all three Stack packages; the 0.3.1 CLI and MCP packages declare Node.js 20 or newer. Check `npm view @ashlr/stack-core version`, `npm view @ashlr/stack version` and `npm view ashlr-stack-mcp version` for current versions. This checkout declares the source version shown above and contains changes not in the v0.3.1 release tag; its version does not establish what is published. Source development uses Bun.
+
 ```bash
-bun add -g @ashlr/stack@0.2.2 ashlr-stack-mcp@0.2.2     # or: npm i -g
+npm i -g @ashlr/stack ashlr-stack-mcp
+# or: bun add -g @ashlr/stack ashlr-stack-mcp
 ```
-<!-- fresh:end -->
 
-> Check the published versions with `npm view @ashlr/stack version` and `npm view ashlr-stack-mcp version`. Older releases may require [Bun](https://bun.sh) and lack commands such as `stack doctor --ecosystem` or `stack exec --as`. Use the dev install below to run this checkout's commands.
-
-**Dev install** (from a local clone of this repo):
+**Dev install** (this repo):
 
 ```bash
 git clone https://github.com/ashlrai/ashlr-stack && cd ashlr-stack
 bun install
 bun run packages/cli/src/index.ts --help
-# Run source commands with: bun run packages/cli/src/index.ts <command>
-# For MCP, build the CLI: bun run --cwd packages/cli build
 ```
 
-> Using Stack with an AI coding agent? See [STACK.md](./STACK.md): a self-contained project brief for agents pulling context from the repo.
+Run source commands with `bun run packages/cli/src/index.ts <command>`. For MCP from source, build the CLI (`bun run --cwd packages/cli build`) or set `STACK_BIN`. Agents working on this repo should read [AGENTS.md](AGENTS.md) and [STACK.md](STACK.md).
 
-## What Stack does
+**Status:** pre-alpha, active development. This source line adds fleet diagnostics and stricter input validation on top of the Node-compatible CLI and headless workflows; this checkout is version <!-- fresh:begin version-pin -->0.3.3<!-- fresh:end -->. See [CHANGELOG.md](./CHANGELOG.md) for compatibility notes and changes since 0.2.2. Source versions do not establish npm publication or provider readiness. Check `npm view @ashlr/stack version`, `npm view ashlr-stack-mcp version`, and your installed `stack --version` before relying on release-specific commands.
 
-In a Claude‑Code‑native world, the friction in starting a project isn't writing code: it's tab‑hopping to create and wire ten services. Every `npx create-next-app` is followed by an hour of:
+## Providers
 
-- creating a Supabase project, copying URL + anon key + service role key into `.env`
-- generating a Vercel token
-- picking a Neon region and copying the connection string
-- setting up a Sentry project and pasting the DSN
-- registering an OAuth app, generating a PAT, pasting keys, adding MCP servers to `.mcp.json`…
+A subset of the catalog:
 
-Stack collapses that hour into one command:
+- **Database:** Supabase, Neon, Turso, Convex, Upstash, Firebase
+- **Deploy:** Vercel, Railway, Fly.io, Cloudflare, Render
+- **Cloud:** AWS
+- **AI:** OpenAI, Anthropic, xAI, DeepSeek
+- **Analytics:** PostHog
+- **Errors:** Sentry
+- **Payments:** Stripe
+- **Code:** GitHub
+- **Tickets:** Linear
+- **Email:** Resend
+- **Auth:** Clerk
 
-```bash
-stack init --template nextjs-supabase-posthog
-# Run from your application's directory. Stack writes its configuration,
-# then provisions template services with provider-specific authentication.
-# It does not generate application code or automatically write .env.
-stack env export --example    # separate empty KEY= skeleton in .env.example
-```
+`stack providers --json` is the full list for your install, including `authKind` and docs links.
 
-## How it relates to the rest of Ashlr
+## Commands
 
-- **[Phantom Secrets](https://phm.dev/secrets)**: the vault. Stack uses its CLI for selected credential storage and runtime operations; provider authentication still uses credentials.
-- **[Locus](https://github.com/ashlrai/locus)**: the identity plane. Run `locus run -b <binding> -- stack add …` so provider CLIs act only in the pinned personal / company / client account. See [docs/phantom-locus.md](./docs/phantom-locus.md).
-- **ashlr-plugin**: token-efficiency layer for Claude Code. Orthogonal to Stack.
-- **ashlrcode**: multi-provider AI coding CLI. Orthogonal.
-
-Stack is the *control plane*. [Phantom Secrets](https://phm.dev/secrets) is the *vault*. ashlr-plugin is the *context compressor*. They compose.
-
-## Curated v1 provider catalog
-
-**Database**: Supabase · Neon · Turso · Convex · Upstash · Firebase
-**Deploy**: Vercel · Railway · Fly.io · Cloudflare · Render
-**Cloud**: AWS
-**AI**: OpenAI · Anthropic · xAI · DeepSeek
-**Analytics**: PostHog
-**Errors**: Sentry
-**Payments**: Stripe
-**Code**: GitHub
-**Tickets**: Linear
-**Email**: Resend
-**Auth**: Clerk
-
-Run `stack providers` to see your installed catalog. This source checkout registers <!-- fresh:begin provider-count -->39<!-- fresh:end --> providers across <!-- fresh:begin category-count -->13<!-- fresh:end --> categories; the examples above are a subset. `stack templates list` shows the starter presets. Registration does not establish account access or provider acceptance.
-
-## Usage
-
-Before `stack add`, `stack apply`, or a writing `stack import`, check
-`phantom status --json` from the project directory. Phantom Secrets 0.7.9
-reports `initialized: true` when its project configuration is readable and valid; this
-is metadata, not vault or provider health. For a new project that is not yet
-configured, run `phantom init --empty` in a trusted terminal, then retry.
-These write flows stop before provider login or provisioning when initialization
-is unknown or missing, and do not initialize Phantom automatically.
-
-```bash
-stack init                    # interactive template picker
-stack add supabase            # provider authentication → setup → vault/config/MCP
-stack providers               # full provider catalog
-stack doctor --fix            # inspect the report and attempt supported remediation
-stack doctor --ecosystem      # which Ashlr tools are installed (via --ashlr-handshake); informational, never fails
-stack doctor --ecosystem --fix                 # preview companions' own doctor --fix (changes nothing)
-stack doctor --ecosystem --fix --apply lexicon # run `lexicon doctor --fix --apply`, opted in per tool
-locus doctor --fix --apply                     # locus: run it yourself (needs its own control capability, which Stack never forwards)
-stack doctor --ecosystem --install             # print install commands for missing or outdated companions (runs nothing)
-stack doctor --ecosystem --install --apply lexicon  # run the printed step for lexicon only; stops at the first non-zero exit
-phantom exec -- bun dev       # run directly with Phantom's secret proxy active
-stack exec -- bun dev         # Stack wrapper for the same runtime
-stack exec --as acme -- bun dev  # same, but refuse (exit 1, nothing starts) unless Locus has `acme` pinned
-```
-
-### Source command reference
-
-This checkout registers <!-- fresh:begin command-count -->37<!-- fresh:end --> top-level commands. Run `stack <command> --help`
-for arguments and subcommands supported by your installed version.
+This checkout registers <!-- fresh:begin command-count -->43<!-- fresh:end --> top-level commands. Run `stack <command> --help` for the flags your install actually has. Options go after the subcommand.
 
 <!-- fresh:begin commands-table -->
 | Command | Purpose |
@@ -192,6 +171,12 @@ for arguments and subcommands supported by your installed version.
 | `stack fleet-supply` | Report hourly launches, observed lane idle minutes, restock errors and UTF-8 queue splits. |
 | `stack fleet-latency` | Report per-repo median and p90 open-to-merge seconds for PRs merged in the last six hours. |
 | `stack fleet-lag` | Report per-repo commits since latest tag, tag age and median time for the last 20 merged PRs. |
+| `stack fleet-waste` | Report per-lane launches, empty finishes, precheck skips by code and unfinished jobs. |
+| `stack fleet-reds` | List failed jobs and first failing tests in the latest completed schedule/push CI runs. |
+| `stack fleet-silent` | Name silent fleet failures in author, dispatch and job logs (read-only JSON). |
+| `stack fleet-collisions` | Rank touched files by open conflicting PR count from one repository's gh JSON. |
+| `stack fleet-delivery-lag` | Report undeployed merged commits and merge wait from a read-only JSON fixture. |
+| `stack fleet-stuck` | List open PRs by merge state, age and auto-merge status with server/ and lockfile path hints. |
 | `stack fleet-slo` | Compare per-repo six-hour merges, open-to-merge latency and conflicting PRs with fleet SLO targets. |
 | `stack fleet-act` | Preview fleet requests; --apply appends a v1 audit request for a dispatcher consumer. |
 | `stack fleet-stream` | Translate fleet logs to typed NDJSON or localhost SSE. |
@@ -215,13 +200,9 @@ for arguments and subcommands supported by your installed version.
 | `stack upgrade` | Check for a release or safely upgrade an npm global CLI install. |
 <!-- fresh:end -->
 
-### Source MCP tool reference
+## MCP tools
 
-The server declares <!-- fresh:begin tool-count -->19<!-- fresh:end --> tools, a subset of the CLI. Each tool accepts its
-advertised input schema; CLI flags are not automatically MCP arguments.
-Project-scoped tools accept an absolute `cwd`; global catalog, registry,
-template and upgrade tools reject it. Results contain CLI output and an
-`isError` flag. They do not guarantee credential validity or provider health.
+Project-scoped tools take an absolute `cwd`. Catalog, registry, template, and upgrade tools reject `cwd`. The server can also list up to three resources when the files exist: `stack://current/.stack.toml`, `stack://current/.stack.local.toml`, and `stack://current/.mcp.json`.
 
 <!-- fresh:begin tools-table -->
 | Tool | CLI route |
@@ -247,114 +228,51 @@ template and upgrade tools reject it. Results contain CLI output and an
 | `stack_apply` | `stack apply` |
 <!-- fresh:end -->
 
-The server lists up to three resources when their files exist in its working
-directory: `stack://current/.stack.toml`, `stack://current/.stack.local.toml`
-and `stack://current/.mcp.json`. Resources do not accept `cwd`. Review output
-before sharing: the MCP wrapper is not a general secret-redaction boundary.
+## Limits
 
-### AI recommendation layer
+Write commands (`stack add`, `stack apply`, `stack import`, `stack onboard --apply`) can contact a provider, store secrets, or edit agent config. Do not run them until the user has named the project and the provider. Check `phantom status --json` first. Writing flows stop when Phantom initialization is missing. Stack does not run `phantom init` for you.
 
-Describe what you're building: Stack picks the providers.
+`stack scan --auto` without `--yes` exits 1 in a non-interactive shell, because it would prompt. Use `stack scan --json` to detect services without writing.
 
-```bash
-stack recommend "B2B SaaS with auth, AI, and payments"
-# → ranked list of matching providers with rationales
+Custom model host variables (`ANTHROPIC_BASE_URL`, `OPENAI_BASE_URL`, `OLLAMA_HOST`) and the rules for which URLs are allowed are in [docs/model-endpoints.md](docs/model-endpoints.md).
 
-stack recommend "serverless postgres" --save
-# → freezes a Recipe to .stack/recipes/<id>.toml
+Release steps for maintainers are in [docs/RELEASE.md](docs/RELEASE.md).
 
-stack apply <recipe-id>
-# → provisions recipe providers, then attempts optional Phantom wiring
-#   and writes webhook stub files; successful rotation is not guaranteed
-#   (add --noWire to skip the optional wiring layer)
-```
+## FAQ
 
-Inside Claude Code, the same flow is one tool call:
+**Does the 60 second start need an account?**
 
-```
-stack_recommend { query: "B2B SaaS with auth + payments", save: true }
-stack_apply     { recipe_id: "<id>" }
-```
+No. The four `npx` commands above only read the local catalog, rank providers, scan the current directory, and list templates.
 
-Reasoning happens in Claude: Stack owns the catalog + execution. Outside Claude, `stack recommend --synth` uses a local SLM (LM Studio on `:1234`, Ollama on `:11434`) for rationales. No remote LLM SDKs live in Stack.
+**Where do secrets go?**
 
-#### Custom model endpoints
+Selected persistent values go to Phantom Secrets. `.stack.toml` stores slot names and shape, not those values. `.stack.local.toml` is gitignored and holds per-clone ids. Stack still holds values in memory during setup, and CLI or MCP text can contain them. Do not paste command output into a public issue.
 
-Stack reads these environment variables when it calls a model provider. Unset or blank means the defaults below, which are what Stack always used.
+**Is `--json` on every command?**
 
-| Variable | Default | Used by |
-|---|---|---|
-| `ANTHROPIC_BASE_URL` | `https://api.anthropic.com` | `anthropic` key check (`/v1/models`) |
-| `OPENAI_BASE_URL` | `https://api.openai.com/v1` | `openai` key check (`/models`) |
-| `OLLAMA_HOST` | `http://localhost:11434` | `--synth` Ollama fallback (`/v1`); accepts `host`, `host:port`, `:port` or a URL |
+No. It is declared per command. The start block and `stack onboard --json` are the quickstart forms. `stack --json providers` exits 1.
 
-Trailing slashes are trimmed. This lets a LiteLLM gateway or a Phantom proxy sit in front of the providers. Only the URL handling is covered by tests; Stack has not been tested against a specific gateway. A key check sends the key to the URL you set, so point these only at endpoints you trust. `ANTHROPIC_BASE_URL` and `OPENAI_BASE_URL` must be `https`, or plain `http` only to `127.0.0.1` or `[::1]`; any other value is refused and no key is sent. LM Studio keeps its own `STACK_LM_URL`.
+**What if I stop using Stack?**
 
-## Bring Stack to an existing project
+Provider resources and the Phantom vault stay where they are. Removing Stack does not turn vault references into a plaintext `.env`.
 
-Already have a repo with services wired up? You don't start from scratch.
+**Is this production secret management?**
 
-```bash
-# In an existing repo:
-stack scan                    # detects Supabase / Sentry / OpenAI / etc. from package.json, config files, .env.example
-stack scan --auto             # scans, then interactively runs `stack add` for each detection
-stack import                  # or: inhale an existing .env straight into Phantom + .stack.toml
+No. Stack is pre-alpha. Evaluate Phantom on its own if you need a vault decision. Provider accounts and API usage can cost money even though the Stack license is MIT.
 
-# Clone someone else's project:
-stack clone https://github.com/your-org/your-repo
-# → git clone + scans the checkout + prints next steps
+**How do I report a bug?**
 
-# Across every project on this machine:
-stack projects list           # everywhere you've used Stack
-stack doctor --all            # run health check across all registered projects
-```
+Use [SUPPORT.md](SUPPORT.md). Security reports stay private: [SECURITY.md](SECURITY.md).
 
-### How git-sharing works
+## Star Ashlr Stack
 
-Stack splits its config into two files so you can commit the shape of a stack without leaking per-developer resource IDs:
-
-- `.stack.toml`: committed. Names of services, their secret slots, MCP wirings.
-- `.stack.local.toml`: gitignored automatically. `project_id`, `resource_id`, timestamps. Unique to each clone.
-
-Another developer can inspect `stack doctor` and use `stack doctor --fix` for supported remediation. Review its report; existing vault names can cause remediation to be skipped, and metadata presence does not establish valid credentials or a healthy provider.
-
-## Monorepo layout
-
-```
-packages/
-  core/       @ashlr/stack-core: shared logic, provider adapters
-  cli/        @ashlr/stack: the `stack` binary
-  mcp/        ashlr-stack-mcp: MCP wrapper
-  plugin/     Claude Code plugin wrapper
-  site/       Astro landing page (deploys to stack.ashlr.ai)
-templates/    starter stacks
-docs/         auth matrix, schema reference
-```
-
-### Publishing
-
-Three packages ship to npm: `@ashlr/stack-core`, `ashlr-stack-mcp`, `@ashlr/stack`. For monorepo dev, `@ashlr/stack` depends on `@ashlr/stack-core` via `workspace:*`: that's what lets `bun install` link the local checkout. A plain `npm install @ashlr/stack` from outside the workspace **cannot resolve `workspace:*`**, so the publish flow has to rewrite those ranges to an actual version (e.g. ^<!-- fresh:begin version-pin -->0.2.2<!-- fresh:end -->) right before `npm publish`.
-
-Don't hand-edit the `workspace:*` entries in `packages/*/package.json`: dev needs them. Release owners should follow [docs/RELEASE.md](./docs/RELEASE.md), which describes the current script, its limitations and separate package, native and website acceptance gates.
-
-## Landing page
-
-```bash
-cd packages/site
-bun install
-bun run dev       # http://localhost:4321
-bun run build     # static output in dist/
-```
-
-Dark-first, magenta accent, Astro + Tailwind v4 + Framer Motion. Three interactive React islands (animated terminal, "with vs without Stack" tab comparison, Claude Code chat mock). `prefers-reduced-motion` honored.
-
-## Part of the Ashlr ecosystem
-
-Ashlr Stack is one of the open-source tools from [Ashlr](https://ashlr.ai), a forward-deployed engineering company. Its siblings: [Lexicon](https://github.com/ashlrai/lexicon), [Locus](https://github.com/ashlrai/locus), [Phantom Secrets](https://github.com/ashlrai/phantom-secrets), [Ashlr Markdown](https://github.com/ashlrai/ashlr-md), [Ashlr plugin](https://github.com/ashlrai/ashlr-plugin).
+If this is the control plane you want agents to find, star the repo: [github.com/ashlrai/ashlr-stack](https://github.com/ashlrai/ashlr-stack).
 
 ## Contributing
 
-Issues and PRs are welcome. Look for [`good first issue`](https://github.com/ashlrai/ashlr-stack/labels/good%20first%20issue) to get started, and read [CONTRIBUTING.md](CONTRIBUTING.md). Report security problems privately per [SECURITY.md](SECURITY.md).
+Issues and PRs are welcome. Look for [`good first issue`](https://github.com/ashlrai/ashlr-stack/labels/good%20first%20issue) to get started, and read [CONTRIBUTING.md](CONTRIBUTING.md). For questions and bug reports, see [SUPPORT.md](SUPPORT.md). Report security problems privately per [SECURITY.md](SECURITY.md).
+
+Ashlr Stack is one of the open-source tools from [Ashlr](https://ashlr.ai). Siblings: [Lexicon](https://github.com/ashlrai/lexicon), [Locus](https://github.com/ashlrai/locus), [Phantom Secrets](https://github.com/ashlrai/phantom-secrets), [Ashlr Markdown](https://github.com/ashlrai/ashlr-md), [Ashlr plugin](https://github.com/ashlrai/ashlr-plugin). The site is [stack.ashlr.ai](https://stack.ashlr.ai).
 
 ## License
 

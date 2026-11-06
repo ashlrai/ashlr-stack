@@ -1,4 +1,6 @@
 import { statSync } from "node:fs";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import {
   addService,
   emptyConfig,
@@ -87,6 +89,33 @@ export const scanCommand = defineCommand({
       return;
     }
 
+    // The shared scanner tolerates broken manifests to collect other signals;
+    // the CLI must not present that partial scan as a complete result.
+    const manifestPath = join(cwd, "package.json");
+    let manifest: string | undefined;
+    try {
+      manifest = await readFile(manifestPath, "utf8");
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
+        problem = `Cannot read dependency manifest "${manifestPath}".`;
+      }
+    }
+    if (manifest !== undefined) {
+      try {
+        JSON.parse(manifest);
+      } catch {
+        problem = `Invalid JSON in dependency manifest "${manifestPath}". Fix it and retry the scan.`;
+      }
+    }
+    if (problem) {
+      if (isJson) {
+        console.error(problem);
+        process.exit(1);
+      }
+      outroError(problem);
+      return;
+    }
+
     const minimum: "low" | "medium" | "high" = rawConfidence
       ? (rawConfidence as "low" | "medium" | "high")
       : isYes
@@ -150,7 +179,7 @@ export const scanCommand = defineCommand({
     console.log();
 
     if (!isAuto) {
-      const suggestion = filtered.map((h) => `stack add ${h.provider}`).join("\n  ");
+      const suggestion = filtered.map((h) => `stack add ${h.provider}`).join("\n    ");
       console.log(colors.dim("  Next steps:"));
       console.log(colors.dim(`    ${suggestion}\n`));
       outro(colors.dim("scan complete — nothing written."));

@@ -5,6 +5,8 @@ description: "Historical, unposted Twitter/X draft revised against the reviewed 
 noindex: true
 ---
 
+> **Historical draft — not current installation guidance.** Versions and runtime requirements below reflect an earlier snapshot and may no longer apply. For current setup, see the [Quickstart](/docs/quickstart/).
+
 # Launch thread (draft)
 
 **Tweet 1 — hook**

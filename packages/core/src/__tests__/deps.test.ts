@@ -2,8 +2,21 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { buildDepsReport } from "../../../cli/src/commands/deps.ts";
 import { emptyConfig, writeConfig } from "../config.ts";
 import { getProvider, listProviderNames } from "../providers/index.ts";
+
+test("an empty service list resolves to an empty dependency report", async () => {
+  const config = emptyConfig();
+  expect(await buildDepsReport(config)).toEqual({
+    schema: "ashlr.stack.deps/v1",
+    project_id: config.stack.project_id,
+    template: null,
+    categories: [],
+    unresolved: [],
+    totals: { services: 0, secrets: 0, mcp: 0 },
+  });
+});
 
 describe("provider loading — wave 9 additions", () => {
   test("render + firebase are in the catalog", () => {
@@ -55,5 +68,27 @@ describe("config carrying 21+ provider entries still round-trips", () => {
     const { readConfig } = await import("../config.ts");
     const roundtrip = await readConfig(cwd);
     expect(Object.keys(roundtrip.services).length).toBe(listProviderNames().length);
+  });
+  test("duplicate secret entries are preserved verbatim (no dedupe on round-trip)", async () => {
+    const config = emptyConfig("dupes");
+    config.services.render = {
+      provider: "render",
+      secrets: ["RENDER_API_KEY", "RENDER_API_KEY"],
+      created_at: new Date().toISOString(),
+    };
+    await writeConfig(config, cwd);
+    const { readConfig } = await import("../config.ts");
+    const roundtrip = await readConfig(cwd);
+    expect(roundtrip.services.render?.secrets).toEqual(["RENDER_API_KEY", "RENDER_API_KEY"]);
+  });
+
+  test("a duplicated [services.x] table in .stack.toml is rejected, not merged", async () => {
+    const { readConfig, CONFIG_FILENAME } = await import("../config.ts");
+    const toml =
+      '[stack]\nversion = "1"\n\n' +
+      '[services.render]\nprovider = "render"\nsecrets = ["A"]\n\n' +
+      '[services.render]\nprovider = "render"\nsecrets = ["B"]\n';
+    await Bun.write(join(cwd, CONFIG_FILENAME), toml);
+    await expect(readConfig(cwd)).rejects.toThrow();
   });
 });
