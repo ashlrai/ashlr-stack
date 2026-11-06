@@ -14,12 +14,9 @@
 
 **What needs a real asset pipeline in deploy (placeholders today):**
 
-- **PNG rasterization.** We don't ship `og.png`, `favicon.ico`, `favicon-32.png`, `apple-touch-icon.png`, `icon-192.png`, or `icon-512.png`. SVG works for modern browsers, Discord, Slack, iMessage, and most social previewers, but:
-  - iOS Safari prefers a PNG apple-touch-icon (it'll fall back to the SVG but may not render at peak crispness on home-screen install).
-  - Some legacy OG scrapers (older Facebook, LinkedIn) still want PNG. If sharing on those surfaces matters at launch, the deploy pipeline should use `sharp` / `resvg-js` / `satori` to rasterize the SVGs and emit sibling `.png` files, then flip `DEFAULT_OG_IMAGE` in `src/lib/og.ts` to `/og.png`.
-  - A true multi-size `favicon.ico` needs `png-to-ico` or similar. Not critical — SVG favicon is sufficient for every target browser released in the last five years.
-- **Per-page OG stamping.** `stampOgImage()` in `src/lib/og.ts` is a stub. For real per-page cards (docs pages, blog posts), wire it to a build-time `satori` call that overlays a per-page title onto the base image.
-- **RSS feed.** `<link rel="alternate" type="application/rss+xml" href="/feed.xml">` points at a URL that doesn't exist yet. Add `/feed.xml` when we ship a blog or changelog.
+- **PNG social cards.** `og.png` (1200x630) and `twitter-card.png` (1200x600) are rasterized from the SVG cards. `DEFAULT_OG_IMAGE` and `DEFAULT_TWITTER_IMAGE` in `src/lib/og.ts` point at them. SVG originals stay in `public/` for browsers. Favicon ICO, `apple-touch-icon.png`, and the 192/512 PNG icons are still not shipped. A multi-size `favicon.ico` needs a separate raster step. SVG favicons cover current browsers.
+- **Per-page OG stamping.** `stampOgImage()` returns the shared `/og.png`. It does not overlay a per-page title.
+- **RSS feed.** `<link rel="alternate" type="application/rss+xml" href="/feed.xml">` is served by `src/pages/feed.xml.ts`.
 
 **What's intentionally not included:**
 
