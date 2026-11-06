@@ -101,6 +101,8 @@ That adds `/stack:add`, `/stack:apply`, `/stack:doctor`, `/stack:list`, `/stack:
 - **JSON for agents.** Put `--json` after the subcommand: `stack providers --json`. A flag the command does not declare exits 1 and names the closest real option.
 - **One MCP server.** Claude Code, Cursor, and Codex share the snippet above. The server declares <!-- fresh:begin tool-count -->19<!-- fresh:end --> tools, a subset of the CLI. Tool results are CLI text plus an `isError` flag. They are not a secret-redaction boundary.
 - **Phantom holds selected secrets.** Stack handles credential values in memory during setup. Persistent entries go through Phantom. Talk about slot names, not secret values.
+- **Fleet diagnostics.** `stack fleet` and the `stack fleet-*` commands report fleet state from local data or GitHub. `stack fleet-act --apply` appends an audit request; a separate dispatcher must consume it. See [fleet commands](docs/fleet-commands.md).
+- **Updates on request.** `stack upgrade` checks npm; `stack upgrade --apply` can upgrade an eligible npm global installation with health checks and rollback. `--dryRun` prevents installation. The MCP upgrade tool only checks.
 - **Catalog in this checkout.** It registers <!-- fresh:begin provider-count -->39<!-- fresh:end --> providers across <!-- fresh:begin category-count -->13<!-- fresh:end --> categories. Registration is not provider acceptance. Run `stack providers --json` for the install you have.
 
 ## Install
