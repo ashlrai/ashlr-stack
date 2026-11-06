@@ -1,5 +1,5 @@
-import { expect, it, describe } from "bun:test";
-import { webhookStubFor, verificationHintFor } from "../ai/phantom-wire.ts";
+import { describe, expect, it } from "bun:test";
+import { verificationHintFor, webhookStubFor } from "../ai/phantom-wire.ts";
 
 /**
  * Helper: return the sequence of code point values in a string.
