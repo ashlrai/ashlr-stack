@@ -1,28 +1,29 @@
-import { constants } from "node:fs";
-import { open, readdir } from "node:fs/promises";
+import { readdir } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { defineCommand } from "citty";
+import { type FleetRow, isFleetRow, readFleetJsonl } from "../lib/fleet-jsonl.ts";
 
-type Row = Record<string, unknown>;
-const record = (v: unknown): v is Row => !!v && typeof v === "object" && !Array.isArray(v);
 const name = (v: unknown): v is string =>
   typeof v === "string" && /^[A-Za-z0-9][A-Za-z0-9._-]{0,199}$/.test(v);
 const count = (v: unknown) => typeof v === "number" && Number.isSafeInteger(v) && v >= 0;
-const time = (r: Row) => {
+const time = (r: FleetRow) => {
   const value = r.timestamp ?? r.ts;
   return typeof value === "string" ? Date.parse(value) : Number.NaN;
 };
 
 /** JSONL or the timestamped key=value format used by dispatchd; never emit raw lines. */
-function parse(line: string): Row | null {
+function parse(line: string): FleetRow | null {
   try {
     const row: unknown = JSON.parse(line);
-    return record(row) ? row : null;
+    return isFleetRow(row) ? row : null;
   } catch {
     const head = /^(\d{4}-\d\d-\d\d[ T]\d\d:\d\d:\d\d(?:\.\d+)?Z?)\s+(\S+)\s*(.*)$/.exec(line);
     if (!head) return null;
-    const row: Row = Object.assign(Object.create(null), { timestamp: head[1], event: head[2] });
+    const row: FleetRow = Object.assign(Object.create(null), {
+      timestamp: head[1],
+      event: head[2],
+    });
     for (const m of head[3]!.matchAll(/(\w+)=("[^"\r\n]*"|\S+)/g)) {
       try {
         row[m[1]!] = JSON.parse(m[2]!);
@@ -35,56 +36,19 @@ function parse(line: string): Row | null {
   }
 }
 
-/** Bounded, regular-file reads only. Missing/invalid inputs never mean a healthy fleet. */
-async function source(path: string) {
-  try {
-    const file = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
-    try {
-      const stat = await file.stat();
-      if (!stat.isFile() || stat.size > 16 * 1024 * 1024) throw new Error();
-      const rows: Row[] = [];
-      let status = "ok";
-      const buffer = Buffer.alloc(stat.size);
-      let offset = 0;
-      while (offset < buffer.length) {
-        const { bytesRead } = await file.read(buffer, offset, buffer.length - offset, offset);
-        if (!bytesRead) throw new Error();
-        offset += bytesRead;
-      }
-      for (const line of buffer
-        .toString("utf8")
-        .split(/\r?\n/)
-        .filter((s) => s.trim())) {
-        const row = parse(line);
-        if (!row) {
-          status = "invalid";
-          continue;
-        }
-        if (
-          ((row.timestamp !== undefined ||
-            row.ts !== undefined ||
-            row.event === "launch" ||
-            row.event === "tick") &&
-            !Number.isFinite(time(row))) ||
-          (row.status !== undefined && typeof row.status !== "string") ||
-          (row.event === "tick" && !count(row.launched)) ||
-          ((row.need !== undefined || row.picked !== undefined) &&
-            (!count(row.need) || !count(row.picked)))
-        )
-          status = "invalid";
-        rows.push(row);
-      }
-      return { status, rows };
-    } finally {
-      await file.close();
-    }
-  } catch (error) {
-    return {
-      status: (error as NodeJS.ErrnoException).code === "ENOENT" ? "missing" : "invalid",
-      rows: [] as Row[],
-    };
-  }
-}
+/** Timestamped or launch/tick rows need a real time; counters need nonnegative integers. */
+const wellFormed = (row: FleetRow) =>
+  !(
+    ((row.timestamp !== undefined ||
+      row.ts !== undefined ||
+      row.event === "launch" ||
+      row.event === "tick") &&
+      !Number.isFinite(time(row))) ||
+    (row.status !== undefined && typeof row.status !== "string") ||
+    (row.event === "tick" && !count(row.launched)) ||
+    ((row.need !== undefined || row.picked !== undefined) &&
+      (!count(row.need) || !count(row.picked)))
+  );
 
 export async function collectFleetSilent(runs: string, now = Date.now()) {
   const sources: Record<string, string> = {};
@@ -96,10 +60,19 @@ export async function collectFleetSilent(runs: string, now = Date.now()) {
     sources.authors = "unavailable";
   }
   const paths = [...authors, "dispatchd.log", "dispatch-events.log", "metrics/jobs.jsonl"];
-  const inputs = await Promise.all(paths.map((p) => source(join(runs, p))));
-  const findings: Row[] = [];
-  const lanes = new Map<string, Row>();
-  const finishes = new Map<string, Row[]>();
+  // Bounded, regular-file reads only; missing/invalid inputs never mean a healthy fleet.
+  const inputs = await Promise.all(
+    paths.map((path) =>
+      readFleetJsonl(join(runs, path), {
+        parseLine: parse,
+        malformedLines: "flag",
+        flagRow: wellFormed,
+      }),
+    ),
+  );
+  const findings: FleetRow[] = [];
+  const lanes = new Map<string, FleetRow>();
+  const finishes = new Map<string, FleetRow[]>();
   const fixups = new Map<string, Set<string>>();
   let firstActivity = now;
   let lastLaunch: number | null = null;
@@ -108,7 +81,7 @@ export async function collectFleetSilent(runs: string, now = Date.now()) {
     sources[path] = input.status;
     // An unreadable newer record could reverse a latest/absence claim.
     if (input.status !== "ok") continue;
-    let lastAuthor: Row | undefined;
+    let lastAuthor: FleetRow | undefined;
     // Legacy untimestamped logs use append order; fully dated logs use event time.
     if (input.rows.every((row) => Number.isFinite(time(row))))
       input.rows.sort((a, b) => time(a) - time(b));

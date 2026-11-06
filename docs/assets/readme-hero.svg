@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="520" viewBox="0 0 1200 520" role="img" aria-labelledby="heroTitle heroDesc">
+  <title id="heroTitle">Ashlr Stack for agents</title>
+  <desc id="heroDesc">A dark panel showing read-only stack commands that print JSON, beside the keys those JSON objects use.</desc>
+  <defs>
+    <linearGradient id="fade" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#e96b2a" stop-opacity="0.22"/>
+      <stop offset="55%" stop-color="#e96b2a" stop-opacity="0"/>
+    </linearGradient>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M32 0H0V32" fill="none" stroke="#ffffff" stroke-opacity="0.035" stroke-width="1"/>
+    </pattern>
+  </defs>
+  <rect width="1200" height="520" fill="#050506"/>
+  <rect width="1200" height="520" fill="url(#grid)"/>
+  <rect width="1200" height="520" fill="url(#fade)"/>
+  <text x="64" y="78" fill="#e96b2a" font-family="ui-sans-serif, system-ui, Segoe UI, Helvetica, Arial, sans-serif" font-size="14" letter-spacing="3">ASHLR STACK</text>
+  <text x="64" y="148" fill="#f4f5f7" font-family="ui-sans-serif, system-ui, Segoe UI, Helvetica, Arial, sans-serif" font-size="54" font-weight="650">Agents run Stack.</text>
+  <text x="64" y="198" fill="#c5cad3" font-family="ui-sans-serif, system-ui, Segoe UI, Helvetica, Arial, sans-serif" font-size="20">Read-only commands. JSON out.</text>
+  <text x="64" y="226" fill="#c5cad3" font-family="ui-sans-serif, system-ui, Segoe UI, Helvetica, Arial, sans-serif" font-size="20">No account required.</text>
+  <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="16">
+    <rect x="64" y="248" width="430" height="40" rx="6" fill="#12141a" stroke="#2a3140"/>
+    <text x="80" y="274" fill="#e96b2a">stack providers --json</text>
+    <rect x="64" y="300" width="430" height="40" rx="6" fill="#12141a" stroke="#2a3140"/>
+    <text x="80" y="326" fill="#f4f5f7">stack recommend "B2B SaaS" --json</text>
+    <rect x="64" y="352" width="430" height="40" rx="6" fill="#12141a" stroke="#2a3140"/>
+    <text x="80" y="378" fill="#f4f5f7">stack scan --json</text>
+    <rect x="64" y="404" width="430" height="40" rx="6" fill="#12141a" stroke="#2a3140"/>
+    <text x="80" y="430" fill="#f4f5f7">stack templates list --json</text>
+  </g>
+  <rect x="560" y="64" width="576" height="392" rx="12" fill="#101218" stroke="#2a3140"/>
+  <circle cx="588" cy="92" r="6" fill="#e96b2a"/>
+  <circle cx="608" cy="92" r="6" fill="#3e4651"/>
+  <circle cx="628" cy="92" r="6" fill="#3e4651"/>
+  <text x="652" y="97" fill="#9aa3b2" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13">recommend --json keys</text>
+  <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="16">
+    <text x="588" y="150" fill="#9aa3b2">{</text>
+    <text x="612" y="182" fill="#7dcea0">"query"</text>
+    <text x="700" y="182" fill="#c5cad3">: string</text>
+    <text x="612" y="214" fill="#7dcea0">"hits"</text>
+    <text x="692" y="214" fill="#c5cad3">: name, category, score</text>
+    <text x="612" y="246" fill="#7dcea0">"byCategory"</text>
+    <text x="748" y="246" fill="#c5cad3">: object</text>
+    <text x="612" y="278" fill="#7dcea0">"guidance"</text>
+    <text x="736" y="278" fill="#c5cad3">: string</text>
+    <text x="588" y="310" fill="#9aa3b2">}</text>
+    <text x="588" y="366" fill="#9aa3b2">scan --json</text>
+    <text x="588" y="398" fill="#f4f5f7">{ "hits": [] }  writes nothing</text>
+  </g>
+</svg>

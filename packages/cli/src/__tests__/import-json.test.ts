@@ -88,8 +88,24 @@ describe("stack import --json", () => {
 
     const { code, stdout, stderr } = stack(["import", "--json", "--from", "broken.json"]);
     expect(code).toBe(1);
-    expect(JSON.parse(stdout).error).toContain("line 1: expected a valid KEY=VALUE assignment");
+    expect(JSON.parse(stdout)).toEqual({
+      error: "Invalid .env input on line 1: expected a valid KEY=VALUE assignment.",
+    });
     expect(stdout + stderr).not.toContain(NEW_VALUE);
+    expect(existsSync(join(dir, ".stack.toml"))).toBe(false);
+    expect(vault()).toEqual({ OPENAI_API_KEY: STORED_VALUE });
+    expect(h.callsTo("add")).toEqual([]);
+  });
+
+  it("reports malformed JSON input without a human-readable success message", () => {
+    writeFileSync(join(dir, "broken.json"), `{"RESEND_API_KEY": "${NEW_VALUE}"`);
+
+    const { code, stdout, stderr } = stack(["import", "--from", "broken.json"]);
+    const output = stdout + stderr;
+    expect(code).toBe(1);
+    expect(output).toContain("Invalid .env input on line 1: expected a valid KEY=VALUE assignment");
+    expect(output).not.toContain("Imported");
+    expect(output).not.toContain(NEW_VALUE);
     expect(existsSync(join(dir, ".stack.toml"))).toBe(false);
     expect(vault()).toEqual({ OPENAI_API_KEY: STORED_VALUE });
     expect(h.callsTo("add")).toEqual([]);
@@ -124,6 +140,38 @@ describe("stack import malformed input", () => {
         } else {
           expect(existsSync(configPath)).toBe(false);
         }
+      });
+    }
+  }
+});
+
+describe("stack import malformed JSON files", () => {
+  const payloads: Record<string, string> = {
+    "truncated object": `{"RESEND_API_KEY": "${NEW_VALUE}"`,
+    "multi-line truncated object": `{\n  "RESEND_API_KEY": "${NEW_VALUE}",\n  "OTHER": `,
+    "trailing comma": `{"RESEND_API_KEY": "${NEW_VALUE}",}`,
+    "single-quoted keys": `{'RESEND_API_KEY': '${NEW_VALUE}'}`,
+    "array root": `["${NEW_VALUE}", {"a": 1`,
+    "trailing garbage": `{"RESEND_API_KEY": "${NEW_VALUE}"} oops`,
+  };
+
+  for (const [name, payload] of Object.entries(payloads)) {
+    for (const flags of [[], ["--json"], ["--json", "--dryRun"]]) {
+      it(`rejects ${name} with ${flags.join(" ") || "human output"} and leaves the destination untouched`, () => {
+        writeFileSync(join(dir, "bad.json"), payload);
+        const configPath = join(dir, ".stack.toml");
+        const originalConfig = '[services.existing]\nprovider = "existing"\n';
+        writeFileSync(configPath, originalConfig);
+
+        const { code, stdout, stderr } = stack(["import", ...flags, "--from", "bad.json"]);
+        expect(code).not.toBe(0);
+        expect(code).not.toBeNull();
+        const message = flags.includes("--json") ? JSON.parse(stdout).error : stdout + stderr;
+        expect(message).toContain("Invalid .env input on line");
+        expect(stdout + stderr).not.toContain(NEW_VALUE);
+        expect(readFileSync(configPath, "utf8")).toBe(originalConfig);
+        expect(vault()).toEqual({ OPENAI_API_KEY: STORED_VALUE });
+        expect(h.callsTo("add")).toEqual([]);
       });
     }
   }

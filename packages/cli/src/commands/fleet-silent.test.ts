@@ -231,6 +231,13 @@ test(
         expect(report.schemaVersion).toBe(1);
         expect(report.findings).toEqual([]);
       }
+      const defaultRuns = join(root, ".ashlr-runs");
+      await mkdir(defaultRuns);
+      const authorLog = JSON.stringify({ status: "failed" });
+      await writeFile(join(defaultRuns, "leader-author.log"), authorLog);
+      const report = JSON.parse(await cli("fleet-silent"));
+      expect(report.findings).toEqual([{ rule: "author-non-ok", author: "leader-author.log" }]);
+      expect(await readFile(join(defaultRuns, "leader-author.log"), "utf8")).toBe(authorLog);
       expect(await cli("fleet-silent", "--help")).toContain("--runs");
       expect(await cli("--help")).toContain("fleet-silent");
       for (const shell of ["bash", "zsh", "fish"])
