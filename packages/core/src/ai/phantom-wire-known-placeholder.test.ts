@@ -74,10 +74,7 @@ describe("ai/phantom-wire known placeholder as the entire template", () => {
     ["stripe", "Stripe: `stripe.webhooks.constructEvent` — HMAC-SHA256 with timestamp tolerance."],
     ["clerk", "Clerk (svix): `new Webhook(secret).verify(body, headers)`."],
     ["supabase", "Supabase: `x-supabase-signature` per Supabase's documented webhook scheme."],
-    [
-      "github",
-      "GitHub: `x-hub-signature-256` is `sha256=` + HMAC-SHA256 of the raw body.",
-    ],
+    ["github", "GitHub: `x-hub-signature-256` is `sha256=` + HMAC-SHA256 of the raw body."],
   ])("renders the %s hint slot as exactly its replacement value", (provider, hint) => {
     // A known provider name is the whole template of the hint slot: the
     // render is exactly the fixed replacement — no wrapper, no leftover
