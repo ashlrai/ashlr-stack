@@ -71,5 +71,10 @@ test("fixture version bodies match the published changelog with trailing newline
 });
 
 test("site-facts release lookup still finds the latest release", () => {
-  expect(latestReleaseFromChangelog(fixture)).toEqual({ version: "0.3.0", date: "2026-10-31", scope: "source-changelog" });
+  const root = join(import.meta.dir, "../../..");
+  const { version } = JSON.parse(readFileSync(join(root, "packages/cli/package.json"), "utf8"));
+  const source = readFileSync(join(root, "CHANGELOG.md"), "utf8");
+  const heading = source.match(/^## (\d+\.\d+\.\d+) \((\d{4}-\d{2}-\d{2})\)$/m);
+  expect(heading?.[1]).toBe(version);
+  expect(latestReleaseFromChangelog(fixture)).toEqual({ version, date: heading?.[2], scope: "source-changelog" });
 });

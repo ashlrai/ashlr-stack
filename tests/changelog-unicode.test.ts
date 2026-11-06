@@ -79,3 +79,22 @@ test("sectionEntries keeps Unicode entry text verbatim, under LF and CRLF", () =
   ]);
   expect(sectionEntries(fixture.replace(/\n/g, "\r\n"))).toEqual(sections);
 });
+
+const ROOT_ENTRY = "Café résumé naïve: Zoë’s “señor” 日本語 مرحبا — entry keeps its Unicode text 🚀 👩‍💻 (#1).";
+
+test("root-CHANGELOG fixture entry keeps its Unicode text", () => {
+  const [group] = sectionEntries(read("./__fixtures__/changelog-root-unicode.md"));
+  expect(group).toEqual({ version: "## Unreleased", section: "Fixed", entries: [ROOT_ENTRY] });
+});
+
+test("CHANGELOG.md plus the Unicode fixture entry parses with the entry intact, under LF and CRLF", () => {
+  const root = read("../CHANGELOG.md");
+  const marker = "### Fixed\n\n";
+  const at = root.indexOf(marker);
+  expect(at).toBeGreaterThan(-1);
+  const merged = `${root.slice(0, at + marker.length)}- ${ROOT_ENTRY}\n${root.slice(at + marker.length)}`;
+  const find = (md: string) => sectionEntries(md).find((g) => g.version === "## Unreleased" && g.section === "Fixed");
+  const before = find(root)?.entries ?? [];
+  expect(find(merged)?.entries).toEqual([ROOT_ENTRY, ...before]);
+  expect(find(merged.replace(/\n/g, "\r\n"))?.entries[0]).toBe(ROOT_ENTRY);
+});

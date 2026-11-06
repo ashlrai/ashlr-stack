@@ -82,21 +82,16 @@ test("empty changelog fixture parses with no results from every parser function"
   expect(inlineLinks(fixture)).toEqual([]);
 });
 
-test("whitespace-only changelog fixture parses with no results from every parser function", () => {
-  const fixture = readFileSync(new URL("./__fixtures__/changelog-whitespace-only.md", import.meta.url), "utf8");
-  expect(fixture.length).toBeGreaterThan(0);
-  expect(fixture.trim()).toBe("");
-  for (const text of [fixture, fixture.replace(/\n/g, "\r\n"), " \t\n\n  "]) {
-    expect(() => {
-      malformedHeadings(text);
-      versionSections(text);
-      sectionEntries(text);
-      inlineLinks(text);
-    }).not.toThrow();
-    expect(malformedHeadings(text)).toEqual([]);
-    expect(versionSections(text)).toEqual([]);
-    expect(sectionEntries(text)).toEqual([]);
-    expect(inlineLinks(text)).toEqual([]);
+test("whitespace-only input returns no sections from every parser function without throwing", () => {
+  for (const input of [" ", "\n", "\r\n", "   \n\t\n  \r\n\n", "\u00a0\u2003\n"]) {
+    expect(() => malformedHeadings(input)).not.toThrow();
+    expect(malformedHeadings(input)).toEqual([]);
+    expect(() => versionSections(input)).not.toThrow();
+    expect(versionSections(input)).toEqual([]);
+    expect(() => sectionEntries(input)).not.toThrow();
+    expect(sectionEntries(input)).toEqual([]);
+    expect(() => inlineLinks(input)).not.toThrow();
+    expect(inlineLinks(input)).toEqual([]);
   }
 });
 
@@ -265,4 +260,23 @@ test("heading-only fixture returns each version with no fabricated body or entri
   // A version heading as the very last line (no newline, no body) is still returned.
   expect(versionSections("## 0.1.0 (2026-04-19)").map((s) => s.heading)).toEqual(["## 0.1.0 (2026-04-19)"]);
   expect(sectionEntries("## 0.1.0 (2026-04-19)")).toEqual([]);
+});
+
+
+test("Original PR 758: whitespace-only changelog fixture parses with no results from every parser function", () => {
+  const fixture = readFileSync(new URL("./__fixtures__/changelog-whitespace-only.md", import.meta.url), "utf8");
+  expect(fixture.length).toBeGreaterThan(0);
+  expect(fixture.trim()).toBe("");
+  for (const text of [fixture, fixture.replace(/\n/g, "\r\n"), " \t\n\n  "]) {
+    expect(() => {
+      malformedHeadings(text);
+      versionSections(text);
+      sectionEntries(text);
+      inlineLinks(text);
+    }).not.toThrow();
+    expect(malformedHeadings(text)).toEqual([]);
+    expect(versionSections(text)).toEqual([]);
+    expect(sectionEntries(text)).toEqual([]);
+    expect(inlineLinks(text)).toEqual([]);
+  }
 });
