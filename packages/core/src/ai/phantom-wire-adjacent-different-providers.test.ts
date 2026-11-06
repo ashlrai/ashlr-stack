@@ -61,9 +61,7 @@ describe("ai/phantom-wire adjacent different known providers", () => {
     const result = await wirePhantomForRecipe(recipe, { cwd: dir });
 
     // Webhook paths follow recipe order, one per provider.
-    expect(result.webhooks).toEqual(
-      KNOWN.map((p) => join(dir, ".stack", "webhooks", `${p}.ts`)),
-    );
+    expect(result.webhooks).toEqual(KNOWN.map((p) => join(dir, ".stack", "webhooks", `${p}.ts`)));
     // Every reported secret is prefixed by its own provider, grouped in order.
     const order = [...result.present, ...result.missing].map((e) => e.split(":")[0]);
     const firstSeen = [...new Set(order)];
