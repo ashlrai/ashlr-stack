@@ -708,3 +708,61 @@ test("real CHANGELOG.md code-span fixture keeps each span and its contents in pa
   // The section parser agrees with parseChangelog on the same text.
   expect(sectionEntries(fixture)[0].entries).toEqual(unreleased.entries);
 });
+
+
+test("Original PR 688: blank-lines-between-entries fixture returns both entries in order without blank entries", () => {
+  expect(parseChangelog(read("./__fixtures__/changelog-blank-lines.md"))).toEqual([
+    {
+      version: "0.2.0",
+      date: "2026-04-23",
+      entries: ["First entry.", "Second entry after three blank lines.", "Fix entry."],
+    },
+    { version: "0.1.0", date: "2026-04-19", entries: ["Old entry."] },
+  ]);
+});
+
+
+test("Original PR 703: whitespace-only input returns no changelog sections from any parser", () => {
+  for (const blank of [" ", "   \n", "\n\n\n", "\t\n \t\n", "\r\n\r\n", "  \n"]) {
+    expect(parseChangelog(blank)).toEqual([]);
+    expect(versionSections(blank)).toEqual([]);
+    expect(sectionEntries(blank)).toEqual([]);
+    expect(versionBodies(blank).size).toBe(0);
+    expect(malformedHeadings(blank)).toEqual([]);
+  }
+});
+
+
+test("Original PR 725: punctuation fixture keeps commas, colons, parentheses, and semicolons in parsed entry text", () => {
+  expect(parseChangelog(read("./__fixtures__/changelog-punctuation.md"))).toEqual([
+    {
+      version: "0.3.0",
+      date: "2026-10-31",
+      entries: [
+        "Added retry logic, with exponential backoff, for unreliable endpoints (see #123).",
+        "New provider for Cloudflare Workers: supports binding, streaming, and observability.",
+        "Fixed timeout handling: connections now close cleanly (fixes #456, closes #457).",
+        "Punctuation in entries: commas, colons (:) and parentheses () are all preserved.",
+      ],
+    },
+    {
+      version: "0.2.0",
+      date: "2026-04-23",
+      entries: [
+        "Updated configuration format (breaking: migrate your config file).",
+        "Renamed the `stack apply` flag: use `--apply` instead of `--run` (deprecated).",
+      ],
+    },
+    {
+      version: "0.1.0",
+      date: "2026-04-19",
+      entries: ["Initial release: core parsing, version detection, and changelog mirroring."],
+    },
+  ]);
+  // Spot-check individual punctuation characters survived the parse.
+  const all = parseChangelog(read("./__fixtures__/changelog-punctuation.md")).flatMap((v) => v.entries);
+  expect(all.some((e) => e.includes(", "))).toBe(true);
+  expect(all.some((e) => e.includes(": "))).toBe(true);
+  expect(all.some((e) => e.includes("("))).toBe(true);
+  expect(all.some((e) => e.includes("#123)"))).toBe(true);
+});
