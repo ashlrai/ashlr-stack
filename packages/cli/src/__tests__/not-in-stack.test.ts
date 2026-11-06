@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -68,6 +68,7 @@ describe("unknown service names", () => {
       expect(code).toBe(1);
       expect(out).toContain(`No .stack.toml at ${join(realpathSync(dir), ".stack.toml")}.`);
       expect(out).toContain("Run `stack init` first.");
+      expect(readdirSync(dir)).toEqual([]);
     });
 
     it(`stack ${cmd} names the configured services and exits 1`, () => {

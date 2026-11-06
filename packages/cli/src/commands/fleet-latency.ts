@@ -3,7 +3,7 @@ import { defineCommand } from "citty";
 import { DOCTOR_REPOS, type GhRunner } from "../lib/doctor-repos.ts";
 
 const WINDOW_MS = 6 * 60 * 60 * 1000;
-const locusGh: GhRunner = (args, signal) =>
+export const locusGh: GhRunner = (args, signal) =>
   new Promise((resolve, reject) => {
     execFile(
       "locus",

@@ -29,7 +29,7 @@ function cliCommands(): string[] {
   const src = read("packages/cli/src/index.ts");
   const block = src.match(/\n {2}subCommands: \{\n([\s\S]*?)\n {2}\},/);
   if (!block) throw new Error("no subCommands block in packages/cli/src/index.ts");
-  return [...block[1].matchAll(/^\s+(\w+):/gm)].map((m) => m[1]);
+  return [...block[1].matchAll(/^\s+"?([\w-]+)"?:/gm)].map((m) => m[1]);
 }
 
 /** Resource URIs the MCP server can list (packages/mcp/src/server.ts). */
@@ -96,6 +96,8 @@ function signature(tool: (typeof TOOLS)[number]): string {
 describe("doc facts: sources of truth are sane", () => {
   test("the derived values are non-empty", () => {
     expect(commands.length).toBeGreaterThan(0);
+    for (const command of ["fleet-act", "fleet-stream", "fleet-graph", "fleet-latency"])
+      expect(commands).toContain(command);
     expect(toolNames.length).toBeGreaterThan(0);
     expect(providerNames.length).toBeGreaterThan(0);
     expect(templates.length).toBeGreaterThan(0);
@@ -202,10 +204,15 @@ describe("doc facts: providers", () => {
   test("provider counts match packages/core/src/providers/index.ts", () => {
     expectCount("STACK.md", /\b(\d+) providers in \d+ categories\b/, n, "providers");
     expectCount("README.md", /\bregisters (\d+) providers\b/, n, "providers");
-    expectCount("packages/cli/README.md", /\bregisters (\d+) providers\b/, n, "providers");
     expectCount("packages/site/public/llms.txt", /\b(\d+) providers across \d+ categories\b/, n, "providers");
     expectCount("packages/site/public/llms-full.txt", /\bregisters (\d+) providers\b/, n, "providers");
     expectCount("docs/provider-auth-matrix.md", /\((\d+) providers\)/, n, "providers");
+  });
+
+  test("the packaged CLI README points to the installed provider catalog", () => {
+    const readme = read("packages/cli/README.md");
+    expect(readme).toContain("Use `stack providers` to inspect your installed catalog.");
+    expect(readme).not.toMatch(/\b(?:registers|contains|exposes|supports)\s+\d+\s+providers\b/i);
   });
 
   test("category counts match packages/core/src/catalog.ts PROVIDERS_REF", () => {
