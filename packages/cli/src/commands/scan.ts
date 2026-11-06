@@ -179,7 +179,7 @@ export const scanCommand = defineCommand({
     console.log();
 
     if (!isAuto) {
-      const suggestion = filtered.map((h) => `stack add ${h.provider}`).join("\n  ");
+      const suggestion = filtered.map((h) => `stack add ${h.provider}`).join("\n    ");
       console.log(colors.dim("  Next steps:"));
       console.log(colors.dim(`    ${suggestion}\n`));
       outro(colors.dim("scan complete — nothing written."));

@@ -1,4 +1,6 @@
 import { expect, test } from "bun:test";
+import { spawnSync } from "node:child_process";
+import { existsSync, statSync } from "node:fs";
 import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -42,6 +44,147 @@ test("readFleetText reads regular files and reports missing, oversized and non-f
     await writeFile(join(dir, "big"), "x".repeat(33));
     expect((await readFleetText(join(dir, "big"), { maxBytes: 32 })).status).toBe("invalid");
     expect((await readFleetText(join(dir, "big"), { maxBytes: 33 })).status).toBe("ok");
+  }));
+
+test("readFleetText enforces the cap at read time, not only at stat", async () => {
+  // procfs entries stat as zero bytes but produce content at read: the same
+  // stat-vs-read gap a mid-read growth exploits, on a real file, no timing.
+  if (!existsSync("/proc/self/status") || statSync("/proc/self/status").size !== 0) return;
+  for (const maxBytes of [0, 1]) {
+    expect(await readFleetText("/proc/self/status", { maxBytes })).toEqual({
+      status: "invalid",
+      text: "",
+    });
+  }
+  expect(
+    await readFleetText("/proc/self/status", { maxBytes: 1, ioStatus: "unavailable" }),
+  ).toEqual({
+    status: "unavailable",
+    text: "",
+  });
+});
+
+test("readFleetText returns exact tiny and empty files without provisioning the cap", () =>
+  fixture({ "tiny.log": "x", "empty.log": "" }, async (dir) => {
+    expect(await readFleetText(join(dir, "tiny.log"), { maxBytes: 4 })).toEqual({
+      status: "ok",
+      text: "x",
+    });
+    expect(await readFleetText(join(dir, "empty.log"), { maxBytes: 0 })).toEqual({
+      status: "ok",
+      text: "",
+    });
+    expect((await readFleetText(join(dir, "tiny.log"), { maxBytes: 0 })).status).toBe("invalid");
+    for (const maxBytes of [-1, 1.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect((await readFleetText(join(dir, "tiny.log"), { maxBytes })).status).toBe("invalid");
+    }
+    // Isolate allocation instrumentation in a child to avoid modifying other tests.
+    const moduleUrl = new URL("./fleet-jsonl.ts", import.meta.url).href;
+    const source = `
+      const { readFleetText } = await import(${JSON.stringify(moduleUrl)});
+      const allocations = [];
+      const original = Buffer.alloc;
+      Buffer.alloc = function(size, ...args) { allocations.push(size); return original.call(Buffer, size, ...args); };
+      const result = await readFleetText(${JSON.stringify(join(dir, "tiny.log"))});
+      console.log(JSON.stringify({ result, allocations }));
+    `;
+    const child = spawnSync(process.execPath, ["--eval", source], { encoding: "utf8" });
+    expect(child.status).toBe(0);
+    const result = JSON.parse(child.stdout) as {
+      result: { status: string; text: string };
+      allocations: number[];
+    };
+    expect(result.result).toEqual({ status: "ok", text: "x" });
+    expect(result.allocations.length).toBeGreaterThan(0);
+    expect(Math.max(...result.allocations)).toBeLessThanOrEqual(2);
+  }));
+
+test("readFleetText bounds actual reads when a real file grows after stat", () =>
+  fixture({ grow: "x", within: "x" }, async (dir) => {
+    const moduleUrl = new URL("./fleet-jsonl.ts", import.meta.url).href;
+    for (const [name, suffix, expected] of [
+      ["grow", "yy", { status: "invalid", text: "" }],
+      ["within", "y", { status: "ok", text: "xy" }],
+    ] as const) {
+      // Hook only the timing of a real append; file reads remain native.
+      const source = `
+        const { open } = await import("node:fs/promises");
+        const { appendFileSync } = await import("node:fs");
+        const { readFleetText } = await import(${JSON.stringify(moduleUrl)});
+        const handle = await open(${JSON.stringify(join(dir, name))}, "r");
+        const proto = Object.getPrototypeOf(handle);
+        await handle.close();
+        const original = proto.read;
+        let first = true, bytes = 0;
+        proto.read = async function(...args) {
+          if (first) { first = false; appendFileSync(${JSON.stringify(join(dir, name))}, ${JSON.stringify(suffix)}); }
+          const result = await original.apply(this, args);
+          bytes += result.bytesRead;
+          return result;
+        };
+        const result = await readFleetText(${JSON.stringify(join(dir, name))}, { maxBytes: 2 });
+        console.log(JSON.stringify({ result, bytes }));
+      `;
+      const child = spawnSync(process.execPath, ["--eval", source], { encoding: "utf8" });
+      expect(child.status).toBe(0);
+      const observed = JSON.parse(child.stdout) as {
+        result: { status: string; text: string };
+        bytes: number;
+      };
+      expect(observed.result).toEqual(expected);
+      expect(observed.bytes).toBe(name === "grow" ? 3 : 2);
+    }
+  }));
+
+test("readFleetText handles repeated short reads without per-read allocations", () =>
+  fixture({ short: "x".repeat(1024) }, async (dir) => {
+    const moduleUrl = new URL("./fleet-jsonl.ts", import.meta.url).href;
+    const path = join(dir, "short");
+    // Limit native reads to one byte in an isolated child; do not mock their data.
+    const source = `
+      const { open } = await import("node:fs/promises");
+      const { readFleetText } = await import(${JSON.stringify(moduleUrl)});
+      const handle = await open(${JSON.stringify(path)}, "r");
+      const proto = Object.getPrototypeOf(handle);
+      await handle.close();
+      const read = proto.read, alloc = Buffer.alloc, from = Buffer.from;
+      let reads = 0, allocs = 0, copies = 0;
+      proto.read = async function(buffer, offset, length, position) {
+        reads++;
+        return read.call(this, buffer, offset, Math.min(length, 1), position);
+      };
+      Buffer.alloc = function(...args) { allocs++; return alloc.apply(Buffer, args); };
+      Buffer.from = function(...args) { copies++; return from.apply(Buffer, args); };
+      const result = await readFleetText(${JSON.stringify(path)}, { maxBytes: 1024 });
+      Buffer.alloc = alloc; Buffer.from = from;
+      console.log(JSON.stringify({ result, reads, allocs, copies }));
+    `;
+    const child = spawnSync(process.execPath, ["--eval", source], { encoding: "utf8" });
+    expect(child.status).toBe(0);
+    const observed = JSON.parse(child.stdout) as {
+      result: { status: string; text: string };
+      reads: number;
+      allocs: number;
+      copies: number;
+    };
+    expect(observed.result).toEqual({ status: "ok", text: "x".repeat(1024) });
+    expect(observed.reads).toBe(1025);
+    expect(observed.allocs).toBeLessThanOrEqual(12);
+    expect(observed.copies).toBeLessThanOrEqual(10);
+  }));
+
+test("readFleetText preserves UTF-8 when a character crosses a read boundary", () =>
+  fixture({ unicode: `${"x".repeat(65535)}🌍end` }, async (dir) => {
+    const text = `${"x".repeat(65535)}🌍end`;
+    expect(
+      await readFleetText(join(dir, "unicode"), { maxBytes: Buffer.byteLength(text) }),
+    ).toEqual({
+      status: "ok",
+      text,
+    });
+    expect(
+      (await readFleetText(join(dir, "unicode"), { maxBytes: Buffer.byteLength(text) - 1 })).status,
+    ).toBe("invalid");
   }));
 
 test("readFleetText tail keeps the newest bytes and drops the torn first line", () =>

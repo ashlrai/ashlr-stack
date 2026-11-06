@@ -1,0 +1,13 @@
+# Reading the `stack apply` changelog over time
+
+The [root changelog](../CHANGELOG.md) and [site changelog data](../packages/site/src/data/CHANGELOG.md) contain the same checked-in history. The site copies the root file during its content sync. These notes describe what the entries say, not what is installed or deployed; check the version in use.
+
+| Version heading and source | What a reader should take away |
+| --- | --- |
+| `0.1.0 — 2026-04-19 (superseded by 0.1.1)` — [root](../CHANGELOG.md#010--2026-04-19-superseded-by-011) · [site](../packages/site/src/data/CHANGELOG.md#010--2026-04-19-superseded-by-011) | The AI recommendation layer introduces `stack apply` and its wiring. The entry is annotated with later knowledge: placeholder writes were attempted historically, those calls failed, and the 0.2.1 fix removed the attempts. Do not read the current wording as an unchanged description from 0.1.0. |
+| `0.2.1 (2026-10-16)` — [root](../CHANGELOG.md#021-2026-10-16) · [site](../packages/site/src/data/CHANGELOG.md#021-2026-10-16) | Under **Bug fixes**, wiring stops attempting placeholder writes. Phantom rejected values in arguments and did not support the old `--rotate` flag, so every attempt failed and the reported `envelopes` count was always zero. The result fields changed from `envelopes` to `present` and `missing`. |
+| `0.2.2 (2026-10-25)` — [root](../CHANGELOG.md#022-2026-10-25) · [site](../packages/site/src/data/CHANGELOG.md#022-2026-10-25) | The release note says 0.2.1 was tagged but its npm publish failed; 0.2.2 supersedes it and includes the changes listed under 0.2.1. |
+| `0.3.0 (2026-10-31)` — [root](../CHANGELOG.md#030-2026-10-31) · [site](../packages/site/src/data/CHANGELOG.md#030-2026-10-31) | The **Changed** notes explain that wiring checks secret names without filling missing values. A readable vault yields missing-name information; an unreadable vault yields skipped providers, not a list of missing names. Provider setup may separately store real credentials. |
+| `Unreleased` — [root](../CHANGELOG.md#unreleased) · [site](../packages/site/src/data/CHANGELOG.md#unreleased) | After at least one provider succeeds, wiring checks every recipe provider, including failed providers, and can create webhook stubs even when the vault is unreadable. Missing names alone do not fail apply; provider failures do. `--noWire` skips both checks and stubs. |
+
+For each required missing value, run `phantom add <NAME>` in a trusted terminal and enter the real value. A successful apply alone does not establish that every required secret is present. See the [reader guide](changelog-apply-reader-guide.md) for report examples and the [site sync guide](changelog-site-sync.md) for comparing the two files.
