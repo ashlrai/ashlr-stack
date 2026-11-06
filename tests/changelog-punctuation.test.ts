@@ -1,32 +1,6 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
-
-/** Entries per version and `### ` section, in source order. */
-function sectionEntries(markdown: string): { version: string; section: string; entries: string[] }[] {
-  const out: { version: string; section: string; entries: string[] }[] = [];
-  let version = "";
-  let fenced = false;
-  for (const line of markdown.split("\n")) {
-    if (/^\s*(```|~~~)/.test(line)) fenced = !fenced;
-    if (fenced) continue;
-    if (/^##(?!#)/.test(line)) version = line;
-    else if (/^### /.test(line)) out.push({ version, section: line.slice(4), entries: [] });
-    else if (/^- /.test(line) && out.length > 0) out[out.length - 1].entries.push(line.slice(2));
-  }
-  return out;
-}
-
-/** Version sections in source order. */
-function versionSections(markdown: string): { heading: string; body: string }[] {
-  const sections: { heading: string; body: string }[] = [];
-  let fenced = false;
-  for (const line of markdown.split("\n")) {
-    if (/^\s*(```|~~~)/.test(line)) fenced = !fenced;
-    if (!fenced && /^##(?!#)/.test(line)) sections.push({ heading: line, body: "" });
-    else if (sections.length > 0) sections[sections.length - 1].body += `${line}\n`;
-  }
-  return sections;
-}
+import { sectionEntries, versionSections } from "./changelog-parser-utils";
 
 test("punctuation fixture parses version headings correctly", () => {
   const fixture = readFileSync(new URL("./__fixtures__/changelog-punctuation.md", import.meta.url), "utf8");

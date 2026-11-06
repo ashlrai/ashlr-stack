@@ -46,3 +46,20 @@ test("padding the gaps before headings in the real CHANGELOG.md keeps its versio
   const padded = real.replace(/\n\n(?=#{2,3} )/g, "\n\n\n\n");
   expect(parseVersions(padded)).toEqual(expected);
 });
+
+test("blank lines of any size between bullets in one section never create extra entries", () => {
+  const fixture = readFileSync(join(import.meta.dir, "__fixtures__/changelog-blank-line-separated-entries.md"), "utf8");
+  const items = marked
+    .lexer(fixture)
+    .flatMap((t) => (t.type === "list" ? t.items.map((i: { text: string }) => i.text.trim()) : []));
+  // Six bullet markers in the source → exactly six entries across Unreleased and 0.1.0; a continuation paragraph after a blank line stays inside its entry.
+  expect(fixture.split("\n").filter((l) => /^- /.test(l))).toHaveLength(6);
+  expect(items).toEqual([
+    "Entry one.",
+    "Entry two.",
+    "Entry three,\n\nwith a continuation paragraph after a blank line.",
+    "Entry four.",
+    "Entry five.",
+    "Entry six.",
+  ]);
+});

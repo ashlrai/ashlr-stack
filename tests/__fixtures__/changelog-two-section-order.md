@@ -1,13 +1,13 @@
 # Changelog
 
-## 0.2.0 (2026-04-23)
+## 0.4.0 (2026-11-03)
 
 ### Fixed
 
-- Fix Z in 0.2.0.
-- Fix A in 0.2.0.
+- Fixed first.
+- Fixed second.
 
 ### Added
 
-- Add M in 0.2.0.
-- Add B in 0.2.0.
+- Added first.
+- Added second.
