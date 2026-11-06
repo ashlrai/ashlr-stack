@@ -4,6 +4,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import packageManifest from "../../package.json";
 
 const CLI_ENTRY = join(dirname(fileURLToPath(import.meta.url)), "..", "index.ts");
 
@@ -62,6 +63,21 @@ describe("command errors", () => {
     expect(`${r.stdout}${r.stderr}`).toContain("USAGE stack info");
   });
 
+  test("an unknown nested command exits 1 and identifies the command", () => {
+    const r = stack(["templates", "definitely-not-a-stack-command"]);
+    expect(r.code).toBe(1);
+    expect(r.stderr).toContain("Unknown command definitely-not-a-stack-command");
+    expect(`${r.stdout}${r.stderr}`).toContain("USAGE stack templates");
+  }, 25_000);
+
+  test("an unknown command under --json reports the command as a JSON error", () => {
+    const r = stack(["definitely-not-a-stack-command", "--json"]);
+    expect(r.code).toBe(1);
+    const parsed = JSON.parse(r.stdout) as { error: string };
+    expect(parsed.error).toContain("Unknown command `definitely-not-a-stack-command`");
+    expect(r.stderr).toContain("Unknown command");
+  }, 25_000);
+
   test("a usage error under --json is one JSON error on stdout, no usage text", () => {
     const r = stack(["info", "--json"]);
     expect(r.code).toBe(1);
@@ -79,6 +95,21 @@ describe("command errors", () => {
 });
 
 describe("cold startup", () => {
+  test("version options report the CLI package version", () => {
+    for (const args of [["--version"], ["-v"], ["--version", "--json"]]) {
+      const r = stack(args);
+      expect(r.code).toBe(0);
+      expect(r.stderr).toBe("");
+      if (args.includes("--json")) {
+        expect(JSON.parse(r.stdout).version).toBe(packageManifest.version);
+      } else if (args.includes("-v")) {
+        expect(r.stdout.split("\n")[0]).toBe(`stack ${packageManifest.version}`);
+      } else {
+        expect(r.stdout.trim()).toBe(packageManifest.version);
+      }
+    }
+  }, 65_000);
+
   test("version forms never load command modules", () => {
     const preload = join(emptyDir(), "reject-commands.ts");
     writeFileSync(

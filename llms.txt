@@ -1,0 +1,63 @@
+# Ashlr Stack
+
+> Configure supported services from your terminal or your AI agent. MIT-licensed. Pre-alpha.
+
+This is the repo entry point for agents. The published short index is https://stack.ashlr.ai/llms.txt and the full reference is https://stack.ashlr.ai/llms-full.txt. In this checkout those files are `packages/site/public/llms.txt` and `packages/site/public/llms-full.txt`.
+
+## Read-only commands
+
+No account. These print JSON and write nothing. Node.js 20 or newer matches the engines field of the published 0.3.6 packages.
+
+```bash
+npx -y -p @ashlr/stack stack providers --json
+npx -y -p @ashlr/stack stack recommend "B2B SaaS with auth, AI, and payments" --json
+npx -y -p @ashlr/stack stack scan --json
+npx -y -p @ashlr/stack stack templates list --json
+```
+
+## Install
+
+```bash
+curl -fsSL stack.ashlr.ai/install.sh | bash
+```
+
+Windows (PowerShell): `irm https://stack.ashlr.ai/install.ps1 | iex`
+
+After install, `stack onboard --json` prints a plan and writes nothing. `stack doctor --ecosystem --json` only reports which Ashlr tools are installed.
+
+## MCP server
+
+Claude Code:
+
+```bash
+claude mcp add ashlr-stack -- npx -y -p @ashlr/stack -p ashlr-stack-mcp ashlr-stack-mcp
+```
+
+Codex:
+
+```bash
+codex mcp add ashlr-stack -- npx -y -p @ashlr/stack -p ashlr-stack-mcp ashlr-stack-mcp
+```
+
+Cursor (`~/.cursor/mcp.json` or `.mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "ashlr-stack": {
+      "command": "npx",
+      "args": ["-y", "-p", "@ashlr/stack", "-p", "ashlr-stack-mcp", "ashlr-stack-mcp"]
+    }
+  }
+}
+```
+
+Do not run `stack add`, `stack apply`, `stack import`, or `stack onboard --apply` until the user names the project and the provider.
+
+## Where to read next
+
+- [README](https://github.com/ashlrai/ashlr-stack/blob/main/README.md)
+- [AGENTS.md](https://github.com/ashlrai/ashlr-stack/blob/main/AGENTS.md)
+- [STACK.md](https://github.com/ashlrai/ashlr-stack/blob/main/STACK.md)
+- [Published index](https://stack.ashlr.ai/llms.txt)
+- [Full reference](https://stack.ashlr.ai/llms-full.txt)

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -332,6 +332,116 @@ describe("stack scan without recognized project files", () => {
     expect(stdout).not.toContain("openai");
     expect(existsSync(join(cwd, ".stack.toml"))).toBe(false);
   });
+});
+
+describe("stack scan on an empty project directory (regression)", () => {
+  test("a filtered result is empty without adding, while a lower threshold finds the signal", () => {
+    const cwd = tmp({ ".env.example": "OPENAI_API_KEY=\n" });
+    const report = runCli(["scan", "--yes", "--path", cwd], undefined, { CI: "1" });
+    expect(report.code).toBe(0);
+    expect(report.stderr).toBe("");
+    expect(report.stdout).toContain("No providers detected");
+    expect(existsSync(join(cwd, ".stack.toml"))).toBe(false);
+
+    const json = runCli(["scan", "--json", "--yes", "--path", cwd], undefined, { CI: "1" });
+    expect(json.code).toBe(0);
+    expect(JSON.parse(json.stdout)).toEqual({ hits: [] });
+
+    const lower = runCli(["scan", "--json", "--confidence", "low", "--path", cwd], undefined, {
+      CI: "1",
+    });
+    expect(lower.code).toBe(0);
+    expect(JSON.parse(lower.stdout)).toEqual({
+      hits: [
+        { provider: "openai", confidence: "medium", sources: [".env.example:OPENAI_API_KEY"] },
+      ],
+    });
+    expect(existsSync(join(cwd, ".stack.toml"))).toBe(false);
+  });
+
+  test("--yes exits 0 with an empty result without reaching the Phantom preflight", () => {
+    // With zero hits the command reports "No providers detected" and returns
+    // before requirePhantom() — reordering that would exit 1 wherever Phantom
+    // isn't installed, so this pins the short-circuit.
+    const cwd = tmp({});
+    const { stdout, stderr, code } = runCli(["scan", "--yes", "--path", cwd], undefined, {
+      CI: "1",
+    });
+    expect(code).toBe(0);
+    expect(stderr).toBe("");
+    expect(stdout).toContain("No providers detected");
+    expect(stdout).not.toContain("stack add");
+    expect(existsSync(join(cwd, ".stack.toml"))).toBe(false);
+  }, 15_000);
+
+  test("an empty directory scans to the documented empty result without any network access", () => {
+    // Preload traps fetch and raw sockets; any attempt is recorded in a marker
+    // file (and throws), so the assertion survives even if the CLI swallows errors.
+    const cwd = tmp({});
+    const trapDir = tmp({});
+    const marker = join(trapDir, "network-attempts.log");
+    const preload = join(trapDir, "no-network.ts");
+    writeFileSync(
+      preload,
+      `import net from "node:net";
+import { appendFileSync } from "node:fs";
+const trap = (what: string) => () => {
+  appendFileSync(${JSON.stringify(marker)}, what + "\\n");
+  throw new Error("network access attempted: " + what);
+};
+globalThis.fetch = trap("fetch") as unknown as typeof fetch;
+net.Socket.prototype.connect = trap("net.connect") as never;
+`,
+    );
+    const run = (args: string[]) =>
+      spawnSync("bun", ["--preload", preload, CLI_ENTRY, ...args], {
+        encoding: "utf8",
+        cwd,
+        env: { ...process.env, NO_COLOR: "1", CI: "1" },
+      });
+
+    const json = run(["scan", "--json", "--path", cwd]);
+    expect(json.status).toBe(0);
+    expect(json.stderr).toBe("");
+    expect(JSON.parse(json.stdout)).toEqual({ hits: [] });
+
+    const report = run(["scan", "--path", cwd]);
+    expect(report.status).toBe(0);
+    expect(report.stdout).toContain("No providers detected");
+
+    expect(existsSync(marker) ? readFileSync(marker, "utf8") : "").toBe("");
+    expect(existsSync(join(cwd, ".stack.toml"))).toBe(false);
+  }, 20_000);
+
+  test("a directory holding only scaffold files reports no providers at any confidence", () => {
+    const cwd = tmp({ ".gitkeep": "", "src/.gitkeep": "" });
+    for (const confidence of ["low", "medium", "high"]) {
+      const { stdout, stderr, code } = runCli(
+        ["scan", "--json", "--confidence", confidence, "--path", cwd],
+        undefined,
+        { CI: "1" },
+      );
+      expect(code).toBe(0);
+      expect(stderr).toBe("");
+      expect(JSON.parse(stdout)).toEqual({ hits: [] });
+    }
+    expect(existsSync(join(cwd, ".stack.toml"))).toBe(false);
+  }, 20_000);
+
+  test("a manifest with no dependencies yields an empty result, not an error", () => {
+    // "{}" parses fine, so the manifest gate must not confuse "no deps" with
+    // "no manifest" — the scan completes with an empty hits array.
+    const cwd = tmp({ "package.json": "{}" });
+    const { stdout, stderr, code } = runCli(["scan", "--json", "--path", cwd], undefined, {
+      CI: "1",
+    });
+    expect(code).toBe(0);
+    expect(stderr).toBe("");
+    expect(JSON.parse(stdout)).toEqual({ hits: [] });
+    const report = runCli(["scan", "--path", cwd], undefined, { CI: "1" });
+    expect(report.code).toBe(0);
+    expect(report.stdout).toContain("No providers detected");
+  }, 15_000);
 });
 
 // ── --yes headless (decision logic, mock addService not needed) ──────────
