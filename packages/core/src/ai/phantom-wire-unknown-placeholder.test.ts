@@ -168,4 +168,22 @@ describe("ai/phantom-wire unknown placeholder surrounded by ordinary text", () =
     expect(harness.callsTo("add")).toEqual([]);
     expect(JSON.parse(readFileSync(harness.vaultPath, "utf-8"))).toEqual({});
   });
+
+  it("renders the known provider's placeholders and leaves a bare unknown ${...} token untouched in one recipe", async () => {
+    // Known (`stripe`) and unknown (`${UNKNOWN}`) together: the known
+    // provider's stub has every slot replaced (no `${` left); the unknown
+    // token is skipped verbatim and no file is written under its name.
+    const unknown = "${UNKNOWN}";
+    const stubPath = join(dir, ".stack", "webhooks", "stripe.ts");
+    const result = await wirePhantomForRecipe(recipe("stripe", unknown), { cwd: dir });
+
+    expect(result.skipped).toEqual([unknown]);
+    expect(result.webhooks).toEqual([stubPath]);
+    const stub = readFileSync(stubPath, "utf-8");
+    expect(stub).toBe(webhookStubFor("stripe"));
+    expect(stub).toContain("webhook handler stub for stripe.");
+    expect(stub).toContain("handleStripeWebhook");
+    expect(stub).not.toContain("${");
+    expect(readdirSync(join(dir, ".stack", "webhooks"))).toEqual(["stripe.ts"]);
+  });
 });

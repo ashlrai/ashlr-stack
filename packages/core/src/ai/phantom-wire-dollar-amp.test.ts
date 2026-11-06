@@ -81,6 +81,16 @@ describe("ai/phantom-wire literal `$&` in replacement text", () => {
     },
   );
 
+  it("preserves `$&` after an astral initial at every expansion site", () => {
+    const stub = webhookStubFor("𐐨$&tail");
+
+    expect(stub).toContain("webhook handler stub for 𐐨$&tail.");
+    expect(stub).toContain("handle𐐀$&tailWebhook(req: Request)");
+    expect(stub).toContain("forge a 𐐨$&tail webhook.");
+    expect(stub.split("phantom reveal 𐐀$&TAIL_WEBHOOK_SECRET")).toHaveLength(3);
+    expect(stub.split("$&")).toHaveLength(6);
+  });
+
   it("skips `$&` names byte-for-byte through wiring and writes nothing for them", async () => {
     // Through `wirePhantomForRecipe` the bare and doubled tokens match no
     // catalog provider: both return in `skipped` byte-for-byte — every `$`
