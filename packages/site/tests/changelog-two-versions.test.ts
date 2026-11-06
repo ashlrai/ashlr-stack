@@ -1,44 +1,72 @@
-import { expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { marked } from "marked";
+import { marked, type Tokens } from "marked";
 
 const fixture = readFileSync(join(import.meta.dir, "__fixtures__/changelog-two-versions.md"), "utf8");
 
-type Entry = { version: string; section: string; text: string };
+type Release = { version: string; entries: string[] };
 
-/** Every list entry tagged with its `##` version and `###` section, in source order. */
-function entries(markdown: string): Entry[] {
-  const out: Entry[] = [];
-  let version = "";
-  let section = "";
-  for (const t of marked.lexer(markdown)) {
-    if (t.type === "heading" && t.depth === 2) [version, section] = [t.text, ""];
-    else if (t.type === "heading" && t.depth === 3) section = t.text;
-    else if (t.type === "list") for (const item of t.items) out.push({ version, section, text: item.text });
+/** Each `##` version with every list entry under it (all `###` sections flattened), in source order. */
+function parseReleases(markdown: string): Release[] {
+  const releases: Release[] = [];
+  let current: Release | null = null;
+  for (const token of marked.lexer(markdown)) {
+    if (token.type === "heading" && token.depth <= 2) {
+      current = token.depth === 2 ? { version: token.text, entries: [] } : null;
+      if (current) releases.push(current);
+    } else if (token.type === "list" && current) {
+      current.entries.push(...(token as Tokens.List).items.map((item) => item.text));
+    }
   }
-  return out;
+  return releases;
 }
 
-test("two versions keep their entries associated and in source order", () => {
-  expect(entries(fixture)).toEqual([
-    { version: "0.2.0 (2026-06-10)", section: "Added", text: "Shared entry text." },
-    { version: "0.2.0 (2026-06-10)", section: "Added", text: "Zulu entry only in 0.2.0." },
-    { version: "0.2.0 (2026-06-10)", section: "Fixed", text: "Alpha fix only in 0.2.0." },
-    { version: "0.1.0 (2026-06-01)", section: "Added", text: "Shared entry text." },
-    { version: "0.1.0 (2026-06-01)", section: "Added", text: "Bravo entry only in 0.1.0." },
+test("both versions keep their own entries, in source order", () => {
+  expect(parseReleases(fixture)).toEqual([
+    { version: "0.10.0 (2026-11-02)", entries: ["Shared entry text.", "Only in 0.10.0.", "Shared fix text."] },
+    { version: "0.9.0 (2026-10-20)", entries: ["Shared entry text.", "Only in 0.9.0.", "Shared fix text."] },
   ]);
 });
 
-test("identical entry text in both versions is not merged or reassigned", () => {
-  const shared = entries(fixture).filter((e) => e.text === "Shared entry text.");
-  expect(shared.map((e) => e.version)).toEqual(["0.2.0 (2026-06-10)", "0.1.0 (2026-06-01)"]);
+test("entries with identical text stay attached to their own version", () => {
+  const [newer, older] = parseReleases(fixture);
+  expect(newer?.entries).not.toContain("Only in 0.9.0.");
+  expect(older?.entries).not.toContain("Only in 0.10.0.");
+  expect(newer?.entries.filter((e) => e === "Shared entry text.")).toHaveLength(1);
+  expect(older?.entries.filter((e) => e === "Shared entry text.")).toHaveLength(1);
 });
 
-test("headings stay in file order (newest first), not sorted", () => {
-  const versions = marked
-    .lexer(fixture)
-    .filter((t) => t.type === "heading" && t.depth === 2)
-    .map((t) => (t as { text: string }).text);
-  expect(versions).toEqual(["0.2.0 (2026-06-10)", "0.1.0 (2026-06-01)"]);
+test("0.10.0 stays ahead of 0.9.0 as written (no numeric or lexical re-sorting)", () => {
+  expect(parseReleases(fixture).map((r) => r.version.split(" ")[0])).toEqual(["0.10.0", "0.9.0"]);
+});
+
+test("every heading and entry appears at a strictly later line than the one before it", () => {
+  const lines = fixture.split("\n");
+  const expected = ["## 0.10.0", "- Shared entry text.", "- Only in 0.10.0.", "- Shared fix text.", "## 0.9.0", "- Shared entry text.", "- Only in 0.9.0.", "- Shared fix text."];
+  let from = 0;
+  for (const want of expected) {
+    const at = lines.findIndex((l, i) => i >= from && l.startsWith(want));
+    expect(at, want).toBeGreaterThanOrEqual(from);
+    from = at + 1;
+  }
+});
+
+describe("PR649: published changelog entry order", () => {
+  test("site changelog: its two newest released versions list entries in file order", () => {
+    const path = join(import.meta.dir, "../src/data/CHANGELOG.md");
+    const raw = readFileSync(path, "utf8").replace(/\r\n/g, "\n");
+    const [first, second] = parseReleases(raw).filter((r) => /^\[?\d+\.\d+\.\d+/.test(r.version));
+    expect(first?.entries.length).toBeGreaterThan(0);
+    expect(second?.entries.length).toBeGreaterThan(0);
+    // Each release's entries must start at increasing offsets, and the first release must precede the second.
+    let from = 0;
+    for (const release of [first, second]) {
+      for (const entry of release.entries) {
+        const at = raw.indexOf(entry.split("\n")[0].slice(0, 40), from);
+        expect(at, `${release.version}: ${entry.slice(0, 40)}`).toBeGreaterThanOrEqual(from);
+        from = at;
+      }
+    }
+  });
 });

@@ -35,6 +35,7 @@ export function completionForClose(
 }
 
 let cachedInstalled: boolean | undefined;
+let spawnImpl: typeof spawn = spawn;
 
 /**
  * `phantom --version` as three states. A timeout is not cached, because a slow
@@ -88,7 +89,7 @@ export async function exec(args: string[], opts: ExecOptions = {}): Promise<Phan
     // phantom and any grandchild holding its stdio. Interactive runs stay in
     // the foreground group so the TTY keeps working.
     const useGroup = hasTimeout && !opts.interactive && process.platform !== "win32";
-    const child = spawn(binary, args, {
+    const child = spawnImpl(binary, args, {
       env,
       cwd: opts.cwd,
       stdio: opts.interactive ? "inherit" : ["pipe", "pipe", "pipe"],
@@ -422,6 +423,14 @@ export async function syncToPlatform(
  */
 export function __resetPhantomCache(): void {
   cachedInstalled = undefined;
+}
+
+/**
+ * For tests only. Replaces the process spawner so a test can stub `phantom`
+ * without a real subprocess; call with no argument to restore the real one.
+ */
+export function __setPhantomSpawn(impl?: typeof spawn): void {
+  spawnImpl = impl ?? spawn;
 }
 
 /**

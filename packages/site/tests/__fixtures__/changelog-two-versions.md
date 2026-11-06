@@ -1,19 +1,23 @@
 # Changelog
 
-## 0.2.0 (2026-06-10)
+## 0.10.0 (2026-11-02)
 
 ### Added
 
 - Shared entry text.
-- Zulu entry only in 0.2.0.
+- Only in 0.10.0.
 
 ### Fixed
 
-- Alpha fix only in 0.2.0.
+- Shared fix text.
 
-## 0.1.0 (2026-06-01)
+## 0.9.0 (2026-10-20)
 
 ### Added
 
 - Shared entry text.
-- Bravo entry only in 0.1.0.
+- Only in 0.9.0.
+
+### Fixed
+
+- Shared fix text.
