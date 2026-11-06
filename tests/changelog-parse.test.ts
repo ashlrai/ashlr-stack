@@ -676,3 +676,93 @@ test("multi-version fixture entries are verbatim from the matching version and s
   expect(added.entries).toEqual(find("## 0.3.0 (2026-10-31)", "Added").slice(0, 2));
   expect(added.entries[0]).toStartWith("Fleet diagnostics");
 });
+
+test("colon-and-comma fixture retains both punctuation marks in the parsed entry text", () => {
+  const [v] = parseChangelog(read("./__fixtures__/changelog-colon-comma.md"));
+  expect(v.entries).toEqual(["Fixed timeout handling: connections close cleanly, retries resume, and logs stay readable."]);
+  expect(v.entries[0]).toContain(": ");
+  expect(v.entries[0]).toContain(", ");
+});
+
+test("site CHANGELOG.md entry with a colon and commas keeps them in the parsed text", () => {
+  const unreleased = parseChangelog(read("../packages/site/src/data/CHANGELOG.md")).find((v) => v.version === null);
+  const entry = unreleased?.entries.find((e) => e.startsWith("Fleet JSONL reads"));
+  expect(entry).toContain("while reading: a non-tail read grows one buffer up to the cap, probes");
+});
+
+test("real CHANGELOG.md code-span fixture keeps each span and its contents in parsed entries", () => {
+  const fixture = read("./__fixtures__/changelog-real-code-span.md");
+  const lines = new Set(read("../CHANGELOG.md").split("\n"));
+  const [unreleased] = parseChangelog(fixture);
+  expect(unreleased.entries).toHaveLength(2);
+  // The fixture is verbatim CHANGELOG.md content, not a hand-written approximation.
+  for (const entry of unreleased.entries) expect(lines.has(`- ${entry}`)).toBe(true);
+
+  const spans = (e: string) => [...e.matchAll(/`([^`]+)`/g)].map((m) => m[1]);
+  // Spans holding `$`, `*` and `_` stay literal: no expansion, no emphasis stripping.
+  expect(spans(unreleased.entries[0])).toEqual(["$VERSION$", "$SHA_*$", "sed", "$"]);
+  expect(unreleased.entries[0]).toContain("(`$VERSION$` and the per-platform `$SHA_*$` values)");
+  // A span with a path and dot survives next to parentheses and a trailing `(#363)`.
+  expect(spans(unreleased.entries[1])).toEqual(["scripts/mcp-registry-gate.mjs"]);
+  expect(unreleased.entries[1]).toContain("(`scripts/mcp-registry-gate.mjs`)");
+  // The section parser agrees with parseChangelog on the same text.
+  expect(sectionEntries(fixture)[0].entries).toEqual(unreleased.entries);
+});
+
+
+test("Original PR 688: blank-lines-between-entries fixture returns both entries in order without blank entries", () => {
+  expect(parseChangelog(read("./__fixtures__/changelog-blank-lines.md"))).toEqual([
+    {
+      version: "0.2.0",
+      date: "2026-04-23",
+      entries: ["First entry.", "Second entry after three blank lines.", "Fix entry."],
+    },
+    { version: "0.1.0", date: "2026-04-19", entries: ["Old entry."] },
+  ]);
+});
+
+
+test("Original PR 703: whitespace-only input returns no changelog sections from any parser", () => {
+  for (const blank of [" ", "   \n", "\n\n\n", "\t\n \t\n", "\r\n\r\n", "  \n"]) {
+    expect(parseChangelog(blank)).toEqual([]);
+    expect(versionSections(blank)).toEqual([]);
+    expect(sectionEntries(blank)).toEqual([]);
+    expect(versionBodies(blank).size).toBe(0);
+    expect(malformedHeadings(blank)).toEqual([]);
+  }
+});
+
+
+test("Original PR 725: punctuation fixture keeps commas, colons, parentheses, and semicolons in parsed entry text", () => {
+  expect(parseChangelog(read("./__fixtures__/changelog-punctuation.md"))).toEqual([
+    {
+      version: "0.3.0",
+      date: "2026-10-31",
+      entries: [
+        "Added retry logic, with exponential backoff, for unreliable endpoints (see #123).",
+        "New provider for Cloudflare Workers: supports binding, streaming, and observability.",
+        "Fixed timeout handling: connections now close cleanly (fixes #456, closes #457).",
+        "Punctuation in entries: commas, colons (:) and parentheses () are all preserved.",
+      ],
+    },
+    {
+      version: "0.2.0",
+      date: "2026-04-23",
+      entries: [
+        "Updated configuration format (breaking: migrate your config file).",
+        "Renamed the `stack apply` flag: use `--apply` instead of `--run` (deprecated).",
+      ],
+    },
+    {
+      version: "0.1.0",
+      date: "2026-04-19",
+      entries: ["Initial release: core parsing, version detection, and changelog mirroring."],
+    },
+  ]);
+  // Spot-check individual punctuation characters survived the parse.
+  const all = parseChangelog(read("./__fixtures__/changelog-punctuation.md")).flatMap((v) => v.entries);
+  expect(all.some((e) => e.includes(", "))).toBe(true);
+  expect(all.some((e) => e.includes(": "))).toBe(true);
+  expect(all.some((e) => e.includes("("))).toBe(true);
+  expect(all.some((e) => e.includes("#123)"))).toBe(true);
+});
