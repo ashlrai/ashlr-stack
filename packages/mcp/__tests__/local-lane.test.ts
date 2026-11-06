@@ -70,6 +70,17 @@ test("closing the bridge closes its idle connection and preserves unrelated sock
       socket.once("connect", resolve);
       socket.once("error", reject);
     });
+    // A client connect event can precede server accept on Linux. Complete a
+    // real keepalive exchange so this is an accepted, idle bridge connection,
+    // rather than an unaccepted TCP backlog entry when shutdown begins.
+    const response = await new Promise<string>((resolve, reject) => {
+      socket.once("data", (data) => resolve(data.toString()));
+      socket.once("error", reject);
+      socket.write("GET /idle-probe HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: keep-alive\r\n\r\n");
+    });
+    expect(response).toMatch(/^HTTP\/1\.1 404/);
+    socket.resume(); // Continue consuming remote EOF after the one-shot response listener.
+    expect(socket.destroyed).toBe(false);
     const closed = new Promise<void>((resolve) => socket.once("close", () => resolve()));
     await owned.close();
     await closed;
