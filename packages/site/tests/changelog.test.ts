@@ -801,3 +801,30 @@ test("published 0.1.0 apply entry keeps its Phantom link text and destination", 
   const html = await marked.parse(applyEntry?.raw ?? "");
   expect(html).toContain('<a href="https://phm.dev">Phantom</a>');
 });
+
+// Ordered release versions (`## 0.3.0 …`, `## [0.2.0] …`) found in a changelog; "Unreleased" is skipped.
+function releaseVersions(markdown: string): string[] {
+  return marked
+    .lexer(markdown)
+    .flatMap((token) =>
+      token.type === "heading" && token.depth === 2 ? [token.text.match(/^\[?(\d+\.\d+\.\d+)\]?(?:\s|$)/)?.[1] ?? null] : [],
+    )
+    .filter((version): version is string => version !== null);
+}
+
+test("site changelog lists the same release versions, in the same order, as the root changelog", () => {
+  const source = readFileSync(join(root, "CHANGELOG.md"), "utf8");
+  const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
+  const expected = releaseVersions(source);
+  expect(expected.length).toBeGreaterThan(0);
+  expect(releaseVersions(published)).toEqual(expected);
+});
+
+test("release version comparison detects a missing or reordered heading", () => {
+  const source = "# Changelog\n\n## Unreleased\n\n## 0.3.0 (2026-10-31)\n\n## [0.2.0] — 2026-04-23\n\n## 0.1.1 — 2026-04-19\n";
+  const missing = source.replace("## [0.2.0] — 2026-04-23\n\n", "");
+  const reordered = source.replace("## 0.3.0 (2026-10-31)", "## 0.2.0-tmp").replace("## [0.2.0] — 2026-04-23", "## 0.3.0 (2026-10-31)").replace("## 0.2.0-tmp", "## [0.2.0] — 2026-04-23");
+  expect(releaseVersions(source)).toEqual(["0.3.0", "0.2.0", "0.1.1"]);
+  expect(releaseVersions(missing)).not.toEqual(releaseVersions(source));
+  expect(releaseVersions(reordered)).toEqual(["0.2.0", "0.3.0", "0.1.1"]);
+});

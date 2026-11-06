@@ -9,7 +9,7 @@
  *   bun packages/mcp/src/local-lane.ts smoke [--json]
  */
 import { type IncomingMessage, type ServerResponse, createServer } from "node:http";
-import type { AddressInfo } from "node:net";
+import type { AddressInfo, Socket } from "node:net";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
@@ -82,19 +82,42 @@ export async function startLaneBridge(opts: { upstreams?: UpstreamSpec[]; port?:
       (err: Error) => !res.headersSent && res.writeHead(500).end(err.message),
     );
   });
+  const sockets = new Set<Socket>();
+  http.on("connection", (socket) => {
+    sockets.add(socket);
+    socket.once("close", () => sockets.delete(socket));
+  });
   const boundPort = () => (http.address() as AddressInfo).port;
   await new Promise<void>((resolve, reject) => {
     http.once("error", reject);
     http.listen(opts.port ?? 0, HOST, () => resolve());
   });
   const endpoint = `http://${HOST}:${boundPort()}/mcp`;
+  let closePromise: Promise<void> | undefined;
   return {
     endpoint,
     status,
     toolNames: listed.map((t) => t.name),
-    async close() {
-      await new Promise((resolve) => http.close(resolve));
-      await Promise.all(clients.map((c) => c.close().catch(() => {})));
+    close(): Promise<void> {
+      closePromise ??= (async () => {
+        const closed = new Promise<void>((resolve, reject) => {
+          http.once("close", resolve);
+          http.once("error", reject);
+          // Bun 1.2 drops its native server handle in close(), making a later
+          // closeAllConnections() ineffective. Force-close this server's own
+          // connections first. Bun 1.2 also stops its listener here; Node keeps
+          // it open, so close that listener only when address() still exists.
+          http.closeAllConnections();
+          if (http.address() !== null) {
+            http.close((error) => (error ? reject(error) : resolve()));
+          }
+        });
+        // Retain explicit ownership cleanup for compatibility socket wrappers.
+        for (const socket of sockets) socket.destroy();
+        await closed;
+        await Promise.all(clients.map((c) => c.close().catch(() => {})));
+      })();
+      return closePromise;
     },
   };
 }

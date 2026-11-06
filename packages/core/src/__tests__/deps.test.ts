@@ -2,8 +2,21 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { buildDepsReport } from "../../../cli/src/commands/deps.ts";
 import { emptyConfig, writeConfig } from "../config.ts";
 import { getProvider, listProviderNames } from "../providers/index.ts";
+
+test("an empty service list resolves to an empty dependency report", async () => {
+  const config = emptyConfig();
+  expect(await buildDepsReport(config)).toEqual({
+    schema: "ashlr.stack.deps/v1",
+    project_id: config.stack.project_id,
+    template: null,
+    categories: [],
+    unresolved: [],
+    totals: { services: 0, secrets: 0, mcp: 0 },
+  });
+});
 
 describe("provider loading — wave 9 additions", () => {
   test("render + firebase are in the catalog", () => {
