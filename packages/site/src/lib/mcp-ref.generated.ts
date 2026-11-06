@@ -25,7 +25,8 @@ export interface McpTool {
 export const MCP_TOOLS: McpTool[] = [
   {
     name: "stack_init",
-    description: "Scaffold .stack.toml in the current directory; a selected template may also run provider setup.",
+    description:
+      "Scaffold .stack.toml in the current directory; a selected template may also run provider setup.",
     inputs: [
       {
         name: "template",
@@ -41,13 +42,14 @@ export const MCP_TOOLS: McpTool[] = [
         name: "cwd",
         type: "string",
         description: "Existing absolute project directory; defaults to server cwd.",
-      }
+      },
     ],
     cli: "stack init --noInteractive [--template <name>] [--force]",
   },
   {
     name: "stack_import",
-    description: "Import nonempty new variables from an .env file into Phantom and record detected services; existing vault names are left unchanged. Returns ashlr.stack.import/v1 JSON naming what was stored, skipped and wired (names only, never values).",
+    description:
+      "Import nonempty new variables from an .env file into Phantom and record detected services; existing vault names are left unchanged. Returns ashlr.stack.import/v1 JSON naming what was stored, skipped and wired (names only, never values).",
     inputs: [
       {
         name: "from",
@@ -63,13 +65,14 @@ export const MCP_TOOLS: McpTool[] = [
         name: "cwd",
         type: "string",
         description: "Existing absolute project directory; defaults to server cwd.",
-      }
+      },
     ],
     cli: "stack import --json [--from <path>] [--dryRun]",
   },
   {
     name: "stack_scan",
-    description: "Detect providers this repo uses by reading package.json / requirements.txt / config files.",
+    description:
+      "Detect providers this repo uses by reading package.json / requirements.txt / config files.",
     inputs: [
       {
         name: "path",
@@ -85,13 +88,14 @@ export const MCP_TOOLS: McpTool[] = [
         name: "cwd",
         type: "string",
         description: "Existing absolute project directory; defaults to server cwd.",
-      }
+      },
     ],
     cli: "stack scan [--path <dir>] [--confidence low|medium|high]",
   },
   {
     name: "stack_add",
-    description: "Run provider-specific service setup or attach an existing resource, then record returned secret slots and optional MCP configuration. Credentials and client/provider acceptance must be checked separately.",
+    description:
+      "Run provider-specific service setup or attach an existing resource, then record returned secret slots and optional MCP configuration. Credentials and client/provider acceptance must be checked separately.",
     inputs: [
       {
         name: "service",
@@ -108,13 +112,14 @@ export const MCP_TOOLS: McpTool[] = [
         name: "cwd",
         type: "string",
         description: "Existing absolute project directory; defaults to server cwd.",
-      }
+      },
     ],
     cli: "stack add <service> [--use <id>]",
   },
   {
     name: "stack_remove",
-    description: "Remove local service configuration and its MCP entry, and attempt Phantom secret cleanup. Returns JSON (ashlr.stack.remove/v1); `secrets_kept` lists names Phantom left stored, which headless runs always do, for the user to remove with `phantom remove` in a terminal. Upstream resources are kept.",
+    description:
+      "Remove local service configuration and its MCP entry, and attempt Phantom secret cleanup. Returns JSON (ashlr.stack.remove/v1); `secrets_kept` lists names Phantom left stored, which headless runs always do, for the user to remove with `phantom remove` in a terminal. Upstream resources are kept.",
     inputs: [
       {
         name: "service",
@@ -131,7 +136,7 @@ export const MCP_TOOLS: McpTool[] = [
         name: "cwd",
         type: "string",
         description: "Existing absolute project directory; defaults to server cwd.",
-      }
+      },
     ],
     cli: "stack remove <service> --json [--keepRemote]",
   },
@@ -148,13 +153,14 @@ export const MCP_TOOLS: McpTool[] = [
         name: "cwd",
         type: "string",
         description: "Existing absolute project directory; defaults to server cwd.",
-      }
+      },
     ],
     cli: "stack list [--json]",
   },
   {
     name: "stack_info",
-    description: "Inspect configured resource, auth kind, secret-name inventory and MCP metadata; attempt a healthcheck when the provider supports one.",
+    description:
+      "Inspect configured resource, auth kind, secret-name inventory and MCP metadata; attempt a healthcheck when the provider supports one.",
     inputs: [
       {
         name: "service",
@@ -171,7 +177,7 @@ export const MCP_TOOLS: McpTool[] = [
         name: "cwd",
         type: "string",
         description: "Existing absolute project directory; defaults to server cwd.",
-      }
+      },
     ],
     cli: "stack info <service> [--json]",
   },
@@ -188,7 +194,7 @@ export const MCP_TOOLS: McpTool[] = [
         name: "cwd",
         type: "string",
         description: "Existing absolute project directory; defaults to server cwd.",
-      }
+      },
     ],
     cli: "stack status [--json]",
   },
@@ -205,7 +211,7 @@ export const MCP_TOOLS: McpTool[] = [
         name: "cwd",
         type: "string",
         description: "Existing absolute project directory; defaults to server cwd.",
-      }
+      },
     ],
     cli: "stack env show [--json]",
   },
@@ -216,19 +222,21 @@ export const MCP_TOOLS: McpTool[] = [
       {
         name: "json",
         type: "boolean",
-        description: "JSON: ashlr.stack.env-diff/v1; names and service only. Missing secrets remain an error.",
+        description:
+          "JSON: ashlr.stack.env-diff/v1; names and service only. Missing secrets remain an error.",
       },
       {
         name: "cwd",
         type: "string",
         description: "Existing absolute project directory; defaults to server cwd.",
-      }
+      },
     ],
     cli: "stack env diff [--json]",
   },
   {
     name: "stack_doctor",
-    description: "Inspect the configured-service health report. --fix attempts supported remediation; stored vault names can cause repairs to be skipped, and name presence is not credential validity.",
+    description:
+      "Inspect the configured-service health report. --fix attempts supported remediation; stored vault names can cause repairs to be skipped, and name presence is not credential validity.",
     inputs: [
       {
         name: "fix",
@@ -249,13 +257,14 @@ export const MCP_TOOLS: McpTool[] = [
         name: "cwd",
         type: "string",
         description: "Existing absolute project directory; defaults to server cwd.",
-      }
+      },
     ],
     cli: "stack doctor [--fix] [--all] [--json]",
   },
   {
     name: "stack_sync",
-    description: "Forward a deployment-platform sync request to phantom sync; inspect the installed Phantom command support and result separately.",
+    description:
+      "Forward a deployment-platform sync request to phantom sync; inspect the installed Phantom command support and result separately.",
     inputs: [
       {
         name: "platform",
@@ -267,13 +276,14 @@ export const MCP_TOOLS: McpTool[] = [
         name: "cwd",
         type: "string",
         description: "Existing absolute project directory; defaults to server cwd.",
-      }
+      },
     ],
     cli: "stack sync --platform <name>",
   },
   {
     name: "stack_providers",
-    description: "List the curated source provider catalog by category; inclusion does not attest complete provisioning or active credentials.",
+    description:
+      "List the curated source provider catalog by category; inclusion does not attest complete provisioning or active credentials.",
     inputs: [
       {
         name: "category",
@@ -284,19 +294,20 @@ export const MCP_TOOLS: McpTool[] = [
         name: "json",
         type: "boolean",
         description: "JSON: ashlr.stack.providers/v1.",
-      }
+      },
     ],
     cli: "stack providers [--category <category>] [--json]",
   },
   {
     name: "stack_projects_list",
-    description: "List projects recorded in the local Stack registry; this is not a filesystem-wide discovery scan.",
+    description:
+      "List projects recorded in the local Stack registry; this is not a filesystem-wide discovery scan.",
     inputs: [
       {
         name: "json",
         type: "boolean",
         description: "JSON: ashlr.stack.projects/v1.",
-      }
+      },
     ],
     cli: "stack projects list [--json]",
   },
@@ -313,7 +324,7 @@ export const MCP_TOOLS: McpTool[] = [
         name: "cwd",
         type: "string",
         description: "Existing absolute project directory; defaults to server cwd.",
-      }
+      },
     ],
     cli: "stack deps [--json]",
   },
@@ -325,19 +336,21 @@ export const MCP_TOOLS: McpTool[] = [
         name: "json",
         type: "boolean",
         description: "JSON: ashlr.stack.templates/v1; services, providers and secret names.",
-      }
+      },
     ],
     cli: "stack templates list [--json]",
   },
   {
     name: "stack_upgrade",
-    description: "Check npm for a newer @ashlr/stack release. Returns ashlr.stack.upgrade/v1 JSON (current, latest, status, install command); installs nothing.",
+    description:
+      "Check npm for a newer @ashlr/stack release. Returns ashlr.stack.upgrade/v1 JSON (current, latest, status, install command); installs nothing.",
     inputs: [],
     cli: "stack upgrade --json",
   },
   {
     name: "stack_recommend",
-    description: "Rank curated providers by query, returning JSON as text without LLM inference. save:true writes a Recipe for stack_apply.",
+    description:
+      "Rank curated providers by query, returning JSON as text without LLM inference. save:true writes a Recipe for stack_apply.",
     inputs: [
       {
         name: "query",
@@ -353,7 +366,8 @@ export const MCP_TOOLS: McpTool[] = [
       {
         name: "category",
         type: "string",
-        description: "Category (case-insensitive): Database, Deploy, Cloud, AI, Analytics, Observability, Errors, Payments, Code, Tickets, Email, Auth, FeatureFlags. Unknown values error.",
+        description:
+          "Category (case-insensitive): Database, Deploy, Cloud, AI, Analytics, Observability, Errors, Payments, Code, Tickets, Email, Auth, FeatureFlags. Unknown values error.",
       },
       {
         name: "save",
@@ -364,19 +378,21 @@ export const MCP_TOOLS: McpTool[] = [
         name: "cwd",
         type: "string",
         description: "Existing absolute project directory; defaults to server cwd.",
-      }
+      },
     ],
-    cli: "stack recommend \"<query>\" --json [--k <n>] [--category <name>] [--save]",
+    cli: 'stack recommend "<query>" --json [--k <n>] [--category <name>] [--save]',
   },
   {
     name: "stack_apply",
-    description: "Apply a saved Recipe through provider setup, then report which declared secrets are in the Phantom vault and which are missing (names only; it never writes to the vault) and write webhook stubs. Inspect failures and skips. no_wire:true skips the vault check and stubs, not provider credential writes.",
+    description:
+      "Apply a saved Recipe through provider setup, then report which declared secrets are in the Phantom vault and which are missing (names only; it never writes to the vault) and write webhook stubs. Inspect failures and skips. no_wire:true skips the vault check and stubs, not provider credential writes.",
     inputs: [
       {
         name: "recipe_id",
         type: "string",
         required: true,
-        description: "Recipe id (filename stem in .stack/recipes/, letters, numbers, underscores or hyphens).",
+        description:
+          "Recipe id (filename stem in .stack/recipes/, letters, numbers, underscores or hyphens).",
       },
       {
         name: "no_wire",
@@ -387,10 +403,10 @@ export const MCP_TOOLS: McpTool[] = [
         name: "cwd",
         type: "string",
         description: "Existing absolute project directory; defaults to server cwd.",
-      }
+      },
     ],
     cli: "stack apply <recipe_id> [--noWire]",
-  }
+  },
 ];
 
 export interface McpResource {
@@ -405,19 +421,22 @@ export const MCP_RESOURCES: McpResource[] = [
   {
     uri: "stack://current/.stack.toml",
     name: ".stack.toml (this project)",
-    description: "Project configuration text when the file exists in server cwd; Git commit state is not verified and reads are not redacted.",
+    description:
+      "Project configuration text when the file exists in server cwd; Git commit state is not verified and reads are not redacted.",
     mimeType: "application/toml",
   },
   {
     uri: "stack://current/.stack.local.toml",
     name: ".stack.local.toml (local instance)",
-    description: "Local instance data when the file exists in server cwd; inspect contents and project ignore rules before exposing raw text.",
+    description:
+      "Local instance data when the file exists in server cwd; inspect contents and project ignore rules before exposing raw text.",
     mimeType: "application/toml",
   },
   {
     uri: "stack://current/.mcp.json",
     name: ".mcp.json (MCP wiring)",
-    description: "MCP configuration text when the file exists in server cwd; client loading and usable credentials are not verified.",
+    description:
+      "MCP configuration text when the file exists in server cwd; client loading and usable credentials are not verified.",
     mimeType: "application/json",
-  }
+  },
 ];
