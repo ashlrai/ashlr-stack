@@ -336,6 +336,38 @@ test("apply note explains the action required even after success", () => {
   expect(entry).toContain("If the vault cannot be read, providers are reported as skipped");
 });
 
+test("0.3.0 apply entries state the readable-inventory report and that success does not prove every secret is present", () => {
+  const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
+  const release = published.split("## 0.3.0 (2026-10-31)\n")[1]?.split("\n## ")[0];
+  const entry = release?.split("\n").find((line) => line.startsWith("- After at least one provider succeeds, `stack apply`"));
+  expect(entry).toContain("When the vault is readable, wiring reports missing secret names");
+  expect(entry).toContain(
+    "Missing names alone do not make apply fail, so an applied recipe is not proof that every required secret is present.",
+  );
+
+  // The 0.1.0 and 0.2.1 entries are pinned historical claims. They report
+  // names when the vault is readable and keep unreadable inventory as skipped.
+  const initial = published
+    .split("\n")
+    .find((line) => line.startsWith("- **`stack apply [recipe-id]`**"));
+  expect(initial).toContain("wiring reports how many secret names are present and missing and lists missing names");
+  expect(initial).toContain("Missing names alone do not make apply fail; provider failures still do.");
+  expect(placeholderRemovalEntry).toContain("plus a `not in Phantom:` line for missing names");
+  expect(placeholderRemovalEntry).toContain("it reports providers as skipped instead of identifying missing names");
+});
+
+test("no changelog entry claims webhook stubs verify signatures or that wiring covers a run with no successful provider", () => {
+  const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
+  const unreleased = published.split("## Unreleased\n")[1]?.split("\n## ")[0] ?? "";
+  expect(unreleased).toContain("Wiring can also create webhook stubs for those recipe providers, even if the vault is unreadable");
+  expect(unreleased).toContain("After at least one provider succeeds");
+  const releases = published.split("\n## ").slice(1);
+  for (const line of [unreleased, ...releases].join("\n").split("\n")) {
+    if (!/webhook/i.test(line)) continue;
+    expect(line).not.toMatch(/verif(?:ies|ied) signatures?|signatures? (?:are|is) verified|authenticat(?:es|ed) (?:the )?(?:request|webhook)/i);
+  }
+});
+
 test("unreleased apply note describes wiring after a partial failure", () => {
   const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
   const unreleased = published.split("## Unreleased\n")[1]?.split("\n## ")[0];
