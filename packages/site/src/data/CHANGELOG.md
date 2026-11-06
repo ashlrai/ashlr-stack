@@ -20,6 +20,7 @@
 
 ### Fixed
 
+- The local MCP lane bridge closes its own keepalive connections before releasing upstream clients, allowing shutdown to finish on Bun 1.2 without affecting unrelated sockets.
 - Release changelog fixtures and version assertions track the current source while preserving no-final-newline parser coverage.
 
 ## 0.3.3 (2026-11-05)
