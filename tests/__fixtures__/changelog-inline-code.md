@@ -1,14 +1,11 @@
 # Changelog
 
-## 0.2.0 (2026-11-03)
+## 0.5.0 (2026-11-03)
 
 ### Added
 
-- Use `stack apply` to wire providers.
-- Set `OPENAI_API_KEY` in `~/.env`.
-- The `--noWire` flag opts out of wiring.
-
-## 0.1.0 (2026-04-19)
-
-- Run `stack scan` first, then `stack onboard`.
-- Configure the provider in `.stack/config.json`.
+- Run `stack apply --noWire` to skip wiring; flags like `--json` stay literal.
+- Code spans keep markup: `a - b`, `[not a link](x)`, and `## not a heading`.
+- Starts with `--flag` immediately at the beginning.
+- Ends with `--flag` at the very end.
+- Multiple spans: `a`, `b`, and `c` in one line.

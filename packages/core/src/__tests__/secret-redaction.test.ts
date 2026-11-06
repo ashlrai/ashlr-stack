@@ -92,7 +92,7 @@ describe("phantom error formatting — regression guard for formatArgsForError",
    * exercise the error path.
    */
   function setupAlwaysFailingPhantom(): { cleanup(): void } {
-    const { chmodSync, mkdtempSync, rmSync, writeFileSync } = require("node:fs") as typeof import("node:fs"); // biome-ignore format: Bun parser rejects split typeof import()
+    const { chmodSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } = require("node:fs") as typeof import("node:fs"); // biome-ignore format: Bun parser rejects split typeof import()
     const { tmpdir } = require("node:os") as typeof import("node:os");
     const { join } = require("node:path") as typeof import("node:path");
     const { __resetPhantomCache } = require("../phantom.ts") as typeof import("../phantom.ts");
@@ -104,9 +104,19 @@ case "\${1:-}" in
   *) echo "boom" >&2; exit 1 ;;
 esac
 `;
+    // Sandboxed runners and macOS Gatekeeper's provenance policy refuse to
+    // exec an extensionless file written by a non-platform process, while a
+    // `*.sh` target passes the check: point `phantom` at a `phantom.sh` shim.
     const binPath = join(dir, "phantom");
-    writeFileSync(binPath, script);
-    chmodSync(binPath, 0o755);
+    const realPath = join(dir, "phantom.sh");
+    writeFileSync(realPath, script);
+    chmodSync(realPath, 0o755);
+    try {
+      symlinkSync(realPath, binPath);
+    } catch {
+      writeFileSync(binPath, script);
+      chmodSync(binPath, 0o755);
+    }
 
     const previousPath = process.env.PATH ?? "";
     process.env.PATH = `${dir}:${previousPath}`;

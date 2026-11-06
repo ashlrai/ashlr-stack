@@ -1,24 +1,8 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { inlineLinks, sectionEntries, versionBodies, versionSections } from "./changelog-parser-utils";
 
 const fixture = readFileSync(new URL("./__fixtures__/changelog-no-final-newline.md", import.meta.url), "utf8");
-
-/** Body of each semver `##` section, keyed by heading line (fenced code ignored). */
-function versionBodies(md: string): Map<string, string> {
-  const bodies = new Map<string, string>();
-  let key: string | null = null;
-  let fenced = false;
-  for (const line of md.split("\n")) {
-    if (/^\s*(```|~~~)/.test(line)) fenced = !fenced;
-    if (!fenced && /^##(?!#)/.test(line)) {
-      key = /^## +\[?\d+\.\d+\.\d+/.test(line) ? line : null;
-      if (key) bodies.set(key, "");
-    } else if (key) {
-      bodies.set(key, `${bodies.get(key)}${line}\n`);
-    }
-  }
-  return bodies;
-}
 
 test("fixture really ends without a newline", () => {
   expect(fixture.endsWith("\n")).toBe(false);
@@ -40,4 +24,45 @@ test("earlier version is not polluted by the final one", () => {
 test("every level-2 heading in the unterminated fixture is a release heading", () => {
   const headings = fixture.split("\n").filter((l) => /^##(?!#)/.test(l));
   expect(headings).toEqual(["## Unreleased", "## 0.2.0 (2026-05-01)", "## 0.1.0 (2026-04-19)"]);
+});
+
+test("final entry keeps its full text, link and unicode when the file has no final newline", () => {
+  const md = readFileSync(new URL("./__fixtures__/changelog-no-final-newline-links.md", import.meta.url), "utf8");
+  expect(md.endsWith("\n")).toBe(false);
+  const final = "Final entry with a [provider guide](docs/adding-a-provider.md) link, café — and a trailing `code`";
+  expect(sectionEntries(md).at(-1)?.entries).toEqual(["First entry.", final]);
+  expect(versionSections(md).at(-1)?.body.trimEnd().endsWith("`code`")).toBe(true);
+  expect(inlineLinks(versionBodies(md).get("## 0.1.0 (2026-04-19)") ?? "")).toEqual([
+    { label: "provider guide", destination: "docs/adding-a-provider.md" },
+  ]);
+});
+
+/** Parsed view of a changelog; bodies are trimmed because the trailing newline only adds a blank line. */
+function parsed(md: string) {
+  return {
+    entries: sectionEntries(md),
+    sections: versionSections(md).map((s) => ({ heading: s.heading, body: s.body.trimEnd() })),
+    bodies: [...versionBodies(md)].map(([heading, body]) => [heading, body.trimEnd()]),
+    links: inlineLinks(md),
+  };
+}
+
+const withoutNewline = (md: string) => md.replace(/\n+$/, "");
+const withNewline = (md: string) => `${withoutNewline(md)}\n`;
+
+test.each([
+  ["no-final-newline fixture", fixture],
+  ["links fixture", readFileSync(new URL("./__fixtures__/changelog-no-final-newline-links.md", import.meta.url), "utf8")],
+  ["repo CHANGELOG.md", readFileSync(new URL("../CHANGELOG.md", import.meta.url), "utf8")],
+])("%s: versions and entries parse identically with and without a final newline", (_name, md) => {
+  const bare = withoutNewline(md);
+  const terminated = withNewline(md);
+  expect(bare.endsWith("\n")).toBe(false);
+  expect(terminated.endsWith("\n")).toBe(true);
+  expect(parsed(terminated)).toEqual(parsed(bare));
+  expect(sectionEntries(bare).length).toBeGreaterThan(0);
+});
+
+test("a CRLF final newline parses the same as no final newline", () => {
+  expect(parsed(`${withoutNewline(fixture)}\r\n`)).toEqual(parsed(withoutNewline(fixture)));
 });
