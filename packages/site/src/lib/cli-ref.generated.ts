@@ -620,6 +620,144 @@ export const CLI_COMMANDS: CliCommand[] = [
       "Read-only via Locus. Latest tag is ordered by underlying commit date; age uses the annotated tagger date or lightweight commit date. Compares that tag to the default branch. Median seconds use the latest 20 merge timestamps across all base branches, or all merged PRs if fewer. No tags and unavailable repositories remain in the report; unknown metrics are null.",
   },
   {
+    name: "stack fleet-waste",
+    description:
+      "Report per-lane launches, empty finishes, precheck skips by code and unfinished jobs.",
+    synopsis: "stack fleet-waste [--metrics <metrics>] [--hours <hours>] [--json]",
+    flags: [
+      {
+        name: "metrics",
+        synopsis: "--metrics <metrics>",
+        type: "string",
+        description: "Job event JSONL (default: ~/.ashlr-runs/metrics/jobs.jsonl).",
+      },
+      {
+        name: "hours",
+        synopsis: "--hours <hours>",
+        type: "string",
+        default: "1",
+        description: "Positive trailing window in hours; fractional hours accepted.",
+      },
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        description: "Emit schemaVersion 1 JSON (also the default).",
+      },
+    ],
+    examples: [
+      { command: "stack fleet waste --json" },
+      { command: "stack fleet-waste --metrics ~/.ashlr-runs/metrics/jobs.jsonl --hours 6" },
+    ],
+    notes:
+      "Read-only JSON, including empty files. Defaults to ~/.ashlr-runs/metrics/jobs.jsonl. Inclusive trailing window, default one hour. Events use ISO ts (or timestamp), event, lane and job; finish.empty must be true to count as empty. Launches and empties count events; precheckSkip groups skips by code (unknown if absent/invalid). neverFinished counts unique jobs launched in the window without a finish at or after their latest launch, as of windowEnd; unfinishedJobs lists their ids. File order does not matter. Malformed rows are skipped and counted; unrelated events and out-of-window rows are ignored. Missing/unreadable files fail without exposing raw input.",
+  },
+  {
+    name: "stack fleet-reds",
+    description:
+      "List failed jobs and first failing tests in the latest completed schedule/push CI runs.",
+    synopsis: "stack fleet-reds [--json]",
+    flags: [
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        description: "Emit schemaVersion 1 JSON (also the default).",
+      },
+    ],
+    examples: [{ command: "stack fleet-reds --json" }],
+    notes:
+      "Read-only via Locus. JSON is the default. For each of the seven fleet repositories, selects the latest completed workflow named CI on its default branch for each event (schedule and push), then lists failed jobs only when that run failed. A newer successful run clears older failures. no-runs means no completed run; unavailable and partial mean incomplete reads. firstFailingTest is null for unrecognized output or expired logs; logStatus distinguishes these cases. Parses Vitest, node:test TAP/spec and nextest text output. Raw logs and API errors are omitted.",
+  },
+  {
+    name: "stack fleet-silent",
+    description: "Name silent fleet failures in author, dispatch and job logs (read-only JSON).",
+    synopsis: "stack fleet-silent [--runs <runs>] [--json]",
+    flags: [
+      {
+        name: "runs",
+        synopsis: "--runs <runs>",
+        type: "string",
+        description: "Runs directory (default: ~/.ashlr-runs).",
+      },
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        description: "Emit schemaVersion 1 JSON (also the default).",
+      },
+    ],
+    examples: [{ command: "stack fleet-silent --runs /path/to/runs --json" }],
+    notes:
+      "Read-only JSON. Reads top-level *author*.log files, dispatchd.log, dispatch-events.log and metrics/jobs.jsonl; missing/invalid sources are reported, never treated as healthy. Inputs are JSONL or timestamped key=value lines (naive timestamps are local). Fully dated logs use event order; legacy undated logs use append order. Author summaries use status=ok to clear older failures; lane summaries use lane (or pool), need and picked. Reports the latest positive need with zero picks per lane, ten explicit empty:true finish events per lane, and no fleet-wide launch for at least 20 minutes of observed dispatch/job history. Launch/tick timestamps are required; ticks use a nonnegative launched count. Malformed inputs suppress latest/absence claims. FIXUP reuse means the same job id launched on distinct UTC days; finishes crossing midnight do not count. Metrics use event, job, lane, empty and timestamp (or ts). Reads are capped at 16 MiB per regular file; symlink files and raw log bodies are excluded.",
+  },
+  {
+    name: "stack fleet-collisions",
+    description: "Rank touched files by open conflicting PR count from one repository's gh JSON.",
+    synopsis: "stack fleet-collisions [--file <file>] [--json]",
+    flags: [
+      {
+        name: "file",
+        synopsis: "--file <file>",
+        type: "string",
+        description: "Input JSON file; omit or use - for stdin.",
+      },
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        description: "Emit schemaVersion 1 JSON (also the default).",
+      },
+    ],
+    examples: [
+      {
+        command:
+          "locus exec -- gh pr list --state open --limit 1000 --json number,state,mergeable,files | stack fleet-collisions",
+      },
+      { command: "stack fleet collisions --file prs.json" },
+    ],
+    notes:
+      "Read-only JSON for one repository per snapshot. Includes only OPEN, CONFLICTING PRs; UNKNOWN mergeability is excluded. Files rank by distinct PR count, then path. Paths are touched files, not confirmed conflict hunks. Counts cover only the supplied snapshot; ensure the gh limit covers all PRs. Empty input arrays yield files: []; invalid input exits nonzero.",
+  },
+  {
+    name: "stack fleet-delivery-lag",
+    description: "Report undeployed merged commits and merge wait from a read-only JSON fixture.",
+    synopsis: "stack fleet-delivery-lag --fixture <fixture> [--json]",
+    flags: [
+      {
+        name: "fixture",
+        synopsis: "--fixture <fixture>",
+        type: "string",
+        required: true,
+        description:
+          "JSON snapshot: latestDeployed {version, commits: SHA[]}, commits {sha, createdAt, mergedAt: UTC ISO|null}[].",
+      },
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        description: "Emit schemaVersion 1 JSON; unknown metrics are null.",
+      },
+    ],
+  },
+  {
+    name: "stack fleet-stuck",
+    description:
+      "List open PRs by merge state, age and auto-merge status with server/ and lockfile path hints.",
+    synopsis: "stack fleet-stuck [--json]",
+    flags: [
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        description: "Emit schemaVersion 1 JSON (also the default).",
+      },
+    ],
+    examples: [{ command: "stack fleet-stuck --json" }],
+    notes:
+      "Read-only via Locus. JSON is the default. Lists every open PR, sorted by merge state then descending age in days since creation. Auto-merge-off path reasons identify server/ directories and common lockfiles, including renamed paths; these are hints, not GitHub's explanation. Empty repositories have prs: []; unavailable or incomplete reads have prs: null.",
+  },
+  {
     name: "stack fleet-slo",
     description:
       "Compare per-repo six-hour merges, open-to-merge latency and conflicting PRs with fleet SLO targets.",
@@ -766,9 +904,58 @@ export const CLI_COMMANDS: CliCommand[] = [
     ],
   },
   {
+    name: "stack fleet-bets",
+    description:
+      "Score leader bets: join queue ledger ids with dispatch state and job outcomes for per-bet status and per-lane merged rate.",
+    synopsis:
+      "stack fleet-bets [--json] [--queue <queue>] [--router <router>] [--ready <ready>] [--metrics <metrics>] [--src <src>]",
+    flags: [
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        description:
+          "Emit schemaVersion 1 JSON; open covers unresolved work, mergedRate uses resolved bets.",
+      },
+      {
+        name: "queue",
+        synopsis: "--queue <queue>",
+        type: "string",
+        description: "Fleet state directory (default: ~/.ashlr-runs/queue).",
+      },
+      {
+        name: "router",
+        synopsis: "--router <router>",
+        type: "string",
+        description: "Leader queue ledger path (default: <queue>/router-queue.md).",
+      },
+      {
+        name: "ready",
+        synopsis: "--ready <ready>",
+        type: "string",
+        description: "Dispatch queue TSV (default: <queue>/ready.tsv).",
+      },
+      {
+        name: "metrics",
+        synopsis: "--metrics <metrics>",
+        type: "string",
+        description: "Job outcomes JSONL (default: <runs>/metrics/jobs.jsonl).",
+      },
+      {
+        name: "src",
+        synopsis: "--src <src>",
+        type: "string",
+        description: "Source marker selecting bets (default: leader).",
+      },
+    ],
+    examples: [{ command: "stack fleet-bets --json" }],
+    notes:
+      "Read-only. Bets are job ids on `- STATUS <id> (attrs)` lines of the leader queue ledger whose attrs carry src=leader (`--src` selects another marker). Queue state comes from ready.tsv; launch, finish, publish and outcome events come from metrics/jobs.jsonl (tail-read at 32 MiB). Statuses: vanished (no trace), waiting (queued), running (launched), empty (resolved with no merge: empty finish, empty publish, precheck skip or a terminal non-merge outcome), open (PR open or unresolved non-empty work) and merged (outcome state MERGED). Ledger MERGED/LANDED/DONE/PR-OPEN statuses are fallbacks when local evidence is absent. mergedRate is merged over resolved (merged + empty) bets per lane; null when nothing resolved.",
+  },
+  {
     name: "stack fleet",
     description: "Show repository CI, open PR counts, and dispatcher lane status.",
-    synopsis: "stack fleet <slo>",
+    synopsis: "stack fleet <slo|collisions|waste>",
     flags: [
       {
         name: "json",
@@ -807,6 +994,55 @@ export const CLI_COMMANDS: CliCommand[] = [
         examples: [{ command: "stack fleet slo --json" }],
         notes:
           "Read-only via Locus. Same report as stack fleet-slo, nested under the fleet namespace.",
+      },
+      {
+        name: "stack fleet collisions",
+        description:
+          "Rank touched files by open conflicting PR count from one repository's gh JSON.",
+        synopsis: "stack fleet collisions [--file <file>] [--json]",
+        flags: [
+          {
+            name: "file",
+            synopsis: "--file <file>",
+            type: "string",
+            description: "Input JSON file; omit or use - for stdin.",
+          },
+          {
+            name: "json",
+            synopsis: "--json",
+            type: "boolean",
+            description: "Emit schemaVersion 1 JSON (also the default).",
+          },
+        ],
+      },
+      {
+        name: "stack fleet waste",
+        description:
+          "Report per-lane launches, empty finishes, precheck skips by code and unfinished jobs.",
+        synopsis: "stack fleet waste [--metrics <metrics>] [--hours <hours>] [--json]",
+        flags: [
+          {
+            name: "metrics",
+            synopsis: "--metrics <metrics>",
+            type: "string",
+            description: "Job event JSONL (default: ~/.ashlr-runs/metrics/jobs.jsonl).",
+          },
+          {
+            name: "hours",
+            synopsis: "--hours <hours>",
+            type: "string",
+            default: "1",
+            description: "Positive trailing window in hours; fractional hours accepted.",
+          },
+          {
+            name: "json",
+            synopsis: "--json",
+            type: "boolean",
+            description: "Emit schemaVersion 1 JSON (also the default).",
+          },
+        ],
+        examples: [{ command: "stack fleet waste --json" }],
+        notes: "Read-only JSON. Same report, metrics path and window as stack fleet-waste.",
       },
     ],
   },
@@ -1125,7 +1361,7 @@ export const CLI_COMMANDS: CliCommand[] = [
     name: "stack apply",
     description:
       "Apply a saved recipe: provision each provider, check its secrets in Phantom, and add webhook stubs.",
-    synopsis: "stack apply [id] [--noWire] [--noRollback]",
+    synopsis: "stack apply [id] [--noWire] [--noRollback] [--dryRun]",
     flags: [
       {
         name: "recipeId",
@@ -1148,6 +1384,13 @@ export const CLI_COMMANDS: CliCommand[] = [
         default: false,
         description:
           "On partial failure, leave successfully-added services in .stack.toml instead of rolling them back.",
+      },
+      {
+        name: "dryRun",
+        synopsis: "--dryRun",
+        type: "boolean",
+        default: false,
+        description: "Preview provisioning and wiring without making changes.",
       },
     ],
     examples: [{ command: "stack apply" }, { command: "stack apply my-recipe" }],

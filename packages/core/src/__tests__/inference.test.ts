@@ -176,6 +176,44 @@ describe("LocalSLMBackend — infer", () => {
     expect(call).toBeGreaterThanOrEqual(2);
   });
 
+  test.each(["invalid UTF-8", "replacement character"])(
+    "falls back when a 200 response contains an unusable %s assistant message",
+    async (kind) => {
+      const calls: string[] = [];
+      const fetchImpl = (async (input: string | URL | Request) => {
+        const url =
+          typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+        calls.push(url);
+        if (url.includes("secondary")) return okChatResponse(VALID_RECIPE_JSON);
+
+        // The envelope is valid JSON even after a malformed byte is decoded as U+FFFD.
+        const envelope = '{"choices":[{"message":{"content":"X"}}]}';
+        const bytes = new TextEncoder().encode(envelope);
+        if (kind === "invalid UTF-8") {
+          bytes[envelope.indexOf("X")] = 0xff;
+          return new Response(bytes, { status: 200 });
+        }
+        return new Response(envelope.replace("X", "\uFFFD"), { status: 200 });
+      }) as unknown as typeof fetch;
+      const backend = new LocalSLMBackend({
+        endpoints: [
+          { name: "primary", baseUrl: "http://primary/v1", model: "a" },
+          { name: "secondary", baseUrl: "http://secondary/v1", model: "b" },
+        ],
+        fetchImpl,
+        costTracker: new CostTracker(),
+      });
+
+      const result = await backend.infer({ query: "x", catalogContext: "" });
+      expect(result.recipe?.providers.map((provider) => provider.name)).toEqual(["neon", "clerk"]);
+      expect(backend.lastEndpoint).toBe("secondary");
+      expect(calls).toEqual([
+        "http://primary/v1/chat/completions",
+        "http://secondary/v1/chat/completions",
+      ]);
+    },
+  );
+
   test("throws NoInferenceBackendError when every endpoint fails", async () => {
     const fetchImpl = (async () => {
       throw new Error("down");

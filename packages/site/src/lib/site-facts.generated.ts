@@ -5,14 +5,15 @@
  * Facts about the current Stack source and recorded published packages.
  * See scripts/gen-site-facts.ts for the source of each value.
  */
-export const SOURCE_VERSION = "0.2.2";
-export const PUBLISHED_VERSION = "0.1.1";
-export const LATEST_RELEASE_VERSION = "0.2.2";
-export const LATEST_RELEASE_DATE = "2026-10-25";
+export const SOURCE_VERSION = "0.3.7";
+export const PUBLISHED_VERSION = "0.3.6";
+// Latest source CHANGELOG heading, not a publication observation.
+export const LATEST_RELEASE_VERSION = "0.3.7";
+export const LATEST_RELEASE_DATE = "2026-11-06";
 export const PROVIDER_COUNT = 39;
 export const PROVIDER_CATEGORY_COUNT = 13;
 export const TEMPLATE_COUNT = 7;
-export const CLI_COMMAND_COUNT = 36;
+export const CLI_COMMAND_COUNT = 43;
 export const MCP_TOOL_COUNT = 19;
 export const MCP_TOOL_NAMES: string[] = [
   "stack_init",
@@ -45,10 +46,10 @@ export const PLUGIN_SLASH_COMMANDS: string[] = [
 ];
 export const INSTALL_CMD = "curl -fsSL stack.ashlr.ai/install.sh | bash";
 export const INSTALL_CMD_HTTPS = "curl -fsSL https://stack.ashlr.ai/install.sh | bash";
-export const INSTALL_BUN = "bun add -g @ashlr/stack@0.1.1";
-export const INSTALL_NPM = "npm i -g @ashlr/stack@0.1.1";
-export const INSTALL_BUN_ALL = "bun add -g @ashlr/stack@0.1.1 ashlr-stack-mcp@0.1.1";
-export const INSTALL_NPM_ALL = "npm i -g @ashlr/stack@0.1.1 ashlr-stack-mcp@0.1.1";
+export const INSTALL_BUN = "bun add -g @ashlr/stack@0.3.6";
+export const INSTALL_NPM = "npm i -g @ashlr/stack@0.3.6";
+export const INSTALL_BUN_ALL = "bun add -g @ashlr/stack@0.3.6 ashlr-stack-mcp@0.3.6";
+export const INSTALL_NPM_ALL = "npm i -g @ashlr/stack@0.3.6 ashlr-stack-mcp@0.3.6";
 export const INSTALL_BUN_LATEST = "bun add -g @ashlr/stack ashlr-stack-mcp";
 export const INSTALL_NPM_LATEST = "npm i -g @ashlr/stack ashlr-stack-mcp";
 export const PHANTOM_BREW = "brew install ashlrai/phantom/phantom";
@@ -56,10 +57,10 @@ export const PHANTOM_NPM = "npm i -g phantom-secrets";
 export const MCP_NPX_ARGS: string[] = [
   "-y",
   "-p",
-  "@ashlr/stack@0.1.1",
+  "@ashlr/stack@0.3.6",
   "-p",
-  "ashlr-stack-mcp@0.1.1",
+  "ashlr-stack-mcp@0.3.6",
   "ashlr-stack-mcp",
 ];
 export const MCP_STDIO_CONFIG =
-  '{\n  "mcpServers": {\n    "ashlr-stack": {\n      "command": "npx",\n      "args": [\n        "-y",\n        "-p",\n        "@ashlr/stack@0.1.1",\n        "-p",\n        "ashlr-stack-mcp@0.1.1",\n        "ashlr-stack-mcp"\n      ]\n    }\n  }\n}';
+  '{\n  "mcpServers": {\n    "ashlr-stack": {\n      "command": "npx",\n      "args": [\n        "-y",\n        "-p",\n        "@ashlr/stack@0.3.6",\n        "-p",\n        "ashlr-stack-mcp@0.3.6",\n        "ashlr-stack-mcp"\n      ]\n    }\n  }\n}';

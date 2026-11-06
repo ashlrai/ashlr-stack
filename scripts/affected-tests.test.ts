@@ -81,6 +81,11 @@ describe("affected test selection", () => {
       expect(affectedTests([path])).toBe("ALL");
     }
   });
+  test("changelog fixtures select their consuming test", () => {
+    expect(
+      affectedTests(["scripts/__fixtures__/changelog/duplicate-version-headings.md"]),
+    ).toEqual(["./scripts/changelog-duplicate-versions.test.ts"]);
+  });
   test("selector and fixtures select their own test", () => {
     for (const path of [
       "scripts/affected-tests",

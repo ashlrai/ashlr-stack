@@ -12,7 +12,7 @@ const faq = faqPageSchema(
     {
       question: "Is this production-ready?",
       answer:
-        `These docs describe reviewed source ${SOURCE_VERSION}, not a new release or production acceptance. Recorded public CLI/MCP packages are ${PUBLISHED_VERSION}; historical native 0.2.0 is separate. Interfaces and provider coverage vary. Check the installed version and help; no future CLI stability or migration guarantee follows from this source.`,
+        `These docs describe reviewed source ${SOURCE_VERSION}; source version alone does not establish publication or production acceptance. Recorded public CLI/MCP packages are ${PUBLISHED_VERSION}; native release binaries are separate artifacts. Interfaces and provider coverage vary. Check the installed version and help; no future CLI stability or migration guarantee follows from this source.`,
     },
     {
       question: "Why is Phantom required?",
@@ -88,7 +88,7 @@ const faq = faqPageSchema(
   <h2>Is this production-ready?</h2>
   <p>
     <strong>These docs describe source {SOURCE_VERSION}.</strong> Recorded public CLI/MCP
-    packages are {PUBLISHED_VERSION}; historical native 0.2.0 is separate. Neither the docs
+    packages are {PUBLISHED_VERSION}; native release binaries are separate artifacts. Neither the docs
     nor a source version establishes production or provider acceptance.
   </p>
   <p>

@@ -10,7 +10,7 @@ drift. Plain `.mjs`, no dependencies, runs under Node 18+ or Bun.
   manifests `packages/{core,cli,mcp}/package.json` must agree, and
   `packages/mcp/server.json` plus `const VERSION` in
   `packages/cli/src/index.ts` must match).
-- Latest released section: first `## x.y.z (date)` heading in `CHANGELOG.md`
+- Latest dated section (not proof of publication): first `## x.y.z (date)` heading in `CHANGELOG.md`
   (`## Unreleased` is skipped); it must equal the release version.
 - Monorepo version: root `package.json` `version` (private; shown in the
   version table only).
