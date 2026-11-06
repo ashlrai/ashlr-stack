@@ -34,7 +34,9 @@ describe("ai/phantom-wire repeated unknown placeholders", () => {
 
     // Two uppercased reveal lines: both placeholders are folded with the
     // surrounding text by `toUpperCase()`, but neither is resolved or lost.
-    expect(stub.split("phantom reveal PRE${ALPHA}MID${BETA}POST_WEBHOOK_SECRET").length - 1).toBe(2);
+    expect(stub.split("phantom reveal PRE${ALPHA}MID${BETA}POST_WEBHOOK_SECRET").length - 1).toBe(
+      2,
+    );
 
     // Every `${...}` token in the stub is one of the two carried placeholders
     // — five expansion sites × two tokens = ten occurrences.
