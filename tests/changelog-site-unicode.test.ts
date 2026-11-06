@@ -35,3 +35,11 @@ test("site CHANGELOG.md is valid UTF-8 and parsed entries lose no non-ASCII text
   for (const entry of entries) expect(lines.has(`- ${entry}`)).toBe(true);
   expect(entries.some((e) => /[^\x00-\x7F]/.test(e))).toBe(true);
 });
+
+test("parser does not normalize combining marks or CRLF-terminated Unicode entries", () => {
+  const nfd = "Café résumé 日本語 مرحبا";
+  const md = `## Unreleased\r\n\r\n### Fixed\r\n\r\n- ${nfd}\r\n`;
+  const [group] = sectionEntries(md);
+  expect(group.entries).toEqual([nfd]);
+  expect(group.entries[0]).not.toBe(nfd.normalize("NFC"));
+});

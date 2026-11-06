@@ -8,7 +8,7 @@ export function malformedHeadings(markdown: string): string[] {
   );
   let fenced = false;
   const bad: string[] = [];
-  for (const line of markdown.split("\n")) {
+  for (const line of markdown.split(/\r?\n/)) {
     if (/^\s*(```|~~~)/.test(line)) fenced = !fenced;
     if (!fenced && /^##(?!#)/.test(line) && !VERSION_HEADING.test(line)) bad.push(line);
   }
@@ -19,7 +19,7 @@ export function malformedHeadings(markdown: string): string[] {
 export function versionSections(markdown: string): { heading: string; body: string }[] {
   const sections: { heading: string; body: string }[] = [];
   let fenced = false;
-  for (const line of markdown.split("\n")) {
+  for (const line of markdown.split(/\r?\n/)) {
     if (/^\s*(```|~~~)/.test(line)) fenced = !fenced;
     if (!fenced && /^##(?!#)/.test(line)) sections.push({ heading: line, body: "" });
     else if (sections.length > 0) sections[sections.length - 1].body += `${line}\n`;
@@ -33,7 +33,7 @@ export function sectionEntries(markdown: string): { version: string; section: st
   let version = "";
   let current: (typeof out)[number] | null = null;
   let fenced = false;
-  for (const line of markdown.split("\n")) {
+  for (const line of markdown.split(/\r?\n/)) {
     if (/^\s*(```|~~~)/.test(line)) fenced = !fenced;
     if (fenced) continue;
     if (/^##(?!#)/.test(line)) {
@@ -60,7 +60,7 @@ export function versionBodies(md: string): Map<string, string> {
   const bodies = new Map<string, string>();
   let key: string | null = null;
   let fenced = false;
-  for (const line of md.split("\n")) {
+  for (const line of md.split(/\r?\n/)) {
     if (/^\s*(```|~~~)/.test(line)) fenced = !fenced;
     if (!fenced && /^##(?!#)/.test(line)) {
       key = /^## +\[?\d+\.\d+\.\d+/.test(line) ? line : null;
