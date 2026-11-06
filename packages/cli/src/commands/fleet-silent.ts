@@ -64,6 +64,7 @@ export async function collectFleetSilent(runs: string, now = Date.now()) {
   const inputs = await Promise.all(
     paths.map((path) =>
       readFleetJsonl(join(runs, path), {
+        requireInitialSize: true,
         parseLine: parse,
         malformedLines: "flag",
         flagRow: wellFormed,

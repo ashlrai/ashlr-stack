@@ -125,7 +125,10 @@ export function serveFleet(paths: Record<Source, string>, port: number) {
     hostname: "127.0.0.1",
     port,
     idleTimeout: 0,
-    fetch(request) {
+    fetch(request, server) {
+      const host = request.headers.get("host");
+      if (host !== `127.0.0.1:${server.port}` && host !== `localhost:${server.port}`)
+        return new Response("Forbidden", { status: 403 });
       if (new URL(request.url).pathname !== "/events")
         return new Response("Not found", { status: 404 });
       const abort = new AbortController();

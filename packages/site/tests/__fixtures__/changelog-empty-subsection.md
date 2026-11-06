@@ -4,19 +4,19 @@
 
 ### Added
 
-- Added entry one.
-- Added entry two.
+- First added entry.
+- Second added entry.
 
 ### Changed
 
 ### Fixed
 
-- Fixed entry.
-
-### Removed
+- Fixed entry stays attached to Fixed.
 
 ## 0.1.0 (2026-04-19)
 
 ### Added
 
 - Initial entry.
+
+### Removed
