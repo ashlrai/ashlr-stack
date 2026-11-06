@@ -2,12 +2,12 @@
 
 ## 0.7.0 (2026-11-02)
 
-### Added
+### Fixed
 
-- Added well-known, state-of-the-art, and up-to-date checks for read-only, opt-in flags
-- Re-run the pre-commit hook; non-breaking, cross-platform, multi-word-hyphenated-term support
-- Leading-dash-free: a - b stays spaced, and trailing-hyphen- survives, as does --long-flag and -x
+- Fixed the well-known, long-standing, state-of-the-art re-run bug in non-interactive mode.
+- Kept self-hosted, pre-1.0, e-mail-style and cross-platform names like `--dry-run` intact.
+- Trailing hyphen- and leading -dash words stay as written; en-dash range 1-10 too.
 
 ## 0.6.0 (2026-11-01)
 
-- Plain entry with no hyphenated words
+- Added built-in, opt-in, one-time setup

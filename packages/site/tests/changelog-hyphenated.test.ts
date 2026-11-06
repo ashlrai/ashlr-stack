@@ -15,21 +15,21 @@ function itemsFor(heading: string): string[] {
   return ((list as Tokens.List | undefined)?.items ?? []).map((i) => i.text);
 }
 
-test("hyphenated words stay whole and attached to their version", () => {
+test("hyphenated words stay intact in entry text under their version", () => {
   expect(itemsFor("0.7.0 (2026-11-02)")).toEqual([
-    "Added well-known, state-of-the-art, and up-to-date checks for read-only, opt-in flags",
-    "Re-run the pre-commit hook; non-breaking, cross-platform, multi-word-hyphenated-term support",
-    "Leading-dash-free: a - b stays spaced, and trailing-hyphen- survives, as does --long-flag and -x",
+    "Fixed the well-known, long-standing, state-of-the-art re-run bug in non-interactive mode.",
+    "Kept self-hosted, pre-1.0, e-mail-style and cross-platform names like `--dry-run` intact.",
+    "Trailing hyphen- and leading -dash words stay as written; en-dash range 1-10 too.",
   ]);
 });
 
-test("the next version is not affected by the hyphenated entries", () => {
-  expect(itemsFor("0.6.0 (2026-11-01)")).toEqual(["Plain entry with no hyphenated words"]);
+test("hyphenated entries do not leak into the next version", () => {
+  expect(itemsFor("0.6.0 (2026-11-01)")).toEqual(["Added built-in, opt-in, one-time setup"]);
 });
 
-test("rendered HTML keeps hyphens intact", async () => {
+test("hyphens are not turned into list bullets or dashes when rendered", async () => {
   const html = await marked.parse(fixture);
-  expect(html).toContain("state-of-the-art");
-  expect(html).toContain("multi-word-hyphenated-term");
-  expect(html).toContain("--long-flag and -x");
+  expect(html).toContain("well-known, long-standing, state-of-the-art re-run");
+  expect(html).toContain("<code>--dry-run</code>");
+  expect(html.match(/<li>/g)?.length).toBe(4);
 });
