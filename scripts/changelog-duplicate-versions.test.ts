@@ -4,6 +4,8 @@ import { join } from "node:path";
 
 const paths = ["CHANGELOG.md", "packages/site/src/data/CHANGELOG.md"];
 const fixturePath = "scripts/__fixtures__/changelog/duplicate-version-headings.md";
+const orderFixturePath = "scripts/__fixtures__/changelog/version-order.md";
+const unicodeFixturePath = "scripts/__fixtures__/changelog/unicode-entry.md";
 
 /**
  * Version headings look like `## 0.3.0 (date)`, `## [0.2.0] — date`, or
@@ -76,4 +78,41 @@ test("duplicate check ignores example headings inside fenced code blocks", () =>
   // The fixture shows `## 0.3.0` and `## 0.1.1` examples inside fences; each
   // version has exactly one real heading, so neither may count twice.
   expect(versionsOf(fixture)).toEqual(["0.3.0", "0.2.0", "0.2.0", "0.1.1"]);
+});
+
+test("version parsing keeps deliberately ordered fixture entries in source order", () => {
+  const fixture = readFileSync(join(import.meta.dir, "..", orderFixturePath), "utf8");
+  // 0.2.0 precedes 0.10.0 although a numeric sort would put it last, and a
+  // lexical sort would put 0.10.0 first; neither may reorder the result.
+  expect(versionsOf(fixture)).toEqual(["0.2.0", "0.10.0"]);
+  expect(duplicateVersions(fixture)).toEqual([]);
+});
+
+test("version parsing preserves an entry that carries Unicode text", () => {
+  const fixture = readFileSync(join(import.meta.dir, "..", unicodeFixturePath), "utf8");
+  expect(versionsOf(fixture)).toEqual(["0.4.0"]);
+  expect(duplicateVersions(fixture)).toEqual([]);
+
+  const entry = fixture.split("\n").find((line) => line.startsWith("- "));
+  expect(entry).toBeDefined();
+  // Accents, CJK, Hangul, right-to-left, Greek, an astral emoji, a ZWJ sequence,
+  // a regional-indicator flag, and a combining mark must all survive unchanged.
+  for (const text of [
+    "café",
+    "résumé naïve",
+    "日本語のテキスト",
+    "한국어",
+    "العربية",
+    "Ελληνικά",
+    "🚀",
+    "👨\u200d👩\u200d👧",
+    "🇯🇵",
+    "e + \u25cc\u0301 = é",
+  ]) {
+    expect(entry).toContain(text);
+  }
+  // Re-encoding through UTF-8 bytes must round-trip with no replacement characters.
+  const roundTrip = new TextDecoder("utf-8", { fatal: true }).decode(new TextEncoder().encode(entry));
+  expect(roundTrip).toBe(entry!);
+  expect(roundTrip).not.toContain("\ufffd");
 });
