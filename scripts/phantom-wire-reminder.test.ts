@@ -24,6 +24,17 @@ describe("generated webhook signature-verification reminder", () => {
 
       for (const path of result.webhooks) {
         const stub = readFileSync(path, "utf8");
+        // Original PR 466: preserve the exact emitted line boundaries and
+        // double-comment prefix across the entire reminder, not just its ends.
+        const lines = stub.split("\n");
+        const body = lines.indexOf("//   const body = await req.text();");
+        const successLine = lines.indexOf('//   return new Response("ok", { status: 200 });');
+        expect(body).toBeGreaterThanOrEqual(0);
+        expect(successLine).toBeGreaterThan(body + 1);
+        const emittedReminder = lines.slice(body + 1, successLine);
+        expect(emittedReminder.every((line) => line.startsWith("//   // "))).toBe(true);
+        expect(emittedReminder[0]).toContain("TODO(security): signature verification is NOT implemented");
+        expect(emittedReminder.join("\n")).toContain("parse, trust, or act on the body.");
         const example = stub.match(/^\/\/ export async function [\s\S]*?^\/\/ }$/m)?.[0];
         if (!example) throw new Error(`Missing commented handler in ${path}`);
         expect(example.split("\n").every((line) => line.startsWith("//"))).toBe(true);
