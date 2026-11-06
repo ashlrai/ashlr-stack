@@ -56,3 +56,39 @@ origin or integrity. Use recipes from a trusted source. See the
 [reading guide](phantom-wire-example-reading-guide.md) for the generated steps
 and the [broader review questions](phantom-wire-review-questions.md) for wiring
 and failure handling.
+
+## Stated assumptions and open question, with source references
+
+Line numbers refer to
+[`phantom-wire.ts`](../packages/core/src/ai/phantom-wire.ts). Each row's quoted
+anchor must appear within the cited lines; a test in
+`packages/core/src/__tests__/phantom-wire.test.ts` enforces this, so update the
+row when the source moves.
+
+| # | Assumption the source states | Lines | Anchor |
+| - | ---------------------------- | ----- | ------ |
+| A1 | Wiring only reports vault presence; real values arrive via `stack add`. | 4-6 | `this step never` |
+| A2 | Phantom rejects secret values in argv and refuses to overwrite names, so placeholders would fail or block the real value. | 7-9 | `denies overwriting existing names` |
+| A3 | Only Stripe, Clerk, Supabase, and GitHub get stubs; the list is kept tight and each entry needs its own secret and header mapping. | 42-46 | `const WEBHOOK_PROVIDERS` |
+| A4 | The stub is an example only; signature verification is not implemented, so a present header authenticates nothing and the body is untrusted. | 11-16 | `Signature verification is not implemented` |
+| A5 | Recipe manifests are unsigned; catalog name checks prove nothing about origin or integrity, so callers must supply trusted recipes. | 19-21 | `Recipe manifests are unsigned` |
+| A6 | A missing Phantom CLI skips the vault check but stubs are still written, because they are only files. | 61-63 | `they're just files` |
+| A7 | The vault inventory (`phantom list --json`) exposes names and metadata only, and an unreadable vault means "unknown", not "empty". | 98-101 | `names and metadata only, never values` |
+| A8 | The webhook secret is read at call time with `phantom reveal`; it is not one of the catalog secrets the inventory checks. | 125-126 | `phantom reveal` |
+| A9 | Unexpected recipe providers are skipped rather than rejected; names outside the webhook list never reach the filesystem path. | 37-38, 88-91 | `if (WEBHOOK_PROVIDERS.has(name))` |
+
+**Open verification question.** The `TODO(security)` at lines 132-141 leaves the
+verifier unwritten: it names the comparison to make (raw body bytes, webhook
+secret, constant-time compare, reject before parsing) but nothing in the source
+or its tests runs one. Which documented scheme and tested implementation will
+replace each stub before a handler is deployed? The per-provider hints at
+lines 155-168 are one-line pointers, and the Supabase hint only says "per
+Supabase's documented webhook scheme", so that scheme must be confirmed from
+current Supabase documentation rather than from this file.
+
+| Open item | Lines | Anchor |
+| --------- | ----- | ------ |
+| Verification is a TODO, not code. | 131-135 | `TODO(security): signature verification is NOT` |
+| Required checks are described, not implemented. | 137-140 | `constant time` |
+| Provider hints are pointers, not verifiers. | 154-167 | `function verificationHintFor` |
+| Supabase scheme is unspecified in the source. | 162 | `per Supabase's documented webhook scheme` |
