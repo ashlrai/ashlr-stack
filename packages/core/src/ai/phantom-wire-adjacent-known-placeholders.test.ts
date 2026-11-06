@@ -37,6 +37,8 @@ describe("ai/phantom-wire adjacent known placeholders in a provider name", () =>
     "${signatureHeaderFor(provider)}${provider}", // reversed order
     "pay${capitalize(provider)}${webhookSecretKeyFor(provider)}ment", // pair mid-name
     "hook${verificationHintFor(provider)}${provider}line", // hint slot beside the name slot
+    "${capitalize(provider)}${signatureHeaderFor(provider)}hook", // pair leads the name
+    "pay${webhookSecretKeyFor(provider)}${verificationHintFor(provider)}", // pair ends the name
   ])("keeps the adjacent pair %j flush and in order at every expansion site", (name) => {
     // Each token in the pair spells one of the template's own slots — both
     // are known placeholders — but arriving inside the name they are data.
@@ -91,6 +93,62 @@ describe("ai/phantom-wire adjacent known placeholders in a provider name", () =>
     expect(count(stub, 'req.headers.get("x-webhook-signature")')).toBe(1);
     expect(count(stub, "//   // Verify per the provider's documented signature scheme.")).toBe(1);
     expect(stub).not.toContain("WEBHOOK_SECRET_WEBHOOK_SECRET");
+  });
+
+  it("keeps a three-token run flush and in order at every expansion site", () => {
+    // Adjacency generalizes: three known spellings back-to-back inside the
+    // name. The run is data — each site's expansion emits all three tokens
+    // in the name's order, the next starting on the byte the previous ends,
+    // with no inserted separator and the middle token neither dropped nor
+    // reseated.
+    const t1 = "${provider}";
+    const t2 = "${capitalize(provider)}";
+    const t3 = "${signatureHeaderFor(provider)}";
+    const name = `${t1}${t2}${t3}trail`;
+    const run = t1 + t2 + t3;
+    const stub = webhookStubFor(name);
+
+    // The name — run included — lands byte-for-byte at the three
+    // case-preserving sites and whole-name uppercased at both secret-key
+    // sites. `capitalize` leaves the `$`-led name unchanged.
+    expect(stub).toContain(`webhook handler stub for ${name}.`);
+    expect(stub).toContain(`forge a ${name} webhook.`);
+    expect(stub).toContain(`handle${name}Webhook(req: Request)`);
+    expect(count(stub, `phantom reveal ${name.toUpperCase()}_WEBHOOK_SECRET`)).toBe(2);
+
+    // At every occurrence, in both casings: the three values sit in the
+    // name's order, each starting on the byte the previous one ends.
+    for (const [variant, sites] of [
+      [run, 3],
+      [run.toUpperCase(), 2],
+    ] as const) {
+      const [a, b, c] =
+        variant === run ? [t1, t2, t3] : [t1.toUpperCase(), t2.toUpperCase(), t3.toUpperCase()];
+      let occurrences = 0;
+      for (let at = stub.indexOf(variant); at !== -1; at = stub.indexOf(variant, at + 1)) {
+        occurrences++;
+        expect(stub.startsWith(a, at)).toBe(true);
+        // Zero bytes between values: b begins exactly where a ends, c
+        // exactly where b ends — no separator inserted, no byte eaten.
+        expect(stub.startsWith(b, at + a.length)).toBe(true);
+        expect(stub.startsWith(c, at + a.length + b.length)).toBe(true);
+      }
+      expect(occurrences).toBe(sites);
+    }
+
+    // No reordering: neither adjacent swap nor the reversed run appears,
+    // in either casing.
+    for (const swapped of [t2 + t1, t3 + t2, t3 + t2 + t1]) {
+      expect(stub).not.toContain(swapped);
+      expect(stub).not.toContain(swapped.toUpperCase());
+    }
+
+    // Three tokens per name × five sites: no `${` minted, dropped, or
+    // re-expanded into the value its spelling names.
+    expect(count(stub, "${")).toBe(15);
+    // The template's real slots still take their own values, once each.
+    expect(count(stub, 'req.headers.get("x-webhook-signature")')).toBe(1);
+    expect(count(stub, "//   // Verify per the provider's documented signature scheme.")).toBe(1);
   });
 
   it("skips a pair-carrying name byte-for-byte through wiring and writes nothing for it", async () => {
