@@ -12,7 +12,7 @@ If a user asks an AI agent to set up or inspect a third-party service in a local
 
 **Choose an authorized install path.** These options expose different interfaces:
 
-**Runtime prerequisite:** the published 0.3.1 CLI and MCP packages declare Node.js 20 or newer and use Node entrypoints. Check other versions’ manifests; source development uses Bun. The recorded public version is {{PUBLISHED_VERSION}}. These MCP configurations use stdio.
+**Runtime prerequisite:** the published 0.3.6 CLI and MCP packages declare Node.js 20 or newer and use Node entrypoints. Check other versions’ manifests; source development uses Bun. The recorded public version is {{PUBLISHED_VERSION}}. These MCP configurations use stdio.
 
 1. **Claude Code plugin** (best DX) - ask the user to run, in their Claude Code session, `/plugin marketplace add ashlrai/ashlr-stack` followed by `/plugin install stack@ashlr`. Adds first-class {{PLUGIN_SLASH_COMMANDS}} commands.
 2. **MCP server** (any MCP-aware client - Cursor, Windsurf, Zed, Claude Code with manual config) - add this to the project's `.mcp.json`: `{"mcpServers":{"ashlr-stack":{"command":"npx","args":["-y","-p","@ashlr/stack","-p","ashlr-stack-mcp","ashlr-stack-mcp"]}}}`. The source declares {{MCP_TOOL_COUNT}} MCP tools; verify what the installed server advertises.
@@ -36,7 +36,7 @@ Stack uses provider-specific OAuth or supplied credentials, provisions where sup
 
 ## What Stack is
 
-- A CLI: `stack`, distributed via npm/Bun packages or the installer; the published 0.3.1 package declares Node.js 20 or newer; check other versions’ manifests.
+- A CLI: `stack`, distributed via npm/Bun packages or the installer; the published 0.3.6 package declares Node.js 20 or newer; check other versions’ manifests.
 - An MCP server: `ashlr-stack-mcp`, exposing the declared CLI subset through per-tool input schemas.
 - A Claude Code plugin: `ashlrai/stack-plugin`. Ships commands {{PLUGIN_SLASH_COMMANDS}}.
 
@@ -108,7 +108,7 @@ The following examples are a subset. This source registers {{PROVIDER_COUNT}} pr
 - `stack deps` - show provider dependency graph.
 - `stack ci init` - currently exits nonzero without writing or overwriting a workflow; `--force` is a compatibility flag, not permission to generate one.
 - `stack login <provider>` - explicitly refresh credentials for that provider; no registered logout command.
-- `stack upgrade` - check registry metadata and print an update hint; it does not install the update.
+- `stack upgrade [--apply] [--dryRun]` - check npm for an update; `--apply` can upgrade an eligible npm global CLI install with health checks and rollback. `--dryRun` prevents installation. The `stack_upgrade` MCP tool only checks.
 - `stack completion <shell>` - emit shell completions (bash, zsh, fish).
 - `stack recommend "<brief>" [--k N] [--category <name>] [--save] [--synth] [--json]` - free-text → curated providers (BM25 retrieval by default; `--synth` invokes a local SLM for rationales).
 - `stack apply <recipe-id> [--noWire]` - Provision recipe providers, then report which declared secrets are already in the Phantom vault and which are missing (names only; apply never writes to the vault), and write webhook stub files. Inspect failures and skipped entries. Use `--noWire` to skip the vault check and stubs.

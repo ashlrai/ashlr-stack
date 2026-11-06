@@ -68,6 +68,42 @@ describe("config", () => {
     expect(roundTripped.services.supabase).toEqual(original.services.supabase);
   });
 
+  test("a full configuration survives serialize → parse with every value preserved", async () => {
+    const cwd = freshCwd();
+    const original = emptyConfig("saas");
+    original.services.supabase = {
+      provider: "supabase",
+      resource_id: "abcd1234",
+      region: "us-east-1",
+      secrets: ["SUPABASE_URL", "SUPABASE_ANON_KEY"],
+      mcp: "supabase",
+      meta: { plan: "free", replicas: 2, nested: { ok: true, tags: ["a", "b"] } },
+      created_at: "2026-04-17T05:00:00Z",
+      created_by: "test",
+    };
+    original.services.sentry = {
+      provider: "sentry",
+      secrets: [],
+      created_at: "2026-04-18T05:00:00Z",
+    };
+    original.environments = [
+      { name: "dev", default: true },
+      { name: "prod", overrides: { SUPABASE_URL: "SUPABASE_URL_PROD" } },
+    ];
+
+    await writeConfig(original, cwd);
+    const parsed = await readConfig(cwd);
+    expect(parsed).toEqual(original);
+
+    // Re-serializing the parsed config is stable: the files do not drift.
+    const shapeBefore = readFileSync(join(cwd, CONFIG_FILENAME), "utf-8");
+    const localBefore = readFileSync(join(cwd, LOCAL_FILENAME), "utf-8");
+    await writeConfig(parsed, cwd);
+    expect(readFileSync(join(cwd, CONFIG_FILENAME), "utf-8")).toBe(shapeBefore);
+    expect(readFileSync(join(cwd, LOCAL_FILENAME), "utf-8")).toBe(localBefore);
+    expect(await readConfig(cwd)).toEqual(original);
+  });
+
   test("readConfig throws ConfigNotFoundError when file is missing", async () => {
     const cwd = freshCwd();
     await expect(readConfig(cwd)).rejects.toThrow(/No .stack.toml at/);
