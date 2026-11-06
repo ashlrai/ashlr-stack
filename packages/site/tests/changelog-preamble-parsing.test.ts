@@ -58,8 +58,8 @@ test("site changelog first version remains intact after preamble split", () => {
   const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
   const { versions } = parsePreambleAndVersions(published);
 
-  // The first version is "0.3.0 (2026-10-31)" — verify it is not mangled.
-  expect(versions[0].text).toBe("0.3.0 (2026-10-31)");
+  // The first version is "0.3.2 (2026-11-04)" — verify it is not mangled.
+  expect(versions[0].text).toBe("0.3.2 (2026-11-04)");
   expect(versions[0].depth).toBe(2);
 });
 
