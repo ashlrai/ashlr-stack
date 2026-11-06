@@ -3,63 +3,61 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { marked } from "marked";
 
-const root = join(import.meta.dir, "../../..");
+const VERSION = /^(?:\[\d+\.\d+\.\d+\]|\d+\.\d+\.\d+)(?:\s|$)/;
 
-/** Versions (e.g. "0.3.0") that appear in more than one `##` release heading. */
-function duplicateVersions(markdown: string): string[] {
-  const seen = new Set<string>();
-  const duplicates = new Set<string>();
-  for (const token of marked.lexer(markdown)) {
-    if (token.type !== "heading" || token.depth !== 2) continue;
-    const match = token.text.match(/^\[?(\d+\.\d+\.\d+)\]?(?:\s|$)/);
-    if (!match) continue;
-    if (seen.has(match[1])) duplicates.add(match[1]);
-    seen.add(match[1]);
-  }
-  return [...duplicates];
+/** Released version headings in source order. */
+function versionHeadings(markdown: string): string[] {
+  return marked
+    .lexer(markdown)
+    .flatMap((t) => (t.type === "heading" && t.depth === 2 && VERSION.test(t.text) ? [t.text] : []));
 }
 
-/** Release headings (or `null`) that contain a `stack apply` entry. */
-function historicalApplyReleases(markdown: string): (string | null)[] {
-  let release: string | null = null;
-  const releases: (string | null)[] = [];
-  for (const token of marked.lexer(markdown)) {
-    if (token.type === "heading" && token.depth <= 2) {
-      release = token.depth === 2 && /^(?:\[\d+\.\d+\.\d+\]|\d+\.\d+\.\d+)(?:\s|$)/.test(token.text) ? token.text : null;
-    }
-    if (token.type === "list") {
-      for (const item of token.items) {
-        if (item.raw.startsWith("- **`stack apply [recipe-id]`**")) releases.push(release);
-      }
-    }
-  }
-  return releases;
-}
-
-test("empty fixture returns no tokens without throwing", () => {
-  const fixture = readFileSync(join(import.meta.dir, "__fixtures__/changelog-empty.md"), "utf8");
+test("empty fixture parses to no entries without throwing", () => {
+  const fixture = readFileSync(join(import.meta.dir, "__fixtures__/changelog-empty-input.md"), "utf8");
   expect(fixture).toBe("");
-  const tokens = marked.lexer(fixture);
-  expect(tokens).toEqual([]);
+  expect(() => versionHeadings(fixture)).not.toThrow();
+  expect(versionHeadings(fixture)).toEqual([]);
 });
 
-test("empty fixture returns no entries for all changelog parsers", () => {
-  const fixture = readFileSync(join(import.meta.dir, "__fixtures__/changelog-empty.md"), "utf8");
-
-  // Lexer produces no tokens, so downstream parsers return empty arrays.
-  expect(historicalApplyReleases(fixture)).toEqual([]);
-  expect(duplicateVersions(fixture)).toEqual([]);
+test("whitespace-only and heading-only input also yield no entries", () => {
+  for (const input of ["\n", "\r\n\r\n", "  \n\t\n", "# Changelog\n", "# Changelog\n\n## Unreleased\n"]) {
+    expect(versionHeadings(input)).toEqual([]);
+  }
 });
 
-test("empty string input also returns no entries without throwing", () => {
-  expect(marked.lexer("")).toEqual([]);
-  expect(historicalApplyReleases("")).toEqual([]);
-  expect(duplicateVersions("")).toEqual([]);
+test("the published changelog is not empty, so the empty fixture is a real contrast", () => {
+  const published = readFileSync(join(import.meta.dir, "../src/data/CHANGELOG.md"), "utf8");
+  expect(versionHeadings(published).length).toBeGreaterThan(0);
 });
 
-test("published changelog parser does not throw on the live file", () => {
-  const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
-  expect(() => marked.lexer(published)).not.toThrow();
-  expect(() => historicalApplyReleases(published)).not.toThrow();
-  expect(() => duplicateVersions(published)).not.toThrow();
+test("the docs page transform renders empty input as empty HTML", async () => {
+  // Same steps as src/pages/docs/changelog.astro: strip the H1, then marked.parse.
+  const body = "".replace(/^#\s+Changelog\s*\n+/, "");
+  expect(await marked.parse(body)).toBe("");
+});
+
+/** Version → section → entries, the same shape the entry-level fixture tests use. */
+function entriesBySection(markdown: string): Record<string, Record<string, string[]>> {
+  const out: Record<string, Record<string, string[]>> = {};
+  let version: string | null = null;
+  let section = "";
+  for (const t of marked.lexer(markdown)) {
+    if (t.type === "heading" && t.depth <= 2) {
+      version = t.depth === 2 && VERSION.test(t.text) ? t.text : null;
+      section = "";
+      if (version) out[version] = {};
+    } else if (version && t.type === "heading" && t.depth === 3) {
+      section = t.text;
+    } else if (version && t.type === "list") {
+      (out[version][section] ??= []).push(...t.items.map((item) => item.text));
+    }
+  }
+  return out;
+}
+
+test("empty fixture yields no entries or sections, and no list items at all", () => {
+  const fixture = readFileSync(join(import.meta.dir, "__fixtures__/changelog-empty-input.md"), "utf8");
+  expect(() => entriesBySection(fixture)).not.toThrow();
+  expect(entriesBySection(fixture)).toEqual({});
+  expect(marked.lexer(fixture).flatMap((t) => (t.type === "list" ? t.items : []))).toEqual([]);
 });

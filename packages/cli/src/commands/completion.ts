@@ -145,7 +145,7 @@ const CMD_META: Record<string, CmdMeta> = {
     ],
   },
   apply: {
-    flags: [{ name: "noWire" }, { name: "noRollback" }],
+    flags: [{ name: "noWire" }, { name: "noRollback" }, { name: "dryRun" }],
   },
   swap: {
     completesProviders: true,
