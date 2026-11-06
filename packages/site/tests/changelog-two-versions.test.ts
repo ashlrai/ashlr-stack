@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { marked, type Tokens } from "marked";
@@ -41,19 +41,32 @@ test("0.10.0 stays ahead of 0.9.0 as written (no numeric or lexical re-sorting)"
   expect(parseReleases(fixture).map((r) => r.version.split(" ")[0])).toEqual(["0.10.0", "0.9.0"]);
 });
 
-test("site changelog: its two newest released versions list entries in file order", () => {
-  const path = join(import.meta.dir, "../src/data/CHANGELOG.md");
-  const raw = readFileSync(path, "utf8").replace(/\r\n/g, "\n");
-  const [first, second] = parseReleases(raw).filter((r) => /^\[?\d+\.\d+\.\d+/.test(r.version));
-  expect(first?.entries.length).toBeGreaterThan(0);
-  expect(second?.entries.length).toBeGreaterThan(0);
-  // Each release's entries must start at increasing offsets, and the first release must precede the second.
+test("every heading and entry appears at a strictly later line than the one before it", () => {
+  const lines = fixture.split("\n");
+  const expected = ["## 0.10.0", "- Shared entry text.", "- Only in 0.10.0.", "- Shared fix text.", "## 0.9.0", "- Shared entry text.", "- Only in 0.9.0.", "- Shared fix text."];
   let from = 0;
-  for (const release of [first, second]) {
-    for (const entry of release.entries) {
-      const at = raw.indexOf(entry.split("\n")[0].slice(0, 40), from);
-      expect(at, `${release.version}: ${entry.slice(0, 40)}`).toBeGreaterThanOrEqual(from);
-      from = at;
-    }
+  for (const want of expected) {
+    const at = lines.findIndex((l, i) => i >= from && l.startsWith(want));
+    expect(at, want).toBeGreaterThanOrEqual(from);
+    from = at + 1;
   }
+});
+
+describe("PR649: published changelog entry order", () => {
+  test("site changelog: its two newest released versions list entries in file order", () => {
+    const path = join(import.meta.dir, "../src/data/CHANGELOG.md");
+    const raw = readFileSync(path, "utf8").replace(/\r\n/g, "\n");
+    const [first, second] = parseReleases(raw).filter((r) => /^\[?\d+\.\d+\.\d+/.test(r.version));
+    expect(first?.entries.length).toBeGreaterThan(0);
+    expect(second?.entries.length).toBeGreaterThan(0);
+    // Each release's entries must start at increasing offsets, and the first release must precede the second.
+    let from = 0;
+    for (const release of [first, second]) {
+      for (const entry of release.entries) {
+        const at = raw.indexOf(entry.split("\n")[0].slice(0, 40), from);
+        expect(at, `${release.version}: ${entry.slice(0, 40)}`).toBeGreaterThanOrEqual(from);
+        from = at;
+      }
+    }
+  });
 });
