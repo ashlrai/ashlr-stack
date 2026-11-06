@@ -336,6 +336,38 @@ test("apply note explains the action required even after success", () => {
   expect(entry).toContain("If the vault cannot be read, providers are reported as skipped");
 });
 
+test("0.3.0 apply entries state the readable-inventory report and that success does not prove every secret is present", () => {
+  const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
+  const release = published.split("## 0.3.0 (2026-10-31)\n")[1]?.split("\n## ")[0];
+  const entry = release?.split("\n").find((line) => line.startsWith("- After at least one provider succeeds, `stack apply`"));
+  expect(entry).toContain("When the vault is readable, wiring reports missing secret names");
+  expect(entry).toContain(
+    "Missing names alone do not make apply fail, so an applied recipe is not proof that every required secret is present.",
+  );
+
+  // The 0.1.0 and 0.2.1 entries are pinned historical claims. They report
+  // names when the vault is readable and keep unreadable inventory as skipped.
+  const initial = published
+    .split("\n")
+    .find((line) => line.startsWith("- **`stack apply [recipe-id]`**"));
+  expect(initial).toContain("wiring reports how many secret names are present and missing and lists missing names");
+  expect(initial).toContain("Missing names alone do not make apply fail; provider failures still do.");
+  expect(placeholderRemovalEntry).toContain("plus a `not in Phantom:` line for missing names");
+  expect(placeholderRemovalEntry).toContain("it reports providers as skipped instead of identifying missing names");
+});
+
+test("no changelog entry claims webhook stubs verify signatures or that wiring covers a run with no successful provider", () => {
+  const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
+  const unreleased = published.split("## Unreleased\n")[1]?.split("\n## ")[0] ?? "";
+  expect(unreleased).toContain("Wiring can also create webhook stubs for those recipe providers, even if the vault is unreadable");
+  expect(unreleased).toContain("After at least one provider succeeds");
+  const releases = published.split("\n## ").slice(1);
+  for (const line of [unreleased, ...releases].join("\n").split("\n")) {
+    if (!/webhook/i.test(line)) continue;
+    expect(line).not.toMatch(/verif(?:ies|ied) signatures?|signatures? (?:are|is) verified|authenticat(?:es|ed) (?:the )?(?:request|webhook)/i);
+  }
+});
+
 test("unreleased apply note describes wiring after a partial failure", () => {
   const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
   const unreleased = published.split("## Unreleased\n")[1]?.split("\n## ")[0];
@@ -492,4 +524,462 @@ test("double-backtick inline code keeps an embedded backtick and its release", (
   const input = "## 0.3.0\n\n### Changed\n\n- renamed ``a `b` c`` to `d`\n\n## 0.2.0\n\n### Changed\n\n- other\n";
   expect(sectionEntries(input, "0.3.0", "Changed")).toEqual(["renamed ``a `b` c`` to `d`"]);
   expect(sectionEntries(input, "0.2.0", "Changed")).toEqual(["other"]);
+});
+
+// ── Heading-only fixture: empty subsection parsing ──
+
+type Parsed = { version: string; sections: { name: string; items: string[] }[] };
+
+function parse(markdown: string): Parsed[] {
+  const versions: Parsed[] = [];
+  let version: Parsed | null = null;
+  let section: Parsed["sections"][number] | null = null;
+  for (const token of marked.lexer(markdown)) {
+    if (token.type === "heading" && token.depth <= 2) {
+      section = null;
+      version = token.depth === 2 && /^\[?\d+\.\d+\.\d+\]?(?:\s|$)/.test(token.text) ? { version: token.text, sections: [] } : null;
+      if (version) versions.push(version);
+    } else if (token.type === "heading" && token.depth === 3 && version) {
+      section = { name: token.text, items: [] };
+      version.sections.push(section);
+    } else if (token.type === "list" && section) {
+      for (const item of token.items) section.items.push(item.text);
+    }
+  }
+  return versions;
+}
+
+test("heading-only fixture: empty ### section is kept with no entries", () => {
+  const fixture = readFileSync(join(import.meta.dir, "__fixtures__/changelog-empty-section-heading.md"), "utf8");
+  const parsed = parse(fixture);
+  expect(parsed.map((v) => v.version)).toEqual(["0.2.0 (2026-04-23)", "0.1.0 (2026-04-19)"]);
+  expect(parsed[0].sections).toEqual([{ name: "Added", items: ["Entry."] }]);
+  expect(parsed[1].sections).toEqual([{ name: "Fixed", items: [] }]);
+});
+
+test("heading-only fixture: empty subsection does not throw", () => {
+  const fixture = readFileSync(join(import.meta.dir, "__fixtures__/changelog-empty-section-heading.md"), "utf8");
+  expect(() => parse(fixture)).not.toThrow();
+});
+
+test("heading-only fixture: published CHANGELOG.md parses without error and handles all sections", () => {
+  const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
+  expect(() => parse(published)).not.toThrow();
+  const parsed = parse(published);
+  expect(parsed.length).toBeGreaterThan(0);
+  // Every section has a name (even if its item list is empty)
+  expect(parsed.flatMap((v) => v.sections.map((s) => s.name))).toBeTruthy();
+});
+
+// Single-version, single-entry fixture in the shape of src/data/CHANGELOG.md.
+const SINGLE_ENTRY = "CLI lazily loads the selected command rather than all commands at startup.";
+const SINGLE_ENTRY_FIXTURE = `# Changelog
+
+## 0.3.0 (2026-10-31)
+
+### Changed and fixed
+
+- ${SINGLE_ENTRY}
+`;
+
+function parseReleaseEntries(markdown: string): { version: string; entries: string[] }[] {
+  const releases: { version: string; entries: string[] }[] = [];
+  for (const token of marked.lexer(markdown)) {
+    if (token.type === "heading" && token.depth === 2) {
+      const match = token.text.match(/^\[?(\d+\.\d+\.\d+)\]?/);
+      releases.push({ version: match?.[1] ?? token.text, entries: [] });
+    } else if (token.type === "list" && releases.length > 0) {
+      releases[releases.length - 1].entries.push(...token.items.map((item) => item.text));
+    }
+  }
+  return releases;
+}
+
+test("single-version, single-entry fixture parses to its version and entry text", () => {
+  expect(parseReleaseEntries(SINGLE_ENTRY_FIXTURE)).toEqual([{ version: "0.3.0", entries: [SINGLE_ENTRY] }]);
+});
+
+test("the fixture's version and entry text match the published site changelog", () => {
+  const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
+  const release = parseReleaseEntries(published).find((r) => r.version === "0.3.0");
+  expect(release).toBeDefined();
+  expect(release?.entries).toContain(SINGLE_ENTRY);
+});
+
+// Trailing-newline fixture: the same changelog with and without its final newline.
+const NO_FINAL_NEWLINE_FIXTURE = SINGLE_ENTRY_FIXTURE.replace(/\n+$/, "");
+
+test("trailing-newline fixture differs only by its final newline", () => {
+  expect(SINGLE_ENTRY_FIXTURE.endsWith("\n")).toBe(true);
+  expect(NO_FINAL_NEWLINE_FIXTURE.endsWith("\n")).toBe(false);
+  expect(`${NO_FINAL_NEWLINE_FIXTURE}\n`).toBe(SINGLE_ENTRY_FIXTURE);
+});
+
+test("a version and its entry parse identically with and without a final newline", () => {
+  const expected = [{ version: "0.3.0", entries: [SINGLE_ENTRY] }];
+  expect(parseReleaseEntries(NO_FINAL_NEWLINE_FIXTURE)).toEqual(expected);
+  expect(parseReleaseEntries(SINGLE_ENTRY_FIXTURE)).toEqual(expected);
+});
+
+test("the published site changelog parses identically with and without its final newline", () => {
+  const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
+  const trimmed = published.replace(/\n+$/, "");
+  expect(trimmed.endsWith("\n")).toBe(false);
+  expect(parseReleaseEntries(trimmed)).toEqual(parseReleaseEntries(`${trimmed}\n`));
+  expect(parseReleaseEntries(trimmed).length).toBeGreaterThan(0);
+});
+
+// Fixture modeled on the 0.1.0 `stack apply` entry in CHANGELOG.md: a list entry with a Markdown link.
+const LINK_ENTRY_FIXTURE = [
+  "## 0.1.0",
+  "",
+  "### Added",
+  "",
+  "- **`stack apply [recipe-id]`** — checks declared secret names in [Phantom](https://phm.dev) and creates webhook stubs.",
+  "",
+].join("\n");
+
+function linksInEntry(markdown: string, prefix: string): { text: string; href: string }[] {
+  const entry = marked
+    .lexer(markdown)
+    .flatMap((token) => (token.type === "list" ? token.items : []))
+    .find((item) => item.raw.startsWith(prefix));
+  expect(entry).toBeDefined();
+  const links: { text: string; href: string }[] = [];
+  marked.walkTokens(entry?.tokens ?? [], (token) => {
+    if (token.type === "link") links.push({ text: token.text, href: token.href });
+  });
+  return links;
+}
+
+test("fixture entry with a Markdown link keeps its link text and destination", async () => {
+  expect(linksInEntry(LINK_ENTRY_FIXTURE, "- **`stack apply [recipe-id]`**")).toEqual([
+    { text: "Phantom", href: "https://phm.dev" },
+  ]);
+  const html = await marked.parse(LINK_ENTRY_FIXTURE);
+  expect(html).toContain('<a href="https://phm.dev">Phantom</a>');
+  // Brackets in the entry's code span are not mistaken for a link.
+  expect(html).toContain("<code>stack apply [recipe-id]</code>");
+});
+
+test("source changelog apply entry keeps its Phantom link text and destination", () => {
+  const source = readFileSync(join(root, "CHANGELOG.md"), "utf8");
+  expect(linksInEntry(source, "- **`stack apply [recipe-id]`**")).toContainEqual({
+    text: "Phantom",
+    href: "https://phm.dev",
+  });
+});
+
+test("parsed changelog entries preserve colons and commas", () => {
+  const entry = "Fixed: wiring skips unset keys, then continues with the rest";
+  const markdown = `## 0.1.0\n\n### Fixed\n\n- ${entry}\n- **Note:** plain, bold lead-in\n`;
+  const items = marked.lexer(markdown).flatMap((token) => (token.type === "list" ? token.items : []));
+  expect(items.map((item) => item.text)).toEqual([entry, "**Note:** plain, bold lead-in"]);
+  for (const item of items) {
+    expect(item.text).toContain(":");
+    expect(item.text).toContain(",");
+  }
+});
+
+test("source changelog entries with a colon and comma keep both in parsed text", () => {
+  const source = readFileSync(join(root, "CHANGELOG.md"), "utf8");
+  const items = marked.lexer(source).flatMap((token) => (token.type === "list" ? token.items : []));
+  const raw = items.find((item) => item.raw.startsWith("- **`stack apply [recipe-id]`**"));
+  expect(raw).toBeDefined();
+  const withBoth = items.filter((item) => item.text.includes(":") && item.text.includes(","));
+  expect(withBoth.length).toBeGreaterThan(0);
+  for (const item of withBoth) {
+    expect(item.raw).toContain(":");
+    expect(item.raw).toContain(",");
+  }
+});
+
+type ParsedRelease = { heading: string; entries: string[] };
+
+// Collects each "## <version>" release and its list entries (across ### groups) in source order.
+function parseReleases(markdown: string): ParsedRelease[] {
+  const releases: ParsedRelease[] = [];
+  let current: ParsedRelease | null = null;
+  for (const token of marked.lexer(markdown)) {
+    if (token.type === "heading" && token.depth <= 2) {
+      current = token.depth === 2 ? { heading: token.text, entries: [] } : null;
+      if (current) releases.push(current);
+    } else if (current && token.type === "list") {
+      for (const item of token.items) current.entries.push(item.text);
+    }
+  }
+  return releases;
+}
+
+test("parseReleases keeps two successive releases and their entries in source order", () => {
+  const sample = "# Changelog\n\n## 2.0.0\n\n### Added\n\n- b1\n- b2\n\n### Fixed\n\n- b3\n\n## 1.0.0\n\n- a1\n- a2\n";
+  expect(parseReleases(sample)).toEqual([
+    { heading: "2.0.0", entries: ["b1", "b2", "b3"] },
+    { heading: "1.0.0", entries: ["a1", "a2"] },
+  ]);
+});
+
+test("source changelog 0.3.0 and 0.2.2 are successive and their entries stay in source order", () => {
+  const source = readFileSync(join(root, "CHANGELOG.md"), "utf8");
+  const releases = parseReleases(source);
+  const index = releases.findIndex((release) => release.heading.startsWith("0.3.0"));
+  expect(index).toBeGreaterThanOrEqual(0);
+  const [newer, older] = [releases[index], releases[index + 1]];
+  expect(older?.heading.startsWith("0.2.2")).toBe(true);
+
+  const offsetOf = (release: ParsedRelease) => {
+    const start = source.indexOf(`## ${release.heading}`);
+    expect(start).toBeGreaterThanOrEqual(0);
+    return start;
+  };
+  expect(offsetOf(newer)).toBeLessThan(offsetOf(older));
+
+  for (const release of [newer, older]) {
+    expect(release.entries.length).toBeGreaterThan(0);
+    // Each entry's first line must appear in the raw source after the previous entry's.
+    let cursor = offsetOf(release);
+    for (const entry of release.entries) {
+      const at = source.indexOf(entry.split("\n")[0], cursor);
+      expect(at, `${release.heading}: ${entry.slice(0, 40)}`).toBeGreaterThanOrEqual(cursor);
+      cursor = at + 1;
+    }
+  }
+
+  // Anchor the first entry of each release, so a reorder at either boundary is caught.
+  expect(newer.entries[0]).toMatch(/^Fleet diagnostics: lanes/);
+  expect(older.entries[0]).toMatch(/^Release: npm publishing relies only on npm trusted publishing/);
+});
+
+// Walk every list item (including nested ones) and return the inline code spans it holds.
+function codespansByEntry(markdown: string): { raw: string; codespans: string[] }[] {
+  const found: { raw: string; codespans: string[] }[] = [];
+  const visit = (tokens: ReturnType<typeof marked.lexer>) => {
+    for (const token of tokens) {
+      if (token.type !== "list") continue;
+      for (const item of token.items) {
+        const spans: string[] = [];
+        marked.walkTokens(item.tokens, (t) => {
+          if (t.type === "codespan") spans.push(t.text);
+        });
+        found.push({ raw: item.raw, codespans: spans });
+        visit(item.tokens as ReturnType<typeof marked.lexer>);
+      }
+    }
+  };
+  visit(marked.lexer(markdown));
+  return found;
+}
+
+test("parsed changelog entries keep the TODO_STACK_APPLY marker intact", () => {
+  const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
+  const entries = codespansByEntry(published).filter((entry) => entry.raw.includes("TODO_STACK_APPLY"));
+  // One in 0.2.1 (the fix) and one in 0.1.0 (the original apply entry).
+  expect(entries.length).toBeGreaterThanOrEqual(2);
+  for (const entry of entries) {
+    // Not split, escaped, or mangled by the parser: every occurrence is whole in the raw source...
+    expect(entry.raw.match(/TODO_STACK_APPLY/g)?.length).toBe(entry.raw.match(/\bTODO_STACK_APPLY\b/g)?.length);
+    expect(entry.raw).not.toMatch(/TODO\\_STACK|TODO_\\STACK|STACK\\_APPLY|TODO_STACK_ APPLY/);
+    // ...and the parser keeps it whole inside an inline code span.
+    expect(entry.codespans.some((span) => span.includes("TODO_STACK_APPLY"))).toBe(true);
+  }
+  // The exact span text for each known entry survives parsing.
+  const spans = entries.flatMap((entry) => entry.codespans);
+  expect(spans).toContain("TODO_STACK_APPLY");
+  expect(spans).toContain("phantom add <KEY> TODO_STACK_APPLY --rotate");
+});
+
+test("marker survival check detects a mangled TODO_STACK_APPLY marker", () => {
+  const whole = codespansByEntry("- wrote `TODO_STACK_APPLY` once\n");
+  expect(whole[0].codespans).toEqual(["TODO_STACK_APPLY"]);
+  // Emphasis parsing eats underscores outside code spans, so the marker must stay in backticks.
+  const bare = codespansByEntry("- wrote TODO_STACK_APPLY once\n");
+  expect(bare[0].codespans).toEqual([]);
+  // Nested list items are visited too.
+  const nested = codespansByEntry("- outer\n  - inner `TODO_STACK_APPLY`\n");
+  expect(nested.some((entry) => entry.codespans.includes("TODO_STACK_APPLY"))).toBe(true);
+});
+
+function entryLinks(entry: { tokens: { type: string; tokens?: unknown[] }[] }): { text: string; href: string }[] {
+  const links: { text: string; href: string }[] = [];
+  const walk = (tokens: unknown[]) => {
+    for (const token of tokens as { type: string; text?: string; href?: string; tokens?: unknown[] }[]) {
+      if (token.type === "link") links.push({ text: token.text ?? "", href: token.href ?? "" });
+      if (token.tokens) walk(token.tokens);
+    }
+  };
+  walk(entry.tokens);
+  return links;
+}
+
+test("parsed changelog entry keeps Markdown link text and destination", () => {
+  const entry = "- See [Phantom](https://phm.dev) for secrets and the [docs](https://stack.ashlr.ai/docs \"Docs\").\n";
+  const [item] = marked.lexer(entry).flatMap((token) => (token.type === "list" ? token.items : []));
+  expect(item.raw).toContain("[Phantom](https://phm.dev)");
+  expect(entryLinks(item)).toEqual([
+    { text: "Phantom", href: "https://phm.dev" },
+    { text: "docs", href: "https://stack.ashlr.ai/docs" },
+  ]);
+});
+
+test("published 0.1.0 apply entry keeps its Phantom link text and destination", async () => {
+  const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
+  const release = published.split("## 0.1.0 — 2026-04-19 (superseded by 0.1.1)\n")[1]?.split("\n## ")[0];
+  const entries = marked.lexer(release ?? "").flatMap((token) => (token.type === "list" ? token.items : []));
+  const applyEntry = entries.find((item) => item.raw.startsWith("- **`stack apply [recipe-id]`**"));
+  expect(applyEntry).toBeDefined();
+  expect(applyEntry?.raw).toContain("[Phantom](https://phm.dev)");
+  expect(entryLinks(applyEntry as never)).toContainEqual({ text: "Phantom", href: "https://phm.dev" });
+
+  const html = await marked.parse(applyEntry?.raw ?? "");
+  expect(html).toContain('<a href="https://phm.dev">Phantom</a>');
+});
+
+// Ordered release versions (`## 0.3.0 …`, `## [0.2.0] …`) found in a changelog; "Unreleased" is skipped.
+function releaseVersions(markdown: string): string[] {
+  return marked
+    .lexer(markdown)
+    .flatMap((token) =>
+      token.type === "heading" && token.depth === 2 ? [token.text.match(/^\[?(\d+\.\d+\.\d+)\]?(?:\s|$)/)?.[1] ?? null] : [],
+    )
+    .filter((version): version is string => version !== null);
+}
+
+test("site changelog lists the same release versions, in the same order, as the root changelog", () => {
+  const source = readFileSync(join(root, "CHANGELOG.md"), "utf8");
+  const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
+  const expected = releaseVersions(source);
+  expect(expected.length).toBeGreaterThan(0);
+  expect(releaseVersions(published)).toEqual(expected);
+});
+
+test("release version comparison detects a missing or reordered heading", () => {
+  const source = "# Changelog\n\n## Unreleased\n\n## 0.3.0 (2026-10-31)\n\n## [0.2.0] — 2026-04-23\n\n## 0.1.1 — 2026-04-19\n";
+  const missing = source.replace("## [0.2.0] — 2026-04-23\n\n", "");
+  const reordered = source.replace("## 0.3.0 (2026-10-31)", "## 0.2.0-tmp").replace("## [0.2.0] — 2026-04-23", "## 0.3.0 (2026-10-31)").replace("## 0.2.0-tmp", "## [0.2.0] — 2026-04-23");
+  expect(releaseVersions(source)).toEqual(["0.3.0", "0.2.0", "0.1.1"]);
+  expect(releaseVersions(missing)).not.toEqual(releaseVersions(source));
+  expect(releaseVersions(reordered)).toEqual(["0.2.0", "0.3.0", "0.1.1"]);
+});
+
+
+test("original apply entry points back to the placeholder fix in the published release history", () => {
+  const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
+  const tokens = marked.lexer(published);
+  const fixRelease = tokens.findIndex((token) => token.type === "heading" && token.depth === 2 && token.text === "0.2.1 (2026-10-16)");
+  const originalRelease = tokens.findIndex(
+    (token) => token.type === "heading" && token.depth === 2 && token.text === "0.1.0 — 2026-04-19 (superseded by 0.1.1)",
+  );
+  expect(fixRelease).toBeGreaterThanOrEqual(0);
+  expect(originalRelease).toBeGreaterThan(fixRelease);
+
+  const nextRelease = (start: number) => {
+    const index = tokens.findIndex((token, i) => i > start && token.type === "heading" && token.depth === 2);
+    return index === -1 ? tokens.length : index;
+  };
+  const entriesInRelease = (start: number) =>
+    tokens.slice(start + 1, nextRelease(start)).flatMap((token) => (token.type === "list" ? token.items : []));
+
+  const fixes = entriesInRelease(fixRelease).filter((entry) =>
+    entry.raw.startsWith("- **`stack apply` stops attempting to write placeholder secrets.**"),
+  );
+  expect(fixes).toHaveLength(1);
+  expect(fixes[0].raw).toContain("The wiring step never writes to the vault or fills in missing values.");
+
+  const originals = entriesInRelease(originalRelease).filter((entry) =>
+    entry.raw.startsWith("- **`stack apply [recipe-id]`**"),
+  );
+  expect(originals).toHaveLength(1);
+  expect(originals[0].raw).toContain("but those calls failed; the 0.2.1 fix above removed the attempts.");
+  expect(originals[0].raw).toContain("Wiring no longer attempts to write placeholder values");
+});
+
+
+test("Original PR 752: a hyphenated-word entry retains its hyphenated text through the parser", () => {
+  const input = [
+    "## 0.4.0",
+    "",
+    "### Fixed",
+    "",
+    "- Fixed the well-known, long-standing, state-of-the-art re-run bug in non-interactive mode.",
+    "- Kept self-hosted, pre-1.0, e-mail-style and cross-platform names like `--dry-run` intact.",
+    "- Trailing hyphen- and leading -dash words stay as written.",
+    "",
+    "## 0.3.0",
+    "",
+    "### Added",
+    "",
+    "- Plain entry without hyphens.",
+    "",
+  ].join("\n");
+  expect(sectionEntries(input, "0.4.0", "Fixed")).toEqual([
+    "Fixed the well-known, long-standing, state-of-the-art re-run bug in non-interactive mode.",
+    "Kept self-hosted, pre-1.0, e-mail-style and cross-platform names like `--dry-run` intact.",
+    "Trailing hyphen- and leading -dash words stay as written.",
+  ]);
+  // Entries in the other version are not affected.
+  expect(sectionEntries(input, "0.3.0", "Added")).toEqual(["Plain entry without hyphens."]);
+});
+
+test("Original PR 752: published changelog retains hyphenated words in its Unreleased Fixed section", () => {
+  const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
+  const entries = sectionEntries(published, "Unreleased", "Fixed");
+  expect(entries.length).toBeGreaterThanOrEqual(1);
+  const fleetEntry = entries[0];
+  // Hyphenated words must survive the lexer round-trip intact.
+  expect(fleetEntry).toContain("non-tail");
+  expect(fleetEntry).toContain("non-integer");
+  expect(fleetEntry).toContain("oversized");
+});
+
+
+// Walks the lexer tokens and returns each depth-2 release with its depth-3 subsections and
+// list entries, in the order they appear in the file.
+function releaseSections(markdown: string) {
+  const releases: { title: string; subsections: string[]; entries: string[] }[] = [];
+  for (const token of marked.lexer(markdown)) {
+    if (token.type === "heading" && token.depth === 2) {
+      releases.push({ title: token.text, subsections: [], entries: [] });
+    } else if (releases.length > 0 && token.type === "heading" && token.depth === 3) {
+      releases[releases.length - 1].subsections.push(token.text);
+    } else if (releases.length > 0 && token.type === "list") {
+      for (const item of token.items) releases[releases.length - 1].entries.push(item.raw);
+    }
+  }
+  return releases;
+}
+
+test("Original PR 794: two successive releases keep their headings, subsections and entries in source order", () => {
+  const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
+  const releases = releaseSections(published);
+  const newer = releases.findIndex((release) => release.title === "0.3.0 (2026-10-31)");
+  expect(newer).toBeGreaterThanOrEqual(0);
+  // 0.2.2 is the very next release heading after 0.3.0.
+  expect(releases[newer + 1]?.title).toBe("0.2.2 (2026-10-25)");
+  const [first, second] = releases.slice(newer, newer + 2);
+
+  expect(first.subsections.slice(0, 3)).toEqual(["Added", "Changed and fixed", "Compatibility notes"]);
+  expect(second.subsections.slice(0, 3)).toEqual(["Changed", "Added", "Templates"]);
+  expect(first.entries[0]).toStartWith("- Fleet diagnostics: lanes, supply");
+  expect(second.entries[0]).toStartWith("- Release: npm publishing relies only on npm trusted publishing");
+
+  // Every entry appears in the file after the previous one, and each release's entries
+  // all fall between its own heading and the next release heading.
+  const bounds = [
+    published.indexOf("\n## 0.3.0 (2026-10-31)\n"),
+    published.indexOf("\n## 0.2.2 (2026-10-25)\n"),
+    published.indexOf("\n## 0.2.1 (2026-10-16)\n"),
+  ];
+  expect(bounds[0]).toBeGreaterThanOrEqual(0);
+  expect(bounds[0]).toBeLessThan(bounds[1]);
+  expect(bounds[1]).toBeLessThan(bounds[2]);
+  [first, second].forEach((release, index) => {
+    let cursor = bounds[index];
+    expect(release.entries.length).toBeGreaterThan(0);
+    for (const entry of release.entries) {
+      const position = published.indexOf(entry.trimEnd(), cursor);
+      expect(position, entry.slice(0, 60)).toBeGreaterThan(cursor);
+      expect(position).toBeLessThan(bounds[index + 1]);
+      cursor = position;
+    }
+  });
 });

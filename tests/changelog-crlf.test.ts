@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { malformedHeadings, sectionEntries, versionSections } from "./changelog-parser-utils";
+import { inlineLinks, malformedHeadings, sectionEntries, versionBodies, versionSections } from "./changelog-parser-utils";
 import { readFileSync } from "node:fs";
 
 const fixture = readFileSync(new URL("./__fixtures__/changelog-crlf.md", import.meta.url), "utf8");
@@ -46,4 +46,48 @@ test("shared parser utils return identical results for CRLF and LF", () => {
   expect(versionSections(fixture)).toEqual(versionSections(lf));
   expect(malformedHeadings(fixture)).toEqual(malformedHeadings(lf));
   expect(sectionEntries(fixture).flatMap((s) => s.entries)).toEqual(["Second version entry.", "First version entry."]);
+});
+
+test("versionBodies and inlineLinks keep CRLF text clean and match LF", () => {
+  const lf = fixture.replace(/\r\n/g, "\n");
+  const bodies = versionBodies(fixture);
+  expect(bodies).toEqual(versionBodies(lf));
+  expect([...bodies.keys()]).toEqual(["## 0.2.0 (2026-05-01)", "## 0.1.0 (2026-04-19)"]);
+  expect([...bodies.values()].some((b) => b.includes("\r"))).toBe(false);
+  const withLink = "## 1.0.0 (2026-01-01)\r\n\r\n### Added\r\n\r\n- See [docs](https://example.com/a \"T\") now.\r\n";
+  expect(inlineLinks(versionBodies(withLink).get("## 1.0.0 (2026-01-01)") ?? "")).toEqual([
+    { label: "docs", destination: "https://example.com/a" },
+  ]);
+});
+
+// --- Tests against the real site CHANGELOG.md (CRLF converted) ---
+
+const realSiteLf = readFileSync(new URL("../packages/site/src/data/CHANGELOG.md", import.meta.url), "utf8")
+  .replace(/\r\n/g, "\n");
+const realSiteCrlf = realSiteLf.replace(/\n/g, "\r\n");
+
+test("real site CHANGELOG.md is a valid CRLF fixture when converted", () => {
+  expect(realSiteCrlf.includes("\r\n")).toBe(true);
+  expect(realSiteCrlf.replace(/\r\n/g, "").includes("\n")).toBe(false);
+});
+
+test("real site CHANGELOG.md version/sections/entries parse identically from CRLF vs LF (local parser)", () => {
+  expect(parse(realSiteCrlf)).toEqual(parse(realSiteLf));
+  expect(parse(realSiteCrlf).length).toBeGreaterThan(0);
+});
+
+test("real site CHANGELOG.md sectionEntries identical under CRLF and LF", () => {
+  expect(sectionEntries(realSiteCrlf)).toEqual(sectionEntries(realSiteLf));
+});
+
+test("real site CHANGELOG.md versionBodies and versionSections identical under CRLF and LF", () => {
+  expect(versionSections(realSiteCrlf)).toEqual(versionSections(realSiteLf));
+  expect([...versionBodies(realSiteCrlf)]).toEqual([...versionBodies(realSiteLf)]);
+});
+
+test("real site CHANGELOG.md malformedHeadings and inlineLinks identical under CRLF and LF", () => {
+  expect(malformedHeadings(realSiteCrlf)).toEqual(malformedHeadings(realSiteLf));
+  expect(inlineLinks([...versionBodies(realSiteCrlf).values()].join("\n"))).toEqual(
+    inlineLinks([...versionBodies(realSiteLf).values()].join("\n")),
+  );
 });

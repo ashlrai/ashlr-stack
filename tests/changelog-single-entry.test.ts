@@ -10,3 +10,22 @@ test("single-section, single-entry changelog yields the section and its entry on
   ]);
   expect(versionSections(fixture)).toHaveLength(1);
 });
+
+test("site-style single-section fixture yields its one section and entry", () => {
+  const site = readFileSync(new URL("./__fixtures__/changelog-site-single-section.md", import.meta.url), "utf8");
+  expect(sectionEntries(site)).toEqual([
+    {
+      version: "## Unreleased",
+      section: "Changed",
+      entries: [
+        "`stack apply` does not create placeholder secrets; supply required missing secrets as real values through Phantom (#1).",
+      ],
+    },
+  ]);
+  expect(versionSections(site)).toEqual([
+    {
+      heading: "## Unreleased",
+      body: "\n### Changed\n\n- `stack apply` does not create placeholder secrets; supply required missing secrets as real values through Phantom (#1).\n\n",
+    },
+  ]);
+});
