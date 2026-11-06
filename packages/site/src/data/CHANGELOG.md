@@ -16,6 +16,21 @@
 
 - Setup, README and package READMEs separate the source version from the recorded npm publication (0.3.1 for `@ashlr/stack-core`, `@ashlr/stack` and `ashlr-stack-mcp`) and state that the published CLI and MCP packages declare Node.js 20 or newer. Source development uses Bun (#356, #361, #363).
 
+## 0.3.3 (2026-11-05)
+
+This source candidate carries forward the 0.3.2 main-line release and subsequent integrated changes. The apply behavior described under Unreleased also ships in this candidate; that entry remains there while documentation links to it.
+
+### Fixed
+
+- The MCP server exits when its host closes stdin, and optional tool arguments reject JSON `null` as a type error.
+- `stack scan` aligns next-step suggestions under their heading.
+- Fleet JSONL reads enforce their byte limit, including short reads and growing inputs; Homebrew formula rendering preserves literal placeholders.
+
+### Changed
+
+- Release qualification requires CI evidence for the exact immutable tagged source, and registry publication reconciles release state before publishing.
+- Documentation distinguishes source capabilities from published versions and provider acceptance.
+
 ## 0.3.2 (2026-11-04)
 
 This release carries main forward from 0.3.0. The 0.3.1 packages were published from a documentation-only release branch, so 0.3.2 is the first release whose source is the main line since 0.3.0.
