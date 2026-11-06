@@ -25,3 +25,11 @@ test("the root CHANGELOG.md parses without throwing into a nonempty result", () 
   expect(releases.length).toBeGreaterThan(0);
   expect(releases.some((r) => r.entries.length > 0)).toBe(true);
 });
+
+test("empty input fixture parses to no releases without throwing", () => {
+  const empty = readFileSync(join(import.meta.dir, "__fixtures__/changelog-empty-input.md"), "utf8");
+  expect(empty).toBe("");
+  expect(() => parseReleases(empty)).not.toThrow();
+  expect(parseReleases(empty)).toEqual([]);
+  expect(parseReleases("\n\n  \n")).toEqual([]);
+});

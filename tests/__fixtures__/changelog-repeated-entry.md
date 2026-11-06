@@ -2,13 +2,21 @@
 
 ## Unreleased
 
+- Same pending entry.
+- Same pending entry.
+
+## 0.9.0 (2026-11-03)
+
 ### Fixed
 
-- Repeated entry text.
-- Between the two.
-- Repeated entry text.
+- Repeated fix.
+- Unique fix between.
+- Repeated fix.
 
-## 0.3.0 (2026-10-31)
+### Added
 
-- Repeated entry text.
-- Repeated entry text.
+- Repeated fix.
+
+## 0.8.0 (2026-11-02)
+
+- Repeated fix.

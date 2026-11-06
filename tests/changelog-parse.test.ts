@@ -49,6 +49,9 @@ test("site CHANGELOG.md parses 0.3.0 with its date and entries", () => {
   const v030 = site.find((v) => v.version === "0.3.0");
   expect(v030?.date).toBe("2026-10-31");
   expect(v030?.entries.length).toBeGreaterThan(0);
+  // Inline-code text in entries is retained by the parser (backticks preserved).
+  expect(v030?.entries[0]).toContain("`stack fleet`");
+  expect(v030?.entries[1]).toContain("`stack doctor --repos`");
   for (const v of site) if (v.version) expect(v.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
 });
 
@@ -168,6 +171,22 @@ test("inline-code fixture keeps backtick text verbatim in parsed entries", () =>
   expect(entries[1]).toContain("## not a heading");
 });
 
+test("site CHANGELOG.md retains inline-code text (backticks) in parsed entries", () => {
+  const site = parseChangelog(read("../packages/site/src/data/CHANGELOG.md"));
+  const v030 = site.find((v) => v.version === "0.3.0");
+  expect(v030).toBeDefined();
+  // Entries that start with inline code retain their backtick delimiters.
+  expect(v030!.entries).toContain(
+    "`stack doctor --repos` reports default-branch CI and open PR counts through gh. Only --json may be combined with this mode.",
+  );
+  expect(v030!.entries).toContain(
+    "`stack upgrade --apply` supports npm global upgrades with health checks and rollback; --dry-run remains non-installing. Review installer constraints before use.",
+  );
+  // Inline code within entries is also preserved.
+  expect(v030!.entries.some((e) => e.includes("`stack apply`"))).toBe(true);
+  expect(v030!.entries.some((e) => e.includes("`stack fleet`"))).toBe(true);
+});
+
 test("bold-entry fixture keeps ** and __ markers verbatim in parsed entries", () => {
   // Documented representation: entries are raw Markdown, so bold markers are retained, not stripped.
   expect(parseChangelog(read("./__fixtures__/changelog-bold-entry.md"))).toEqual([
@@ -234,6 +253,26 @@ test("blank and whitespace-only lines never add, drop or reorder entries across 
   expect(parseChangelog(compact)).toEqual(expected);
 });
 
+test("blank lines inside an entry (continuation, nested bullet, fenced block) never create extra entries", () => {
+  const md = read("./__fixtures__/changelog-blank-line-continuation.md");
+  const expected: ChangelogVersion[] = [
+    {
+      version: "0.8.0",
+      date: "2026-11-03",
+      entries: [
+        "Entry with a continuation paragraph.",
+        "Entry with a fenced block containing blank lines.",
+        "Last entry.",
+      ],
+    },
+    { version: "0.7.0", date: "2026-11-02", entries: ["Older entry."] },
+  ];
+  expect(parseChangelog(md)).toEqual(expected);
+  expect(parseChangelog(md.replace(/\n/g, "\r\n"))).toEqual(expected);
+  // Doubling every blank line must not change the result either.
+  expect(parseChangelog(md.replace(/\n\n/g, "\n\n\n"))).toEqual(expected);
+});
+
 test("site CHANGELOG.md parses the same with all blank lines removed", () => {
   const md = read("../packages/site/src/data/CHANGELOG.md");
   const compact = md.split("\n").filter((l) => l.trim() !== "").join("\n");
@@ -257,6 +296,17 @@ test("site CHANGELOG.md without final newline parses the final entry completely"
   expect(last.entries.at(-1)).toBe(
     "47 tests across 12 files; fetch-mocked provider tests and fake-phantom integration harness.",
   );
+});
+
+test("site no-final-newline fixture is the real CHANGELOG.md minus its trailing newline, and shared parsers keep the last entry", () => {
+  const real = read("../packages/site/src/data/CHANGELOG.md");
+  const bare = read("./__fixtures__/changelog-no-final-newline-site.md");
+  expect(bare).toBe(real.replace(/\n+$/, ""));
+  const lastEntry = "47 tests across 12 files; fetch-mocked provider tests and fake-phantom integration harness.";
+  expect(sectionEntries(bare).at(-1)?.entries.at(-1)).toBe(lastEntry);
+  expect(versionSections(bare).at(-1)?.body.trimEnd().endsWith(lastEntry)).toBe(true);
+  expect([...versionBodies(bare).values()].at(-1)?.trimEnd().endsWith(lastEntry)).toBe(true);
+  expect(sectionEntries(bare)).toEqual(sectionEntries(real));
 });
 
 test("empty input returns no changelog sections from any parser", () => {
@@ -439,13 +489,280 @@ test("punctuation fixture keeps every entry's punctuation verbatim", () => {
   ]);
 });
 
-test("repeated-entry fixture keeps both identical entries in their original order", () => {
+test("repeated-entry fixture keeps both identical entries in source order, never merged or deduplicated", () => {
   const md = read("./__fixtures__/changelog-repeated-entry.md");
+  const expected: ChangelogVersion[] = [
+    { version: null, date: null, entries: ["Same pending entry.", "Same pending entry."] },
+    {
+      version: "0.9.0",
+      date: "2026-11-03",
+      entries: ["Repeated fix.", "Unique fix between.", "Repeated fix.", "Repeated fix."],
+    },
+    { version: "0.8.0", date: "2026-11-02", entries: ["Repeated fix."] },
+  ];
+  expect(parseChangelog(md)).toEqual(expected);
+  expect(parseChangelog(md.replace(/\n/g, "\r\n"))).toEqual(expected);
+  // Per-section view: the repeat inside "Fixed" and the one in "Added" stay separate.
+  expect(sectionEntries(md).map((s) => [s.section, s.entries])).toEqual([
+    ["Fixed", ["Repeated fix.", "Unique fix between.", "Repeated fix."]],
+    ["Added", ["Repeated fix."]],
+  ]);
+});
+
+test("heading-only fixture returns every version with no entries from any parser without throwing", () => {
+  const md = read("./__fixtures__/changelog-heading-only.md");
+  expect(() => {
+    parseChangelog(md);
+    versionSections(md);
+    sectionEntries(md);
+    versionBodies(md);
+    malformedHeadings(md);
+    inlineLinks(md);
+  }).not.toThrow();
   expect(parseChangelog(md)).toEqual([
-    { version: null, date: null, entries: ["Repeated entry text.", "Between the two.", "Repeated entry text."] },
-    { version: "0.3.0", date: "2026-10-31", entries: ["Repeated entry text.", "Repeated entry text."] },
+    { version: "0.2.0", date: "2026-04-23", entries: [] },
+    { version: "0.1.0", date: "2026-04-19", entries: [] },
   ]);
-  expect(sectionEntries(md).map((s) => s.entries)).toEqual([
-    ["Repeated entry text.", "Between the two.", "Repeated entry text."],
+  expect(versionSections(md).map((s) => s.heading)).toEqual(["## 0.2.0 (2026-04-23)", "## 0.1.0 (2026-04-19)"]);
+  expect(sectionEntries(md)).toEqual([]);
+  expect([...versionBodies(md).values()].map((b) => b.trim())).toEqual(["", ""]);
+  expect(malformedHeadings(md)).toEqual([]);
+  expect(inlineLinks(md)).toEqual([]);
+  // A lone heading with no newline and no body is still a version with no entries.
+  expect(parseChangelog("## Unreleased")).toEqual([{ version: null, date: null, entries: [] }]);
+});
+
+test("blank-line-sections fixture keeps entries on either side of a blank line in their section and order", () => {
+  const md = read("./__fixtures__/changelog-blank-line-sections.md");
+  const sections = [
+    {
+      version: "## 0.9.0 (2026-11-03)",
+      section: "Fixed",
+      entries: ["Fixed before blank.", "Fixed after blank.", "Fixed after whitespace line."],
+    },
+    { version: "## 0.9.0 (2026-11-03)", section: "Added", entries: ["Added before blank.", "Added after blank."] },
+  ];
+  expect(sectionEntries(md)).toEqual(sections);
+  expect(parseChangelog(md)).toEqual([
+    { version: "0.9.0", date: "2026-11-03", entries: sections.flatMap((s) => s.entries) },
   ]);
+  // CRLF endings and removing every blank line must not move an entry between sections.
+  expect(sectionEntries(md.replace(/\n/g, "\r\n"))).toEqual(sections);
+  expect(sectionEntries(md.split("\n").filter((l) => l.trim() !== "").join("\n"))).toEqual(sections);
+});
+
+test("numbered-version fixture puts each multi-digit version heading's entry in its own section", () => {
+  const md = read("./__fixtures__/changelog-numbered-version.md");
+  expect(parseChangelog(md)).toEqual([
+    { version: "10.12.134", date: "2026-11-03", entries: ["Entry for the multi-digit version."] },
+    { version: "1.10.0", date: "2026-11-02", entries: ["Entry for 1.10.0, not 1.1.0."] },
+    { version: "1.1.0", date: "2026-11-01", entries: ["Entry for 1.1.0."] },
+  ]);
+  expect(sectionEntries(md)).toEqual([
+    { version: "## 10.12.134 (2026-11-03)", section: "Added", entries: ["Entry for the multi-digit version."] },
+    { version: "## 1.10.0 (2026-11-02)", section: "Fixed", entries: ["Entry for 1.10.0, not 1.1.0."] },
+    { version: "## 1.1.0 (2026-11-01)", section: "Changed", entries: ["Entry for 1.1.0."] },
+  ]);
+  expect([...versionBodies(md).keys()]).toEqual([
+    "## 10.12.134 (2026-11-03)",
+    "## 1.10.0 (2026-11-02)",
+    "## 1.1.0 (2026-11-01)",
+  ]);
+  expect(malformedHeadings(md)).toEqual([]);
+});
+
+test("CRLF fixture and both real CHANGELOG.md files parse like their LF equivalents", () => {
+  const sources = [
+    read("./__fixtures__/changelog-crlf.md"),
+    read("../CHANGELOG.md"),
+    read("../packages/site/src/data/CHANGELOG.md"),
+  ];
+  for (const source of sources) {
+    const lf = source.replace(/\r\n/g, "\n");
+    const crlf = lf.replace(/\n/g, "\r\n");
+    const parsed = parseChangelog(crlf);
+    expect(parsed.length).toBeGreaterThan(0);
+    expect(parsed).toEqual(parseChangelog(lf));
+    expect(parsed.flatMap((v) => v.entries).some((e) => e.includes("\r"))).toBe(false);
+    expect(sectionEntries(crlf)).toEqual(sectionEntries(lf));
+    expect(versionSections(crlf).some((s) => s.body.includes("\r") || s.heading.includes("\r"))).toBe(false);
+    expect(versionSections(crlf)).toEqual(versionSections(lf));
+    expect([...versionBodies(crlf)]).toEqual([...versionBodies(lf)]);
+    expect(malformedHeadings(crlf)).toEqual(malformedHeadings(lf));
+  }
+  expect(parseChangelog(sources[0])).toEqual([
+    { version: "0.2.0", date: "2026-05-01", entries: ["Second version entry."] },
+    { version: "0.1.0", date: "2026-04-19", entries: ["First version entry."] },
+  ]);
+});
+test("root CHANGELOG.md retains inline-code text in parsed entries", () => {
+  const root = parseChangelog(read("../CHANGELOG.md"));
+  const v030 = root.find((v) => v.version === "0.3.0");
+  expect(v030).not.toBeUndefined();
+  // Inline-code entries retain backtick markup in parsed text.
+  expect(v030?.entries[0]).toContain("`stack fleet`");
+  expect(v030?.entries[1]).toContain("`stack doctor --repos`");
+  expect(v030?.entries[3]).toContain("`stack upgrade --apply`");
+  // All entries that contain backticks retain matching pairs.
+  for (const entry of v030?.entries ?? []) {
+    if (entry.includes("`")) {
+      const count = (entry.match(/`/g) ?? []).length;
+      expect(count % 2).toBe(0);
+    }
+  }
+});
+
+test("multi-entry section fixture from CHANGELOG.md keeps entries in source order", () => {
+  const fixture = read("./__fixtures__/changelog-source-multi-entry-section.md");
+  const [unreleased] = parseChangelog(fixture);
+  expect(unreleased.entries).toHaveLength(3);
+  expect(unreleased.entries.map((e) => /\(#(\d+)\)\.$/.exec(e)?.[1])).toEqual(["360", "354", "363"]);
+  expect(unreleased.entries[0]).toStartWith("Fleet JSONL reads");
+  expect(unreleased.entries[1]).toStartWith("The release workflow renders");
+  expect(unreleased.entries[2]).toStartWith("The MCP Registry workflow");
+  expect(sectionEntries(fixture)).toEqual([
+    { version: "## Unreleased", section: "Fixed", entries: unreleased.entries },
+  ]);
+});
+
+test("multi-entry fixture entries are still the Unreleased Fixed entries of CHANGELOG.md", () => {
+  const fixture = parseChangelog(read("./__fixtures__/changelog-source-multi-entry-section.md"))[0].entries;
+  const source = sectionEntries(read("../CHANGELOG.md")).find(
+    (g) => g.version === "## Unreleased" && g.section === "Fixed",
+  );
+  expect(fixture).toEqual(source?.entries);
+});
+
+test("site two-entry fixture returns two consecutive entries in source order", () => {
+  const fixture = read("./__fixtures__/changelog-site-two-entry-order.md");
+  const [unreleased] = parseChangelog(fixture);
+  expect(unreleased.entries).toHaveLength(2);
+  expect(unreleased.entries[0]).toStartWith("Fleet JSONL reads");
+  expect(unreleased.entries[1]).toStartWith("The release workflow renders");
+  expect(sectionEntries(fixture)).toEqual([
+    { version: "## Unreleased", section: "Fixed", entries: unreleased.entries },
+  ]);
+});
+
+test("site two-entry fixture is the first two consecutive Unreleased Fixed entries of the site CHANGELOG.md", () => {
+  const fixture = parseChangelog(read("./__fixtures__/changelog-site-two-entry-order.md"))[0].entries;
+  const source = sectionEntries(read("../packages/site/src/data/CHANGELOG.md")).find(
+    (g) => g.version === "## Unreleased" && g.section === "Fixed",
+  );
+  expect(fixture).toEqual(source?.entries.slice(0, 2));
+});
+
+test("multi-version fixture keeps each entry under its own version heading", () => {
+  const fixture = read("./__fixtures__/changelog-source-multi-version.md");
+  expect(parseChangelog(fixture).map((v) => [v.version, v.entries.length])).toEqual([
+    [null, 1],
+    ["0.3.0", 2],
+  ]);
+  const groups = sectionEntries(fixture);
+  expect(groups.map((g) => [g.version, g.section])).toEqual([
+    ["## Unreleased", "Changed"],
+    ["## 0.3.0 (2026-10-31)", "Added"],
+  ]);
+  // Neither version's entries leak into the other.
+  expect(groups[0].entries.some((e) => groups[1].entries.includes(e))).toBe(false);
+});
+
+test("multi-version fixture entries are verbatim from the matching version and section of CHANGELOG.md", () => {
+  const source = sectionEntries(read("../CHANGELOG.md"));
+  const find = (version: string, section: string) =>
+    source.find((g) => g.version === version && g.section === section)?.entries ?? [];
+  const [changed, added] = sectionEntries(read("./__fixtures__/changelog-source-multi-version.md"));
+  expect(changed.entries).toEqual(find("## Unreleased", "Changed").slice(0, 1));
+  expect(added.entries).toEqual(find("## 0.3.0 (2026-10-31)", "Added").slice(0, 2));
+  expect(added.entries[0]).toStartWith("Fleet diagnostics");
+});
+
+test("colon-and-comma fixture retains both punctuation marks in the parsed entry text", () => {
+  const [v] = parseChangelog(read("./__fixtures__/changelog-colon-comma.md"));
+  expect(v.entries).toEqual(["Fixed timeout handling: connections close cleanly, retries resume, and logs stay readable."]);
+  expect(v.entries[0]).toContain(": ");
+  expect(v.entries[0]).toContain(", ");
+});
+
+test("site CHANGELOG.md entry with a colon and commas keeps them in the parsed text", () => {
+  const unreleased = parseChangelog(read("../packages/site/src/data/CHANGELOG.md")).find((v) => v.version === null);
+  const entry = unreleased?.entries.find((e) => e.startsWith("Fleet JSONL reads"));
+  expect(entry).toContain("while reading: a non-tail read grows one buffer up to the cap, probes");
+});
+
+test("real CHANGELOG.md code-span fixture keeps each span and its contents in parsed entries", () => {
+  const fixture = read("./__fixtures__/changelog-real-code-span.md");
+  const lines = new Set(read("../CHANGELOG.md").split("\n"));
+  const [unreleased] = parseChangelog(fixture);
+  expect(unreleased.entries).toHaveLength(2);
+  // The fixture is verbatim CHANGELOG.md content, not a hand-written approximation.
+  for (const entry of unreleased.entries) expect(lines.has(`- ${entry}`)).toBe(true);
+
+  const spans = (e: string) => [...e.matchAll(/`([^`]+)`/g)].map((m) => m[1]);
+  // Spans holding `$`, `*` and `_` stay literal: no expansion, no emphasis stripping.
+  expect(spans(unreleased.entries[0])).toEqual(["$VERSION$", "$SHA_*$", "sed", "$"]);
+  expect(unreleased.entries[0]).toContain("(`$VERSION$` and the per-platform `$SHA_*$` values)");
+  // A span with a path and dot survives next to parentheses and a trailing `(#363)`.
+  expect(spans(unreleased.entries[1])).toEqual(["scripts/mcp-registry-gate.mjs"]);
+  expect(unreleased.entries[1]).toContain("(`scripts/mcp-registry-gate.mjs`)");
+  // The section parser agrees with parseChangelog on the same text.
+  expect(sectionEntries(fixture)[0].entries).toEqual(unreleased.entries);
+});
+
+
+test("Original PR 688: blank-lines-between-entries fixture returns both entries in order without blank entries", () => {
+  expect(parseChangelog(read("./__fixtures__/changelog-blank-lines.md"))).toEqual([
+    {
+      version: "0.2.0",
+      date: "2026-04-23",
+      entries: ["First entry.", "Second entry after three blank lines.", "Fix entry."],
+    },
+    { version: "0.1.0", date: "2026-04-19", entries: ["Old entry."] },
+  ]);
+});
+
+
+test("Original PR 703: whitespace-only input returns no changelog sections from any parser", () => {
+  for (const blank of [" ", "   \n", "\n\n\n", "\t\n \t\n", "\r\n\r\n", "  \n"]) {
+    expect(parseChangelog(blank)).toEqual([]);
+    expect(versionSections(blank)).toEqual([]);
+    expect(sectionEntries(blank)).toEqual([]);
+    expect(versionBodies(blank).size).toBe(0);
+    expect(malformedHeadings(blank)).toEqual([]);
+  }
+});
+
+
+test("Original PR 725: punctuation fixture keeps commas, colons, parentheses, and semicolons in parsed entry text", () => {
+  expect(parseChangelog(read("./__fixtures__/changelog-punctuation.md"))).toEqual([
+    {
+      version: "0.3.0",
+      date: "2026-10-31",
+      entries: [
+        "Added retry logic, with exponential backoff, for unreliable endpoints (see #123).",
+        "New provider for Cloudflare Workers: supports binding, streaming, and observability.",
+        "Fixed timeout handling: connections now close cleanly (fixes #456, closes #457).",
+        "Punctuation in entries: commas, colons (:) and parentheses () are all preserved.",
+      ],
+    },
+    {
+      version: "0.2.0",
+      date: "2026-04-23",
+      entries: [
+        "Updated configuration format (breaking: migrate your config file).",
+        "Renamed the `stack apply` flag: use `--apply` instead of `--run` (deprecated).",
+      ],
+    },
+    {
+      version: "0.1.0",
+      date: "2026-04-19",
+      entries: ["Initial release: core parsing, version detection, and changelog mirroring."],
+    },
+  ]);
+  // Spot-check individual punctuation characters survived the parse.
+  const all = parseChangelog(read("./__fixtures__/changelog-punctuation.md")).flatMap((v) => v.entries);
+  expect(all.some((e) => e.includes(", "))).toBe(true);
+  expect(all.some((e) => e.includes(": "))).toBe(true);
+  expect(all.some((e) => e.includes("("))).toBe(true);
+  expect(all.some((e) => e.includes("#123)"))).toBe(true);
 });

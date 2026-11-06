@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { marked, type Token, type Tokens } from "marked";
@@ -70,4 +70,21 @@ test("the published changelog keeps the Phantom link on the apply entry", () => 
     .find((item) => item.raw.startsWith("- **`stack apply [recipe-id]`**"));
   expect(entry).toBeDefined();
   expect(collectLinks(entry?.tokens ?? [])).toContainEqual({ label: "Phantom", href: "https://phm.dev" });
+});
+
+describe("PR581: link label and destination preservation", () => {
+  test("rendered entries keep the label as anchor text and the destination as href", async () => {
+    const html = await marked.parse(fixture);
+    expect(html).toContain('<a href="https://workers.dev">Cloudflare Workers</a>');
+    expect(html).toContain('<a href="docs/adding-a-provider.md">adding a provider guide</a>');
+    expect(html).toContain('<a href="https://github.com/ashlrai/ashlr-stack">GitHub repository</a>');
+  });
+
+  test("the published changelog's 0.1.0 apply entry keeps its Phantom link", () => {
+    const published = readFileSync(join(import.meta.dir, "../src/data/CHANGELOG.md"), "utf8");
+    expect(linksFor(published, "0.1.0 — 2026-04-19 (superseded by 0.1.1)")).toContainEqual({
+      label: "Phantom",
+      href: "https://phm.dev",
+    });
+  });
 });
