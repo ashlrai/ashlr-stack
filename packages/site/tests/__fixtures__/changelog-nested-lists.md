@@ -4,14 +4,14 @@
 
 ### Added
 
-- Parent alpha:
-  - child alpha one
-  - child alpha two
-    - grandchild alpha
+- Parent one:
+  - child 1a
+    - grandchild 1a-i
+    - grandchild 1a-ii
+  - child 1b
 - Flat entry
-- Parent beta
-  1. ordered beta one
-  2. ordered beta two
+- Parent two with `code` and a [link](https://example.com)
+  - child 2a
 
 ## 0.1.0 (2026-01-01)
 

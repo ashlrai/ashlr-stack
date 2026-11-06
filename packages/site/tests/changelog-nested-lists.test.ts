@@ -91,7 +91,7 @@ function entriesByVersion(markdown: string): Record<string, string[]> {
 }
 
 test("fixture entry retains parent and nested list text in order", () => {
-  const md = readFileSync(join(import.meta.dir, "__fixtures__/changelog-nested-lists.md"), "utf8");
+  const md = readFileSync(join(import.meta.dir, "__fixtures__/changelog-original-576.md"), "utf8");
   expect(entriesByVersion(md)).toEqual({
     "0.2.0 (2026-02-01)": [
       "Parent alpha:",
