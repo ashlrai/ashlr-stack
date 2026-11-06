@@ -99,6 +99,18 @@ describe("Stack Builder copyable output", () => {
     expect(output).toEqual({ plan: { commands: "", unsupported: [] }, mcp: "" });
   });
 
+  test("a single selection includes only the selected provider in generated commands", () => {
+    const supabase = PROVIDERS.find(({ name }) => name === "Supabase")!;
+    const sentry = PROVIDERS_REF.find(({ name }) => name === "sentry");
+    expect(sentry).toBeDefined();
+    const selected = joinProviderReferences([supabase], PROVIDERS_REF);
+    const supported = new Set(PROVIDERS_REF.map(({ name }) => name));
+    const output = planJoinedProviderCommands(selected, supported);
+
+    expect(output).toEqual({ commands: "stack add supabase", unsupported: [] });
+    expect(output.commands).not.toContain(sentry!.name);
+  });
+
   test("clearing a selection removes its service from generated output", () => {
     const supabase = PROVIDERS.find(({ name }) => name === "Supabase")!;
     const supported = new Set(PROVIDERS_REF.map(({ name }) => name));

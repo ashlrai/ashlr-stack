@@ -6,7 +6,7 @@
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
@@ -65,9 +65,9 @@ describe("MCP structured list tools", () => {
     return (res.content as Array<{ type: string; text: string }>)[0]?.text ?? "";
   }
 
-  function expectCliContract(report: unknown, command: string[]) {
+  function expectCliContract(report: unknown, command: string[], project = join(dir, "proj")) {
     const cli = spawnSync(process.execPath, [CLI_SRC, ...command, "--json"], {
-      cwd: join(dir, "proj"),
+      cwd: project,
       env: {
         PATH: [dirname(process.execPath), "/usr/bin", "/bin"].join(":"),
         HOME: join(dir, "home"),
@@ -93,6 +93,24 @@ describe("MCP structured list tools", () => {
     expect(report.services.map((s: { name: string }) => s.name)).toEqual(["openai"]);
   }, 15_000);
 
+  test("stack_list json: true returns an empty services array for an empty stack", async () => {
+    const project = join(dir, "empty-proj");
+    mkdirSync(project);
+    writeFileSync(join(project, ".stack.toml"), '[stack]\nversion = "1"\ntemplate = "starter"\n');
+    writeFileSync(join(project, ".stack.local.toml"), '[stack]\nproject_id = "stk_empty001"\n');
+    const res = await client.callTool({ name: "stack_list", arguments: { json: true, cwd: project } });
+    expect(res.isError).toBe(false);
+    const report = JSON.parse(text(res));
+    expect(report).toEqual({
+      schema: "ashlr.stack.list/v1",
+      project_id: "stk_empty001",
+      template: "starter",
+      services: [],
+    });
+    expect(text(res)).toBe(JSON.stringify(report));
+    expectCliContract(report, ["list"], project);
+  }, 15_000);
+
   test("stack_deps json: true returns the stack deps --json contract", async () => {
     const res = await client.callTool({ name: "stack_deps", arguments: { json: true } });
     expect(res.isError).toBe(false);
@@ -113,6 +131,23 @@ describe("MCP structured list tools", () => {
     expectCliContract(report, ["providers"]);
     expect(report.schema).toBe("ashlr.stack.providers/v1");
     expect(report.providers.length).toBe(report.total);
+  }, 15_000);
+
+  test("repeated stack_list json: true calls return equivalent JSON and leave the fixture unchanged", async () => {
+    const project = join(dir, "proj");
+    const snapshotFixture = () =>
+      readdirSync(project)
+        .sort()
+        .map((name) => [name, readFileSync(join(project, name), "utf8")]);
+    const before = snapshotFixture();
+
+    const first = await client.callTool({ name: "stack_list", arguments: { json: true } });
+    const second = await client.callTool({ name: "stack_list", arguments: { json: true } });
+    expect(first.isError).toBe(false);
+    expect(second.isError).toBe(false);
+    expect(JSON.parse(text(second))).toEqual(JSON.parse(text(first)));
+    expect(text(second)).toBe(text(first));
+    expect(snapshotFixture()).toEqual(before);
   }, 15_000);
 
   test("default stack_list call keeps human output", async () => {

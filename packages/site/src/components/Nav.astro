@@ -1,5 +1,6 @@
 ---
 import Logo from "./Logo.astro";
+import { PUBLISHED_VERSION } from "~/lib/site-facts.generated";
 ---
 
 <nav class="relative z-30" style="border-bottom: 1px solid var(--color-ink-600);">
@@ -7,7 +8,7 @@ import Logo from "./Logo.astro";
     <a href="/" class="flex items-center gap-3">
       <Logo variant="chip" size={22} idSuffix="-nav" />
       <span class="caption text-[color:var(--color-steel-300)] hidden sm:inline">
-        control plane · v0.1
+        control plane · v{PUBLISHED_VERSION}
       </span>
     </a>
 
