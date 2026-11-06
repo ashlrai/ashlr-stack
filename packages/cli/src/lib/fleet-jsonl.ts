@@ -16,6 +16,8 @@ export interface FleetReadOptions {
   tail?: boolean;
   /** Status for non-ENOENT I/O failures (default "invalid"). */
   ioStatus?: "invalid" | "unavailable";
+  /** Reject EOF before the initially observed size on non-tail reads. */
+  requireInitialSize?: boolean;
 }
 
 /** Bounded public state reads only: regular files, never links, never blocking on pipes. */
@@ -73,6 +75,7 @@ export async function readFleetText(
           if (!bytesRead) break;
           offset += bytesRead;
         }
+        if (options.requireInitialSize && offset < stat.size) throw new Error("Incomplete source");
         text = buffer.subarray(0, offset).toString("utf8");
       }
       return { status: "ok", text };

@@ -5,4 +5,3 @@
 ### Added
 
 - Only version entry.
-- Second line of the same body.
