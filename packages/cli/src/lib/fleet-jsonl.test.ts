@@ -338,7 +338,10 @@ test("initial-size option rejects a real truncation while the default remains un
       const unchanged = await readFleetJsonl(ordinary);
       console.log(JSON.stringify({ complete, initiallyEmpty, refused, unchanged }));
     `;
-      const child = spawnSync(process.execPath, ["--eval", source], { encoding: "utf8", timeout: 10_000 });
+      const child = spawnSync(process.execPath, ["--eval", source], {
+        encoding: "utf8",
+        timeout: 10_000,
+      });
       expect(child.status).toBe(0);
       expect(JSON.parse(child.stdout)).toEqual({
         complete: { status: "ok", rows: [{ event: "tick" }] },

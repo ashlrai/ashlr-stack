@@ -272,7 +272,10 @@ test("a journal truncated after its initial stat is invalid and cannot establish
       };
       console.log(JSON.stringify(await collectFleetSilent(${JSON.stringify(root)}, ${now})));
     `;
-    const child = spawnSync(process.execPath, ["--eval", source], { encoding: "utf8", timeout: 10_000 });
+    const child = spawnSync(process.execPath, ["--eval", source], {
+      encoding: "utf8",
+      timeout: 10_000,
+    });
     expect(child.status).toBe(0);
     const report = JSON.parse(child.stdout);
     expect(report.sources["metrics/jobs.jsonl"]).toBe("invalid");

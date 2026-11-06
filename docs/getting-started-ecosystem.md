@@ -8,8 +8,8 @@ This guide sets up four tools side by side: Phantom (`phm`), Locus (`locus`), St
 |---|---|---|---|
 | Phantom `@ashlr/phantom` | 3.29.15 | 3.29.15 | `npm view @ashlr/phantom version` |
 | Locus `locus-cli` | 0.5.0 | 0.5.1 | `npm view locus-cli version` |
-| Stack `@ashlr/stack` | 0.3.6 | <!-- fresh:begin version-pin -->0.3.6<!-- fresh:end --> | `npm view @ashlr/stack version` |
-| Stack MCP `ashlr-stack-mcp` | 0.3.6 | <!-- fresh:begin version-pin -->0.3.6<!-- fresh:end --> | `npm view ashlr-stack-mcp version` |
+| Stack `@ashlr/stack` | 0.3.6 | <!-- fresh:begin version-pin -->0.3.7<!-- fresh:end --> | `npm view @ashlr/stack version` |
+| Stack MCP `ashlr-stack-mcp` | 0.3.6 | <!-- fresh:begin version-pin -->0.3.7<!-- fresh:end --> | `npm view ashlr-stack-mcp version` |
 
 The Stack publication rows were independently verified on November 6, 2026. The other tool rows and walkthrough observations remain historical; check their current registry versions and installed help before setup.
 
