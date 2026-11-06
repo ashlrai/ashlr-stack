@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -373,6 +373,45 @@ describe("stack scan on an empty project directory (regression)", () => {
     expect(stdout).not.toContain("stack add");
     expect(existsSync(join(cwd, ".stack.toml"))).toBe(false);
   }, 15_000);
+
+  test("an empty directory scans to the documented empty result without any network access", () => {
+    // Preload traps fetch and raw sockets; any attempt is recorded in a marker
+    // file (and throws), so the assertion survives even if the CLI swallows errors.
+    const cwd = tmp({});
+    const trapDir = tmp({});
+    const marker = join(trapDir, "network-attempts.log");
+    const preload = join(trapDir, "no-network.ts");
+    writeFileSync(
+      preload,
+      `import net from "node:net";
+import { appendFileSync } from "node:fs";
+const trap = (what: string) => () => {
+  appendFileSync(${JSON.stringify(marker)}, what + "\\n");
+  throw new Error("network access attempted: " + what);
+};
+globalThis.fetch = trap("fetch") as unknown as typeof fetch;
+net.Socket.prototype.connect = trap("net.connect") as never;
+`,
+    );
+    const run = (args: string[]) =>
+      spawnSync("bun", ["--preload", preload, CLI_ENTRY, ...args], {
+        encoding: "utf8",
+        cwd,
+        env: { ...process.env, NO_COLOR: "1", CI: "1" },
+      });
+
+    const json = run(["scan", "--json", "--path", cwd]);
+    expect(json.status).toBe(0);
+    expect(json.stderr).toBe("");
+    expect(JSON.parse(json.stdout)).toEqual({ hits: [] });
+
+    const report = run(["scan", "--path", cwd]);
+    expect(report.status).toBe(0);
+    expect(report.stdout).toContain("No providers detected");
+
+    expect(existsSync(marker) ? readFileSync(marker, "utf8") : "").toBe("");
+    expect(existsSync(join(cwd, ".stack.toml"))).toBe(false);
+  }, 20_000);
 
   test("a directory holding only scaffold files reports no providers at any confidence", () => {
     const cwd = tmp({ ".gitkeep": "", "src/.gitkeep": "" });
