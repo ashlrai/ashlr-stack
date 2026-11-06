@@ -70,6 +70,24 @@ describe("ai/phantom-wire known placeholder as the entire template", () => {
     expect(verificationHintFor(name)).toBe(verificationHintFor("zzq"));
   });
 
+  it.each([
+    ["stripe", "Stripe: `stripe.webhooks.constructEvent` — HMAC-SHA256 with timestamp tolerance."],
+    ["clerk", "Clerk (svix): `new Webhook(secret).verify(body, headers)`."],
+    ["supabase", "Supabase: `x-supabase-signature` per Supabase's documented webhook scheme."],
+    [
+      "github",
+      "GitHub: `x-hub-signature-256` is `sha256=` + HMAC-SHA256 of the raw body.",
+    ],
+  ])("renders the %s hint slot as exactly its replacement value", (provider, hint) => {
+    // A known provider name is the whole template of the hint slot: the
+    // render is exactly the fixed replacement — no wrapper, no leftover
+    // `${...}` — and the stub carries that value once, on the TODO line.
+    expect(verificationHintFor(provider)).toBe(hint);
+    const stub = webhookStubFor(provider);
+    expect(stub.split(`//   // ${hint}\n`).length - 1).toBe(1);
+    expect(stub).not.toContain("${");
+  });
+
   it("emits the name where the `${provider}` slot stood — output equals the value it resolved to", () => {
     // The name spells the `provider` slot itself, so at the name sites the
     // emitted text is indistinguishable from an unfilled slot. The proof
