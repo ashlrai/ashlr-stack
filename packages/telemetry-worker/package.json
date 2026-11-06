@@ -2,6 +2,7 @@
   "name": "@ashlr/stack-telemetry-worker",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
   "description": "Cloudflare Worker that accepts opt-in usage telemetry from the Stack CLI.",
   "type": "module",
   "scripts": {

@@ -46,3 +46,52 @@ test("the real CHANGELOG.md parses the same when converted to CRLF", () => {
   expect(versions.length).toBeGreaterThan(0);
   expect(parse(asCrlf)).toEqual(versions);
 });
+
+test("the published site CHANGELOG.md has the same version headings and entries when converted to CRLF", () => {
+  const real = readFileSync(join(import.meta.dir, "../src/data/CHANGELOG.md"), "utf8").replace(/\r\n/g, "\n");
+  const versions = parse(real);
+  expect(versions.length).toBeGreaterThan(0);
+  expect(versions.some((v) => v.entries.length > 0)).toBe(true);
+  const fromCrlf = parse(real.replace(/\n/g, "\r\n"));
+  expect(fromCrlf).toEqual(versions);
+  expect(JSON.stringify(fromCrlf)).not.toContain("\\r");
+});
+
+/** Version → section (### heading) → entries; entries before any section land under "". */
+function parseSections(markdown: string): Record<string, Record<string, string[]>> {
+  const out: Record<string, Record<string, string[]>> = {};
+  let version: string | null = null;
+  let section = "";
+  for (const t of marked.lexer(markdown)) {
+    if (t.type === "heading" && t.depth <= 2) {
+      version = t.depth === 2 && VERSION.test(t.text) ? t.text : null;
+      section = "";
+      if (version) out[version] = {};
+    } else if (version && t.type === "heading" && t.depth === 3) {
+      section = t.text;
+    } else if (version && t.type === "list") {
+      (out[version][section] ??= []).push(...t.items.map((item) => item.text));
+    }
+  }
+  return out;
+}
+
+test("CRLF fixture parses version, section and entry together without \\r", () => {
+  const parsed = parseSections(crlf);
+  expect(parsed).toEqual({
+    "0.3.0 (2026-05-01)": { Added: ["Third version entry."] },
+    "[0.2.0] — 2026-04-23": { Fixed: ["Second version entry."] },
+    "0.1.0 (2026-04-19)": { "": ["First version entry."] },
+  });
+  expect(parsed).toEqual(parseSections(lf));
+  expect(JSON.stringify(parsed)).not.toContain("\\r");
+});
+
+test("the published site CHANGELOG.md keeps its sections when converted to CRLF", () => {
+  const real = readFileSync(join(import.meta.dir, "../src/data/CHANGELOG.md"), "utf8").replace(/\r\n/g, "\n");
+  const sections = parseSections(real);
+  expect(Object.values(sections).some((s) => Object.keys(s).length > 0)).toBe(true);
+  const fromCrlf = parseSections(real.replace(/\n/g, "\r\n"));
+  expect(fromCrlf).toEqual(sections);
+  expect(JSON.stringify(fromCrlf)).not.toContain("\\r");
+});

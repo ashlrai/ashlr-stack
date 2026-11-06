@@ -242,12 +242,13 @@ describe("operation-owned credential persistence", () => {
   });
   test("reads/writes stay at captured absolute cwd despite ctx and opts mutation", async () => {
     // Add cwd metadata to the inert producer log, never secret input values.
-    const bin = join(h.dir, "phantom");
+    const helper = join(h.dir, "helper.mjs");
     writeFileSync(
-      bin,
-      readFileSync(bin, "utf8")
-        .replace("import json,sys; open", "import json,sys,os; open")
-        .replace('{"cmd": sys.argv[2]', '{"cwd": os.getcwd(), "cmd": sys.argv[2]'),
+      helper,
+      readFileSync(helper, "utf8").replace(
+        "JSON.stringify({ cmd: rest[0]",
+        "JSON.stringify({ cwd: process.cwd(), cmd: rest[0]",
+      ),
     );
     const opts = { providerName: "stagefixture", cwd, interactive: true };
     const p = factory();
@@ -267,7 +268,7 @@ describe("operation-owned credential persistence", () => {
       .trim()
       .split("\n")
       .map((line) => JSON.parse(line));
-    // Python getcwd resolves filesystem aliases such as macOS /var.
+    // process.cwd() resolves filesystem aliases such as macOS /var.
     for (const row of rows.filter((r) => ["status", "reveal", "add"].includes(r.cmd)))
       expect(row.cwd).toBe(realpathSync(cwd));
     expect((await readConfig(cwd)).services.stagefixture).toBeDefined();
