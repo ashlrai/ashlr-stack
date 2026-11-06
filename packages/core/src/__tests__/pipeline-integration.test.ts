@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { wirePhantomForRecipe } from "../ai/phantom-wire.ts";
+import { type Recipe, readRecipe, writeRecipe } from "../ai/recipe.ts";
 import { emptyConfig, writeConfig } from "../config.ts";
 import { addService } from "../pipeline.ts";
 import type { Provider } from "../providers/_base.ts";
@@ -92,4 +94,58 @@ describe("addService full loop", () => {
 
     Reflect.deleteProperty(providers, "stubsvc");
   });
+
+  test("stack apply reports every missing value without writing placeholders", async () => {
+    const vault = { NEON_API_KEY: "existing-value", UNRELATED_KEY: "keep-me" };
+    writeFileSync(h.vaultPath, JSON.stringify(vault));
+    const recipe: Recipe = {
+      id: "missing-values",
+      query: "database and ai",
+      createdAt: "2026-04-18T00:00:00.000Z",
+      providers: [{ name: "neon" }, { name: "openai" }, { name: "anthropic" }],
+    };
+    await writeRecipe(recipe, cwd);
+
+    // Apply reads the saved recipe and uses this wiring result for its report.
+    const result = await wirePhantomForRecipe(await readRecipe(recipe.id, cwd), { cwd });
+    expect(result).toEqual({
+      present: ["neon:NEON_API_KEY"],
+      missing: ["neon:DATABASE_URL", "openai:OPENAI_API_KEY", "anthropic:ANTHROPIC_API_KEY"],
+      webhooks: [],
+      skipped: [],
+    });
+    expect(h.callsTo("list").length).toBeGreaterThan(0);
+    expect(h.callsTo("add")).toEqual([]);
+    expect(await readVault(h.dir)).toEqual(vault);
+  });
+});
+
+test("apply wiring preserves an existing value and leaves missing values absent", async () => {
+  const initialVault = {
+    NEON_API_KEY: "existing-test-value",
+    UNRELATED_KEY: "unrelated-test-value",
+  };
+  const h = setupFakePhantom(initialVault);
+  try {
+    const recipe = {
+      id: "preserve-existing-value",
+      query: "database",
+      createdAt: "2026-04-18T00:00:00.000Z",
+      providers: [{ name: "neon" }],
+    };
+    await writeRecipe(recipe, h.dir);
+    const loaded = await readRecipe(recipe.id, h.dir);
+
+    // This is the vault-wiring phase used by stack apply after provisioning.
+    const result = await wirePhantomForRecipe(loaded, { cwd: h.dir });
+    expect(result.present).toEqual(["neon:NEON_API_KEY"]);
+    expect(result.missing).toEqual(["neon:DATABASE_URL"]);
+    expect(result.skipped).toEqual([]);
+    expect(h.callsTo("list")).toEqual([{ cmd: "list", args: ["--json"] }]);
+    expect(h.callsTo("add")).toEqual([]);
+    expect(h.callsTo("remove")).toEqual([]);
+    expect(await readVault(h.dir)).toEqual(initialVault);
+  } finally {
+    h.cleanup();
+  }
 });

@@ -1,0 +1,12 @@
+# Reading the `stack apply` history
+
+The [root changelog](../CHANGELOG.md) is the source; the [site changelog data](../packages/site/src/data/CHANGELOG.md) is its checked-in copy. Read both historical entries in either file:
+
+1. **0.1.0, AI recommendation layer** — [root](../CHANGELOG.md#010--2026-04-19-superseded-by-011) · [site](../packages/site/src/data/CHANGELOG.md#010--2026-04-19-superseded-by-011). The `stack apply [recipe-id]` bullet introduces applying a saved recipe and wiring its providers. Its present wording includes later annotations: it is not an unchanged account of 0.1.0 behavior.
+2. **0.2.1, Bug fixes** — [root](../CHANGELOG.md#021-2026-10-16) · [site](../packages/site/src/data/CHANGELOG.md#021-2026-10-16). The `stack apply` placeholder-secret bullet explains the subsequent fix and its reason.
+
+Originally, wiring attempted to add a `TODO_STACK_APPLY` placeholder for each declared secret, first with `--rotate` and then without it. Phantom rejected values in arguments and did not support `--rotate`, so every attempt failed; the reported `envelopes` count was always zero. These attempts are history, not instructions to run or evidence that placeholders were stored.
+
+The 0.2.1 change removed the attempts. Wiring checks secret names instead of writing placeholder values or filling missing values; provider setup is separate and may store real credentials. The result fields changed from `WireResult.envelopes` to `present` and `missing`. The [0.2.2 release note](../CHANGELOG.md#022-2026-10-25) says 0.2.1 was tagged but its npm publish failed, and 0.2.2 supersedes it. Check the version actually installed before applying this history to a system.
+
+For the later operational context, see [0.3.0](../CHANGELOG.md#030-2026-10-31) and [Unreleased](../CHANGELOG.md#unreleased). A readable vault yields missing-name information; an unreadable vault yields skipped providers, not proof that no names are missing. After at least one provider succeeds, wiring checks the whole recipe, including failed providers, and can create webhook stubs even when the vault is unreadable. Missing names alone do not fail apply; provider failures do. `--noWire` skips the checks and stubs. Supply each required missing value by running `phantom add <NAME>` in a trusted terminal and entering the real value. See [apply troubleshooting](apply-troubleshooting.md) for investigating skipped checks.
