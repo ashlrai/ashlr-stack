@@ -16,6 +16,27 @@
 
 - Setup, README and package READMEs separate the source version from the recorded npm publication (0.3.1 for `@ashlr/stack-core`, `@ashlr/stack` and `ashlr-stack-mcp`) and state that the published CLI and MCP packages declare Node.js 20 or newer. Source development uses Bun (#356, #361, #363).
 
+## 0.3.3 (2026-11-06)
+
+This release carries main forward from 0.3.2. Most of the delta is release-pipeline hardening and test coverage; the user-facing addition is the `--dryRun` flag for `stack apply`.
+
+### Added
+
+- The `--dryRun` flag previews an apply run without making changes: it prints the recipe id, runs provider provisioning in dry-run mode, and lists the secrets wiring would check in Phantom plus the webhook stubs it would create. `stack completion` suggests the flag (#977).
+
+### Changed
+
+- Apply no longer requires or probes Phantom when the recipe names no providers; the wiring helper returns an empty result for a providerless recipe without spawning `phantom` (#978, #988).
+
+### Release process
+
+- `release.yml` manual dispatch now requires an exact `vX.Y.Z` tag or `version` input resolving to a commit, and verifies a completed full-CI run on that commit before releasing; evidence uses bounded `gh api` reads (#1026).
+- `auto-tag.yml` only re-evaluates after a `workflow_run` whose head repository is this repository, so completed CI on a fork cannot arm tagging (#518).
+
+### Tests
+
+- Added the phantom-wire placeholder and expansion matrix (known, unknown, nested, adjacent and repeated placeholders; quoting, dollar-sign, tab and newline replacements), apply dry-run, empty-wiring and missing-value coverage, the MCP apply missing-value case, and the `release.yml` qualification fixtures (#973-#1026).
+
 ## 0.3.2 (2026-11-04)
 
 This release carries main forward from 0.3.0. The 0.3.1 packages were published from a documentation-only release branch, so 0.3.2 is the first release whose source is the main line since 0.3.0.
