@@ -1,9 +1,9 @@
 # Changelog
 
-## 1.2.0
+## 1.0.0 (2026-06-01)
 
 ### Added
 
-- Zulu: the entry that sorts last but comes first.
-- Mike: a `stack apply` entry with [a link](https://stack.ashlr.ai) and **bold** text.
-- Alpha: the entry that sorts first but comes last.
+- Zulu: listed first, sorts last.
+- Mike `--flag` and **bold** text, listed second.
+- Alpha: listed third, sorts first.
