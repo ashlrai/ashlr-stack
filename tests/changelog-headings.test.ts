@@ -82,6 +82,19 @@ test("empty changelog fixture parses with no results from every parser function"
   expect(inlineLinks(fixture)).toEqual([]);
 });
 
+test("whitespace-only input returns no sections from every parser function without throwing", () => {
+  for (const input of [" ", "\n", "\r\n", "   \n\t\n  \r\n\n", "\u00a0\u2003\n"]) {
+    expect(() => malformedHeadings(input)).not.toThrow();
+    expect(malformedHeadings(input)).toEqual([]);
+    expect(() => versionSections(input)).not.toThrow();
+    expect(versionSections(input)).toEqual([]);
+    expect(() => sectionEntries(input)).not.toThrow();
+    expect(sectionEntries(input)).toEqual([]);
+    expect(() => inlineLinks(input)).not.toThrow();
+    expect(inlineLinks(input)).toEqual([]);
+  }
+});
+
 test("prose before the first version is not a version and the first version stays intact", () => {
   const fixture = readFileSync(new URL("./__fixtures__/changelog-preamble.md", import.meta.url), "utf8");
   const lines = fixture.split("\n");
@@ -149,6 +162,22 @@ test("blank lines between entries do not add, drop or reorder entries", () => {
   expect(sectionEntries(fixture.replace(/\n{2,}/g, "\n"))).toEqual(expected);
   // Adding a blank line after every line changes nothing either.
   expect(sectionEntries(fixture.replace(/\n/g, "\n\n"))).toEqual(expected);
+});
+
+test("blank and whitespace-only lines keep entries in their own section and order across versions", () => {
+  const fixture = readFileSync(new URL("./__fixtures__/changelog-blank-lines-multi-version.md", import.meta.url), "utf8");
+  const expected = [
+    { version: "## 0.7.0 (2026-11-03)", section: "Fixed", entries: ["Fixed one.", "Fixed two."] },
+    { version: "## 0.7.0 (2026-11-03)", section: "Added", entries: ["Added one."] },
+  ];
+  // Entries under `### Fixed` must not leak into `### Added` across the blank lines between them.
+  expect(sectionEntries(fixture)).toEqual(expected);
+  expect(sectionEntries(fixture.split("\n").filter((l) => l.trim() !== "").join("\n"))).toEqual(expected);
+  expect(versionSections(fixture).map((s) => s.heading)).toEqual([
+    "## Unreleased",
+    "## 0.7.0 (2026-11-03)",
+    "## 0.6.0 (2026-10-31)",
+  ]);
 });
 
 test("a Markdown link in a version body keeps its label and destination", () => {
@@ -231,4 +260,23 @@ test("heading-only fixture returns each version with no fabricated body or entri
   // A version heading as the very last line (no newline, no body) is still returned.
   expect(versionSections("## 0.1.0 (2026-04-19)").map((s) => s.heading)).toEqual(["## 0.1.0 (2026-04-19)"]);
   expect(sectionEntries("## 0.1.0 (2026-04-19)")).toEqual([]);
+});
+
+
+test("Original PR 758: whitespace-only changelog fixture parses with no results from every parser function", () => {
+  const fixture = readFileSync(new URL("./__fixtures__/changelog-whitespace-only.md", import.meta.url), "utf8");
+  expect(fixture.length).toBeGreaterThan(0);
+  expect(fixture.trim()).toBe("");
+  for (const text of [fixture, fixture.replace(/\n/g, "\r\n"), " \t\n\n  "]) {
+    expect(() => {
+      malformedHeadings(text);
+      versionSections(text);
+      sectionEntries(text);
+      inlineLinks(text);
+    }).not.toThrow();
+    expect(malformedHeadings(text)).toEqual([]);
+    expect(versionSections(text)).toEqual([]);
+    expect(sectionEntries(text)).toEqual([]);
+    expect(inlineLinks(text)).toEqual([]);
+  }
 });
