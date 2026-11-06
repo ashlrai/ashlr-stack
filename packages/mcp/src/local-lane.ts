@@ -9,7 +9,7 @@
  *   bun packages/mcp/src/local-lane.ts smoke [--json]
  */
 import { type IncomingMessage, type ServerResponse, createServer } from "node:http";
-import type { AddressInfo } from "node:net";
+import type { AddressInfo, Socket } from "node:net";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
@@ -82,6 +82,11 @@ export async function startLaneBridge(opts: { upstreams?: UpstreamSpec[]; port?:
       (err: Error) => !res.headersSent && res.writeHead(500).end(err.message),
     );
   });
+  const sockets = new Set<Socket>();
+  http.on("connection", (socket) => {
+    sockets.add(socket);
+    socket.once("close", () => sockets.delete(socket));
+  });
   const boundPort = () => (http.address() as AddressInfo).port;
   await new Promise<void>((resolve, reject) => {
     http.once("error", reject);
@@ -93,7 +98,13 @@ export async function startLaneBridge(opts: { upstreams?: UpstreamSpec[]; port?:
     status,
     toolNames: listed.map((t) => t.name),
     async close() {
-      await new Promise((resolve) => http.close(resolve));
+      const closed = new Promise<void>((resolve, reject) => {
+        http.close((error) => (error ? reject(error) : resolve()));
+      });
+      // Bun 1.2 can retain MCP keepalive sockets after protocol transports close.
+      // Stop only this bridge's connections so shutdown also reaches upstream cleanup.
+      for (const socket of sockets) socket.destroy();
+      await closed;
       await Promise.all(clients.map((c) => c.close().catch(() => {})));
     },
   };

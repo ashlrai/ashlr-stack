@@ -16,6 +16,13 @@
 
 - Setup, README and package READMEs separate the source version from the recorded npm publication (0.3.1 for `@ashlr/stack-core`, `@ashlr/stack` and `ashlr-stack-mcp`) and state that the published CLI and MCP packages declare Node.js 20 or newer. Source development uses Bun (#356, #361, #363).
 
+## 0.3.4 (2026-11-06)
+
+### Fixed
+
+- The local MCP lane bridge closes its own keepalive connections before releasing upstream clients, allowing shutdown to finish on Bun 1.2 without affecting unrelated sockets.
+- Release changelog fixtures and version assertions track the current source while preserving no-final-newline parser coverage.
+
 ## 0.3.3 (2026-11-05)
 
 This source candidate carries forward the 0.3.2 main-line release and subsequent integrated changes. The apply behavior described under Unreleased also ships in this candidate; that entry remains there while documentation links to it.
