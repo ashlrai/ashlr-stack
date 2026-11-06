@@ -139,6 +139,7 @@ const TERMS: [string, RegExp[], string[], boolean][] = [
   ],
   ["Provider failure", [/providers? (fail|failed|failures)/i], ["U", "0.2.2-B", "0.1.0"], true],
   ["`Some providers failed` / exit 1", [/Some providers failed/, /exit 1/], ["0.2.2-B"], true],
+  ["Partial-failure rollback", [/rollback/i], ["0.2.2-B"], true],
   ["Missing recipe / auto-`stack init`", [/\.stack\.toml/, /stack init/], ["0.2.2-A"], true],
   ["`@clack/prompts` picker", [/@clack\/prompts/], ["0.1.0"], true],
 ];

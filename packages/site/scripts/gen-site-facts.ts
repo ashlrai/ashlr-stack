@@ -125,11 +125,37 @@ const TOOL_CLI_EXTRAS: Record<string, string> = {
 // Fact extraction
 // ---------------------------------------------------------------------------
 
-/** Latest `## X.Y.Z (date)` heading in CHANGELOG.md (skips `## Unreleased`). */
-function latestChangelogRelease(): { version: string; date: string; scope: "source-changelog" } {
-  const m = read("CHANGELOG.md").match(/^## (\d+\.\d+\.\d+) \((\d{4}-\d{2}-\d{2})\)/m);
+/** Blank out fenced code so heading-like lines inside it are never read as releases. */
+function stripFencedCode(text: string): string {
+  let fence: string | null = null;
+  return text
+    .split("\n")
+    .map((line) => {
+      const m = line.match(/^\s*(`{3,}|~{3,})/);
+      if (!fence) {
+        if (m) fence = m[1];
+        return m ? "" : line;
+      }
+      if (m && m[1][0] === fence[0] && m[1].length >= fence.length && /^\s*[`~]+\s*$/.test(line))
+        fence = null;
+      return "";
+    })
+    .join("\n");
+}
+
+/** Latest `## X.Y.Z (date)` heading in a changelog (skips `## Unreleased` and fenced examples). */
+export function latestReleaseFromChangelog(text: string): {
+  version: string;
+  date: string;
+  scope: "source-changelog";
+} {
+  const m = stripFencedCode(text).match(/^## (\d+\.\d+\.\d+) \((\d{4}-\d{2}-\d{2})\)/m);
   if (!m) throw new Error("no `## X.Y.Z (date)` release heading found in CHANGELOG.md");
   return { version: m[1], date: m[2], scope: "source-changelog" };
+}
+
+function latestChangelogRelease() {
+  return latestReleaseFromChangelog(read("CHANGELOG.md"));
 }
 
 /** Recorded published npm version from the docs version-lag table, never inferred from source. */

@@ -2,11 +2,14 @@
 
 ## History
 
-The current changelog annotates the [0.1.0 entry](../CHANGELOG.md#010--2026-04-19-superseded-by-011):
+The current changelog annotates the 0.1.0 entry in the
+[source](../CHANGELOG.md#010--2026-04-19-superseded-by-011) and
+[site copy](../packages/site/src/data/CHANGELOG.md#010--2026-04-19-superseded-by-011):
 wiring historically attempted a `TODO_STACK_APPLY` placeholder for each declared
 secret. Those calls failed; they did not create usable credentials.
 
-The [0.2.1 bug fix](../CHANGELOG.md#021-2026-10-16) removed those attempts.
+The 0.2.1 bug fix in the [source](../CHANGELOG.md#021-2026-10-16) and
+[site copy](../packages/site/src/data/CHANGELOG.md#021-2026-10-16) removed those attempts.
 Previously, wiring ran `phantom add <KEY> TODO_STACK_APPLY --rotate`, then
 retried without `--rotate`, for every declared secret. Phantom rejected values
 in command arguments and had no `--rotate`, so every call failed and the

@@ -4,34 +4,16 @@ import { join } from "node:path";
 
 const paths = ["CHANGELOG.md", "packages/site/src/data/CHANGELOG.md"] as const;
 
-function unreleasedApplyEntry(changelog: string): string {
-  const section = changelog.split(/^## Unreleased\s*$/m)[1]?.split(/^## /m)[0] ?? "";
-  const entries = section.split("\n").filter((line) => line.startsWith("- `stack apply`"));
-  expect(entries).toHaveLength(1);
-  return entries[0];
-}
+test("site placeholder-removal entry presents the former value as historical", () => {
+  const changelog = readFileSync(join(import.meta.dir, "..", paths[1]), "utf8");
+  const release = changelog.split("## 0.2.1 (2026-10-16)\n")[1]?.split("\n## ")[0];
+  const entry = release?.split("\n").find((line) => line.startsWith("- **`stack apply` stops attempting"));
 
-function expectUnreleasedPlaceholderRemoval(changelogs: string[]): void {
-  const entries = changelogs.map(unreleasedApplyEntry);
-  for (const entry of entries) {
-    expect(entry).toContain("`stack apply` does not create placeholder secrets.");
-  }
-  expect(entries[0]).toBe(entries[1]);
-}
-
-test("both Unreleased apply entries describe the removal of placeholder writes", () => {
-  const changelogs = paths.map((path) => readFileSync(join(import.meta.dir, "..", path), "utf8"));
-  expectUnreleasedPlaceholderRemoval(changelogs);
-
-  const claim = "`stack apply` does not create placeholder secrets.";
-  const contradiction = "`stack apply` creates placeholder secrets.";
-  for (const index of [0, 1]) {
-    const changed = [...changelogs];
-    changed[index] = changed[index].replace(claim, contradiction);
-    expect(() => expectUnreleasedPlaceholderRemoval(changed)).toThrow();
-  }
-  // Equal copies with the same incorrect claim must still fail.
-  expect(() => expectUnreleasedPlaceholderRemoval(changelogs.map((text) => text.replace(claim, contradiction)))).toThrow();
+  expect(entry).toBeDefined();
+  expect(entry?.match(/TODO_STACK_APPLY/g)).toHaveLength(1);
+  expect(entry).toContain("Previously, wiring ran `phantom add <KEY> TODO_STACK_APPLY --rotate`");
+  expect(entry).toContain("every call failed");
+  expect(entry).toContain("The wiring step never writes to the vault or fills in missing values.");
 });
 
 test.each(paths)("%s uses the same historical placeholder literal in both apply entries", (path) => {
@@ -147,5 +129,38 @@ test("placeholder fix detection requires the removal and history in the same 0.2
     `## 0.2.2\n${title} ${behavior} ${history}\n`,
   ]) {
     expect(hasPlaceholderFix(changelog)).toBe(false);
+  }
+});
+
+function historicalApplyPlaceholder(changelog: string): string | undefined {
+  const release = changelog.split("## 0.1.0 — 2026-04-19 (superseded by 0.1.1)\n")[1]?.split("\n## ")[0];
+  const entries = release?.split("\n").filter((line) => line.startsWith("- **`stack apply [recipe-id]`**")) ?? [];
+  if (entries.length !== 1) return undefined;
+  return entries[0].match(/Historically, wiring attempted to write a `([^`]+)` placeholder/)?.[1];
+}
+
+function historicalPlaceholdersMatch(changelogs: readonly [string, string]): boolean {
+  const first = historicalApplyPlaceholder(changelogs[0]);
+  const second = historicalApplyPlaceholder(changelogs[1]);
+  return first !== undefined && second !== undefined && first === second;
+}
+
+test("historical stack apply entries use the same placeholder in both changelogs", () => {
+  const changelogs = paths.map((path) => readFileSync(join(import.meta.dir, "..", path), "utf8")) as [string, string];
+  expect(historicalPlaceholdersMatch(changelogs)).toBe(true);
+
+  for (const index of [0, 1] as const) {
+    const placeholder = historicalApplyPlaceholder(changelogs[index]);
+    expect(placeholder).toBeDefined();
+    const entry = changelogs[index]
+      .split("\n")
+      .find((line) => line.startsWith("- **`stack apply [recipe-id]`**"));
+    expect(entry).toBeDefined();
+
+    for (const replacement of [entry!.replace(`\`${placeholder}\``, "`different-value`"), "", `${entry}\n${entry}`]) {
+      const changed: [string, string] = [...changelogs];
+      changed[index] = changed[index].replace(entry!, replacement);
+      expect(historicalPlaceholdersMatch(changed)).toBe(false);
+    }
   }
 });

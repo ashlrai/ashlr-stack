@@ -48,6 +48,7 @@ section; the entry text identifies the bullet inside it, because `Changed`,
 | Readable / unreadable vault | Whether wiring can enumerate Phantom's names. An unreadable vault yields skipped providers, and its zero counts cover only checked names — they do not prove names are absent. | U, 0.3.0-CF, 0.3.0-C, 0.2.1, 0.1.0 |
 | Provider failure | A provider whose `stack add` run failed. Later providers still run; provider failures fail apply while missing names alone do not. | U, 0.2.2-B, 0.1.0 |
 | `Some providers failed` / exit 1 | The summary line and exit code that end a run in which providers failed. | 0.2.2-B |
+| Partial-failure rollback | The cleanup offered when some providers fail and others succeeded: the run's successful adds are removed again — their `.stack.toml` entries, local secrets and MCP entries — so a re-run is not blocked. The early exit the entry describes skipped it along with the later providers and the summary. | 0.2.2-B |
 | Missing recipe / auto-`stack init` | An apply for an id that does not exist in a directory without `.stack.toml`. It once ran `stack init` and left files behind; the recipe is now resolved first so nothing is written. | 0.2.2-A |
 | `@clack/prompts` picker | The interactive recipe chooser shown when `stack apply` is given no id. | 0.1.0 |
 
@@ -63,7 +64,10 @@ section; the entry text identifies the bullet inside it, because `Changed`,
   output), the hero animation (0.2.1 → Hero "Generate a stack" demo), and the
   `stack recommend` follow-up line (0.1.0). `--apply` flags on
   `stack doctor --ecosystem` (0.2.2) and `stack upgrade` (0.3.0) are options on
-  other commands with their own meanings.
+  other commands with their own meanings. Rollback named outside 0.2.2-B —
+  `stack add` and `stack remove` (0.2.2 → Vendor-neutral MCP wiring),
+  `stack add` failure (0.2.0 → Added) and `stack upgrade --apply` (0.3.0 →
+  Added) — belongs to those commands, not to apply's partial-failure pass.
 - Within the apply entries, "missing" also describes an absent recipe (0.2.2-A)
   and an absent secret name (the wiring classification); an "applied" recipe is
   a run outcome, not proof that required secrets exist.

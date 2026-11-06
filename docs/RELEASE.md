@@ -18,6 +18,30 @@ Source versions do not establish publication. On November 1, 2026, npm reported
 binaries and checksum sidecars. Check registry, consumer and artifact evidence
 again before updating guidance for any later version.
 
+## Automatic releases
+
+Merging a version bump to `main` publishes with no manual step. When
+`packages/core/package.json` (which `packages/mcp` and `packages/cli` must
+match) gains a new `X.Y.Z` version on `main`,
+[`auto-tag.yml`](../.github/workflows/auto-tag.yml) requires every required
+check green on that exact commit, creates `refs/tags/v<version>` with the
+ashlr-release GitHub App token so the tag push starts `release.yml`, and
+dispatches `release.yml` once if the tag push did not start it. The release
+workflow then publishes npm packages, binaries and the GitHub Release under
+its existing gates. Required checks are discovered at run time from branch
+rules and protection; a check that is missing, pending or not successful
+blocks the tag.
+
+Manual paths (one command each, same gates):
+
+```sh
+gh workflow run auto-tag.yml -R ashlrai/ashlr-stack
+gh workflow run release.yml -R ashlrai/ashlr-stack -f version=X.Y.Z
+```
+
+The `release.yml` dispatch requires the tag `vX.Y.Z` to exist already and
+must be run from `main`; the legacy `tag` input (`-f tag=vX.Y.Z`) still works.
+
 ## Current script behavior
 
 `scripts/publish.sh` accepts `--version`, `--yes` (or `-y`), and `--help`.
@@ -60,17 +84,18 @@ Homebrew formula and commit/push to the tap, including dispatch on a tag ref.
 It uses an existing referenced tap credential or skips when unavailable. Verify
 actual tap commissioning and the remote formula separately.
 
-## Auto-tagging (pending workflow wiring)
+## Auto-tagging
 
-[`scripts/auto-tag.mjs`](../scripts/auto-tag.mjs) is the fail-closed core of
-the auto-tag design: when the version in `packages/cli/package.json` changes on
-`main` and every required check for that exact commit is green, it creates
-`refs/tags/v<version>` so the tag-triggered release workflow runs. It is
-invoked as `evaluate` (read-only, writes `changed`/`version`/`green` to
-`$GITHUB_OUTPUT`) and `create --version X.Y.Z` (needs a `contents: write`
-token; the ashlr-release GitHub App mints it). `run` chains both for manual
-use. No workflow calls it yet — the `.github/workflows` wrapper is applied
-separately.
+[`.github/workflows/auto-tag.yml`](../.github/workflows/auto-tag.yml) is the
+wired auto-tag workflow: when the version in `packages/core/package.json`
+changes on `main` and every required check for that exact commit is green, it
+creates `refs/tags/v<version>` so the tag-triggered release workflow runs.
+[`scripts/auto-tag.mjs`](../scripts/auto-tag.mjs) is a tested standalone
+implementation of the same fail-closed design, invoked as `evaluate`
+(read-only, writes `changed`/`version`/`green` to `$GITHUB_OUTPUT`) and
+`create --version X.Y.Z` (needs a `contents: write` token; the ashlr-release
+GitHub App mints it). `run` chains both for manual use. The workflow does not
+call the script; it carries the equivalent steps inline.
 
 ## Qualification and partial failures
 
