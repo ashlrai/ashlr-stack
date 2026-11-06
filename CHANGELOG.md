@@ -16,6 +16,17 @@
 
 - Setup, README and package READMEs separate the source version from the recorded npm publication (0.3.1 for `@ashlr/stack-core`, `@ashlr/stack` and `ashlr-stack-mcp`) and state that the published CLI and MCP packages declare Node.js 20 or newer. Source development uses Bun (#356, #361, #363).
 
+## 0.3.7 (2026-11-06)
+
+### Fixed
+
+- Fleet silent-run reads (`stack fleet` diagnostics) opt in to a short-read check: a non-tail read that reaches EOF before the file size observed at open is rejected as an incomplete source instead of being parsed as a truncated log (#297).
+
+### Documentation
+
+- Setup docs and site facts record the independently verified 0.3.6 npm publication; the source version moves to 0.3.7 while the recorded public version stays 0.3.6 until a later publication is verified.
+- Changelog parser coverage adds fixtures for CRLF, empty, hyphenated, horizontal-rule, bold-entry and multi-version layouts.
+
 ## 0.3.6 (2026-11-06)
 
 ### Fixed
