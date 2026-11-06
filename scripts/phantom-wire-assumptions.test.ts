@@ -62,6 +62,6 @@ describe("Phantom wire assumptions", () => {
     expect(doc).toContain("not implemented verification");
     expect(doc).toContain("accepts any non-empty header");
     expect(doc).toContain("Recipe manifests are also unsigned");
-    expect(doc).toContain("../packages/core/src/ai/phantom-wire.ts#L117");
+    expect(doc).toContain("../packages/core/src/ai/phantom-wire.ts#L118");
   });
 });

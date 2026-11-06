@@ -131,3 +131,36 @@ test("placeholder fix detection requires the removal and history in the same 0.2
     expect(hasPlaceholderFix(changelog)).toBe(false);
   }
 });
+
+function historicalApplyPlaceholder(changelog: string): string | undefined {
+  const release = changelog.split("## 0.1.0 — 2026-04-19 (superseded by 0.1.1)\n")[1]?.split("\n## ")[0];
+  const entries = release?.split("\n").filter((line) => line.startsWith("- **`stack apply [recipe-id]`**")) ?? [];
+  if (entries.length !== 1) return undefined;
+  return entries[0].match(/Historically, wiring attempted to write a `([^`]+)` placeholder/)?.[1];
+}
+
+function historicalPlaceholdersMatch(changelogs: readonly [string, string]): boolean {
+  const first = historicalApplyPlaceholder(changelogs[0]);
+  const second = historicalApplyPlaceholder(changelogs[1]);
+  return first !== undefined && second !== undefined && first === second;
+}
+
+test("historical stack apply entries use the same placeholder in both changelogs", () => {
+  const changelogs = paths.map((path) => readFileSync(join(import.meta.dir, "..", path), "utf8")) as [string, string];
+  expect(historicalPlaceholdersMatch(changelogs)).toBe(true);
+
+  for (const index of [0, 1] as const) {
+    const placeholder = historicalApplyPlaceholder(changelogs[index]);
+    expect(placeholder).toBeDefined();
+    const entry = changelogs[index]
+      .split("\n")
+      .find((line) => line.startsWith("- **`stack apply [recipe-id]`**"));
+    expect(entry).toBeDefined();
+
+    for (const replacement of [entry!.replace(`\`${placeholder}\``, "`different-value`"), "", `${entry}\n${entry}`]) {
+      const changed: [string, string] = [...changelogs];
+      changed[index] = changed[index].replace(entry!, replacement);
+      expect(historicalPlaceholdersMatch(changed)).toBe(false);
+    }
+  }
+});
