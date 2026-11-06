@@ -147,20 +147,20 @@ describe("site facts: sources of truth agree", () => {
     }
   });
 
-  test("a later recorded publication is not attributed to the 0.3.0 observation date", async () => {
+  test("a later recorded publication is not attributed to the recorded observation date", async () => {
     const later = { ...facts, publishedVersion: nextPatch(facts.publishedVersion) };
     const guide = substitute(readSite("src/data/agent-guide.txt"), await placeholders(later));
     const full = await renderLlmsFull(later);
     for (const text of [guide, full]) {
       expect(text).toContain(`recorded public CLI/MCP version is ${later.publishedVersion}`);
       expect(text).not.toContain(
-        `November 1, 2026 reported CLI/MCP version ${later.publishedVersion}`,
+        `November 6, 2026 reported CLI/MCP version ${later.publishedVersion}`,
       );
     }
   });
-  test("a later public pointer does not extend the verified 0.3.1 runtime claim", async () => {
+  test("a later public pointer does not extend the verified 0.3.6 runtime claim", async () => {
     // The public pointer records a version, not that release's engines metadata.
-    const later = { ...facts, publishedVersion: "0.3.2" };
+    const later = { ...facts, publishedVersion: "0.3.7" };
     const mcp = JSON.parse(await renderMcpJson(later));
     const plugin = JSON.parse(renderAiPluginJson(later));
     const openapi = JSON.parse(renderOpenApiJson(later));
@@ -170,13 +170,13 @@ describe("site facts: sources of truth agree", () => {
       openapi.info.description,
     ]) {
       expect(description).toContain(
-        "0.3.1 CLI and MCP packages declare Node.js 20 or newer; inspect other releases’ engines.",
+        "0.3.6 CLI and MCP packages declare Node.js 20 or newer; inspect other releases’ engines.",
       );
-      expect(description).not.toContain("0.3.2 CLI and MCP packages declare Node.js");
-      expect(description).toContain("is 0.3.2.");
+      expect(description).not.toContain("0.3.7 CLI and MCP packages declare Node.js");
+      expect(description).toContain("is 0.3.7.");
     }
     const expectedArgs = [
-      "-y", "-p", "@ashlr/stack@0.3.2", "-p", "ashlr-stack-mcp@0.3.2", "ashlr-stack-mcp",
+      "-y", "-p", "@ashlr/stack@0.3.7", "-p", "ashlr-stack-mcp@0.3.7", "ashlr-stack-mcp",
     ];
     expect(mcp.install.args).toEqual(expectedArgs);
     expect(mcp.install.mcpConfigSnippet.mcpServers.stack.args).toEqual(expectedArgs);
