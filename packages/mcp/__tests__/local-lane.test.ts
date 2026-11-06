@@ -55,6 +55,7 @@ test("rejects a rebinding Host header and any browser Origin", async () => {
 
 
 test("closing the bridge closes its idle connection and preserves unrelated sockets", async () => {
+  console.info("[lane-close] start");
   const other = createServer((socket) => socket.on("data", (data) => socket.write(data)));
   await new Promise<void>((resolve) => other.listen(0, "127.0.0.1", resolve));
   const otherSocket = createConnection((other.address() as AddressInfo).port, "127.0.0.1");
@@ -78,24 +79,33 @@ test("closing the bridge closes its idle connection and preserves unrelated sock
       socket.once("error", reject);
       socket.write("GET /idle-probe HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: keep-alive\r\n\r\n");
     });
+    console.info("[lane-close] accepted-http-response");
     expect(response).toMatch(/^HTTP\/1\.1 404/);
     socket.resume(); // Continue consuming remote EOF after the one-shot response listener.
     expect(socket.destroyed).toBe(false);
     const closed = new Promise<void>((resolve) => socket.once("close", () => resolve()));
+    console.info("[lane-close] before-owned-close");
     await owned.close();
+    console.info("[lane-close] after-owned-close");
     await closed;
+    console.info("[lane-close] client-close");
     expect(socket.destroyed).toBe(true);
     const echo = new Promise<string>((resolve, reject) => {
       otherSocket.once("data", (data) => resolve(data.toString()));
       otherSocket.once("error", reject);
     });
     otherSocket.write("still-owned-by-other-server");
+    console.info("[lane-close] before-unrelated-echo");
     expect(await echo).toBe("still-owned-by-other-server");
+    console.info("[lane-close] before-rebind");
     const replacement = await startLaneBridge({ upstreams: [], port });
     await replacement.close();
+    console.info("[lane-close] replacement-closed");
   } finally {
     socket.destroy();
     otherSocket.destroy();
+    console.info("[lane-close] before-unrelated-close");
     await new Promise<void>((resolve) => other.close(() => resolve()));
+    console.info("[lane-close] unrelated-closed");
   }
 });
