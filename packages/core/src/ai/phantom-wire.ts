@@ -50,7 +50,8 @@ export async function wirePhantomForRecipe(
   opts: { cwd?: string; noWire?: boolean } = {},
 ): Promise<WireResult> {
   const result: WireResult = { present: [], missing: [], webhooks: [], skipped: [] };
-  if (opts.noWire) return result;
+  // Nothing requested: no vault to check, no stub to write, no process to spawn.
+  if (opts.noWire || recipe.providers.length === 0) return result;
 
   const cwd = opts.cwd ?? process.cwd();
 
@@ -147,9 +148,11 @@ export function webhookStubFor(provider: string): string {
 /**
  * One-line pointer to the provider's documented signature scheme, inlined into
  * the stub's TODO so the implementer starts at the right verification API.
+ * Template strings carry no placeholders — each known provider returns a
+ * fixed, self-contained hint.
  * Falls back to a generic instruction for providers added later.
  */
-function verificationHintFor(provider: string): string {
+export function verificationHintFor(provider: string): string {
   switch (provider) {
     case "stripe":
       return "Stripe: `stripe.webhooks.constructEvent` — HMAC-SHA256 with timestamp tolerance.";
@@ -195,5 +198,9 @@ function signatureHeaderFor(provider: string): string {
 }
 
 function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
+  // Code-point aware: charAt(0) would take only the high surrogate of an
+  // astral first letter (e.g. Deseret 𐐨) and never upper-case it.
+  if (s === "") return s;
+  const first = String.fromCodePoint(s.codePointAt(0) as number);
+  return first.toUpperCase() + s.slice(first.length);
 }

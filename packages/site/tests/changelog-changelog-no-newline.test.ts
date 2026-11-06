@@ -71,5 +71,5 @@ test("fixture version bodies match the published changelog with trailing newline
 });
 
 test("site-facts release lookup still finds the latest release", () => {
-  expect(latestReleaseFromChangelog(fixture)).toEqual({ version: "0.3.0", date: "2026-10-31", scope: "source-changelog" });
+  expect(latestReleaseFromChangelog(fixture)).toEqual({ version: "0.3.2", date: "2026-11-04", scope: "source-changelog" });
 });

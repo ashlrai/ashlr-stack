@@ -20,12 +20,12 @@ third-party service in a developer's project with one command.
 <!-- fresh:begin version-table -->
 | Package | Manifest | Version |
 | --- | --- | --- |
-| `@ashlr/stack-core` | `packages/core/package.json` | 0.3.0 |
-| `@ashlr/stack` | `packages/cli/package.json` | 0.3.0 |
-| `ashlr-stack-mcp` | `packages/mcp/package.json` | 0.3.0 |
+| `@ashlr/stack-core` | `packages/core/package.json` | 0.3.3 |
+| `@ashlr/stack` | `packages/cli/package.json` | 0.3.3 |
+| `ashlr-stack-mcp` | `packages/mcp/package.json` | 0.3.3 |
 | `ashlr-stack-monorepo` (private) | `package.json` | 0.1.0 |
 
-Latest dated CHANGELOG section: `0.3.0 (2026-10-31)`.
+Latest dated CHANGELOG section: `0.3.3 (2026-11-05)`.
 <!-- fresh:end -->
 
 ## Quick orientation
