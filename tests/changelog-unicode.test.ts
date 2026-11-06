@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { sectionEntries } from "./changelog-parser-utils";
 
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), "utf8");
 
@@ -60,4 +61,40 @@ test("CHANGELOG.md has no replacement characters and round-trips as UTF-8", () =
   expect(Buffer.from(text, "utf8").equals(raw)).toBe(true);
   const nonAscii = [...versionBodies(text).values()].filter((b) => /[^\x00-\x7F]/.test(b));
   expect(nonAscii.length).toBeGreaterThan(0);
+});
+
+test("sectionEntries keeps Unicode entry text verbatim, under LF and CRLF", () => {
+  const sections = sectionEntries(fixture);
+  expect(sections).toEqual([
+    {
+      version: "## 0.3.0 (2026-10-31)",
+      section: "Added",
+      entries: [
+        "日本語のメモ: プロバイダーを追加 🚀 👩‍💻",
+        "مرحبا بالعالم — שלום עולם",
+        "Ελληνικά: αβγδ → ✓ done",
+      ],
+    },
+    { version: "## 0.3.0 (2026-10-31)", section: "Fixed", entries: ["NFC \u00e9 (U+00E9) vs NFD e\u0301 (e + U+0301), \u03a9 \u2260 \u00b5"] },
+  ]);
+  expect(sectionEntries(fixture.replace(/\n/g, "\r\n"))).toEqual(sections);
+});
+
+const ROOT_ENTRY = "Café résumé naïve: Zoë’s “señor” 日本語 مرحبا — entry keeps its Unicode text 🚀 👩‍💻 (#1).";
+
+test("root-CHANGELOG fixture entry keeps its Unicode text", () => {
+  const [group] = sectionEntries(read("./__fixtures__/changelog-root-unicode.md"));
+  expect(group).toEqual({ version: "## Unreleased", section: "Fixed", entries: [ROOT_ENTRY] });
+});
+
+test("CHANGELOG.md plus the Unicode fixture entry parses with the entry intact, under LF and CRLF", () => {
+  const root = read("../CHANGELOG.md");
+  const marker = "### Fixed\n\n";
+  const at = root.indexOf(marker);
+  expect(at).toBeGreaterThan(-1);
+  const merged = `${root.slice(0, at + marker.length)}- ${ROOT_ENTRY}\n${root.slice(at + marker.length)}`;
+  const find = (md: string) => sectionEntries(md).find((g) => g.version === "## Unreleased" && g.section === "Fixed");
+  const before = find(root)?.entries ?? [];
+  expect(find(merged)?.entries).toEqual([ROOT_ENTRY, ...before]);
+  expect(find(merged.replace(/\n/g, "\r\n"))?.entries[0]).toBe(ROOT_ENTRY);
 });

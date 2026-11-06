@@ -21,7 +21,7 @@ function owners(markdown: string): { entry: string; version: string | null; sect
   return found;
 }
 
-const fixture = readFileSync(join(import.meta.dir, "__fixtures__/changelog-empty-then-populated.md"), "utf8");
+const fixture = readFileSync(join(import.meta.dir, "__fixtures__/changelog-empty-then-populated-original-644.md"), "utf8");
 
 test("an entry after an empty section stays under its own heading", () => {
   expect(owners(fixture)).toEqual([
