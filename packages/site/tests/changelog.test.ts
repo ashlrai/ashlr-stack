@@ -828,3 +828,35 @@ test("release version comparison detects a missing or reordered heading", () => 
   expect(releaseVersions(missing)).not.toEqual(releaseVersions(source));
   expect(releaseVersions(reordered)).toEqual(["0.2.0", "0.3.0", "0.1.1"]);
 });
+
+
+test("original apply entry points back to the placeholder fix in the published release history", () => {
+  const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
+  const tokens = marked.lexer(published);
+  const fixRelease = tokens.findIndex((token) => token.type === "heading" && token.depth === 2 && token.text === "0.2.1 (2026-10-16)");
+  const originalRelease = tokens.findIndex(
+    (token) => token.type === "heading" && token.depth === 2 && token.text === "0.1.0 — 2026-04-19 (superseded by 0.1.1)",
+  );
+  expect(fixRelease).toBeGreaterThanOrEqual(0);
+  expect(originalRelease).toBeGreaterThan(fixRelease);
+
+  const nextRelease = (start: number) => {
+    const index = tokens.findIndex((token, i) => i > start && token.type === "heading" && token.depth === 2);
+    return index === -1 ? tokens.length : index;
+  };
+  const entriesInRelease = (start: number) =>
+    tokens.slice(start + 1, nextRelease(start)).flatMap((token) => (token.type === "list" ? token.items : []));
+
+  const fixes = entriesInRelease(fixRelease).filter((entry) =>
+    entry.raw.startsWith("- **`stack apply` stops attempting to write placeholder secrets.**"),
+  );
+  expect(fixes).toHaveLength(1);
+  expect(fixes[0].raw).toContain("The wiring step never writes to the vault or fills in missing values.");
+
+  const originals = entriesInRelease(originalRelease).filter((entry) =>
+    entry.raw.startsWith("- **`stack apply [recipe-id]`**"),
+  );
+  expect(originals).toHaveLength(1);
+  expect(originals[0].raw).toContain("but those calls failed; the 0.2.1 fix above removed the attempts.");
+  expect(originals[0].raw).toContain("Wiring no longer attempts to write placeholder values");
+});
