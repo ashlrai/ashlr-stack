@@ -39,7 +39,7 @@ test("site changelog yields its released versions in source order, each with a b
   const versions = parseVersions(published);
   expect(versions.length).toBeGreaterThanOrEqual(3);
   // `## Unreleased` is not a version, so the first one is the newest release.
-  expect(versions[0].heading).toMatch(/^0\.3\.0 \(/);
+  expect(versions[0].heading).toMatch(/^0\.3\.2 \(/);
   for (const v of versions.slice(0, 3)) expect(listItems(v.body).length).toBeGreaterThan(0);
   const headings = versions.map((v) => v.heading);
   expect(new Set(headings).size).toBe(headings.length);

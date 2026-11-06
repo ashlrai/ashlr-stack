@@ -2,15 +2,6 @@
 
 ## Unreleased
 
-## 0.3.2 (2026-11-04)
-
-This release carries main forward from 0.3.0. The 0.3.1 packages were published from a documentation-only release branch, so 0.3.2 is the first release whose source is the main line since 0.3.0.
-
-### Added
-
-- `packages/mcp/src/local-lane.ts` runs the locus, lexicon and stack MCP servers as stdio children and republishes their tools as `<server>__<tool>` on loopback only. It exposes mutating tools, and any local process can call the endpoint.
-- Agent entry points: root `llms.txt`, copy-paste agent commands in the docs and README, and PNG social cards for link previews (#487, #489, #490).
-
 ### Changed
 
 - `stack apply` does not create placeholder secrets. After at least one provider succeeds, wiring checks secret names for every provider in the recipe, including providers that failed; a missing name does not itself fail apply, while provider failures do. Wiring can also create webhook stubs for those recipe providers, even if the vault is unreadable. Supply required missing secrets as real values through Phantom; `--noWire` skips both checks and stubs.
@@ -24,6 +15,15 @@ This release carries main forward from 0.3.0. The 0.3.1 packages were published 
 ### Documentation
 
 - Setup, README and package READMEs separate the source version from the recorded npm publication (0.3.1 for `@ashlr/stack-core`, `@ashlr/stack` and `ashlr-stack-mcp`) and state that the published CLI and MCP packages declare Node.js 20 or newer. Source development uses Bun (#356, #361, #363).
+
+## 0.3.2 (2026-11-04)
+
+This release carries main forward from 0.3.0. The 0.3.1 packages were published from a documentation-only release branch, so 0.3.2 is the first release whose source is the main line since 0.3.0.
+
+### Added
+
+- `packages/mcp/src/local-lane.ts` runs the locus, lexicon and stack MCP servers as stdio children and republishes their tools as `<server>__<tool>` on loopback only. It exposes mutating tools, and any local process can call the endpoint.
+- Agent entry points: root `llms.txt`, copy-paste agent commands in the docs and README, and PNG social cards for link previews (#487, #489, #490).
 
 ## 0.3.0 (2026-10-31)
 
