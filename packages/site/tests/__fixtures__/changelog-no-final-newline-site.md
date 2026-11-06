@@ -16,6 +16,13 @@
 
 - Setup, README and package READMEs separate the source version from the recorded npm publication (0.3.1 for `@ashlr/stack-core`, `@ashlr/stack` and `ashlr-stack-mcp`) and state that the published CLI and MCP packages declare Node.js 20 or newer. Source development uses Bun (#356, #361, #363).
 
+## 0.3.5 (2026-11-06)
+
+### Fixed
+
+- The idle MCP bridge shutdown regression waits for an actual keepalive exchange before closing the accepted connection and continues consuming remote EOF. This removes Linux accept ordering and Bun 1.2 paused-reader races while retaining the five-second bound, unrelated-socket echo and port-reuse assertions.
+- The isolated npm upgrade fixture resolves Node through the same PATH as the real health-check runner, including runtime paths containing spaces; installation, rollback and cleanup checks remain unchanged.
+
 ## 0.3.4 (2026-11-06)
 
 ### Fixed
