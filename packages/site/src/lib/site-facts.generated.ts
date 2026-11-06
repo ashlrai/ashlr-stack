@@ -5,11 +5,11 @@
  * Facts about the current Stack source and recorded published packages.
  * See scripts/gen-site-facts.ts for the source of each value.
  */
-export const SOURCE_VERSION = "0.3.2";
+export const SOURCE_VERSION = "0.3.3";
 export const PUBLISHED_VERSION = "0.3.1";
 // Latest source CHANGELOG heading, not a publication observation.
-export const LATEST_RELEASE_VERSION = "0.3.2";
-export const LATEST_RELEASE_DATE = "2026-11-04";
+export const LATEST_RELEASE_VERSION = "0.3.3";
+export const LATEST_RELEASE_DATE = "2026-11-05";
 export const PROVIDER_COUNT = 39;
 export const PROVIDER_CATEGORY_COUNT = 13;
 export const TEMPLATE_COUNT = 7;
