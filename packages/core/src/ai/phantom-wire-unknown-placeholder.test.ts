@@ -30,6 +30,20 @@ describe("ai/phantom-wire unknown placeholder surrounded by ordinary text", () =
     providers: names.map((name) => ({ name })),
   });
 
+  it.each(["${UNKNOWN}stripe", "stripe${UNKNOWN}"])(
+    "substitutes the provider beside an unknown token without resolving the token: %s",
+    (name) => {
+      const stub = webhookStubFor(name);
+
+      // The provider interpolation resolves to the supplied name in both
+      // locations, while the adjacent unknown token remains literal data.
+      expect(stub).toContain(`webhook handler stub for ${name}.`);
+      expect(stub).toContain(`forge a ${name} webhook.`);
+      expect(stub).not.toContain("${provider}");
+      expect(stub.split("${UNKNOWN}").length - 1).toBe(5);
+    },
+  );
+
   it("keeps an unknown ${...} token and the text around it byte-for-byte at every site", () => {
     // `pre${HOOK_URL}post` matches none of the template's slots — expansion
     // fills `provider`, `capitalize(provider)`, `webhookSecretKeyFor(provider)`
