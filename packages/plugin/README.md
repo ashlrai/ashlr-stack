@@ -16,9 +16,9 @@ The plugin starts the MCP server through `scripts/mcp-entrypoint.sh`. It prefers
 ## Install
 
 ```bash
-# Illustrative public 0.1.1 package setup; requires Bun 1.2+
+# Install the CLI and MCP packages; check their runtime requirements
 # Installs the CLI and separate stdio server, not provider accounts
-npm i -g @ashlr/stack@0.1.1 ashlr-stack-mcp@0.1.1
+npm i -g @ashlr/stack ashlr-stack-mcp
 
 # Then inside Claude Code (the plugin is named `stack` in the `ashlr`
 # marketplace defined at the repo root, .claude-plugin/marketplace.json):
@@ -36,4 +36,4 @@ ashlr-stack MCP server  ──spawn──►  stack CLI  ──spawn──►  p
          (stdio)                   (TypeScript)            (Rust)
 ```
 
-The server inherits its working directory and forwards CLI output as MCP text. Configure the intended project directory and check the actual client tool list. The recorded public packages are 0.1.1; reviewed source 0.2.1 and historical native release 0.2.0 are separate artifacts. Plugin installation is not provider, credential or installed-runtime acceptance.
+The server inherits its working directory and forwards CLI output as MCP text. Configure the intended project directory and check the actual client tool list. The CLI and MCP package manifests in this repository declare Node.js >= 20; check the manifests and help for your installed versions. Source checkouts and native releases are separate artifacts. Plugin installation is not provider, credential or installed-runtime acceptance.

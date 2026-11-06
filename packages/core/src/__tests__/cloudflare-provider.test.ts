@@ -70,4 +70,27 @@ describe("cloudflare provider (mocked fetch)", () => {
     expect(status.kind).toBe("ok");
     expect(seenAuth).toBe("Bearer cf-cached");
   });
+
+  test("an empty 204 verification response does not verify a cached token", async () => {
+    const { addSecret } = await import("../phantom.ts");
+    await addSecret("CLOUDFLARE_API_TOKEN", "cf-cached");
+
+    let requests = 0;
+    globalThis.fetch = (async (url: string | URL | Request) => {
+      expect(String(url)).toBe("https://api.cloudflare.com/client/v4/user/tokens/verify");
+      requests++;
+      return new Response(null, { status: 204 });
+    }) as unknown as typeof fetch;
+
+    const ctx: ProviderContext = { cwd: process.cwd(), interactive: false, log: () => {} };
+    expect(
+      await cloudflare.healthcheck!(ctx, {
+        provider: "cloudflare",
+        secrets: ["CLOUDFLARE_API_TOKEN"],
+        created_at: new Date().toISOString(),
+      }),
+    ).toEqual({ kind: "error", detail: "token invalid" });
+    await expect(cloudflare.login(ctx)).rejects.toMatchObject({ code: "CLOUDFLARE_AUTH_REQUIRED" });
+    expect(requests).toBe(2);
+  });
 });

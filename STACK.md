@@ -20,17 +20,17 @@ third-party service in a developer's project with one command.
 <!-- fresh:begin version-table -->
 | Package | Manifest | Version |
 | --- | --- | --- |
-| `@ashlr/stack-core` | `packages/core/package.json` | 0.2.2 |
-| `@ashlr/stack` | `packages/cli/package.json` | 0.2.2 |
-| `ashlr-stack-mcp` | `packages/mcp/package.json` | 0.2.2 |
+| `@ashlr/stack-core` | `packages/core/package.json` | 0.3.3 |
+| `@ashlr/stack` | `packages/cli/package.json` | 0.3.3 |
+| `ashlr-stack-mcp` | `packages/mcp/package.json` | 0.3.3 |
 | `ashlr-stack-monorepo` (private) | `package.json` | 0.1.0 |
 
-Latest released CHANGELOG section: `0.2.2 (2026-10-25)`.
+Latest dated CHANGELOG section: `0.3.3 (2026-11-05)`.
 <!-- fresh:end -->
 
 ## Quick orientation
 
-- <!-- fresh:begin command-count -->37<!-- fresh:end --> CLI commands live under `packages/cli/src/commands/*.ts` (registered in `packages/cli/src/index.ts`)
+- <!-- fresh:begin command-count -->43<!-- fresh:end --> CLI commands live under `packages/cli/src/commands/*.ts` (registered in `packages/cli/src/index.ts`)
 - <!-- fresh:begin provider-count -->39<!-- fresh:end --> providers in <!-- fresh:begin category-count -->13<!-- fresh:end --> categories under `packages/core/src/providers/*.ts` (factory: `_api-key.ts`; pilot: `supabase.ts`)
 - <!-- fresh:begin tool-count -->19<!-- fresh:end --> MCP tools in the `TOOLS` array of `packages/mcp/src/tools.ts` (served by `server.ts`). Each runs the CLI: `STACK_BIN` if set, else the `stack` bin of the `@ashlr/stack` dependency (`packages/cli/dist/index.js`, present after a build), else `stack` on PATH (`packages/mcp/src/stack-bin.ts`)
 - Tests live in `packages/*/src/__tests__/`, `packages/mcp/__tests__/`, `packages/site/tests/` and `scripts/`. Run with `HOME=$(mktemp -d) bun test` from the repo root
@@ -47,7 +47,7 @@ bun run packages/cli/src/index.ts --help   # the CLI from source
 
 Things that trip agents up:
 
-- **No TTY.** Agent shells have no TTY. `stack scan` without flags prints the human report; use `stack scan --json` to parse it. `stack scan --auto` without `--yes` exits 1, since it would ask before each add. `stack init` skips the template picker; pass `--template <name>` (see `stack templates list`).
+- **No TTY.** Agent shells have no TTY. `stack scan` without flags prints the human report; use `stack scan --json` to parse it. `stack scan --auto` without `--yes` exits 1, since it would ask before each add. See [scan troubleshooting](docs/scan-troubleshooting.md) for errors and recovery. `stack init` skips the template picker; pass `--template <name>` (see `stack templates list`).
 - **`stack init --dryRun` still writes.** It provisions nothing, but it writes `.stack.toml`, `.stack.local.toml` and `.gitignore` and registers the project in `~/.stack/projects.json`. Run it in a scratch directory, and set `STACK_REGISTRY_DIR` to a temp dir to keep `~/.stack` clean.
 - **MCP from source needs the CLI too.** Point the server at the source CLI with `STACK_BIN` (see `packages/mcp/README.md`), or build `packages/cli` so `dist/index.js` exists. Otherwise every tool call fails with "Could not run the 'stack' CLI".
 - **MCP tests run the built bundles.** `packages/mcp/__tests__/server.test.ts` drives `packages/mcp/dist/server.js` and `packages/cli/dist/index.js` and only builds them when they are missing. Run `bun run build` after changing CLI or MCP source before trusting an MCP test failure.
