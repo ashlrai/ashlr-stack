@@ -1,9 +1,9 @@
 # Phantom wire example annotations
 
-[`phantom-wire.ts`](../packages/core/src/ai/phantom-wire.ts#L117) generates a
+[`phantom-wire.ts`](../packages/core/src/ai/phantom-wire.ts#L118) generates a
 commented webhook example, rather than a working handler. For Stripe, the
 writer puts it at `.stack/webhooks/stripe.ts` under the selected working
-directory; the [writer](../packages/core/src/ai/phantom-wire.ts#L110) creates
+directory; the [writer](../packages/core/src/ai/phantom-wire.ts#L111) creates
 the directory and overwrites an existing file. The same template is used for
 Stripe, Clerk, Supabase, and GitHub, with provider-specific names.
 
@@ -28,14 +28,14 @@ The following excerpt is from the generated Stripe example:
 // }
 ```
 
-- **Example:** The [handler template](../packages/core/src/ai/phantom-wire.ts#L127)
+- **Example:** The [handler template](../packages/core/src/ai/phantom-wire.ts#L128)
   reads a signature header and the body. Every line is commented out; generating
   the file neither registers nor deploys a handler. If uncommented as written,
   any non-empty signature header reaches the 200 response when the body read
   succeeds, without authenticating the request.
-- **Verification reminder:** The [TODO template](../packages/core/src/ai/phantom-wire.ts#L131)
+- **Verification reminder:** The [TODO template](../packages/core/src/ai/phantom-wire.ts#L132)
   warns that the body is attacker-controlled and signature verification is not
-  implemented. The [provider hint](../packages/core/src/ai/phantom-wire.ts#L152)
+  implemented. The [provider hint](../packages/core/src/ai/phantom-wire.ts#L155)
   is a starting point, not executable verification. Before deployment, implement
   the provider's current scheme, preserve the required raw body, retrieve the
   secret securely, and reject invalid requests before trusting or acting on the

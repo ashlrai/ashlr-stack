@@ -35,7 +35,8 @@ export const CLI_COMMANDS: CliCommand[] = [
   {
     name: "stack init",
     description: "Scaffold a .stack.toml in the current directory.",
-    synopsis: "stack init [--template <template>] [--force] [--noInteractive] [--noProvision] [--dryRun] [--noRollback]",
+    synopsis:
+      "stack init [--template <template>] [--force] [--noInteractive] [--noProvision] [--dryRun] [--noRollback]",
     flags: [
       {
         name: "template",
@@ -62,29 +63,36 @@ export const CLI_COMMANDS: CliCommand[] = [
         synopsis: "--noProvision",
         type: "boolean",
         default: false,
-        description: "Write the .stack.toml shape from the template but skip provisioning services.",
+        description:
+          "Write the .stack.toml shape from the template but skip provisioning services.",
       },
       {
         name: "dryRun",
         synopsis: "--dryRun",
         type: "boolean",
         default: false,
-        description: "Print what would be provisioned without doing it (implies --noProvision for real calls).",
+        description:
+          "Print what would be provisioned without doing it (implies --noProvision for real calls).",
       },
       {
         name: "noRollback",
         synopsis: "--noRollback",
         type: "boolean",
         default: false,
-        description: "On partial provisioning failure, keep successfully-added services instead of rolling them back.",
+        description:
+          "On partial provisioning failure, keep successfully-added services instead of rolling them back.",
       },
     ],
     examples: [
       { command: "stack init" },
-      { command: "stack init --template nextjs-supabase-posthog", comment: "# apply a starter template up front" },
+      {
+        command: "stack init --template nextjs-supabase-posthog",
+        comment: "# apply a starter template up front",
+      },
       { command: "stack init --noInteractive", comment: "# CI-safe blank init" },
     ],
-    notes: "Warns (but proceeds) if Phantom isn't on $PATH. `stack add` requires Phantom; `stack init` does not.",
+    notes:
+      "Warns (but proceeds) if Phantom isn't on $PATH. `stack add` requires Phantom; `stack init` does not.",
   },
   {
     name: "stack import",
@@ -110,19 +118,19 @@ export const CLI_COMMANDS: CliCommand[] = [
         synopsis: "--json",
         type: "boolean",
         default: false,
-        description: "Emit machine-readable JSON (schema ashlr.stack.import/v1, names only): what was stored, skipped and wired.",
+        description:
+          "Emit machine-readable JSON (schema ashlr.stack.import/v1, names only): what was stored, skipped and wired.",
       },
     ],
-    examples: [
-      { command: "stack import" },
-      { command: "stack import --from .env.local --dryRun" },
-    ],
-    notes: "Routes every secret into Phantom, then best-guesses which provider each belongs to and writes matching service entries into .stack.toml.",
+    examples: [{ command: "stack import" }, { command: "stack import --from .env.local --dryRun" }],
+    notes:
+      "Routes every secret into Phantom, then best-guesses which provider each belongs to and writes matching service entries into .stack.toml.",
   },
   {
     name: "stack scan",
     description: "Detect providers used by this repo (package.json, config files, .env.example).",
-    synopsis: "stack scan [--path <path>] [--auto] [--yes] [--confidence <low|medium|high>] [--json]",
+    synopsis:
+      "stack scan [--path <path>] [--auto] [--yes] [--confidence <low|medium|high>] [--json]",
     flags: [
       {
         name: "path",
@@ -143,7 +151,8 @@ export const CLI_COMMANDS: CliCommand[] = [
         synopsis: "--yes",
         type: "boolean",
         default: false,
-        description: "Non-interactive: accept all hits at/above --confidence threshold. Implies --auto.",
+        description:
+          "Non-interactive: accept all hits at/above --confidence threshold. Implies --auto.",
       },
       {
         name: "confidence",
@@ -162,7 +171,10 @@ export const CLI_COMMANDS: CliCommand[] = [
     ],
     examples: [
       { command: "stack scan" },
-      { command: "stack scan --auto --confidence high", comment: "# auto-wire only signals we're sure about" },
+      {
+        command: "stack scan --auto --confidence high",
+        comment: "# auto-wire only signals we're sure about",
+      },
     ],
   },
   {
@@ -189,7 +201,8 @@ export const CLI_COMMANDS: CliCommand[] = [
       { command: "stack clone https://github.com/acme/webapp" },
       { command: "stack clone git@github.com:acme/webapp.git my-app" },
     ],
-    notes: "After cloning, runs `stack scan` automatically. If the repo already ships a committed .stack.toml, it prints next-step guidance instead.",
+    notes:
+      "After cloning, runs `stack scan` automatically. If the repo already ships a committed .stack.toml, it prints next-step guidance instead.",
   },
   {
     name: "stack add",
@@ -233,14 +246,19 @@ export const CLI_COMMANDS: CliCommand[] = [
     examples: [
       { command: "stack add supabase" },
       { command: "stack add neon --region us-east-2" },
-      { command: "stack add vercel --use prj_abc123", comment: "# attach to an existing Vercel project" },
+      {
+        command: "stack add vercel --use prj_abc123",
+        comment: "# attach to an existing Vercel project",
+      },
       { command: "stack add --dryRun" },
     ],
-    notes: "Requires Phantom to be on $PATH. Runs the provider's four-step lifecycle: login → provision → materialize → persist.",
+    notes:
+      "Requires Phantom to be on $PATH. Runs the provider's four-step lifecycle: login → provision → materialize → persist.",
   },
   {
     name: "stack remove",
-    description: "Remove local service config and MCP wiring; attempt Phantom secret removal (headless runs may retain secrets).",
+    description:
+      "Remove local service config and MCP wiring; attempt Phantom secret removal (headless runs may retain secrets).",
     synopsis: "stack remove [service] [--all] [--allOrphans] [--keepRemote] [--json]",
     flags: [
       {
@@ -262,7 +280,8 @@ export const CLI_COMMANDS: CliCommand[] = [
         synopsis: "--allOrphans",
         type: "boolean",
         default: false,
-        description: "Detect services in .stack.toml no longer present in source, then remove their local entries.",
+        description:
+          "Detect services in .stack.toml no longer present in source, then remove their local entries.",
       },
       {
         name: "keepRemote",
@@ -276,7 +295,8 @@ export const CLI_COMMANDS: CliCommand[] = [
         synopsis: "--json",
         type: "boolean",
         default: false,
-        description: "Emit machine-readable JSON (schema ashlr.stack.remove/v1) naming the secrets Phantom kept. Never prompts.",
+        description:
+          "Emit machine-readable JSON (schema ashlr.stack.remove/v1) naming the secrets Phantom kept. Never prompts.",
       },
     ],
     examples: [
@@ -321,10 +341,9 @@ export const CLI_COMMANDS: CliCommand[] = [
         description: "Emit machine-readable JSON (schema ashlr.stack.info/v1, secret names only).",
       },
     ],
-    examples: [
-      { command: "stack info supabase" },
-    ],
-    notes: "Prints provider, resource id, region, secret slots (with vault presence), MCP wiring, dashboard URL, and runs a fresh healthcheck.",
+    examples: [{ command: "stack info supabase" }],
+    notes:
+      "Prints provider, resource id, region, secret slots (with vault presence), MCP wiring, dashboard URL, and runs a fresh healthcheck.",
   },
   {
     name: "stack status",
@@ -338,9 +357,7 @@ export const CLI_COMMANDS: CliCommand[] = [
         description: "Emit machine-readable JSON (services, config, phantom).",
       },
     ],
-    examples: [
-      { command: "stack status" },
-    ],
+    examples: [{ command: "stack status" }],
   },
   {
     name: "stack env",
@@ -380,13 +397,11 @@ export const CLI_COMMANDS: CliCommand[] = [
             synopsis: "--json",
             type: "boolean",
             default: false,
-            description: "Emit machine-readable JSON (schema ashlr.stack.env/v1, secret names only).",
+            description:
+              "Emit machine-readable JSON (schema ashlr.stack.env/v1, secret names only).",
           },
         ],
-        examples: [
-          { command: "stack env show" },
-          { command: "stack env show --env prod" },
-        ],
+        examples: [{ command: "stack env show" }, { command: "stack env show --env prod" }],
       },
       {
         name: "stack env export",
@@ -430,12 +445,11 @@ export const CLI_COMMANDS: CliCommand[] = [
             synopsis: "--json",
             type: "boolean",
             default: false,
-            description: "Emit machine-readable JSON (schema ashlr.stack.env-diff/v1, secret names only). Exits 1 when any are missing.",
+            description:
+              "Emit machine-readable JSON (schema ashlr.stack.env-diff/v1, secret names only). Exits 1 when any are missing.",
           },
         ],
-        examples: [
-          { command: "stack env diff" },
-        ],
+        examples: [{ command: "stack env diff" }],
       },
     ],
   },
@@ -455,12 +469,14 @@ export const CLI_COMMANDS: CliCommand[] = [
       { command: "stack deps" },
       { command: "stack deps --json", comment: "# ashlr.stack.deps/v1 for agents" },
     ],
-    notes: "Renders an ASCII tree grouped by category, with every secret slot annotated beneath its service.",
+    notes:
+      "Renders an ASCII tree grouped by category, with every secret slot annotated beneath its service.",
   },
   {
     name: "stack doctor",
     description: "Verify every service is reachable and credentials are valid.",
-    synopsis: "stack doctor [--fix] [--all] [--json] [--ecosystem] [--install] [--apply] [--repos] [--reconcile]",
+    synopsis:
+      "stack doctor [--fix] [--all] [--json] [--ecosystem] [--install] [--apply] [--repos] [--reconcile]",
     flags: [
       {
         name: "fix",
@@ -488,19 +504,22 @@ export const CLI_COMMANDS: CliCommand[] = [
         synopsis: "--ecosystem",
         type: "boolean",
         default: false,
-        description: "List installed Ashlr tools (phantom, locus, lexicon, ...) via --ashlr-handshake. Informational; never fails.",
+        description:
+          "List installed Ashlr tools (phantom, locus, lexicon, ...) via --ashlr-handshake. Informational; never fails.",
       },
       {
         name: "install",
         synopsis: "--install",
         type: "boolean",
-        description: "With --ecosystem: print install commands for missing or outdated companions (optional comma list: phantom, locus, lexicon, ashlr-md). Runs nothing without --apply.",
+        description:
+          "With --ecosystem: print install commands for missing or outdated companions (optional comma list: phantom, locus, lexicon, ashlr-md). Runs nothing without --apply.",
       },
       {
         name: "apply",
         synopsis: "--apply",
         type: "boolean",
-        description: "With --ecosystem --fix or --install: run the step for these tools only (comma list, e.g. lexicon). Required per tool.",
+        description:
+          "With --ecosystem --fix or --install: run the step for these tools only (comma list, e.g. lexicon). Required per tool.",
       },
       {
         name: "repos",
@@ -545,7 +564,8 @@ export const CLI_COMMANDS: CliCommand[] = [
   },
   {
     name: "stack fleet-supply",
-    description: "Report hourly launches, observed lane idle minutes, restock errors and UTF-8 queue splits.",
+    description:
+      "Report hourly launches, observed lane idle minutes, restock errors and UTF-8 queue splits.",
     synopsis: "stack fleet-supply [--json] [--queue <queue>] [--log <log>]",
     flags: [
       {
@@ -570,7 +590,8 @@ export const CLI_COMMANDS: CliCommand[] = [
   },
   {
     name: "stack fleet-latency",
-    description: "Report per-repo median and p90 open-to-merge seconds for PRs merged in the last six hours.",
+    description:
+      "Report per-repo median and p90 open-to-merge seconds for PRs merged in the last six hours.",
     synopsis: "stack fleet-latency [--json]",
     flags: [
       {
@@ -583,7 +604,8 @@ export const CLI_COMMANDS: CliCommand[] = [
   },
   {
     name: "stack fleet-lag",
-    description: "Report per-repo commits since latest tag, tag age and median time for the last 20 merged PRs.",
+    description:
+      "Report per-repo commits since latest tag, tag age and median time for the last 20 merged PRs.",
     synopsis: "stack fleet-lag [--json]",
     flags: [
       {
@@ -593,14 +615,14 @@ export const CLI_COMMANDS: CliCommand[] = [
         description: "Emit schemaVersion 1 JSON; unavailable metrics are null.",
       },
     ],
-    examples: [
-      { command: "stack fleet-lag --json" },
-    ],
-    notes: "Read-only via Locus. Latest tag is ordered by underlying commit date; age uses the annotated tagger date or lightweight commit date. Compares that tag to the default branch. Median seconds use the latest 20 merge timestamps across all base branches, or all merged PRs if fewer. No tags and unavailable repositories remain in the report; unknown metrics are null.",
+    examples: [{ command: "stack fleet-lag --json" }],
+    notes:
+      "Read-only via Locus. Latest tag is ordered by underlying commit date; age uses the annotated tagger date or lightweight commit date. Compares that tag to the default branch. Median seconds use the latest 20 merge timestamps across all base branches, or all merged PRs if fewer. No tags and unavailable repositories remain in the report; unknown metrics are null.",
   },
   {
     name: "stack fleet-waste",
-    description: "Report per-lane launches, empty finishes, precheck skips by code and unfinished jobs.",
+    description:
+      "Report per-lane launches, empty finishes, precheck skips by code and unfinished jobs.",
     synopsis: "stack fleet-waste [--metrics <metrics>] [--hours <hours>] [--json]",
     flags: [
       {
@@ -627,11 +649,13 @@ export const CLI_COMMANDS: CliCommand[] = [
       { command: "stack fleet waste --json" },
       { command: "stack fleet-waste --metrics ~/.ashlr-runs/metrics/jobs.jsonl --hours 6" },
     ],
-    notes: "Read-only JSON, including empty files. Defaults to ~/.ashlr-runs/metrics/jobs.jsonl. Inclusive trailing window, default one hour. Events use ISO ts (or timestamp), event, lane and job; finish.empty must be true to count as empty. Launches and empties count events; precheckSkip groups skips by code (unknown if absent/invalid). neverFinished counts unique jobs launched in the window without a finish at or after their latest launch, as of windowEnd; unfinishedJobs lists their ids. File order does not matter. Malformed rows are skipped and counted; unrelated events and out-of-window rows are ignored. Missing/unreadable files fail without exposing raw input.",
+    notes:
+      "Read-only JSON, including empty files. Defaults to ~/.ashlr-runs/metrics/jobs.jsonl. Inclusive trailing window, default one hour. Events use ISO ts (or timestamp), event, lane and job; finish.empty must be true to count as empty. Launches and empties count events; precheckSkip groups skips by code (unknown if absent/invalid). neverFinished counts unique jobs launched in the window without a finish at or after their latest launch, as of windowEnd; unfinishedJobs lists their ids. File order does not matter. Malformed rows are skipped and counted; unrelated events and out-of-window rows are ignored. Missing/unreadable files fail without exposing raw input.",
   },
   {
     name: "stack fleet-reds",
-    description: "List failed jobs and first failing tests in the latest completed schedule/push CI runs.",
+    description:
+      "List failed jobs and first failing tests in the latest completed schedule/push CI runs.",
     synopsis: "stack fleet-reds [--json]",
     flags: [
       {
@@ -641,10 +665,9 @@ export const CLI_COMMANDS: CliCommand[] = [
         description: "Emit schemaVersion 1 JSON (also the default).",
       },
     ],
-    examples: [
-      { command: "stack fleet-reds --json" },
-    ],
-    notes: "Read-only via Locus. JSON is the default. For each of the seven fleet repositories, selects the latest completed workflow named CI on its default branch for each event (schedule and push), then lists failed jobs only when that run failed. A newer successful run clears older failures. no-runs means no completed run; unavailable and partial mean incomplete reads. firstFailingTest is null for unrecognized output or expired logs; logStatus distinguishes these cases. Parses Vitest, node:test TAP/spec and nextest text output. Raw logs and API errors are omitted.",
+    examples: [{ command: "stack fleet-reds --json" }],
+    notes:
+      "Read-only via Locus. JSON is the default. For each of the seven fleet repositories, selects the latest completed workflow named CI on its default branch for each event (schedule and push), then lists failed jobs only when that run failed. A newer successful run clears older failures. no-runs means no completed run; unavailable and partial mean incomplete reads. firstFailingTest is null for unrecognized output or expired logs; logStatus distinguishes these cases. Parses Vitest, node:test TAP/spec and nextest text output. Raw logs and API errors are omitted.",
   },
   {
     name: "stack fleet-silent",
@@ -664,10 +687,9 @@ export const CLI_COMMANDS: CliCommand[] = [
         description: "Emit schemaVersion 1 JSON (also the default).",
       },
     ],
-    examples: [
-      { command: "stack fleet-silent --runs /path/to/runs --json" },
-    ],
-    notes: "Read-only JSON. Reads top-level *author*.log files, dispatchd.log, dispatch-events.log and metrics/jobs.jsonl; missing/invalid sources are reported, never treated as healthy. Inputs are JSONL or timestamped key=value lines (naive timestamps are local). Fully dated logs use event order; legacy undated logs use append order. Author summaries use status=ok to clear older failures; lane summaries use lane (or pool), need and picked. Reports the latest positive need with zero picks per lane, ten explicit empty:true finish events per lane, and no fleet-wide launch for at least 20 minutes of observed dispatch/job history. Launch/tick timestamps are required; ticks use a nonnegative launched count. Malformed inputs suppress latest/absence claims. FIXUP reuse means the same job id launched on distinct UTC days; finishes crossing midnight do not count. Metrics use event, job, lane, empty and timestamp (or ts). Reads are capped at 16 MiB per regular file; symlink files and raw log bodies are excluded.",
+    examples: [{ command: "stack fleet-silent --runs /path/to/runs --json" }],
+    notes:
+      "Read-only JSON. Reads top-level *author*.log files, dispatchd.log, dispatch-events.log and metrics/jobs.jsonl; missing/invalid sources are reported, never treated as healthy. Inputs are JSONL or timestamped key=value lines (naive timestamps are local). Fully dated logs use event order; legacy undated logs use append order. Author summaries use status=ok to clear older failures; lane summaries use lane (or pool), need and picked. Reports the latest positive need with zero picks per lane, ten explicit empty:true finish events per lane, and no fleet-wide launch for at least 20 minutes of observed dispatch/job history. Launch/tick timestamps are required; ticks use a nonnegative launched count. Malformed inputs suppress latest/absence claims. FIXUP reuse means the same job id launched on distinct UTC days; finishes crossing midnight do not count. Metrics use event, job, lane, empty and timestamp (or ts). Reads are capped at 16 MiB per regular file; symlink files and raw log bodies are excluded.",
   },
   {
     name: "stack fleet-collisions",
@@ -688,10 +710,14 @@ export const CLI_COMMANDS: CliCommand[] = [
       },
     ],
     examples: [
-      { command: "locus exec -- gh pr list --state open --limit 1000 --json number,state,mergeable,files | stack fleet-collisions" },
+      {
+        command:
+          "locus exec -- gh pr list --state open --limit 1000 --json number,state,mergeable,files | stack fleet-collisions",
+      },
       { command: "stack fleet collisions --file prs.json" },
     ],
-    notes: "Read-only JSON for one repository per snapshot. Includes only OPEN, CONFLICTING PRs; UNKNOWN mergeability is excluded. Files rank by distinct PR count, then path. Paths are touched files, not confirmed conflict hunks. Counts cover only the supplied snapshot; ensure the gh limit covers all PRs. Empty input arrays yield files: []; invalid input exits nonzero.",
+    notes:
+      "Read-only JSON for one repository per snapshot. Includes only OPEN, CONFLICTING PRs; UNKNOWN mergeability is excluded. Files rank by distinct PR count, then path. Paths are touched files, not confirmed conflict hunks. Counts cover only the supplied snapshot; ensure the gh limit covers all PRs. Empty input arrays yield files: []; invalid input exits nonzero.",
   },
   {
     name: "stack fleet-delivery-lag",
@@ -703,7 +729,8 @@ export const CLI_COMMANDS: CliCommand[] = [
         synopsis: "--fixture <fixture>",
         type: "string",
         required: true,
-        description: "JSON snapshot: latestDeployed {version, commits: SHA[]}, commits {sha, createdAt, mergedAt: UTC ISO|null}[].",
+        description:
+          "JSON snapshot: latestDeployed {version, commits: SHA[]}, commits {sha, createdAt, mergedAt: UTC ISO|null}[].",
       },
       {
         name: "json",
@@ -715,7 +742,8 @@ export const CLI_COMMANDS: CliCommand[] = [
   },
   {
     name: "stack fleet-stuck",
-    description: "List open PRs by merge state, age and auto-merge status with server/ and lockfile path hints.",
+    description:
+      "List open PRs by merge state, age and auto-merge status with server/ and lockfile path hints.",
     synopsis: "stack fleet-stuck [--json]",
     flags: [
       {
@@ -725,33 +753,34 @@ export const CLI_COMMANDS: CliCommand[] = [
         description: "Emit schemaVersion 1 JSON (also the default).",
       },
     ],
-    examples: [
-      { command: "stack fleet-stuck --json" },
-    ],
-    notes: "Read-only via Locus. JSON is the default. Lists every open PR, sorted by merge state then descending age in days since creation. Auto-merge-off path reasons identify server/ directories and common lockfiles, including renamed paths; these are hints, not GitHub's explanation. Empty repositories have prs: []; unavailable or incomplete reads have prs: null.",
+    examples: [{ command: "stack fleet-stuck --json" }],
+    notes:
+      "Read-only via Locus. JSON is the default. Lists every open PR, sorted by merge state then descending age in days since creation. Auto-merge-off path reasons identify server/ directories and common lockfiles, including renamed paths; these are hints, not GitHub's explanation. Empty repositories have prs: []; unavailable or incomplete reads have prs: null.",
   },
   {
     name: "stack fleet-slo",
-    description: "Compare per-repo six-hour merges, open-to-merge latency and conflicting PRs with fleet SLO targets.",
+    description:
+      "Compare per-repo six-hour merges, open-to-merge latency and conflicting PRs with fleet SLO targets.",
     synopsis: "stack fleet-slo [--json]",
     flags: [
       {
         name: "json",
         synopsis: "--json",
         type: "boolean",
-        description: "Emit schemaVersion 1 JSON; unavailable metrics and inapplicable targets are null.",
+        description:
+          "Emit schemaVersion 1 JSON; unavailable metrics and inapplicable targets are null.",
       },
     ],
-    examples: [
-      { command: "stack fleet-slo --json" },
-      { command: "stack fleet slo --json" },
-    ],
-    notes: "Read-only via Locus. The window is the last six hours. Merge volume, median and p90 open-to-merge seconds come from the same source as stack fleet-latency; open and conflicting PR counts come from a paginated open-PR scan that counts only GitHub-reported CONFLICTING nodes. Targets: 20 merges per window in ashlrai/phantom and a median open-to-merge of 300 seconds; unavailable metrics and inapplicable targets are null.",
+    examples: [{ command: "stack fleet-slo --json" }, { command: "stack fleet slo --json" }],
+    notes:
+      "Read-only via Locus. The window is the last six hours. Merge volume, median and p90 open-to-merge seconds come from the same source as stack fleet-latency; open and conflicting PR counts come from a paginated open-PR scan that counts only GitHub-reported CONFLICTING nodes. Targets: 20 merges per window in ashlrai/phantom and a median open-to-merge of 300 seconds; unavailable metrics and inapplicable targets are null.",
   },
   {
     name: "stack fleet-act",
-    description: "Preview fleet requests; --apply appends a v1 audit request for a dispatcher consumer.",
-    synopsis: "stack fleet-act <verb> [--lane <lane>] [--job <job>] [--slots <slots>] [--message <message>] [--queue <queue>] [--apply] [--dryRun] [--json]",
+    description:
+      "Preview fleet requests; --apply appends a v1 audit request for a dispatcher consumer.",
+    synopsis:
+      "stack fleet-act <verb> [--lane <lane>] [--job <job>] [--slots <slots>] [--message <message>] [--queue <queue>] [--apply] [--dryRun] [--json]",
     flags: [
       {
         name: "verb",
@@ -813,7 +842,8 @@ export const CLI_COMMANDS: CliCommand[] = [
   {
     name: "stack fleet-stream",
     description: "Translate fleet logs to typed NDJSON or localhost SSE.",
-    synopsis: "stack fleet-stream [--dispatch <dispatch>] [--jobs <jobs>] [--follow] [--sse] [--port <port>]",
+    synopsis:
+      "stack fleet-stream [--dispatch <dispatch>] [--jobs <jobs>] [--follow] [--sse] [--port <port>]",
     flags: [
       {
         name: "dispatch",
@@ -875,14 +905,17 @@ export const CLI_COMMANDS: CliCommand[] = [
   },
   {
     name: "stack fleet-bets",
-    description: "Score leader bets: join queue ledger ids with dispatch state and job outcomes for per-bet status and per-lane merged rate.",
-    synopsis: "stack fleet-bets [--json] [--queue <queue>] [--router <router>] [--ready <ready>] [--metrics <metrics>] [--src <src>]",
+    description:
+      "Score leader bets: join queue ledger ids with dispatch state and job outcomes for per-bet status and per-lane merged rate.",
+    synopsis:
+      "stack fleet-bets [--json] [--queue <queue>] [--router <router>] [--ready <ready>] [--metrics <metrics>] [--src <src>]",
     flags: [
       {
         name: "json",
         synopsis: "--json",
         type: "boolean",
-        description: "Emit schemaVersion 1 JSON; open covers unresolved work, mergedRate uses resolved bets.",
+        description:
+          "Emit schemaVersion 1 JSON; open covers unresolved work, mergedRate uses resolved bets.",
       },
       {
         name: "queue",
@@ -915,10 +948,9 @@ export const CLI_COMMANDS: CliCommand[] = [
         description: "Source marker selecting bets (default: leader).",
       },
     ],
-    examples: [
-      { command: "stack fleet-bets --json" },
-    ],
-    notes: "Read-only. Bets are job ids on `- STATUS <id> (attrs)` lines of the leader queue ledger whose attrs carry src=leader (`--src` selects another marker). Queue state comes from ready.tsv; launch, finish, publish and outcome events come from metrics/jobs.jsonl (tail-read at 32 MiB). Statuses: vanished (no trace), waiting (queued), running (launched), empty (resolved with no merge: empty finish, empty publish, precheck skip or a terminal non-merge outcome), open (PR open or unresolved non-empty work) and merged (outcome state MERGED). Ledger MERGED/LANDED/DONE/PR-OPEN statuses are fallbacks when local evidence is absent. mergedRate is merged over resolved (merged + empty) bets per lane; null when nothing resolved.",
+    examples: [{ command: "stack fleet-bets --json" }],
+    notes:
+      "Read-only. Bets are job ids on `- STATUS <id> (attrs)` lines of the leader queue ledger whose attrs carry src=leader (`--src` selects another marker). Queue state comes from ready.tsv; launch, finish, publish and outcome events come from metrics/jobs.jsonl (tail-read at 32 MiB). Statuses: vanished (no trace), waiting (queued), running (launched), empty (resolved with no merge: empty finish, empty publish, precheck skip or a terminal non-merge outcome), open (PR open or unresolved non-empty work) and merged (outcome state MERGED). Ledger MERGED/LANDED/DONE/PR-OPEN statuses are fallbacks when local evidence is absent. mergedRate is merged over resolved (merged + empty) bets per lane; null when nothing resolved.",
   },
   {
     name: "stack fleet",
@@ -947,24 +979,26 @@ export const CLI_COMMANDS: CliCommand[] = [
     subcommands: [
       {
         name: "stack fleet slo",
-        description: "Compare per-repo six-hour merges, open-to-merge latency and conflicting PRs with fleet SLO targets.",
+        description:
+          "Compare per-repo six-hour merges, open-to-merge latency and conflicting PRs with fleet SLO targets.",
         synopsis: "stack fleet slo [--json]",
         flags: [
           {
             name: "json",
             synopsis: "--json",
             type: "boolean",
-            description: "Emit schemaVersion 1 JSON; unavailable metrics and inapplicable targets are null.",
+            description:
+              "Emit schemaVersion 1 JSON; unavailable metrics and inapplicable targets are null.",
           },
         ],
-        examples: [
-          { command: "stack fleet slo --json" },
-        ],
-        notes: "Read-only via Locus. Same report as stack fleet-slo, nested under the fleet namespace.",
+        examples: [{ command: "stack fleet slo --json" }],
+        notes:
+          "Read-only via Locus. Same report as stack fleet-slo, nested under the fleet namespace.",
       },
       {
         name: "stack fleet collisions",
-        description: "Rank touched files by open conflicting PR count from one repository's gh JSON.",
+        description:
+          "Rank touched files by open conflicting PR count from one repository's gh JSON.",
         synopsis: "stack fleet collisions [--file <file>] [--json]",
         flags: [
           {
@@ -983,7 +1017,8 @@ export const CLI_COMMANDS: CliCommand[] = [
       },
       {
         name: "stack fleet waste",
-        description: "Report per-lane launches, empty finishes, precheck skips by code and unfinished jobs.",
+        description:
+          "Report per-lane launches, empty finishes, precheck skips by code and unfinished jobs.",
         synopsis: "stack fleet waste [--metrics <metrics>] [--hours <hours>] [--json]",
         flags: [
           {
@@ -1006,9 +1041,7 @@ export const CLI_COMMANDS: CliCommand[] = [
             description: "Emit schemaVersion 1 JSON (also the default).",
           },
         ],
-        examples: [
-          { command: "stack fleet waste --json" },
-        ],
+        examples: [{ command: "stack fleet waste --json" }],
         notes: "Read-only JSON. Same report, metrics path and window as stack fleet-waste.",
       },
     ],
@@ -1022,14 +1055,13 @@ export const CLI_COMMANDS: CliCommand[] = [
         name: "as",
         synopsis: "--as <as>",
         type: "string",
-        description: "Refuse (exit 1, nothing starts) unless this Locus binding alias is pinned (needs `--`)",
+        description:
+          "Refuse (exit 1, nothing starts) unless this Locus binding alias is pinned (needs `--`)",
       },
     ],
-    examples: [
-      { command: "stack exec -- bun dev" },
-      { command: "stack exec -- npm test" },
-    ],
-    notes: "Thin wrapper over `phantom exec` so env vars with phm_ tokens get swapped for real secrets at the network layer.",
+    examples: [{ command: "stack exec -- bun dev" }, { command: "stack exec -- npm test" }],
+    notes:
+      "Thin wrapper over `phantom exec` so env vars with phm_ tokens get swapped for real secrets at the network layer.",
   },
   {
     name: "stack swap",
@@ -1086,14 +1118,14 @@ export const CLI_COMMANDS: CliCommand[] = [
         description: "One of: vercel, railway, fly",
       },
     ],
-    examples: [
-      { command: "stack sync --platform vercel" },
-    ],
+    examples: [{ command: "stack sync --platform vercel" }],
   },
   {
     name: "stack onboard",
-    description: "Detect Codex, Claude Code, Cursor and Gemini CLI and register the Phantom gateway in each (plan by default).",
-    synopsis: "stack onboard [--apply] [--undo] [--client <client>] [--all] [--home <home>] [--json]",
+    description:
+      "Detect Codex, Claude Code, Cursor and Gemini CLI and register the Phantom gateway in each (plan by default).",
+    synopsis:
+      "stack onboard [--apply] [--undo] [--client <client>] [--all] [--home <home>] [--json]",
     flags: [
       {
         name: "apply",
@@ -1151,10 +1183,7 @@ export const CLI_COMMANDS: CliCommand[] = [
         description: "Service name.",
       },
     ],
-    examples: [
-      { command: "stack open supabase" },
-      { command: "stack open vercel" },
-    ],
+    examples: [{ command: "stack open supabase" }, { command: "stack open vercel" }],
   },
   {
     name: "stack login",
@@ -1169,10 +1198,7 @@ export const CLI_COMMANDS: CliCommand[] = [
         description: "Provider name.",
       },
     ],
-    examples: [
-      { command: "stack login github" },
-      { command: "stack login supabase" },
-    ],
+    examples: [{ command: "stack login github" }, { command: "stack login supabase" }],
   },
   {
     name: "stack telemetry",
@@ -1223,9 +1249,7 @@ export const CLI_COMMANDS: CliCommand[] = [
             description: "Emit machine-readable JSON (schema ashlr.stack.templates/v1).",
           },
         ],
-        examples: [
-          { command: "stack templates list" },
-        ],
+        examples: [{ command: "stack templates list" }],
       },
       {
         name: "stack templates apply",
@@ -1247,9 +1271,7 @@ export const CLI_COMMANDS: CliCommand[] = [
             description: "Keep going when a single service fails (default: true).",
           },
         ],
-        examples: [
-          { command: "stack templates apply nextjs-supabase-posthog" },
-        ],
+        examples: [{ command: "stack templates apply nextjs-supabase-posthog" }],
       },
     ],
   },
@@ -1263,7 +1285,8 @@ export const CLI_COMMANDS: CliCommand[] = [
         synopsis: "--category <category>",
         type: "string",
         required: false,
-        description: "Only this category, any case (database, deploy, cloud, ai, analytics, observability, errors, payments, code, tickets, email, auth, featureflags).",
+        description:
+          "Only this category, any case (database, deploy, cloud, ai, analytics, observability, errors, payments, code, tickets, email, auth, featureflags).",
       },
       {
         name: "json",
@@ -1280,7 +1303,8 @@ export const CLI_COMMANDS: CliCommand[] = [
   {
     name: "stack recommend",
     description: "Pick the right providers for what you're building (AI-assisted).",
-    synopsis: "stack recommend [query] [--k <n>] [--category <category>] [--json] [--save] [--synth]",
+    synopsis:
+      "stack recommend [query] [--k <n>] [--category <category>] [--json] [--save] [--synth]",
     flags: [
       {
         name: "query",
@@ -1301,7 +1325,8 @@ export const CLI_COMMANDS: CliCommand[] = [
         synopsis: "--category <category>",
         type: "string",
         required: false,
-        description: "Restrict to a single category, any case (Database, Deploy, Cloud, AI, Analytics, Observability, Errors, Payments, Code, Tickets, Email, Auth, FeatureFlags).",
+        description:
+          "Restrict to a single category, any case (Database, Deploy, Cloud, AI, Analytics, Observability, Errors, Payments, Code, Tickets, Email, Auth, FeatureFlags).",
       },
       {
         name: "json",
@@ -1315,25 +1340,28 @@ export const CLI_COMMANDS: CliCommand[] = [
         synopsis: "--save",
         type: "boolean",
         required: false,
-        description: "Persist the result as .stack/recipes/<id>.toml so you can run `stack apply <id>`.",
+        description:
+          "Persist the result as .stack/recipes/<id>.toml so you can run `stack apply <id>`.",
       },
       {
         name: "synth",
         synopsis: "--synth",
         type: "boolean",
         required: false,
-        description: "Call the local SLM (LM Studio / Ollama) to synthesize rationales. Silently falls back to retrieval-only when no endpoint is reachable.",
+        description:
+          "Call the local SLM (LM Studio / Ollama) to synthesize rationales. Silently falls back to retrieval-only when no endpoint is reachable.",
       },
     ],
     examples: [
-      { command: "stack recommend \"next.js app with auth and postgres\"" },
-      { command: "stack recommend --json \"realtime websockets\"" },
+      { command: 'stack recommend "next.js app with auth and postgres"' },
+      { command: 'stack recommend --json "realtime websockets"' },
     ],
   },
   {
     name: "stack apply",
-    description: "Apply a saved recipe: provision each provider, check its secrets in Phantom, and add webhook stubs.",
-    synopsis: "stack apply [id] [--noWire] [--noRollback]",
+    description:
+      "Apply a saved recipe: provision each provider, check its secrets in Phantom, and add webhook stubs.",
+    synopsis: "stack apply [id] [--noWire] [--noRollback] [--dryRun]",
     flags: [
       {
         name: "recipeId",
@@ -1354,14 +1382,20 @@ export const CLI_COMMANDS: CliCommand[] = [
         synopsis: "--noRollback",
         type: "boolean",
         default: false,
-        description: "On partial failure, leave successfully-added services in .stack.toml instead of rolling them back.",
+        description:
+          "On partial failure, leave successfully-added services in .stack.toml instead of rolling them back.",
+      },
+      {
+        name: "dryRun",
+        synopsis: "--dryRun",
+        type: "boolean",
+        default: false,
+        description: "Preview provisioning and wiring without making changes.",
       },
     ],
-    examples: [
-      { command: "stack apply" },
-      { command: "stack apply my-recipe" },
-    ],
-    notes: "The golden path is `stack recommend --save && stack apply <id>`. Auto-inits a blank .stack.toml if none exists.",
+    examples: [{ command: "stack apply" }, { command: "stack apply my-recipe" }],
+    notes:
+      "The golden path is `stack recommend --save && stack apply <id>`. Auto-inits a blank .stack.toml if none exists.",
   },
   {
     name: "stack projects",
@@ -1390,17 +1424,13 @@ export const CLI_COMMANDS: CliCommand[] = [
             description: "Emit machine-readable JSON (schema ashlr.stack.projects/v1).",
           },
         ],
-        examples: [
-          { command: "stack projects list" },
-        ],
+        examples: [{ command: "stack projects list" }],
       },
       {
         name: "stack projects register",
         description: "Register the current directory in the registry.",
         synopsis: "stack projects register",
-        examples: [
-          { command: "stack projects register" },
-        ],
+        examples: [{ command: "stack projects register" }],
       },
       {
         name: "stack projects remove",
@@ -1415,9 +1445,7 @@ export const CLI_COMMANDS: CliCommand[] = [
             description: "Project name or absolute path.",
           },
         ],
-        examples: [
-          { command: "stack projects remove my-app" },
-        ],
+        examples: [{ command: "stack projects remove my-app" }],
       },
       {
         name: "stack projects where",
@@ -1433,7 +1461,10 @@ export const CLI_COMMANDS: CliCommand[] = [
           },
         ],
         examples: [
-          { command: "cd $(stack projects where my-app)", comment: "# jump into a project by name" },
+          {
+            command: "cd $(stack projects where my-app)",
+            comment: "# jump into a project by name",
+          },
         ],
       },
     ],
@@ -1454,7 +1485,8 @@ export const CLI_COMMANDS: CliCommand[] = [
     subcommands: [
       {
         name: "stack ci init",
-        description: "Unavailable: refuses with what to run instead (stack doctor). Never writes a workflow.",
+        description:
+          "Unavailable: refuses with what to run instead (stack doctor). Never writes a workflow.",
         synopsis: "stack ci init [--force] [--json]",
         flags: [
           {
@@ -1462,7 +1494,8 @@ export const CLI_COMMANDS: CliCommand[] = [
             synopsis: "--force",
             type: "boolean",
             default: false,
-            description: "Compatibility flag; generation is unavailable and no workflow is overwritten.",
+            description:
+              "Compatibility flag; generation is unavailable and no workflow is overwritten.",
           },
           {
             name: "json",
@@ -1472,9 +1505,7 @@ export const CLI_COMMANDS: CliCommand[] = [
             description: "Emit the refusal as JSON ({ error }) on stdout.",
           },
         ],
-        examples: [
-          { command: "stack ci init" },
-        ],
+        examples: [{ command: "stack ci init" }],
       },
     ],
   },
@@ -1507,7 +1538,8 @@ export const CLI_COMMANDS: CliCommand[] = [
         synopsis: "--apply",
         type: "boolean",
         default: false,
-        description: "Upgrade the npm global CLI, restoring the previous install on failed health checks.",
+        description:
+          "Upgrade the npm global CLI, restoring the previous install on failed health checks.",
       },
       {
         name: "dryRun",
@@ -1523,10 +1555,8 @@ export const CLI_COMMANDS: CliCommand[] = [
         description: "Emit a machine-readable upgrade report without a banner.",
       },
     ],
-    examples: [
-      { command: "stack upgrade" },
-      { command: "stack upgrade --apply" },
-    ],
-    notes: "Checks npm by default. --apply upgrades an npm global CLI install with local rollback on failed health checks; --dryRun never installs.",
+    examples: [{ command: "stack upgrade" }, { command: "stack upgrade --apply" }],
+    notes:
+      "Checks npm by default. --apply upgrades an npm global CLI install with local rollback on failed health checks; --dryRun never installs.",
   },
 ];
