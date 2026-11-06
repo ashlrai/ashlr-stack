@@ -220,6 +220,15 @@ describe("site facts: generated files are current", () => {
     expect(readSite("public/openapi.json")).toBe(renderOpenApiJson(facts));
   });
 
+  test("agent references distinguish CLI upgrades from the read-only MCP tool", () => {
+    for (const rel of ["src/data/agent-guide.txt", "src/data/llms-full.txt", "public/llms.txt", "public/llms-full.txt"]) {
+      const guide = readSite(rel);
+      expect(guide).toContain("`--apply`");
+      expect(guide).toContain("`--dryRun` prevents installation");
+      expect(guide).toContain("`stack_upgrade` MCP tool only checks");
+    }
+  });
+
   test("public/llms-full.txt equals a fresh render of its template", async () => {
     expect(readSite("public/llms-full.txt")).toBe(await renderLlmsFull(facts));
   });
