@@ -36,3 +36,8 @@ test("populated entry is returned exactly once across the whole changelog", () =
   expect(all.filter((e) => e === "Populated entry for Fixed.")).toHaveLength(1);
   expect(all).toHaveLength(2);
 });
+
+test("empty input returns no versions without throwing", () => {
+  expect(() => parse("")).not.toThrow();
+  expect(parse("")).toEqual([]);
+});

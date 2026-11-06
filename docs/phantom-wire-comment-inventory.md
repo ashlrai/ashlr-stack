@@ -13,13 +13,13 @@ The example is illustrative and does not install a handler or verify a request.
 | [Module header](../packages/core/src/ai/phantom-wire.ts#L1) | Describes the vault-name check, example stubs, opt-out, and unsigned recipes. | Wiring checks names and writes files; it neither stores secret values nor authenticates recipes or webhooks. |
 | [`WireResult`](../packages/core/src/ai/phantom-wire.ts#L31) | Documents present and missing secret names, written paths, and skipped providers. | The function fills these arrays; a present name does not validate its value, and skipped means the check was unavailable or the provider unknown. |
 | [`WEBHOOK_PROVIDERS`](../packages/core/src/ai/phantom-wire.ts#L42) | Tells maintainers to keep the list and mappings aligned. | The set limits generated stubs to Stripe, Clerk, Supabase, and GitHub. |
-| [Missing Phantom branch](../packages/core/src/ai/phantom-wire.ts#L60) | Explains why skipped providers can still have stub files. | A missing installation skips every provider and still writes supported stubs; other installation errors propagate. |
-| [`listVaultNames`](../packages/core/src/ai/phantom-wire.ts#L97) | Explains the name-only inventory and unreadable-vault case. | `listSecrets` supplies names; an inventory error returns `undefined`, causing providers to be skipped rather than marked missing. |
-| [`verificationHintFor`](../packages/core/src/ai/phantom-wire.ts#L147) | Describes provider-specific guidance and a generic fallback. | The function returns text for the generated TODO; it calls no verification API. |
+| [Missing Phantom branch](../packages/core/src/ai/phantom-wire.ts#L61) | Explains why skipped providers can still have stub files. | A missing installation skips every provider and still writes supported stubs; other installation errors propagate. |
+| [`listVaultNames`](../packages/core/src/ai/phantom-wire.ts#L98) | Explains the name-only inventory and unreadable-vault case. | `listSecrets` supplies names; an inventory error returns `undefined`, causing providers to be skipped rather than marked missing. |
+| [`verificationHintFor`](../packages/core/src/ai/phantom-wire.ts#L148) | Describes provider-specific guidance and a generic fallback. | The function returns text for the generated TODO; it calls no verification API. |
 
 ## Generated example: comments and hypothetical behavior
 
-[`writeWebhookStub`](../packages/core/src/ai/phantom-wire.ts#L110) creates
+[`writeWebhookStub`](../packages/core/src/ai/phantom-wire.ts#L111) creates
 `.stack/webhooks/<provider>.ts`, overwriting an existing file, and returns its
 absolute path. It writes the template for supported providers even when the
 vault inventory is unavailable; `noWire` returns before either operation. File
