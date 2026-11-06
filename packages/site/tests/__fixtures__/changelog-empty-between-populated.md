@@ -1,25 +1,35 @@
 # Changelog
 
-## 0.3.0 (2026-04-25)
+## Unreleased
 
 ### Added
 
-- Added in 0.3.0.
-
-### Fixed
-
-- Fixed in 0.3.0.
-
-## 0.2.0 (2026-04-23)
-
-## 0.1.0 (2026-04-19)
-
-### Added
-
-- Added in 0.1.0.
+- Added entry one.
+- Added entry two,
+  continued on a second line.
 
 ### Changed
 
 ### Fixed
 
-- Fixed in 0.1.0.
+- Fixed entry sits after an empty Changed.
+
+### Deprecated
+
+### Removed
+
+### Security
+
+- Security entry follows two consecutive empty sections.
+
+## 0.2.0 (2026-04-23)
+
+### Added
+
+- Release entry before an empty section.
+
+### Documentation
+
+### Fixed
+
+- Release entry after an empty section.

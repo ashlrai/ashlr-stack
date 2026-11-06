@@ -34,3 +34,14 @@ test("each entry is counted exactly once", () => {
     expect(section?.entries.filter((e) => e === entry)).toHaveLength(1);
   }
 });
+
+test("the real site changelog keeps a multi-entry section in source order", () => {
+  const real = readFileSync(join(import.meta.dir, "../src/data/CHANGELOG.md"), "utf8");
+  const [version] = real.split(/^## /m).slice(1, 2);
+  const changed = parseSections(`## ${version}`).find((s) => s.heading === "Fixed");
+  expect(changed?.entries.length).toBeGreaterThanOrEqual(2);
+  const lines = real.split("\n").filter((l) => l.startsWith("- "));
+  const positions = (changed?.entries ?? []).map((e) => lines.findIndex((l) => l.slice(2).startsWith(e.slice(0, 40))));
+  expect(positions.every((p) => p >= 0)).toBe(true);
+  expect([...positions].sort((a, b) => a - b)).toEqual(positions);
+});

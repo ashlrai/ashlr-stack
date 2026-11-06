@@ -3,21 +3,24 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { marked } from "marked";
 
-/** Maps `##` heading -> `###` heading -> list items, in document order. */
-function parse(markdown: string): Map<string, Map<string, string[]>> {
-  const releases = new Map<string, Map<string, string[]>>();
-  let sections: Map<string, string[]> | null = null;
-  let items: string[] | null = null;
+type Section = { name: string; items: string[] };
+type Release = { heading: string; sections: Section[] };
+
+/** Every `##` heading (Unreleased included) with its `###` sections and their list items. */
+function parse(markdown: string): Release[] {
+  const releases: Release[] = [];
+  let release: Release | null = null;
+  let section: Section | null = null;
   for (const token of marked.lexer(markdown)) {
     if (token.type === "heading" && token.depth <= 2) {
-      items = null;
-      sections = token.depth === 2 ? new Map() : null;
-      if (sections) releases.set(token.text, sections);
-    } else if (token.type === "heading" && token.depth === 3 && sections) {
-      items = [];
-      sections.set(token.text, items);
-    } else if (token.type === "list" && items) {
-      for (const item of token.items) items.push(item.text);
+      section = null;
+      release = token.depth === 2 ? { heading: token.text, sections: [] } : null;
+      if (release) releases.push(release);
+    } else if (token.type === "heading" && token.depth === 3 && release) {
+      section = { name: token.text, items: [] };
+      release.sections.push(section);
+    } else if (token.type === "list" && section) {
+      for (const item of token.items) section.items.push(item.text);
     }
   }
   return releases;
@@ -25,20 +28,31 @@ function parse(markdown: string): Map<string, Map<string, string[]>> {
 
 const fixture = readFileSync(join(import.meta.dir, "__fixtures__/changelog-empty-between-populated.md"), "utf8");
 
-test("an empty release between populated releases keeps every entry under its own heading", () => {
-  const releases = parse(fixture);
-  expect([...releases.keys()]).toEqual(["0.3.0 (2026-04-25)", "0.2.0 (2026-04-23)", "0.1.0 (2026-04-19)"]);
-  expect(releases.get("0.3.0 (2026-04-25)")).toEqual(
-    new Map([["Added", ["Added in 0.3.0."]], ["Fixed", ["Fixed in 0.3.0."]]]),
-  );
-  expect(releases.get("0.2.0 (2026-04-23)")?.size).toBe(0);
-  expect(releases.get("0.1.0 (2026-04-19)")).toEqual(
-    new Map([["Added", ["Added in 0.1.0."]], ["Changed", []], ["Fixed", ["Fixed in 0.1.0."]]]),
-  );
+test("entries stay under their own heading when empty sections sit between populated ones", () => {
+  const [unreleased, v2] = parse(fixture);
+  expect(unreleased.sections).toEqual([
+    { name: "Added", items: ["Added entry one.", "Added entry two,\ncontinued on a second line."] },
+    { name: "Changed", items: [] },
+    { name: "Fixed", items: ["Fixed entry sits after an empty Changed."] },
+    { name: "Deprecated", items: [] },
+    { name: "Removed", items: [] },
+    { name: "Security", items: ["Security entry follows two consecutive empty sections."] },
+  ]);
+  expect(v2.sections).toEqual([
+    { name: "Added", items: ["Release entry before an empty section."] },
+    { name: "Documentation", items: [] },
+    { name: "Fixed", items: ["Release entry after an empty section."] },
+  ]);
 });
 
-test("an empty release neither absorbs the next release's sections nor leaks the previous one's", () => {
-  const empty = parse(fixture).get("0.2.0 (2026-04-23)");
-  expect(empty).toBeDefined();
-  expect([...empty!.values()].flat()).toEqual([]);
+test("the empty sections do not change which releases exist", () => {
+  expect(parse(fixture).map((r) => r.heading)).toEqual(["Unreleased", "0.2.0 (2026-04-23)"]);
+});
+
+test("removing the empty sections leaves every entry under the same heading", () => {
+  const stripped = fixture.replace(/### (?:Changed|Deprecated|Removed|Documentation)\n\n/g, "");
+  const populated = (rs: Release[]) =>
+    rs.map((r) => ({ ...r, sections: r.sections.filter((s) => s.items.length > 0) }));
+  expect(populated(parse(stripped))).toEqual(populated(parse(fixture)));
+  expect(parse(stripped)[0].sections.map((s) => s.name)).toEqual(["Added", "Fixed", "Security"]);
 });
