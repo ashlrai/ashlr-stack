@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync 
 import { tmpdir } from "node:os";
 import { delimiter, dirname, join } from "node:path";
 import { scanSource } from "../detect-source.ts";
+import { SourceDirectoryNotFoundError } from "../errors.ts";
 
 const projects: string[] = [];
 afterEach(() => {
@@ -337,6 +338,24 @@ test("unrelated text file with provider-like content has no detections", async (
   expect(await scanSource(cwd)).toEqual([]);
 });
 
+test("an empty scan root ignores provider markers in its parent and stays empty", async () => {
+  const parent = makeProject({
+    "package.json": JSON.stringify({ dependencies: { openai: "1" } }),
+    "vercel.json": "{}",
+    ".env.example": "ANTHROPIC_API_KEY=",
+  });
+  const root = join(parent, "empty project");
+  mkdirSync(root);
+
+  expect((await scanSource(parent)).map((hit) => hit.provider)).toEqual([
+    "openai",
+    "vercel",
+    "anthropic",
+  ]);
+  expect(await scanSource(root)).toEqual([]);
+  expect(readdirSync(root)).toEqual([]);
+});
+
 test.each([["--json"], ["--yes"]])(
   "scan %s rejects a nonexistent project without creating files",
   async (flag) => {
@@ -381,4 +400,24 @@ test.each([
   ["Cargo.toml", '[package]\nname = "app"\nversion = "0.1.0"\n\n[dependencies]\n'],
 ] as const)("empty dependency manifest %s produces no detections", async (file, content) => {
   expect(await scanSource(makeProject({ [file]: content }))).toEqual([]);
+});
+
+describe("source scanner — missing project directory", () => {
+  test("fails clearly and does not create the directory", async () => {
+    const parent = makeProject({});
+    const missing = join(parent, "no-such-project");
+    const err = await scanSource(missing).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(SourceDirectoryNotFoundError);
+    expect(err).toMatchObject({ code: "SOURCE_DIRECTORY_NOT_FOUND" });
+    expect((err as Error).message).toContain(missing);
+    expect((err as Error).message).toBe(`Source directory not found: ${missing}`);
+    expect(existsSync(missing)).toBe(false);
+  });
+
+  test("rejects a path that exists but is not a directory", async () => {
+    const cwd = makeProject({ "package.json": "{}" });
+    const file = join(cwd, "package.json");
+    await expect(scanSource(file)).rejects.toThrow(SourceDirectoryNotFoundError);
+    expect(existsSync(file)).toBe(true);
+  });
 });

@@ -50,7 +50,8 @@ export async function wirePhantomForRecipe(
   opts: { cwd?: string; noWire?: boolean } = {},
 ): Promise<WireResult> {
   const result: WireResult = { present: [], missing: [], webhooks: [], skipped: [] };
-  if (opts.noWire) return result;
+  // Nothing requested: no vault to check, no stub to write, no process to spawn.
+  if (opts.noWire || recipe.providers.length === 0) return result;
 
   const cwd = opts.cwd ?? process.cwd();
 
