@@ -46,11 +46,14 @@ test("rejects malformed or incomplete evidence instead of reporting zero collisi
     [null],
     [pr(0)],
     [pr(1.5)],
+    [pr(Number.MAX_SAFE_INTEGER + 1)],
+    [{ number: 1 }],
     [{ ...pr(1), state: null }],
     [{ ...pr(1), mergeable: null }],
     [{ ...pr(1), files: null }],
     [{ ...pr(1), files: [null] }],
     [{ ...pr(1), files: [{ path: "" }] }],
+    [{ ...pr(1), files: [{ path: 123 }] }],
   ])
     expect(() => collectFleetCollisions(input)).toThrow();
 });
@@ -62,10 +65,12 @@ test("CLI reads stdin and files, fails safely, and appears in help and completio
   const cli = async (args: string[], input = "", code = 0) => {
     const child = Bun.spawn([process.execPath, "run", "packages/cli/src/index.ts", ...args], {
       env: { HOME: home, PATH: "", STACK_NO_UPDATE_CHECK: "1", STACK_TELEMETRY: "0" },
-      stdin: new Blob([input]),
+      stdin: "pipe",
       stdout: "pipe",
       stderr: "pipe",
     });
+    child.stdin.write(input);
+    child.stdin.end();
     const [stdout, stderr] = await Promise.all([
       new Response(child.stdout).text(),
       new Response(child.stderr).text(),
@@ -74,24 +79,39 @@ test("CLI reads stdin and files, fails safely, and appears in help and completio
     if (code === 0) expect(stderr).toBe("");
     else {
       expect(stdout).toBe("");
+      expect(stderr).toBe(
+        "fleet-collisions: cannot read PR JSON; require number,state,mergeable,files.\n",
+      );
       expect(stderr).not.toContain("private-input");
     }
     return stdout;
   };
   try {
     await writeFile(file, text);
-    for (const args of [[], ["--file", "-"], ["--file", file, "--json"]])
-      expect(JSON.parse(await cli(["fleet-collisions", ...args], text))).toEqual(
-        collectFleetCollisions(fixture),
-      );
+    for (const command of [["fleet-collisions"], ["fleet", "collisions"]]) {
+      for (const args of [[], ["--file", "-"], ["--file", file, "--json"]])
+        expect(JSON.parse(await cli([...command, ...args], text))).toEqual(
+          collectFleetCollisions(fixture),
+        );
+      await cli(command, "private-input", 1);
+      await cli(command, "{}", 1);
+      await cli([...command, "--file", join(home, "private-input")], "", 1);
+      expect(await cli([...command, "--help"])).toContain("--file");
+    }
     expect(await readFile(file, "utf8")).toBe(text);
-    await cli(["fleet-collisions"], "private-input", 1);
-    await cli(["fleet-collisions"], "{}", 1);
-    await cli(["fleet-collisions", "--file", join(home, "private-input")], "", 1);
-    expect(await cli(["fleet-collisions", "--help"])).toContain("--file");
-    expect(await cli(["--help"])).toContain("fleet-collisions");
-    for (const shell of ["bash", "zsh", "fish"])
-      expect(await cli(["completion", shell])).toContain("fleet-collisions");
+    const help = await cli(["--help"]);
+    expect(help).toContain("fleet-collisions");
+    expect(help).toContain("fleet-reds");
+    expect(await cli(["fleet-reds", "--help"])).toContain("--json");
+    const fleetHelp = await cli(["fleet", "--help"]);
+    expect(fleetHelp).toContain("collisions");
+    expect(fleetHelp).toContain("slo");
+    for (const shell of ["bash", "zsh", "fish"]) {
+      const completion = await cli(["completion", shell]);
+      expect(completion).toContain("fleet-collisions");
+      expect(completion).toContain("fleet-reds");
+      expect(completion).toContain(shell === "fish" ? '-a "collisions"' : "collisions");
+    }
   } finally {
     await rm(home, { recursive: true, force: true });
   }

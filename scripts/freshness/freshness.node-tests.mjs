@@ -5,7 +5,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildContext, check, GENERATORS, listTargets, parseBlocks, sync } from './lib.mjs';
+import { buildContext, check, GENERATORS, listTargets, parseBlocks, stripFencedCode, sync } from './lib.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const V = '9.9.9';
@@ -76,6 +76,8 @@ test('version-table lists every manifest version plus the latest changelog secti
   const { ctx, errors } = buildContext(root);
   assert.deepEqual(errors, []);
   const out = GENERATORS['version-table'].generate(ctx, 'STACK.md');
+  assert.ok(out.includes('Latest dated CHANGELOG section:'));
+  assert.ok(!out.includes('Latest released CHANGELOG section:'));
   for (const pkg of ['@x/core', '@x/cli', 'x-mcp', 'mono']) assert.ok(out.includes(pkg), `missing ${pkg}`);
   for (const m of ['packages/core/package.json', 'packages/cli/package.json', 'packages/mcp/package.json']) {
     assert.ok(out.includes(m), `missing ${m}`);
@@ -357,4 +359,49 @@ test('a broken source convention fails the block, not the run', () => {
   const res = run('check.mjs', root);
   assert.equal(res.status, 1);
   rmSync(root, { recursive: true });
+});
+
+test('fenced heading-like text in the changelog never becomes the released section', () => {
+  const fenced = '```md\n## 8.8.8 (2026-01-01)\n```\n\n~~~text\n## 7.7.7 (2026-01-01)\n~~~\n';
+  const root = repo({
+    'CHANGELOG.md': `# Changelog\n\n## Unreleased\n\n- example:\n\n${fenced}\n## ${V} (2026-10-26)\n\n- things\n`,
+  });
+  const { ctx, errors } = buildContext(root);
+  assert.deepEqual(errors, []);
+  assert.equal(ctx.changelog.version, V);
+  rmSync(root, { recursive: true });
+});
+
+test('stripFencedCode keeps text outside fences and honors fence char and length', () => {
+  const out = stripFencedCode('a\n````\n```\n## x\n````\n## b\n');
+  assert.ok(!out.includes('## x'));
+  assert.ok(out.includes('a') && out.includes('## b'));
+});
+
+test('a CRLF CHANGELOG.md yields the same released section as LF, ignoring fenced headings', () => {
+  const lf = [
+    '# Changelog',
+    '',
+    '## Unreleased',
+    '',
+    '```markdown',
+    '## 0.0.1 (2020-01-01)',
+    '```',
+    '',
+    `## ${V} (2026-10-26)`,
+    '',
+    '- things',
+    '',
+  ].join('\n');
+  const crlf = lf.replace(/\n/g, '\r\n');
+  assert.equal(stripFencedCode(crlf).includes('0.0.1'), false);
+
+  const expected = { version: V, date: '2026-10-26', heading: `${V} (2026-10-26)` };
+  for (const body of [lf, crlf]) {
+    const root = repo({ 'CHANGELOG.md': body });
+    const { ctx, errors } = buildContext(root);
+    assert.deepEqual(errors, []);
+    assert.deepEqual(ctx.changelog, expected);
+    rmSync(root, { recursive: true });
+  }
 });

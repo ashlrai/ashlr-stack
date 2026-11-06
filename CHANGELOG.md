@@ -4,6 +4,87 @@
 
 ### Changed
 
+- `stack apply` does not create placeholder secrets. After at least one provider succeeds, wiring checks secret names for every provider in the recipe, including providers that failed; a missing name does not itself fail apply, while provider failures do. Wiring can also create webhook stubs for those recipe providers, even if the vault is unreadable. Supply required missing secrets as real values through Phantom; `--noWire` skips both checks and stubs.
+
+### Fixed
+
+- Fleet JSONL reads (`stack fleet` diagnostics) now enforce the byte cap while reading: a non-tail read grows one buffer up to the cap, probes a single extra byte to detect an oversized or growing source, and rejects an invalid cap (negative or non-integer) instead of reading the whole file first (#360).
+- The release workflow renders the Homebrew formula placeholders (`$VERSION$` and the per-platform `$SHA_*$` values) as literals through `sed`, so the generated formula no longer depends on shell quoting of the `$` delimiters (#354).
+- The MCP Registry workflow runs only for stable releases or a manual dispatch on an exact tag, checks that the release is complete and reconciles registry state before publishing once (`scripts/mcp-registry-gate.mjs`). Release evidence uses unauthenticated API reads, so a rate limit or outage fails closed; retry the exact-tag dispatch (#363).
+
+### Documentation
+
+- Setup, README and package READMEs separate the source version from the recorded npm publication (0.3.1 for `@ashlr/stack-core`, `@ashlr/stack` and `ashlr-stack-mcp`) and state that the published CLI and MCP packages declare Node.js 20 or newer. Source development uses Bun (#356, #361, #363).
+
+## 0.3.6 (2026-11-06)
+
+### Fixed
+
+- The local MCP bridge closes its owned native HTTP connections before legacy Bun releases the server handle, awaits the actual server close event, and shares one shutdown promise across concurrent and repeated calls. The idle keepalive, unrelated socket and immediate port-reuse checks retain their five-second bound.
+
+## 0.3.5 (2026-11-06)
+
+### Fixed
+
+- The idle MCP bridge shutdown regression waits for an actual keepalive exchange before closing the accepted connection and continues consuming remote EOF. This removes Linux accept ordering and Bun 1.2 paused-reader races while retaining the five-second bound, unrelated-socket echo and port-reuse assertions.
+- The isolated npm upgrade fixture resolves Node through the same PATH as the real health-check runner, including runtime paths containing spaces; installation, rollback and cleanup checks remain unchanged.
+
+## 0.3.4 (2026-11-06)
+
+### Fixed
+
+- The local MCP lane bridge closes its own keepalive connections before releasing upstream clients, allowing shutdown to finish on Bun 1.2 without affecting unrelated sockets.
+- Release changelog fixtures and version assertions track the current source while preserving no-final-newline parser coverage.
+
+## 0.3.3 (2026-11-05)
+
+This source candidate carries forward the 0.3.2 main-line release and subsequent integrated changes. The apply behavior described under Unreleased also ships in this candidate; that entry remains there while documentation links to it.
+
+### Fixed
+
+- The MCP server exits when its host closes stdin, and optional tool arguments reject JSON `null` as a type error.
+- `stack scan` aligns next-step suggestions under their heading.
+- Fleet JSONL reads enforce their byte limit, including short reads and growing inputs; Homebrew formula rendering preserves literal placeholders.
+
+### Changed
+
+- Release qualification requires CI evidence for the exact immutable tagged source, and registry publication reconciles release state before publishing.
+- Documentation distinguishes source capabilities from published versions and provider acceptance.
+
+## 0.3.2 (2026-11-04)
+
+This release carries main forward from 0.3.0. The 0.3.1 packages were published from a documentation-only release branch, so 0.3.2 is the first release whose source is the main line since 0.3.0.
+
+### Added
+
+- `packages/mcp/src/local-lane.ts` runs the locus, lexicon and stack MCP servers as stdio children and republishes their tools as `<server>__<tool>` on loopback only. It exposes mutating tools, and any local process can call the endpoint.
+- Agent entry points: root `llms.txt`, copy-paste agent commands in the docs and README, and PNG social cards for link previews (#487, #489, #490).
+
+## 0.3.0 (2026-10-31)
+
+### Added
+
+- Fleet diagnostics: lanes, supply, latency, lag, waste, reds, silent jobs, collisions, delivery lag, stuck jobs, SLOs, activity, stream, graph and bets, with grouped `stack fleet` routes. These inspect existing operational data; they do not establish automatic repair or fleet deployment.
+- `stack doctor --repos` reports default-branch CI and open PR counts through gh. Only --json may be combined with this mode.
+- Core exports a JSON-safe STACK_MANIFEST component/version descriptor. It describes source distributions, not installed or published versions.
+- `stack upgrade --apply` supports npm global upgrades with health checks and rollback; --dry-run remains non-installing. Review installer constraints before use.
+### Changed and fixed
+
+- CLI lazily loads the selected command rather than all commands at startup.
+- Status probes overlap at bounded concurrency and report timeout/error uncertainty instead of treating failed vault probes as zero secrets. Timed-out Phantom process groups are terminated.
+- Apply wiring checks existing secret names without storing placeholders; unreadable vaults are reported as skipped, not missing. Provider setup may still persist real credentials through its own workflow.
+- MCP compacts valid JSON formatting while preserving fields and number spelling; diagnostics remain readable.
+- MCP binary resolution ignores directory-valued package binaries and falls back to PATH (#306).
+### Compatibility notes
+
+- MCP scan/import paths must remain within selected cwd after symlink resolution. For another project, supply that project's absolute cwd rather than an escaping path.
+- MCP recipe IDs must be filename stems using letters, digits, underscores or hyphens.
+- .env import now rejects malformed assignments, duplicate names and unterminated quoted values before any import. Correct ambiguous files rather than relying on former partial parsing.
+- Scan refuses malformed package.json rather than presenting partial results as complete; nonexistent scan directories are errors.
+- Existing status consumers must tolerate additive error fields. Existing command names remain; new fleet names are additive.
+
+### Changed
+
 - After at least one provider succeeds, `stack apply` wiring checks the recipe's secret names without creating placeholders or filling missing values. Provider setup may store real values separately. When the vault is readable, wiring reports missing secret names; each required missing value needs user action: run `phantom add <NAME>` in a trusted terminal and enter the real value. Missing names alone do not make apply fail, so an applied recipe is not proof that every required secret is present. If the vault cannot be read, providers are reported as skipped instead of being identified as missing.
 
   For example, with `OPENAI_API_KEY` missing and no webhooks, the wiring output is:
@@ -285,7 +366,7 @@ Initial tag. Binaries for macOS (arm64 + x64) and Linux (arm64 + x64) on GitHub 
 Stack is now agent-native from day one. Describe what you're building; Stack picks the providers, drafts a reproducible Recipe, and hands it to either Claude Code (via MCP) or the local-SLM fallback for synthesis.
 
 - **`stack recommend [query]`** — free-text → top providers ranked by a zero-dep BM25 + IDF scorer over the curated catalog. Flags: `--json`, `--k`, `--category`, `--save`, `--synth`. `--save` freezes the result to `.stack/recipes/<id>.toml` so the user can follow up with `stack apply <id>`. `--synth` calls the local SLM for model-authored rationales and falls back silently when no endpoint is reachable.
-- **`stack apply [recipe-id]`** — re-runs the existing `stack add` pipeline for every provider in the Recipe, then checks declared secret names in [Phantom](https://phm.dev) and creates webhook stubs (Stripe, Clerk, Supabase, GitHub). Historically, wiring attempted to write a `TODO_STACK_APPLY` placeholder for each declared secret, but those calls failed; the 0.2.1 fix above removed the attempts. Wiring no longer attempts to write placeholder values; it does not write to the vault or fill in missing values. Provider setup may already store real values. When the vault is readable, wiring reports how many secret names are present and missing and lists missing names. Users must supply each required missing value: run `phantom add <NAME>` from a trusted terminal and enter the real value. If the vault cannot be read, wiring reports providers as skipped instead of identifying missing names. Wiring is on by default; `--noWire` opts out. Interactive `@clack/prompts` picker when no id is given.
+- **`stack apply [recipe-id]`** — re-runs the existing `stack add` pipeline for every provider in the Recipe, then checks declared secret names in [Phantom](https://phm.dev) and creates webhook stubs (Stripe, Clerk, Supabase, GitHub). Historically, wiring attempted to write a `TODO_STACK_APPLY` placeholder for each declared secret, but those calls failed; the 0.2.1 fix above removed the attempts. Wiring no longer attempts to write placeholder values; it does not write to the vault or fill in missing values. Provider setup may already store real values. When the vault is readable, wiring reports how many secret names are present and missing and lists missing names. Missing names alone do not make apply fail; provider failures still do. Users must supply each required missing value: run `phantom add <NAME>` from a trusted terminal and enter the real value. If the vault cannot be read, wiring reports providers as skipped instead of identifying missing names. Wiring is on by default; `--noWire` opts out. Interactive `@clack/prompts` picker when no id is given.
 - **MCP surface** — `stack_recommend` (with `save:true`) and `stack_apply` exposed so Claude can drive the full loop from a coding session. Retrieval-only on the MCP path by design — Claude owns the reasoning, Stack owns the catalog + execution.
 - **Canonical catalog** — moved from `packages/site/src/lib/providers-ref.ts` into `packages/core/src/catalog.ts`; site now re-exports the shim. One source of truth for CLI, MCP, AI, and docs.
 - **Local SLM backend** — `packages/core/src/ai/inference.ts` talks OpenAI-compatible HTTP to LM Studio (`localhost:1234`) with Ollama fallback (`localhost:11434`). Circuit breaker + cost tracker copied from the ashlrcode router pattern. Zero new npm deps, no OpenAI/Anthropic SDKs in the Stack repo — the user's LLM keys belong to Claude, not to us.
