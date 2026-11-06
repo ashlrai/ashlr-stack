@@ -3,106 +3,103 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { marked, type Token } from "marked";
 
-/** A `##` heading that opens with a semver (either bare or bracketed). */
 const VERSION = /^(?:\[\d+\.\d+\.\d+\]|\d+\.\d+\.\d+)(?:\s|$)/;
 
-/** Released versions in source order: heading text and the body tokens before the next `##` heading. */
-function parseVersions(markdown: string): { heading: string; body: Token[] }[] {
-  const versions: { heading: string; body: Token[] }[] = [];
-  let current: { heading: string; body: Token[] } | null = null;
+/** Released versions in source order; `raw` is the body's exact source text. */
+function parseVersions(markdown: string): { heading: string; body: Token[]; raw: string }[] {
+  const versions: { heading: string; body: Token[]; raw: string }[] = [];
+  let current: { heading: string; body: Token[]; raw: string } | null = null;
   for (const token of marked.lexer(markdown)) {
     if (token.type === "heading" && token.depth <= 2) {
-      current =
-        token.depth === 2 && VERSION.test(token.text)
-          ? { heading: token.text, body: [] }
-          : null;
+      current = token.depth === 2 && VERSION.test(token.text) ? { heading: token.text, body: [], raw: "" } : null;
       if (current) versions.push(current);
     } else if (current) {
       current.body.push(token);
+      current.raw += token.raw;
     }
   }
   return versions;
 }
 
-/** Plain-text list items from a version body, flattening through list tokens. */
-function listItems(body: Token[]): string[] {
-  return body.flatMap((t) =>
-    t.type === "list" ? t.items.map((i: { text: string }) => i.text) : []
-  );
-}
+// Built from an array (not a checked-in file) so git autocrlf/eol settings can't normalize the line endings away.
+const lines = [
+  "# Changelog",
+  "",
+  "## Unreleased",
+  "",
+  "- Not released yet.",
+  "",
+  "## 0.2.0 (2026-02-02)",
+  "",
+  "### Added",
+  "",
+  "- First item.",
+  "- Second item",
+  "  with a continuation.",
+  "",
+  "```sh",
+  "stack add",
+  "",
+  "stack apply",
+  "```",
+  "",
+  "## [0.1.0] - 2026-01-01",
+  "",
+  "- Only item.",
+  "",
+];
+const crlf = lines.join("\r\n");
+const lf = lines.join("\n");
 
-test("CRLF fixture has carriage returns in the raw file", () => {
-  const raw = readFileSync(
-    join(import.meta.dir, "__fixtures__/changelog-crlf.md"),
-    "utf8"
-  );
-  expect(raw).toContain("\r\n");
-  expect(raw).not.toMatch(/\r\r/);
+test("fixture really uses CRLF", () => {
+  expect(crlf.split("\r\n").length).toBe(lines.length);
+  expect(crlf.replace(/\r\n/g, "")).not.toContain("\n");
 });
 
-test("CRLF fixture version headings parse identically to the LF fixture", () => {
-  const crlf = readFileSync(
-    join(import.meta.dir, "__fixtures__/changelog-crlf.md"),
-    "utf8"
-  );
-  const lf = readFileSync(
-    join(import.meta.dir, "__fixtures__/changelog-three-versions.md"),
-    "utf8"
-  );
-
-  const crlfVersions = parseVersions(crlf);
-  const lfVersions = parseVersions(lf);
-
-  expect(crlfVersions.map((v) => v.heading)).toEqual(lfVersions.map((v) => v.heading));
+test("version headings parse identically under CRLF and LF", () => {
+  const headings = parseVersions(crlf).map((v) => v.heading);
+  expect(headings).toEqual(["0.2.0 (2026-02-02)", "[0.1.0] - 2026-01-01"]);
+  expect(headings).toEqual(parseVersions(lf).map((v) => v.heading));
+  for (const h of headings) expect(h).not.toContain("\r");
 });
 
-test("CRLF fixture version bodies parse identically to the LF fixture", () => {
-  const crlf = readFileSync(
-    join(import.meta.dir, "__fixtures__/changelog-crlf.md"),
-    "utf8"
-  );
-  const lf = readFileSync(
-    join(import.meta.dir, "__fixtures__/changelog-three-versions.md"),
-    "utf8"
-  );
-
-  const crlfVersions = parseVersions(crlf);
-  const lfVersions = parseVersions(lf);
-
-  // Each version's list-item text matches between CRLF and LF.
-  for (let i = 0; i < crlfVersions.length; i++) {
-    expect(listItems(crlfVersions[i].body)).toEqual(listItems(lfVersions[i].body));
-  }
+test("version bodies parse under CRLF without stray carriage returns", () => {
+  const [newer, older] = parseVersions(crlf);
+  expect(newer.raw).not.toContain("\r");
+  expect(newer.raw).toContain("- First item.\n- Second item\n  with a continuation.");
+  expect(newer.raw).not.toContain("Not released yet");
+  const code = newer.body.find((t) => t.type === "code") as { text: string } | undefined;
+  expect(code?.text).toBe("stack add\n\nstack apply");
+  expect(older.raw.trim()).toBe("- Only item.");
+  expect(parseVersions(crlf).map((v) => v.raw)).toEqual(parseVersions(lf).map((v) => v.raw));
 });
 
-test("CRLF fixture section headings parse correctly", () => {
-  const crlf = readFileSync(
-    join(import.meta.dir, "__fixtures__/changelog-crlf.md"),
-    "utf8"
-  );
-  const tokens = marked.lexer(crlf);
-  const sectionHeadings = tokens
-    .filter((t) => t.type === "heading" && t.depth === 3)
-    .map((t) => t.text);
-
-  expect(sectionHeadings).toEqual(["Added", "Fixed"]);
+test("the changelog page strips the H1 and renders the same HTML under CRLF", async () => {
+  // Same H1 strip as src/pages/docs/changelog.astro.
+  const strip = (s: string) => s.replace(/^#\s+Changelog\s*\n+/, "");
+  expect(strip(crlf).startsWith("## Unreleased")).toBe(true);
+  expect(await marked.parse(strip(crlf))).toBe(await marked.parse(strip(lf)));
 });
 
-test("CRLF fixture list item text has no stray carriage returns", () => {
-  const crlf = readFileSync(
-    join(import.meta.dir, "__fixtures__/changelog-crlf.md"),
-    "utf8"
-  );
-  const versions = parseVersions(crlf);
-  const allItems = versions.flatMap((v) => listItems(v.body));
+test("site-facts release heading regex matches a CRLF changelog", () => {
+  // Same pattern as latestChangelogRelease() in scripts/gen-site-facts.ts.
+  const m = crlf.match(/^## (\d+\.\d+\.\d+) \((\d{4}-\d{2}-\d{2})\)/m);
+  expect(m?.[1]).toBe("0.2.0");
+  expect(m?.[2]).toBe("2026-02-02");
+});
 
-  // Each item's parsed text is clean — no \r left in the text field.
-  for (const item of allItems) {
-    expect(item).not.toContain("\r");
-  }
-  expect(allItems).toEqual([
-    "Third version entry.",
-    "Second version entry.",
-    "First version entry.",
-  ]);
+test("the published CHANGELOG.md parses the same when converted to CRLF", async () => {
+  const real = readFileSync(join(import.meta.dir, "../src/data/CHANGELOG.md"), "utf8").replace(/\r\n/g, "\n");
+  const real_crlf = real.replace(/\n/g, "\r\n");
+  expect(real_crlf).toContain("\r\n");
+
+  const fromLf = parseVersions(real);
+  const fromCrlf = parseVersions(real_crlf);
+  expect(fromLf.length).toBeGreaterThan(0);
+  expect(fromCrlf.map((v) => v.heading)).toEqual(fromLf.map((v) => v.heading));
+  expect(fromCrlf.map((v) => v.raw)).toEqual(fromLf.map((v) => v.raw));
+  expect(await marked.parse(real_crlf)).toBe(await marked.parse(real));
+  expect(real_crlf.match(/^## (\d+\.\d+\.\d+) \((\d{4}-\d{2}-\d{2})\)/m)?.slice(1)).toEqual(
+    real.match(/^## (\d+\.\d+\.\d+) \((\d{4}-\d{2}-\d{2})\)/m)?.slice(1),
+  );
 });
