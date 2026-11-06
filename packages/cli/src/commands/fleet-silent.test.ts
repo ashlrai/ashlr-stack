@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { spawnSync } from "node:child_process";
 import { mkdir, mkdtemp, readFile, rm, symlink, truncate, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -245,3 +246,39 @@ test(
     }),
   30000,
 );
+
+test("a journal truncated after its initial stat is invalid and cannot establish silence", async () => {
+  const root = await mkdtemp(join(tmpdir(), "fleet-silent-truncate-"));
+  try {
+    await mkdir(join(root, "metrics"));
+    const path = join(root, "metrics/jobs.jsonl");
+    await writeFile(path, `${JSON.stringify({ timestamp: ts(30), event: "tick", launched: 0 })}\n`);
+    const moduleUrl = new URL("./fleet-silent.ts", import.meta.url).href;
+    const source = `
+      const { open } = await import("node:fs/promises");
+      const { statSync, truncateSync } = await import("node:fs");
+      const { collectFleetSilent } = await import(${JSON.stringify(moduleUrl)});
+      const target = ${JSON.stringify(path)}, inode = statSync(target).ino;
+      const h = await open(target, "r");
+      const proto = Object.getPrototypeOf(h); await h.close();
+      const stat = proto.stat, counts = new WeakMap();
+      proto.stat = async function(...args) {
+        const result = await stat.apply(this, args);
+        if (result.ino === inode) {
+          const n = (counts.get(this) ?? 0) + 1; counts.set(this, n);
+          if (n === 2) truncateSync(target, 0);
+        }
+        return result;
+      };
+      console.log(JSON.stringify(await collectFleetSilent(${JSON.stringify(root)}, ${now})));
+    `;
+    const child = spawnSync(process.execPath, ["--eval", source], { encoding: "utf8", timeout: 10_000 });
+    expect(child.status).toBe(0);
+    const report = JSON.parse(child.stdout);
+    expect(report.sources["metrics/jobs.jsonl"]).toBe("invalid");
+    expect(report.findings).toEqual([]);
+    expect(await readFile(path, "utf8")).toBe("");
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});

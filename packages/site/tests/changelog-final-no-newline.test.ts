@@ -51,3 +51,18 @@ test("adding the final newline does not change any version's content", () => {
   expect(withNewline.map((v) => v.heading)).toEqual(without.map((v) => v.heading));
   expect(withNewline.map((v) => v.raw.trimEnd())).toEqual(without.map((v) => v.raw.trimEnd()));
 });
+
+test("published changelog keeps its final version and last entry with the trailing newline removed", () => {
+  const published = readFileSync(join(import.meta.dir, "../src/data/CHANGELOG.md"), "utf8");
+  const stripped = published.replace(/\n+$/, "");
+  expect(stripped.endsWith("\n")).toBe(false);
+
+  const full = parseVersions(published);
+  const versions = parseVersions(stripped);
+  expect(versions.map((v) => v.heading)).toEqual(full.map((v) => v.heading));
+  expect(versions.map((v) => v.raw.trimEnd())).toEqual(full.map((v) => v.raw.trimEnd()));
+
+  const lastEntry = published.trimEnd().split("\n").at(-1) ?? "";
+  expect(lastEntry.startsWith("- ")).toBe(true);
+  expect(versions.at(-1)?.raw.endsWith(lastEntry)).toBe(true);
+});

@@ -1,23 +1,23 @@
 # Changelog
 
-## 0.3.0 (2026-03-01)
+## 0.3.0 (2026-05-01)
 
 ### Added
 
-- Entry A
-
-- Entry B
+- Third version entry.
 
 ---
 
-## 0.2.0 (2026-02-01)
+## [0.2.0] — 2026-04-23
 
-- Entry C
+### Fixed
+
+- Second version entry.
 
 ***
 
-## 0.1.0 (2026-01-01)
+## 0.1.0 (2026-04-19)
 
-- Entry D
+- First version entry.
 
 ___

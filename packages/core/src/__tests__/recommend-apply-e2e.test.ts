@@ -33,8 +33,8 @@ import {
 } from "../ai/recipe.ts";
 import { type Harness, setupFakePhantom } from "./_harness.ts";
 
-// `wirePhantomForRecipe` spawns the fake `phantom` shim (bash + several
-// python3 calls), which takes multiple seconds on loaded machines.
+// `wirePhantomForRecipe` spawns the fake `phantom` shim (bash + a Bun JSON
+// helper), which takes multiple seconds on loaded machines.
 setDefaultTimeout(30_000);
 
 describe("recommend → apply e2e", () => {
