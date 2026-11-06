@@ -6,8 +6,8 @@ import { type Harness, setupFakePhantom } from "../__tests__/_harness.ts";
 import { verificationHintFor, webhookStubFor, wirePhantomForRecipe } from "./phantom-wire.ts";
 import type { Recipe } from "./recipe.ts";
 
-// The wiring check spawns the fake `phantom` shim (bash + a Bun JSON helper);
-// keep the sibling files' raised timeout.
+// The wiring check spawns the fake `phantom` shim (bash + python3); keep the
+// sibling files' raised timeout.
 setDefaultTimeout(30_000);
 
 const count = (s: string, needle: string) => s.split(needle).length - 1;
