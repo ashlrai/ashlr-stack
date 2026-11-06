@@ -99,7 +99,7 @@ export async function startLaneBridge(opts: { upstreams?: UpstreamSpec[]; port?:
     status,
     toolNames: listed.map((t) => t.name),
     close(): Promise<void> {
-      return (closePromise ??= (async () => {
+      closePromise ??= (async () => {
         const closed = new Promise<void>((resolve, reject) => {
           http.once("close", resolve);
           http.once("error", reject);
@@ -116,7 +116,8 @@ export async function startLaneBridge(opts: { upstreams?: UpstreamSpec[]; port?:
         for (const socket of sockets) socket.destroy();
         await closed;
         await Promise.all(clients.map((c) => c.close().catch(() => {})));
-      })());
+      })();
+      return closePromise;
     },
   };
 }
