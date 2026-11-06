@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it, setDefaultTimeout } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
-  chmodSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -13,6 +12,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { writePhantomShim } from "./_phantom-shim.ts";
 
 /**
  * End-to-end test for `stack apply` — specifically the auto-init behaviour.
@@ -62,6 +62,38 @@ function mkTmp(): string {
 setDefaultTimeout(30_000);
 
 describe("stack apply", () => {
+  it("previews wiring without calling Phantom or changing the project", () => {
+    for (const flag of ["--dry-run", "--dryRun"]) {
+      const dir = mkTmp();
+      const home = mkTmp();
+      const bin = join(home, "bin");
+      const calls = join(home, "phantom-calls");
+      mkdirSync(bin);
+      writePhantomShim(bin, `#!/bin/sh\necho "$1" >> '${calls}'\nexit 1\n`);
+      const recipes = join(dir, ".stack", "recipes");
+      mkdirSync(recipes, { recursive: true });
+      const recipe =
+        'id = "preview"\nquery = "database and ai"\ncreatedAt = "2026-10-17T00:00:00.000Z"\n\n[[providers]]\nname = "neon"\n\n[[providers]]\nname = "openai"\n\n[[providers]]\nname = "stripe"\n';
+      writeFileSync(join(recipes, "preview.toml"), recipe);
+
+      const result = runCli(["apply", "preview", flag], dir, {
+        HOME: home,
+        STACK_REGISTRY_DIR: join(home, "registry"),
+        PATH: `${bin}:${process.env.PATH ?? ""}`,
+      });
+      expect(result.code).toBe(0);
+      expect(result.stdout).toContain("neon: NEON_API_KEY");
+      expect(result.stdout).toContain("openai: OPENAI_API_KEY");
+      expect(result.stdout).toContain("stripe: STRIPE_SECRET_KEY");
+      expect(result.stdout).toContain("no changes made");
+      expect(existsSync(calls)).toBe(false);
+      expect(existsSync(join(dir, ".stack.toml"))).toBe(false);
+      expect(existsSync(join(dir, ".stack", "webhooks"))).toBe(false);
+      expect(existsSync(join(home, "registry"))).toBe(false);
+      expect(readFileSync(join(recipes, "preview.toml"), "utf8")).toBe(recipe);
+    }
+  });
+
   it("auto-inits .stack.toml when none exists, then runs against the recipe", () => {
     const dir = mkTmp();
 
@@ -115,8 +147,8 @@ describe("stack apply", () => {
     const bin = join(home, "bin");
     mkdirSync(bin);
     // Inert Phantom: initialized, nothing stored, reveal refused (as headless).
-    writeFileSync(
-      join(bin, "phantom"),
+    writePhantomShim(
+      bin,
       `#!/bin/sh
 case "$1" in
  --version) echo fixture;;
@@ -126,7 +158,6 @@ case "$1" in
 esac
 `,
     );
-    chmodSync(join(bin, "phantom"), 0o700);
     mkdirSync(join(dir, ".stack", "recipes"), { recursive: true });
     writeFileSync(
       join(dir, ".stack", "recipes", "two-ai.toml"),
@@ -159,8 +190,8 @@ esac
     const bin = join(home, "bin");
     const calls = join(home, "phantom-calls");
     mkdirSync(bin);
-    writeFileSync(
-      join(bin, "phantom"),
+    writePhantomShim(
+      bin,
       `#!/bin/sh
 echo "$1" >> '${calls}'
 case "$1" in
@@ -170,7 +201,6 @@ case "$1" in
 esac
 `,
     );
-    chmodSync(join(bin, "phantom"), 0o700);
     mkdirSync(join(dir, ".stack", "recipes"), { recursive: true });
     writeFileSync(join(dir, ".stack.toml"), "");
     writeFileSync(
@@ -245,6 +275,61 @@ await applyCommand.run({ args: { recipeId: "example", noWire: false, noRollback:
     const phantomCalls = readFileSync(calls, "utf8").trim().split("\n");
     expect(phantomCalls).toContain("list");
     expect(phantomCalls.every((call) => ["--version", "list"].includes(call))).toBe(true);
+  });
+
+  it("does not populate any of multiple wiring entries with the former placeholder", () => {
+    const dir = mkTmp();
+    const home = mkTmp();
+    const cliDir = dirname(CLI_ENTRY);
+    mkdirSync(join(dir, ".stack", "recipes"), { recursive: true });
+    writeFileSync(join(dir, ".stack.toml"), "");
+    writeFileSync(
+      join(dir, ".stack", "recipes", "multiple.toml"),
+      'id = "multiple"\nquery = "database and ai"\ncreatedAt = "2026-10-17T00:00:00.000Z"\n\n[[providers]]\nname = "neon"\n\n[[providers]]\nname = "openai"\n',
+    );
+    const script = join(dir, "run-apply.ts");
+    writeFileSync(
+      script,
+      `import { mock } from "bun:test";
+import { copyFileSync } from "node:fs";
+import { setupFakePhantom } from ${JSON.stringify(join(cliDir, "../../core/src/__tests__/_harness.ts"))};
+const h = setupFakePhantom({ NEON_API_KEY: "existing-test-value" });
+try {
+  mock.module(${JSON.stringify(join(cliDir, "lib/provision-loop.ts"))}, () => ({
+    provisionProviders: async () => ({ succeeded: ["neon", "openai"], failures: [] }),
+  }));
+  mock.module(${JSON.stringify(join(cliDir, "lib/phantom-preflight.ts"))}, () => ({ requirePhantom: async () => {} }));
+  mock.module(${JSON.stringify(join(cliDir, "commands/doctor.ts"))}, () => ({ doctorCommand: { run: async () => {} } }));
+  const { applyCommand } = await import(${JSON.stringify(join(cliDir, "commands/apply.ts"))});
+  await applyCommand.run({ args: { recipeId: "multiple", noWire: false, noRollback: false } });
+  copyFileSync(h.vaultPath, "vault-result.json");
+  copyFileSync(h.logPath, "phantom-calls.jsonl");
+} finally { h.cleanup(); }
+`,
+    );
+    const result = spawnSync("bun", [script], {
+      cwd: dir,
+      encoding: "utf8",
+      env: { ...process.env, HOME: home, NO_COLOR: "1", CI: "1" },
+      timeout: 20_000,
+    });
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("secrets in vault 1");
+    expect(result.stdout).toContain("missing 2");
+    expect(result.stdout).toContain("DATABASE_URL, OPENAI_API_KEY");
+    const vault = JSON.parse(readFileSync(join(dir, "vault-result.json"), "utf8"));
+    expect(vault).toEqual({ NEON_API_KEY: "existing-test-value" });
+    for (const name of ["NEON_API_KEY", "DATABASE_URL", "OPENAI_API_KEY"]) {
+      expect(vault[name]).not.toBe("TODO_STACK_APPLY");
+    }
+    const calls = readFileSync(join(dir, "phantom-calls.jsonl"), "utf8")
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line) as { cmd: string; args: string[] });
+    expect(calls.filter((call) => call.cmd === "list")).toEqual([
+      { cmd: "list", args: ["--json"] },
+    ]);
+    expect(calls.filter((call) => ["add", "remove"].includes(call.cmd))).toEqual([]);
   });
 
   it("reports valid recipe ids headlessly and surfaces an invalid recipe by id before init", () => {

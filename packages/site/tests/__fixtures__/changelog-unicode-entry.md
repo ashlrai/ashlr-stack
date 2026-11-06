@@ -1,12 +1,18 @@
 # Changelog
 
-## [4.1.0] — 2026-11-02 🚀
+## [3.1.0] - 2026-11-01 · 長期サポート
 
 ### Added
 
-- Café decomposed (NFD) stays decomposed; Café composed stays composed.
-- Astral plane: 𝕏 👨‍👩‍👧 and RTL שלום `設定`.
+- Café menu: combining accent stays decomposed (NFD)
+- [Ünïcödé guide](https://example.com/ü?q=日本) links keep their text and URL
+- Run `stack añadir ✨` to add a provider
+- 👨‍👩‍👧 family emoji (ZWJ sequence) is one entry
 
-## 4.0.0 (2026-10-01)
+## １２．０．０ (fullwidth digits)
 
-- 日本語のエントリ。
+- Not a version: fullwidth digits must not start a release
+
+## 3.0.0 (2026-10-01)
+
+- Ελληνικά → עברית → 한국어 in one entry

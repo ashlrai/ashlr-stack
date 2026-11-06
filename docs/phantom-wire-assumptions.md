@@ -24,7 +24,7 @@ webhooks.
   the providers below, even when inventory checks are skipped. It creates the
   directory and **overwrites existing files** at those paths; write failures
   propagate and can leave earlier files in place. The returned paths are
-  absolute. See [`writeWebhookStub`](../packages/core/src/ai/phantom-wire.ts#L110).
+  absolute. See [`writeWebhookStub`](../packages/core/src/ai/phantom-wire.ts#L111).
 
 | Provider | Header in example | Secret named in example |
 | --- | --- | --- |
@@ -41,7 +41,7 @@ provider was provisioned or an endpoint registered.
 
 ## Signature-verification TODO and trust limits
 
-The [`webhookStubFor` TODO](../packages/core/src/ai/phantom-wire.ts#L117) is
+The [`webhookStubFor` TODO](../packages/core/src/ai/phantom-wire.ts#L118) is
 commented guidance for a future handler, not implemented verification. The
 entire generated handler is commented out. If uncommented as generated, it
 rejects an absent or empty header but accepts any non-empty header and returns
