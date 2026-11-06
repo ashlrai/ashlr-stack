@@ -93,19 +93,30 @@ export async function startLaneBridge(opts: { upstreams?: UpstreamSpec[]; port?:
     http.listen(opts.port ?? 0, HOST, () => resolve());
   });
   const endpoint = `http://${HOST}:${boundPort()}/mcp`;
+  let closePromise: Promise<void> | undefined;
   return {
     endpoint,
     status,
     toolNames: listed.map((t) => t.name),
-    async close() {
-      const closed = new Promise<void>((resolve, reject) => {
-        http.close((error) => (error ? reject(error) : resolve()));
-      });
-      // Bun 1.2 can retain MCP keepalive sockets after protocol transports close.
-      // Stop only this bridge's connections so shutdown also reaches upstream cleanup.
-      for (const socket of sockets) socket.destroy();
-      await closed;
-      await Promise.all(clients.map((c) => c.close().catch(() => {})));
+    close(): Promise<void> {
+      return (closePromise ??= (async () => {
+        const closed = new Promise<void>((resolve, reject) => {
+          http.once("close", resolve);
+          http.once("error", reject);
+          // Bun 1.2 drops its native server handle in close(), making a later
+          // closeAllConnections() ineffective. Force-close this server's own
+          // connections first. Bun 1.2 also stops its listener here; Node keeps
+          // it open, so close that listener only when address() still exists.
+          http.closeAllConnections();
+          if (http.address() !== null) {
+            http.close((error) => (error ? reject(error) : resolve()));
+          }
+        });
+        // Retain explicit ownership cleanup for compatibility socket wrappers.
+        for (const socket of sockets) socket.destroy();
+        await closed;
+        await Promise.all(clients.map((c) => c.close().catch(() => {})));
+      })());
     },
   };
 }

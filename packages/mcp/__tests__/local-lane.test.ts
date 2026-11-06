@@ -85,6 +85,7 @@ test("closing the bridge closes its idle connection and preserves unrelated sock
     expect(socket.destroyed).toBe(false);
     const closed = new Promise<void>((resolve) => socket.once("close", () => resolve()));
     console.info("[lane-close] before-owned-close");
+    await Promise.all([owned.close(), owned.close()]);
     await owned.close();
     console.info("[lane-close] after-owned-close");
     await closed;
