@@ -95,7 +95,7 @@ The order follows the first-run measurements: Node 22.15+ is checked first, then
 One command previews the repairs every installed tool offers. It runs each tool's own `doctor --fix --json` (only for tools whose handshake advertises the `doctor-fix` capability) and changes nothing:
 
 ```bash
-stack doctor --ecosystem --fix   # available in this 0.3.2 source checkout; absent from the historical 0.1.1 build
+stack doctor --ecosystem --fix   # available in this 0.3.7 source checkout; absent from the historical 0.1.1 build
 ```
 
 Then make the repairs with each tool's own command. Run them yourself, directly in your shell:
