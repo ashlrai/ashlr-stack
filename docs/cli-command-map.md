@@ -39,7 +39,7 @@ are separate effects. A child command run through `exec` can do anything.
 | `fleet-delivery-lag` | Report undeployed merges from a fixture. | `stack fleet-delivery-lag --fixture delivery.json` | Read a JSON fixture. |
 | `fleet-stuck` | Report open PRs and merge state. | `stack fleet-stuck --json` | Read via Locus. |
 | `fleet-slo` | Compare fleet metrics with SLO targets. | `stack fleet-slo --json` | Read via Locus. |
-| `fleet-act` | Preview a dispatcher request. | `stack fleet-act pause --lane codex-personal --json` | `--apply` appends an audit request for a dispatcher consumer; it does not execute the request. |
+| `fleet-act` | Preview a dispatcher request. | `stack fleet-act pause --lane worker-1 --json` | `--apply` appends an audit request for a dispatcher consumer; it does not execute the request. |
 | `fleet-stream` | Translate fleet logs into NDJSON or SSE. | `stack fleet-stream --dispatch dispatch-events.log --jobs jobs.jsonl` | Reads logs; `--sse` opens a localhost listener and `--follow` keeps running. |
 | `fleet-graph` | Report fleet nodes and relationships. | `stack fleet-graph --json` | Read. |
 | `fleet-bets` | Report leader bet outcomes. | `stack fleet-bets --json` | Read. |
