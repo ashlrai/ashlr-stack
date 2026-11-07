@@ -133,7 +133,7 @@ MIT. See the repository [LICENSE](../../LICENSE).
 
 `stack upgrade` checks for a newer stable release without installing it. For an
 existing npm global installation on macOS or Linux, run `stack upgrade --apply`.
-Use `--apply --dry-run` to preview, or add `--json` for machine-readable output.
+Use `--apply --dryRun` to preview, or add `--json` for machine-readable output.
 Bun, linked development installs, Windows, and other ecosystem components are
 outside this first upgrade slice; use the manual installation hint for those.
 

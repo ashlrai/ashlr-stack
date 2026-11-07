@@ -1,6 +1,6 @@
 # CLI command map
 
-This map describes the source CLI at version 0.3.4. Run `stack --help` and
+This map describes the source CLI in this checkout. Run `stack --help` and
 `stack <command> --help` for the current syntax; nested commands also have
 help. Examples assume `stack` is installed, a configured project where needed,
 and the named files, services, or tools exist. Replace illustrative names and

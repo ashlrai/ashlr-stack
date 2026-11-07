@@ -250,7 +250,7 @@ Selected persistent values go to Phantom Secrets. `.stack.toml` stores slot name
 
 **Is `--json` on every command?**
 
-No. It is declared per command. The start block and `stack onboard --json` are the quickstart forms. `stack --json providers` exits 1.
+No. It is declared per command. The start block and `stack onboard --json` are the quickstart forms. The root option also supports `stack --version --json`; put `--json` after a subcommand for that command's output.
 
 **What if I stop using Stack?**
 

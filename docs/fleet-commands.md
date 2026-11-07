@@ -29,9 +29,9 @@ and `fleet-waste` also run nested as `stack fleet collisions|slo|waste`.
 
 ## Flags
 
-- **fleet-act** — positional `verb` (required: `pause`, `resume`, `kill`,
+- **fleet-act**: positional `verb` (required: `pause`, `resume`, `kill`,
   `reassign`, `slots` or `steer`); `--lane`, `--job`, `--slots`, `--message`
-  (verb inputs), `--queue`, `--apply`, `--dry-run`, `--json`.
+  (verb inputs), `--queue`, `--apply`, `--dryRun`, `--json`.
 - **fleet-bets** — `--json`, `--queue`, `--router`, `--ready`, `--metrics`,
   `--src`.
 - **fleet-collisions** — `--file` (JSON input; omit or `-` for stdin),

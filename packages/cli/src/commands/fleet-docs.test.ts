@@ -15,8 +15,6 @@ const files = readdirSync(commandsDir)
   .filter((name) => /^fleet-.+\.ts$/.test(name) && !name.endsWith(".test.ts"))
   .sort();
 
-const kebab = (key: string) => key.replace(/[A-Z]/g, (char) => `-${char.toLowerCase()}`);
-
 test("fleet command sources exist to document", () => {
   expect(files.length).toBeGreaterThan(0);
 });
@@ -34,7 +32,7 @@ for (const file of files) {
     expect(doc).toContain(`\`${name}\``);
     for (const [key, arg] of Object.entries(command.args ?? {})) {
       if (arg.type === "positional") continue;
-      expect(doc).toContain(`--${kebab(key)}`);
+      expect(doc).toContain(`--${key}`);
     }
   });
 }
