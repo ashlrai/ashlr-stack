@@ -130,8 +130,9 @@ test("the reference never describes placeholder writes as a current step", () =>
   expect(`${doc} Wiring now writes a placeholder.`).toMatch(currentWrite);
 });
 
-test("the reference accounts for the two bullets that only mention apply", () => {
+test("the reference accounts for bullets that only mention apply", () => {
   for (const signature of [
+    "Expanded coverage for `stack apply` when",
     "**The last lines of a failing command reach a pipe on Bun 1.2.**",
     "**`stack recommend [query]`**",
   ]) {
@@ -153,7 +154,7 @@ test("the documented commands locate the apply bullets and compare the copies", 
 
     const search = run(commands[0]);
     expect(search.status).toBe(0);
-    expect(search.stdout.trim().split("\n")).toHaveLength(8);
+    expect(search.stdout.trim().split("\n")).toHaveLength(9);
     expect(run(commands[1]).status).toBe(0);
 
     writeFileSync(

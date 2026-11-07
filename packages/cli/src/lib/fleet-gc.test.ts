@@ -296,7 +296,7 @@ test("API_SPEND log end marker infers DONE-EMPTY", async () => {
   try {
     await seed(fx, "RQ-GC-SPD1", {
       publish: null,
-      log: `agent output\nmore lines\nAPI_SPEND RQ-GC-SPD1 pool=gift tokens=123\n`,
+      log: "agent output\nmore lines\nAPI_SPEND RQ-GC-SPD1 pool=gift tokens=123\n",
     });
     const report = await collect(fx);
     expect(entry(report, "RQ-GC-SPD1")).toMatchObject({
