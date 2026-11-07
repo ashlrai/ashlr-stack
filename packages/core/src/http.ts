@@ -56,23 +56,21 @@ export async function fetchWithRetry(
   const baseDelayMs = opts.baseDelayMs ?? 400;
   const maxDelayMs = opts.maxDelayMs ?? 8000;
   const retryOn = opts.retryOn ?? defaultRetryOn;
-  const idempotent = opts.idempotent ?? isIdempotent(init?.method);
-  const signal = opts.signal;
+  const idempotent =
+    opts.idempotent ??
+    isIdempotent(init?.method ?? (input instanceof Request ? input.method : undefined));
+  const requestSignal = init?.signal ?? (input instanceof Request ? input.signal : undefined);
+  const mergedInit = mergeSignal({ ...init, signal: requestSignal }, opts.signal);
+  const signal = mergedInit?.signal ?? undefined;
 
   let attempt = 0;
-  // Track the last non-ok response so a final failure returns something the
-  // caller can inspect (status / body) rather than a synthetic error.
-  let lastResponse: Response | undefined;
-  let lastError: unknown;
-
   while (true) {
     if (signal?.aborted) throw abortError(signal);
 
     try {
-      const res = await fetch(input, mergeSignal(init, signal));
+      const res = await fetch(input, mergedInit);
       if (res.ok || !idempotent || !retryOn(res)) return res;
 
-      lastResponse = res;
       if (attempt >= retries) return res;
 
       const waitMs = computeDelay(res, attempt, baseDelayMs, maxDelayMs);
@@ -82,19 +80,14 @@ export async function fetchWithRetry(
       // Network-level failure (DNS, connection reset, fetch threw). Only retry
       // for idempotent requests — a POST that "failed" may have actually been
       // accepted by the remote before the connection dropped.
+      if (signal?.aborted) throw abortError(signal);
       if (isAbortError(err)) throw err;
-      lastError = err;
       if (!idempotent || attempt >= retries) throw err;
       const waitMs = computeDelay(undefined, attempt, baseDelayMs, maxDelayMs);
       await sleep(waitMs, signal);
       attempt++;
     }
   }
-
-  // Unreachable — both branches above either return or throw. The assignment
-  // to lastResponse/lastError keeps TS happy if the loop ever changes shape.
-  void lastResponse;
-  void lastError;
 }
 
 // ---------------------------------------------------------------------------
