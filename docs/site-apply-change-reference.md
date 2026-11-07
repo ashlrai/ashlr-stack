@@ -49,7 +49,8 @@ the behavior those entries state.
   Supabase, GitHub). The entry is annotated with the failed
   `TODO_STACK_APPLY` placeholder history.
 
-Two other bullets spell `stack apply` verbatim but only mention it: the 0.2.2
+Three other bullets spell `stack apply` verbatim but only mention it: the 0.3.8
+"Expanded coverage for `stack apply` when" testing entry, the 0.2.2
 fix "**The last lines of a failing command reach a pipe on Bun 1.2.**" (a
 piped `stack apply` as an example of lost output) and the 0.1.0
 "**`stack recommend [query]`**" bullet ("follow up with `stack apply <id>`").
@@ -88,8 +89,8 @@ From the repository root, list every site changelog bullet that spells
 grep -n -E '^- .*`stack apply' packages/site/src/data/CHANGELOG.md
 ```
 
-Expect eight hits: the six change entries that spell it verbatim, plus the
-two mention bullets above. Then confirm the site copy still matches its
+Expect nine hits: the six change entries that spell it verbatim, plus the
+three mention bullets above. Then confirm the site copy still matches its
 source:
 
 ```sh

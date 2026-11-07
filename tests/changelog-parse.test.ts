@@ -280,8 +280,7 @@ test("site CHANGELOG.md parses the same with all blank lines removed", () => {
 });
 
 test("site CHANGELOG.md without final newline parses the final entry completely", () => {
-  // Fixture is a copy of packages/site/src/data/CHANGELOG.md with the trailing newline stripped.
-  const noNewline = read("./__fixtures__/changelog-no-final-newline-site.md");
+  const noNewline = read("../packages/site/src/data/CHANGELOG.md").replace(/\n+$/, "");
   expect(noNewline.endsWith("\n")).toBe(false);
 
   const parsed = parseChangelog(noNewline);
@@ -298,10 +297,9 @@ test("site CHANGELOG.md without final newline parses the final entry completely"
   );
 });
 
-test("site no-final-newline fixture is the real CHANGELOG.md minus its trailing newline, and shared parsers keep the last entry", () => {
+test("shared parsers keep the last site changelog entry without a final newline", () => {
   const real = read("../packages/site/src/data/CHANGELOG.md");
-  const bare = read("./__fixtures__/changelog-no-final-newline-site.md");
-  expect(bare).toBe(real.replace(/\n+$/, ""));
+  const bare = real.replace(/\n+$/, "");
   const lastEntry = "47 tests across 12 files; fetch-mocked provider tests and fake-phantom integration harness.";
   expect(sectionEntries(bare).at(-1)?.entries.at(-1)).toBe(lastEntry);
   expect(versionSections(bare).at(-1)?.body.trimEnd().endsWith(lastEntry)).toBe(true);

@@ -34,8 +34,8 @@ function allListItems(body: Token[]): string[] {
   return items;
 }
 
-const fixture = readFileSync(join(import.meta.dir, "__fixtures__/changelog-no-final-newline-site.md"), "utf8");
 const published = readFileSync(join(import.meta.dir, "../src/data/CHANGELOG.md"), "utf8");
+const fixture = published.replace(/\n+$/, "");
 
 test("fixture really ends without a trailing newline", () => {
   expect(fixture.endsWith("\n")).toBe(false);
@@ -63,11 +63,11 @@ test("fixture has the same version headings as the published changelog", () => {
   expect(fixtureVersions.map((v) => v.heading)).toEqual(publishedVersions.map((v) => v.heading));
 });
 
-test("fixture version bodies match the published changelog with trailing newline stripped", () => {
+test("version bodies match the published changelog with or without its trailing newline", () => {
   const fixtureVersions = parseVersions(fixture);
-  const strippedVersions = parseVersions(published.replace(/\n+$/, ""));
-  expect(fixtureVersions.map((v) => v.heading)).toEqual(strippedVersions.map((v) => v.heading));
-  expect(fixtureVersions.map((v) => v.raw.trimEnd())).toEqual(strippedVersions.map((v) => v.raw.trimEnd()));
+  const publishedVersions = parseVersions(published);
+  expect(fixtureVersions.map((v) => v.heading)).toEqual(publishedVersions.map((v) => v.heading));
+  expect(fixtureVersions.map((v) => v.raw.trimEnd())).toEqual(publishedVersions.map((v) => v.raw.trimEnd()));
 });
 
 test("site-facts release lookup still finds the latest release", () => {
