@@ -34,7 +34,7 @@ export const upgradeCommand = defineCommand({
   },
 });
 
-export interface UpgradeReport {
+interface UpgradeReport {
   schema: "ashlr.stack.upgrade/v1";
   package: string;
   current: string;

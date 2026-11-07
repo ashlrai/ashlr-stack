@@ -10,7 +10,7 @@ const MAX_PROBLEMS = 3;
 const MAX_PROBLEM_LEN = 100;
 
 /** One Ashlr tool `stack doctor --ecosystem` probes. */
-export interface EcosystemTool {
+interface EcosystemTool {
   name: string;
   command: string;
 }
@@ -24,7 +24,7 @@ export const ECOSYSTEM_TOOLS: EcosystemTool[] = [
   { name: "ashlr-plugin", command: "ashlr-plugin" },
 ];
 
-export const PROBE_TIMEOUT_MS = 2000;
+const PROBE_TIMEOUT_MS = 2000;
 
 /** Result of running one probe. `missing` means the binary was not found. */
 export type ProbeRun =
@@ -96,7 +96,7 @@ export const defaultProbeRunner: ProbeRunner = (command, timeoutMs) =>
     );
   });
 
-export function parseHandshake(tool: EcosystemTool, run: ProbeRun): EcosystemEntry {
+function parseHandshake(tool: EcosystemTool, run: ProbeRun): EcosystemEntry {
   const base = { name: tool.name, command: tool.command };
   if (run.kind === "missing") return { ...base, status: "missing", detail: "not installed" };
   if (run.kind === "timeout")

@@ -176,9 +176,9 @@ export function resolveExecutable(
   return null;
 }
 
-export const PREVIEW_TIMEOUT_MS = 15_000;
-export const APPLY_TIMEOUT_MS = 120_000;
-export const MAX_OUTPUT = 256 * 1024;
+const PREVIEW_TIMEOUT_MS = 15_000;
+const APPLY_TIMEOUT_MS = 120_000;
+const MAX_OUTPUT = 256 * 1024;
 
 export type RunResult =
   | { kind: "exited"; code: number; stdout: string }

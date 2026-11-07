@@ -1,0 +1,1483 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-11-07T09:19:19.025Z",
+  "root": "~/Projects/ashlrai",
+  "repos": [
+    {
+      "name": "ashlr-md",
+      "path": "~/Projects/ashlrai/ashlr-md",
+      "canonicalFleet": true,
+      "isGitRepo": true,
+      "defaultBranch": "main",
+      "headBranch": "main",
+      "headSha": "7ee2415d",
+      "lastCommitAt": "2026-10-26T00:01:34-04:00",
+      "dirtyFiles": 0,
+      "worktrees": {
+        "total": 253,
+        "detached": 199,
+        "prunable": 25
+      },
+      "code": {
+        "files": 377,
+        "loc": 134012,
+        "byLanguage": {
+          "mjs": {
+            "files": 3,
+            "loc": 161
+          },
+          "ts": {
+            "files": 254,
+            "loc": 67984
+          },
+          "sh": {
+            "files": 7,
+            "loc": 559
+          },
+          "py": {
+            "files": 1,
+            "loc": 282
+          },
+          "rs": {
+            "files": 55,
+            "loc": 52633
+          },
+          "tsx": {
+            "files": 57,
+            "loc": 12393
+          }
+        }
+      },
+      "manifests": 3,
+      "deps": {
+        "dependencies": 33,
+        "devDependencies": 18,
+        "optionalDependencies": 0,
+        "peerDependencies": 0,
+        "total": 51,
+        "updateAutomation": null,
+        "checkedWith": "bun outdated",
+        "outdatedCount": 34,
+        "majorsBehind": 8,
+        "examples": [
+          {
+            "name": "@types/node",
+            "current": "20.19.41",
+            "wanted": "20.19.43",
+            "latest": "26.6.6",
+            "dev": true
+          },
+          {
+            "name": "builtin-modules",
+            "current": "3.3.0",
+            "wanted": "3.3.0",
+            "latest": "5.5.0",
+            "dev": true
+          },
+          {
+            "name": "esbuild",
+            "current": "0.21.5",
+            "wanted": "0.21.5",
+            "latest": "0.28.2",
+            "dev": true
+          },
+          {
+            "name": "obsidian",
+            "current": "1.13.0",
+            "wanted": "1.14.4",
+            "latest": "1.14.4",
+            "dev": true
+          },
+          {
+            "name": "tslib",
+            "current": "2.8.1",
+            "wanted": "2.9.1",
+            "latest": "2.9.1",
+            "dev": true
+          },
+          {
+            "name": "typescript",
+            "current": "5.9.3",
+            "wanted": "5.9.3",
+            "latest": "7.0.2",
+            "dev": true
+          },
+          {
+            "name": "@codemirror/commands",
+            "current": "6.10.3",
+            "wanted": "6.11.1",
+            "latest": "6.11.1",
+            "dev": false
+          },
+          {
+            "name": "@codemirror/lang-markdown",
+            "current": "6.5.0",
+            "wanted": "6.5.2",
+            "latest": "6.5.2",
+            "dev": false
+          },
+          {
+            "name": "@codemirror/state",
+            "current": "6.6.0",
+            "wanted": "6.7.6",
+            "latest": "6.7.6",
+            "dev": false
+          },
+          {
+            "name": "@codemirror/view",
+            "current": "6.43.0",
+            "wanted": "6.43.15",
+            "latest": "6.43.15",
+            "dev": false
+          }
+        ],
+        "lockfileDrift": null,
+        "possiblyUnusedDeps": 1,
+        "possiblyUnusedDepExamples": [
+          {
+            "name": "tslib",
+            "manifest": "integrations/obsidian"
+          }
+        ]
+      },
+      "deadCode": {
+        "exportCandidateCount": 130,
+        "exportCandidates": [
+          {
+            "file": "integrations/vscode/src/cli.ts",
+            "name": "CliOutcome",
+            "kind": "type"
+          },
+          {
+            "file": "scripts/check-crypto.mjs",
+            "name": "PATTERNS",
+            "kind": "const"
+          },
+          {
+            "file": "src/ai/actions.ts",
+            "name": "buildActionMessages",
+            "kind": "function"
+          },
+          {
+            "file": "src/ai/actions.ts",
+            "name": "DocAction",
+            "kind": "interface"
+          },
+          {
+            "file": "src/ai/actions.ts",
+            "name": "streamAction",
+            "kind": "function"
+          },
+          {
+            "file": "src/ai/actions.ts",
+            "name": "StreamingActionOptions",
+            "kind": "interface"
+          },
+          {
+            "file": "src/ai/inline.ts",
+            "name": "InlineTransformOptions",
+            "kind": "interface"
+          },
+          {
+            "file": "src/ai/registry.ts",
+            "name": "ANTHROPIC_MODEL",
+            "kind": "const"
+          },
+          {
+            "file": "src/ai/registry.ts",
+            "name": "OFFLINE_MESSAGE",
+            "kind": "const"
+          },
+          {
+            "file": "src/components/ai/AISidebar.tsx",
+            "name": "MAX_RETRIES",
+            "kind": "const"
+          }
+        ],
+        "unusedImportFiles": 4,
+        "unusedImports": 19,
+        "todoFixmeCount": 0,
+        "rustAllowDeadCode": 16
+      },
+      "tests": {
+        "files": 141,
+        "rustTestFns": 922,
+        "skipped": 26,
+        "sleepSignals": 45,
+        "networkCallRefs": 38,
+        "networkCallSample": [
+          "src-tauri/bins/mdopener-mcp/tests/agent_journey.rs:51:    fn request(&mut self, method: &str, params: Value) -> Value {",
+          "src-tauri/bins/mdopener-mcp/tests/agent_journey.rs:67:        let reply = self.request(",
+          "src-tauri/bins/mdopener-mcp/tests/agent_journey.rs:153:    let init = c.request(",
+          "src-tauri/bins/mdopener-mcp/tests/agent_journey.rs:174:    let list = c.request(\"tools/list\", json!({}));",
+          "src-tauri/bins/mdopener-mcp/tests/agent_journey.rs:324:    let read = c.request(",
+          "src-tauri/bins/mdopener-mcp/tests/agent_journey.rs:366:    let bad = c.request(",
+          "src-tauri/bins/mdopener-mcp/tests/agent_journey.rs:404:    c.request(",
+          "src-tauri/bins/mdopener-mcp/tests/agent_journey.rs:442:    c.request(",
+          "src-tauri/bins/mdopener-mcp/tests/integration.rs:1915:fn get_user_annotations_path_url_encoded_in_request() {",
+          "src-tauri/bins/mdopener-mcp/tests/local_inference_probe.rs:20:fn read_request(s: &mut std::net::TcpStream) -> String {"
+        ]
+      },
+      "docs": {
+        "markdownFiles": 54,
+        "brokenLinks": 0,
+        "linkExamples": [],
+        "missingScriptRefs": 0,
+        "scriptExamples": []
+      },
+      "ci": {
+        "workflows": 2
+      }
+    },
+    {
+      "name": "ashlr-stack",
+      "path": "~/Projects/ashlrai/ashlr-stack",
+      "canonicalFleet": true,
+      "isGitRepo": true,
+      "defaultBranch": "main",
+      "headBranch": "main",
+      "headSha": "1f86bfa",
+      "lastCommitAt": "2026-10-26T02:58:17-04:00",
+      "dirtyFiles": 1,
+      "worktrees": {
+        "total": 119,
+        "detached": 92,
+        "prunable": 9
+      },
+      "code": {
+        "files": 278,
+        "loc": 45674,
+        "byLanguage": {
+          "sh": {
+            "files": 7,
+            "loc": 780
+          },
+          "mjs": {
+            "files": 6,
+            "loc": 528
+          },
+          "tsx": {
+            "files": 20,
+            "loc": 5691
+          },
+          "ts": {
+            "files": 245,
+            "loc": 38675
+          }
+        }
+      },
+      "manifests": 6,
+      "deps": {
+        "dependencies": 21,
+        "devDependencies": 15,
+        "optionalDependencies": 0,
+        "peerDependencies": 0,
+        "total": 36,
+        "updateAutomation": "renovate",
+        "checkedWith": "bun outdated",
+        "outdatedCount": 25,
+        "majorsBehind": 13,
+        "examples": [
+          {
+            "name": "@biomejs/biome",
+            "current": "1.9.4",
+            "wanted": "1.9.4",
+            "latest": "2.6.6",
+            "dev": true
+          },
+          {
+            "name": "@types/bun",
+            "current": "1.3.12",
+            "wanted": "1.4.4",
+            "latest": "1.4.4",
+            "dev": true
+          },
+          {
+            "name": "typescript",
+            "current": "5.9.3",
+            "wanted": "5.9.3",
+            "latest": "7.0.2",
+            "dev": true
+          },
+          {
+            "name": "@clack/prompts",
+            "current": "0.8.2",
+            "wanted": "0.8.2",
+            "latest": "1.8.1",
+            "dev": false
+          },
+          {
+            "name": "citty",
+            "current": "0.1.6",
+            "wanted": "0.1.6",
+            "latest": "0.2.2",
+            "dev": false
+          },
+          {
+            "name": "smol-toml",
+            "current": "1.6.1",
+            "wanted": "1.9.1",
+            "latest": "1.9.1",
+            "dev": false
+          },
+          {
+            "name": "@modelcontextprotocol/sdk",
+            "current": "1.29.0",
+            "wanted": "1.32.2",
+            "latest": "1.32.2",
+            "dev": false
+          },
+          {
+            "name": "@astrojs/check",
+            "current": "0.9.8",
+            "wanted": "0.9.12",
+            "latest": "0.9.12",
+            "dev": false
+          },
+          {
+            "name": "@astrojs/mdx",
+            "current": "5.0.3",
+            "wanted": "5.0.6",
+            "latest": "8.1.3",
+            "dev": false
+          },
+          {
+            "name": "@astrojs/react",
+            "current": "4.4.2",
+            "wanted": "4.4.2",
+            "latest": "7.1.4",
+            "dev": false
+          }
+        ],
+        "lockfileDrift": null,
+        "possiblyUnusedDeps": 1,
+        "possiblyUnusedDepExamples": [
+          {
+            "name": "react-dom",
+            "manifest": "packages/site"
+          }
+        ]
+      },
+      "deadCode": {
+        "exportCandidateCount": 143,
+        "exportCandidates": [
+          {
+            "file": "packages/cli/src/commands/add.ts",
+            "name": "AddArgs",
+            "kind": "interface"
+          },
+          {
+            "file": "packages/cli/src/commands/deps.ts",
+            "name": "buildDepsReport",
+            "kind": "function"
+          },
+          {
+            "file": "packages/cli/src/commands/deps.ts",
+            "name": "DepsReport",
+            "kind": "interface"
+          },
+          {
+            "file": "packages/cli/src/commands/doctor.ts",
+            "name": "checkService",
+            "kind": "function"
+          },
+          {
+            "file": "packages/cli/src/commands/doctor.ts",
+            "name": "ReconcileReport",
+            "kind": "interface"
+          },
+          {
+            "file": "packages/cli/src/commands/doctor.ts",
+            "name": "ServiceCheck",
+            "kind": "interface"
+          },
+          {
+            "file": "packages/cli/src/commands/doctor.ts",
+            "name": "UNREADABLE_DETAIL",
+            "kind": "const"
+          },
+          {
+            "file": "packages/cli/src/commands/exec.ts",
+            "name": "exitCodeFor",
+            "kind": "function"
+          },
+          {
+            "file": "packages/cli/src/commands/list.ts",
+            "name": "buildListReport",
+            "kind": "function"
+          },
+          {
+            "file": "packages/cli/src/commands/list.ts",
+            "name": "ListReport",
+            "kind": "interface"
+          }
+        ],
+        "unusedImportFiles": 1,
+        "unusedImports": 1,
+        "todoFixmeCount": 0
+      },
+      "tests": {
+        "files": 108,
+        "skipped": 9,
+        "sleepSignals": 23,
+        "networkCallRefs": 1,
+        "networkCallSample": [
+          "packages/cli/src/__tests__/upgrade.test.ts:106:      await fetch(\"https://registry.npmjs.org/@ashlr/stack/latest\");"
+        ]
+      },
+      "docs": {
+        "markdownFiles": 42,
+        "brokenLinks": 1,
+        "linkExamples": [
+          {
+            "doc": "packages/site/src/data/CHANGELOG.md",
+            "target": "docs/adding-a-provider.md"
+          }
+        ],
+        "missingScriptRefs": 0,
+        "scriptExamples": []
+      },
+      "ci": {
+        "workflows": 7
+      }
+    },
+    {
+      "name": "phantom-secrets",
+      "path": "~/Projects/ashlrai/phantom-secrets",
+      "canonicalFleet": true,
+      "isGitRepo": true,
+      "defaultBranch": "main",
+      "headBranch": "main",
+      "headSha": "58c81eac",
+      "lastCommitAt": "2026-10-26T00:06:14-04:00",
+      "dirtyFiles": 1,
+      "worktrees": {
+        "total": 130,
+        "detached": 65,
+        "prunable": 34
+      },
+      "code": {
+        "files": 466,
+        "loc": 208103,
+        "byLanguage": {
+          "sh": {
+            "files": 5,
+            "loc": 1655
+          },
+          "js": {
+            "files": 21,
+            "loc": 5345
+          },
+          "ts": {
+            "files": 43,
+            "loc": 3415
+          },
+          "cjs": {
+            "files": 25,
+            "loc": 7376
+          },
+          "mjs": {
+            "files": 52,
+            "loc": 10418
+          },
+          "py": {
+            "files": 13,
+            "loc": 1263
+          },
+          "tsx": {
+            "files": 54,
+            "loc": 6015
+          },
+          "rs": {
+            "files": 251,
+            "loc": 172267
+          },
+          "jsx": {
+            "files": 2,
+            "loc": 349
+          }
+        }
+      },
+      "manifests": 5,
+      "deps": {
+        "dependencies": 16,
+        "devDependencies": 10,
+        "optionalDependencies": 0,
+        "peerDependencies": 0,
+        "total": 26,
+        "updateAutomation": null,
+        "checkedWith": "cargo update --dry-run",
+        "outdatedCount": 0,
+        "majorsBehind": 0,
+        "examples": [],
+        "lockfileDrift": {
+          "updating": 0,
+          "adding": 0,
+          "removing": 0
+        },
+        "possiblyUnusedDeps": 3,
+        "possiblyUnusedDepExamples": [
+          {
+            "name": "eslint-config-next",
+            "manifest": "apps/web"
+          },
+          {
+            "name": "@remotion/cli",
+            "manifest": "video"
+          },
+          {
+            "name": "@remotion/player",
+            "manifest": "video"
+          }
+        ]
+      },
+      "deadCode": {
+        "exportCandidateCount": 67,
+        "exportCandidates": [
+          {
+            "file": "apps/web/src/components/landing/BrandLogos.tsx",
+            "name": "AnthropicLogo",
+            "kind": "function"
+          },
+          {
+            "file": "apps/web/src/components/landing/BrandLogos.tsx",
+            "name": "AwsLogo",
+            "kind": "function"
+          },
+          {
+            "file": "apps/web/src/components/landing/BrandLogos.tsx",
+            "name": "ClerkLogo",
+            "kind": "function"
+          },
+          {
+            "file": "apps/web/src/components/landing/BrandLogos.tsx",
+            "name": "CloudflareLogo",
+            "kind": "function"
+          },
+          {
+            "file": "apps/web/src/components/landing/BrandLogos.tsx",
+            "name": "CohereLogo",
+            "kind": "function"
+          },
+          {
+            "file": "apps/web/src/components/landing/BrandLogos.tsx",
+            "name": "CursorLogo",
+            "kind": "function"
+          },
+          {
+            "file": "apps/web/src/components/landing/BrandLogos.tsx",
+            "name": "DatadogLogo",
+            "kind": "function"
+          },
+          {
+            "file": "apps/web/src/components/landing/BrandLogos.tsx",
+            "name": "DiscordLogo",
+            "kind": "function"
+          },
+          {
+            "file": "apps/web/src/components/landing/BrandLogos.tsx",
+            "name": "DockerLogo",
+            "kind": "function"
+          },
+          {
+            "file": "apps/web/src/components/landing/BrandLogos.tsx",
+            "name": "FigmaLogo",
+            "kind": "function"
+          }
+        ],
+        "unusedImportFiles": 0,
+        "unusedImports": 0,
+        "todoFixmeCount": 0,
+        "rustAllowDeadCode": 7
+      },
+      "tests": {
+        "files": 37,
+        "rustTestFns": 2968,
+        "skipped": 39,
+        "sleepSignals": 31,
+        "networkCallRefs": 156,
+        "networkCallSample": [
+          "apps/web/tests/hosted-observability-build.test.cjs:159:        const response = await fetch(url);",
+          "apps/web/tests/hosted-service-commissioning.test.cjs:228:      const args = [definition.request()];",
+          "apps/web/tests/hosted-service-commissioning.test.cjs:264:    const args = [definition.request()];",
+          "apps/web/tests/public-claims.test.cjs:253:    /\\brequest(?:-|\\s+)stream(?:ing|ed)?[^\\n]{0,80}\\breplac(?:e|es|ed|ement|ing)\\b/i,",
+          "apps/web/tests/public-claims.test.cjs:254:    /\\breplac(?:e|es|ed|ement|ing)[^\\n]{0,80}\\b(?:streaming\\s+requests?|request(?:-|\\s+)streams?)\\b/i,",
+          "crates/phantom-cli/src/commands/legacy_proxy.rs:106:    if control_request(&proxy, \"GET\", \"/phantom/health\", HEALTH_BODY).is_ok() {",
+          "crates/phantom-cli/src/commands/legacy_proxy.rs:130:fn control_request(",
+          "crates/phantom-cli/src/commands/workspace.rs:48:    let request_id = workspace_request::create_request(",
+          "crates/phantom-cli/src/commands/workspace.rs:216:            persist_applied_request(request_id, &workspace, &status, &receipt)?;",
+          "crates/phantom-cli/src/commands/workspace.rs:229:                workspace_request::rollback_request("
+        ]
+      },
+      "docs": {
+        "markdownFiles": 102,
+        "brokenLinks": 0,
+        "linkExamples": [],
+        "missingScriptRefs": 0,
+        "scriptExamples": []
+      },
+      "ci": {
+        "workflows": 8
+      }
+    },
+    {
+      "name": "locus",
+      "path": "~/Projects/ashlrai/locus",
+      "canonicalFleet": true,
+      "isGitRepo": true,
+      "defaultBranch": "main",
+      "headBranch": "main",
+      "headSha": "cba5f65",
+      "lastCommitAt": "2026-10-26T00:11:18-04:00",
+      "dirtyFiles": 1,
+      "worktrees": {
+        "total": 112,
+        "detached": 55,
+        "prunable": 43
+      },
+      "code": {
+        "files": 122,
+        "loc": 89495,
+        "byLanguage": {
+          "py": {
+            "files": 1,
+            "loc": 55
+          },
+          "rs": {
+            "files": 100,
+            "loc": 76478
+          },
+          "mjs": {
+            "files": 5,
+            "loc": 396
+          },
+          "js": {
+            "files": 6,
+            "loc": 1253
+          },
+          "sh": {
+            "files": 8,
+            "loc": 5311
+          },
+          "ts": {
+            "files": 2,
+            "loc": 6002
+          }
+        }
+      },
+      "manifests": 3,
+      "deps": {
+        "dependencies": 0,
+        "devDependencies": 0,
+        "optionalDependencies": 0,
+        "peerDependencies": 0,
+        "total": 0,
+        "updateAutomation": "renovate",
+        "checkedWith": "cargo update --dry-run",
+        "outdatedCount": 0,
+        "majorsBehind": 0,
+        "examples": [],
+        "lockfileDrift": {
+          "updating": 0,
+          "adding": 0,
+          "removing": 0
+        },
+        "possiblyUnusedDeps": 0
+      },
+      "deadCode": {
+        "exportCandidateCount": 1,
+        "exportCandidates": [
+          {
+            "file": "scripts/check-crypto.mjs",
+            "name": "PATTERNS",
+            "kind": "const"
+          }
+        ],
+        "unusedImportFiles": 0,
+        "unusedImports": 0,
+        "todoFixmeCount": 0,
+        "rustAllowDeadCode": 6
+      },
+      "tests": {
+        "files": 2,
+        "rustTestFns": 975,
+        "skipped": 40,
+        "sleepSignals": 39,
+        "networkCallRefs": 192,
+        "networkCallSample": [
+          "crates/locus-cli/src/main.rs:10147:    fn switch_honors_ttl_request() {",
+          "crates/locus-core/src/authority_anchor.rs:276:    let response = request(",
+          "crates/locus-core/src/authority_anchor.rs:416:    let response = request(",
+          "crates/locus-core/src/authority_anchor.rs:458:    let response = request(",
+          "crates/locus-core/src/authority_anchor.rs:493:    let response = request(",
+          "crates/locus-core/src/authority_anchor.rs:516:    let response = request(&endpoint, &AnchorRequest::Retire { challenge }, &auth)?;",
+          "crates/locus-core/src/authority_anchor.rs:820:    let response = request(endpoint, &AnchorRequest::BeginControl { operation }, auth)?;",
+          "crates/locus-core/src/authority_anchor.rs:845:    let response = request(endpoint, &AnchorRequest::Ping, auth)?;",
+          "crates/locus-core/src/authority_anchor.rs:1160:    if !credential_allows_request(&envelope.credential, &envelope.request) {",
+          "crates/locus-core/src/authority_anchor.rs:1168:    let response = handle_request("
+        ]
+      },
+      "docs": {
+        "markdownFiles": 61,
+        "brokenLinks": 0,
+        "linkExamples": [],
+        "missingScriptRefs": 0,
+        "scriptExamples": []
+      },
+      "ci": {
+        "workflows": 8
+      }
+    },
+    {
+      "name": "lexicon",
+      "path": "~/Projects/ashlrai/lexicon",
+      "canonicalFleet": true,
+      "isGitRepo": true,
+      "defaultBranch": "main",
+      "headBranch": "HEAD",
+      "headSha": "7cc3196",
+      "lastCommitAt": "2026-10-28T12:25:16-04:00",
+      "dirtyFiles": 1,
+      "worktrees": {
+        "total": 74,
+        "detached": 16,
+        "prunable": 34
+      },
+      "code": {
+        "files": 363,
+        "loc": 213977,
+        "byLanguage": {
+          "mts": {
+            "files": 2,
+            "loc": 41
+          },
+          "sh": {
+            "files": 4,
+            "loc": 616
+          },
+          "js": {
+            "files": 1,
+            "loc": 3
+          },
+          "tsx": {
+            "files": 15,
+            "loc": 3032
+          },
+          "mjs": {
+            "files": 32,
+            "loc": 101373
+          },
+          "py": {
+            "files": 1,
+            "loc": 9
+          },
+          "ts": {
+            "files": 308,
+            "loc": 108903
+          }
+        }
+      },
+      "manifests": 3,
+      "deps": {
+        "dependencies": 16,
+        "devDependencies": 17,
+        "optionalDependencies": 0,
+        "peerDependencies": 0,
+        "total": 33,
+        "updateAutomation": "dependabot",
+        "checkedWith": "npm outdated",
+        "outdatedCount": 6,
+        "majorsBehind": 2,
+        "examples": [
+          {
+            "name": "@modelcontextprotocol/sdk",
+            "current": "1.32.1",
+            "wanted": "1.32.2",
+            "latest": "1.32.2",
+            "dev": false
+          },
+          {
+            "name": "@types/chrome",
+            "current": "0.3.6",
+            "wanted": "0.3.7",
+            "latest": "0.3.7",
+            "dev": false
+          },
+          {
+            "name": "@types/node",
+            "current": "26.6.5",
+            "wanted": "26.6.6",
+            "latest": "26.6.6",
+            "dev": false
+          },
+          {
+            "name": "commander",
+            "current": "14.0.3",
+            "wanted": "14.0.3",
+            "latest": "15.1.0",
+            "dev": false
+          },
+          {
+            "name": "jsdom",
+            "current": "30.1.3",
+            "wanted": "30.1.3",
+            "latest": "31.0.0",
+            "dev": false
+          },
+          {
+            "name": "vitest",
+            "current": "5.0.5",
+            "wanted": "5.1.0",
+            "latest": "5.1.0",
+            "dev": false
+          }
+        ],
+        "lockfileDrift": null,
+        "possiblyUnusedDeps": 1,
+        "possiblyUnusedDepExamples": [
+          {
+            "name": "react-dom",
+            "manifest": "web"
+          }
+        ]
+      },
+      "deadCode": {
+        "exportCandidateCount": 266,
+        "exportCandidates": [
+          {
+            "file": "bench/lib.ts",
+            "name": "Ratio",
+            "kind": "interface"
+          },
+          {
+            "file": "bench/lib.ts",
+            "name": "ReasonStats",
+            "kind": "interface"
+          },
+          {
+            "file": "bench/lib.ts",
+            "name": "SWEEP_STEPS",
+            "kind": "const"
+          },
+          {
+            "file": "extension/src/adapters.ts",
+            "name": "CODE_EDITOR_SELECTOR",
+            "kind": "const"
+          },
+          {
+            "file": "extension/src/adapters.ts",
+            "name": "editableRoot",
+            "kind": "function"
+          },
+          {
+            "file": "extension/src/adapters.ts",
+            "name": "isCodeEditor",
+            "kind": "function"
+          },
+          {
+            "file": "extension/src/adapters.ts",
+            "name": "isEditable",
+            "kind": "function"
+          },
+          {
+            "file": "extension/src/adapters.ts",
+            "name": "isIdentifierField",
+            "kind": "function"
+          },
+          {
+            "file": "extension/src/adapters.ts",
+            "name": "SiteRow",
+            "kind": "interface"
+          },
+          {
+            "file": "extension/src/any-site.ts",
+            "name": "ANY_SITE_NO_FALLBACK_KEY",
+            "kind": "const"
+          }
+        ],
+        "unusedImportFiles": 8,
+        "unusedImports": 11,
+        "todoFixmeCount": 0
+      },
+      "tests": {
+        "files": 132,
+        "skipped": 17,
+        "sleepSignals": 49,
+        "networkCallRefs": 87,
+        "networkCallSample": [
+          "tests/daemon/expander-server.test.ts:79:  const socket = net.connect(socketPath);",
+          "tests/e2e.test.ts:951:  request(method: string, params: Record<string, unknown> = {}): Promise<JsonRpcResponse> {",
+          "tests/e2e.test.ts:989:      const init = await rpc.request('initialize', {",
+          "tests/e2e.test.ts:1000:      const tools = await rpc.request('tools/list');",
+          "tests/e2e.test.ts:1016:      const call = await rpc.request('tools/call', {",
+          "tests/e2e.test.ts:1028:      const resources = await rpc.request('resources/list');",
+          "tests/e2e.test.ts:1032:      const me = await rpc.request('resources/read', { uri: 'lexicon://me' });",
+          "tests/e2e.test.ts:1041:      const unknown = await rpc.request('tools/call', { name: 'no_such_tool', arguments: {} });",
+          "tests/e2e.test.ts:1127:      await rpc.request('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'bundle-e2e', version: '0.0.",
+          "tests/e2e.test.ts:1130:        const r = (await rpc.request('tools/call', { name, arguments: args })).result as ToolCallResult;"
+        ]
+      },
+      "docs": {
+        "markdownFiles": 65,
+        "brokenLinks": 0,
+        "linkExamples": [],
+        "missingScriptRefs": 0,
+        "scriptExamples": []
+      },
+      "ci": {
+        "workflows": 6
+      }
+    },
+    {
+      "name": "ashlr-plugin",
+      "path": "~/Projects/ashlrai/ashlr-plugin",
+      "canonicalFleet": true,
+      "isGitRepo": true,
+      "defaultBranch": "main",
+      "headBranch": "main",
+      "headSha": "a4044ef",
+      "lastCommitAt": "2026-10-26T00:10:34-04:00",
+      "dirtyFiles": 1,
+      "worktrees": {
+        "total": 100,
+        "detached": 53,
+        "prunable": 31
+      },
+      "code": {
+        "files": 956,
+        "loc": 236365,
+        "byLanguage": {
+          "py": {
+            "files": 33,
+            "loc": 13012
+          },
+          "sh": {
+            "files": 11,
+            "loc": 1057
+          },
+          "mjs": {
+            "files": 7,
+            "loc": 529
+          },
+          "rs": {
+            "files": 31,
+            "loc": 8065
+          },
+          "js": {
+            "files": 2,
+            "loc": 706
+          },
+          "mts": {
+            "files": 1,
+            "loc": 11
+          },
+          "tsx": {
+            "files": 110,
+            "loc": 23908
+          },
+          "ts": {
+            "files": 761,
+            "loc": 189077
+          }
+        }
+      },
+      "manifests": 6,
+      "deps": {
+        "dependencies": 44,
+        "devDependencies": 24,
+        "optionalDependencies": 1,
+        "peerDependencies": 0,
+        "total": 69,
+        "updateAutomation": "renovate",
+        "checkedWith": "bun outdated",
+        "outdatedCount": 43,
+        "majorsBehind": 18,
+        "examples": [
+          {
+            "name": "@types/bun",
+            "current": "1.3.12",
+            "wanted": "1.4.4",
+            "latest": "1.4.4",
+            "dev": true
+          },
+          {
+            "name": "typescript",
+            "current": "5.9.3",
+            "wanted": "5.9.3",
+            "latest": "7.0.2",
+            "dev": true
+          },
+          {
+            "name": "@modelcontextprotocol/sdk",
+            "current": "1.29.0",
+            "wanted": "1.32.2",
+            "latest": "1.32.2",
+            "dev": false
+          },
+          {
+            "name": "minimatch",
+            "current": "10.2.5",
+            "wanted": "10.2.6",
+            "latest": "11.0.5",
+            "dev": false
+          },
+          {
+            "name": "postgres",
+            "current": "3.4.9",
+            "wanted": "3.4.9",
+            "latest": "4.1.0",
+            "dev": false
+          },
+          {
+            "name": "web-tree-sitter",
+            "current": "0.22.6",
+            "wanted": "0.22.6",
+            "latest": "0.27.1",
+            "dev": false
+          },
+          {
+            "name": "onnxruntime-node",
+            "current": "1.26.0",
+            "wanted": "1.31.1",
+            "latest": "1.31.1",
+            "dev": false
+          },
+          {
+            "name": "@react-email/render",
+            "current": "2.0.8",
+            "wanted": "2.2.0",
+            "latest": "2.2.0",
+            "dev": false
+          },
+          {
+            "name": "@sentry/bun",
+            "current": "10.55.0",
+            "wanted": "10.78.0",
+            "latest": "11.11.0",
+            "dev": false
+          },
+          {
+            "name": "hono",
+            "current": "4.12.23",
+            "wanted": "4.13.17",
+            "latest": "4.13.17",
+            "dev": false
+          }
+        ],
+        "lockfileDrift": null,
+        "possiblyUnusedDeps": 5,
+        "possiblyUnusedDepExamples": [
+          {
+            "name": "@remotion/fonts",
+            "manifest": "video"
+          },
+          {
+            "name": "@remotion/google-fonts",
+            "manifest": "video"
+          },
+          {
+            "name": "@remotion/player",
+            "manifest": "video"
+          },
+          {
+            "name": "@remotion/renderer",
+            "manifest": "video"
+          },
+          {
+            "name": "@vscode/vsce",
+            "manifest": "vscode"
+          }
+        ]
+      },
+      "deadCode": {
+        "exportCandidateCount": 468,
+        "exportCandidates": [
+          {
+            "file": "bench/refs/node-sdk/src/agent/create-agent-ui-stream.ts",
+            "name": "createAgentUIStream",
+            "kind": "function"
+          },
+          {
+            "file": "bench/refs/node-sdk/src/error/invalid-argument-error.ts",
+            "name": "InvalidArgumentError",
+            "kind": "class"
+          },
+          {
+            "file": "bench/refs/node-sdk/src/error/invalid-tool-input-error.ts",
+            "name": "InvalidToolInputError",
+            "kind": "class"
+          },
+          {
+            "file": "bench/refs/node-sdk/src/generate-image/generate-image.ts",
+            "name": "GenerateImagePrompt",
+            "kind": "type"
+          },
+          {
+            "file": "bench/refs/node-sdk/src/generate-object/inject-json-instruction.ts",
+            "name": "injectJsonInstruction",
+            "kind": "function"
+          },
+          {
+            "file": "bench/refs/node-sdk/src/generate-object/stream-object.ts",
+            "name": "ObjectStreamInputPart",
+            "kind": "type"
+          },
+          {
+            "file": "bench/refs/node-sdk/src/generate-object/stream-object.ts",
+            "name": "StreamObjectOnErrorCallback",
+            "kind": "type"
+          },
+          {
+            "file": "bench/refs/node-sdk/src/generate-object/stream-object.ts",
+            "name": "StreamObjectOnFinishCallback",
+            "kind": "type"
+          },
+          {
+            "file": "bench/refs/node-sdk/src/generate-speech/generate-speech.ts",
+            "name": "generateSpeech",
+            "kind": "function"
+          },
+          {
+            "file": "bench/refs/node-sdk/src/generate-text/generate-text.ts",
+            "name": "GenerateTextOnFinishCallback",
+            "kind": "type"
+          }
+        ],
+        "unusedImportFiles": 36,
+        "unusedImports": 47,
+        "todoFixmeCount": 0
+      },
+      "tests": {
+        "files": 339,
+        "rustTestFns": 7,
+        "skipped": 24,
+        "sleepSignals": 87,
+        "networkCallRefs": 274,
+        "networkCallSample": [
+          "__tests__/_summarize.test.ts:29:    async fetch(req) {",
+          "__tests__/_summarize.test.ts:156:      async fetch(req) {",
+          "__tests__/anthropic-default-path-gateway.test.ts:28:    async fetch(req) {",
+          "__tests__/bash-server.test.ts:658:    async fetch(req) {",
+          "__tests__/deploy-smoke-token-argv.test.ts:64:      fetch(req) {",
+          "__tests__/diff-server.test.ts:196:      async fetch(req) {",
+          "__tests__/diff-server.test.ts:226:      async fetch(req) {",
+          "__tests__/efficiency-server.test.ts:623:      async fetch(req) {",
+          "__tests__/embed-openai-gateway.test.ts:26:    async fetch(req) {",
+          "__tests__/embed-remote-roundtrip.test.ts:55:    fetch(req) {"
+        ]
+      },
+      "docs": {
+        "markdownFiles": 141,
+        "brokenLinks": 1,
+        "linkExamples": [
+          {
+            "doc": ".ashlrcode/genome/knowledge/discoveries.md",
+            "target": "docs/benchmarks.md"
+          }
+        ],
+        "missingScriptRefs": 0,
+        "scriptExamples": []
+      },
+      "ci": {
+        "workflows": 12
+      }
+    },
+    {
+      "name": "phantom",
+      "path": "~/Projects/ashlrai/phantom",
+      "canonicalFleet": true,
+      "isGitRepo": true,
+      "defaultBranch": "master",
+      "headBranch": "cursor/fleet-dashboard-handoff-3af5",
+      "headSha": "e9f456132",
+      "lastCommitAt": "2026-10-26T04:16:00Z",
+      "dirtyFiles": 26,
+      "worktrees": {
+        "total": 337,
+        "detached": 144,
+        "prunable": 56
+      },
+      "code": {
+        "files": 4560,
+        "loc": 1557640,
+        "byLanguage": {
+          "mjs": {
+            "files": 106,
+            "loc": 26104
+          },
+          "sh": {
+            "files": 5,
+            "loc": 638
+          },
+          "js": {
+            "files": 10,
+            "loc": 10714
+          },
+          "rs": {
+            "files": 40,
+            "loc": 35165
+          },
+          "mts": {
+            "files": 6,
+            "loc": 239
+          },
+          "py": {
+            "files": 1,
+            "loc": 83
+          },
+          "tsx": {
+            "files": 749,
+            "loc": 147484
+          },
+          "ts": {
+            "files": 3643,
+            "loc": 1337213
+          }
+        }
+      },
+      "manifests": 5,
+      "deps": {
+        "dependencies": 31,
+        "devDependencies": 58,
+        "optionalDependencies": 0,
+        "peerDependencies": 0,
+        "total": 89,
+        "updateAutomation": "dependabot",
+        "checkedWith": "npm outdated",
+        "outdatedCount": 24,
+        "majorsBehind": 6,
+        "examples": [
+          {
+            "name": "@codemirror/autocomplete",
+            "current": "6.20.3",
+            "wanted": "6.20.4",
+            "latest": "6.20.4",
+            "dev": false
+          },
+          {
+            "name": "@codemirror/language",
+            "current": "6.12.4",
+            "wanted": "6.13.1",
+            "latest": "6.13.1",
+            "dev": false
+          },
+          {
+            "name": "@codemirror/legacy-modes",
+            "current": "6.5.4",
+            "wanted": "6.5.5",
+            "latest": "6.5.5",
+            "dev": false
+          },
+          {
+            "name": "@codemirror/view",
+            "current": "6.43.13",
+            "wanted": "6.43.15",
+            "latest": "6.43.15",
+            "dev": false
+          },
+          {
+            "name": "@lezer/highlight",
+            "current": "1.2.4",
+            "wanted": "1.2.5",
+            "latest": "1.2.5",
+            "dev": false
+          },
+          {
+            "name": "@simplewebauthn/server",
+            "current": "14.0.3",
+            "wanted": "14.1.0",
+            "latest": "14.1.0",
+            "dev": false
+          },
+          {
+            "name": "@testing-library/user-event",
+            "current": "14.6.7",
+            "wanted": "14.6.8",
+            "latest": "14.6.8",
+            "dev": false
+          },
+          {
+            "name": "@types/node",
+            "current": "26.2.0",
+            "wanted": "26.6.6",
+            "latest": "26.6.6",
+            "dev": false
+          },
+          {
+            "name": "@vitejs/plugin-react",
+            "current": "6.1.2",
+            "wanted": "6.2.1",
+            "latest": "6.2.1",
+            "dev": false
+          },
+          {
+            "name": "eslint",
+            "current": "9.39.5",
+            "wanted": "9.39.5",
+            "latest": "10.14.0",
+            "dev": false
+          }
+        ],
+        "lockfileDrift": null,
+        "possiblyUnusedDeps": 4,
+        "possiblyUnusedDepExamples": [
+          {
+            "name": "date-fns",
+            "manifest": "examples/universe-site"
+          },
+          {
+            "name": "react-server-dom-webpack",
+            "manifest": "examples/universe-site"
+          },
+          {
+            "name": "@vitejs/plugin-rsc",
+            "manifest": "examples/universe-site"
+          },
+          {
+            "name": "oxlint-tsgolint",
+            "manifest": "examples/universe-site"
+          }
+        ]
+      },
+      "deadCode": {
+        "exportCandidateCount": 4539,
+        "exportCandidates": [
+          {
+            "file": ".github/scripts/ci-site-lane.mjs",
+            "name": "DOCS_ONLY_PATH_PATTERNS",
+            "kind": "const"
+          },
+          {
+            "file": "examples/universe-site/components/ui/accordion.tsx",
+            "name": "Accordion",
+            "kind": "named"
+          },
+          {
+            "file": "examples/universe-site/components/ui/accordion.tsx",
+            "name": "AccordionContent",
+            "kind": "named"
+          },
+          {
+            "file": "examples/universe-site/components/ui/accordion.tsx",
+            "name": "AccordionItem",
+            "kind": "named"
+          },
+          {
+            "file": "examples/universe-site/components/ui/accordion.tsx",
+            "name": "AccordionTrigger",
+            "kind": "named"
+          },
+          {
+            "file": "examples/universe-site/components/ui/alert-dialog.tsx",
+            "name": "AlertDialog",
+            "kind": "named"
+          },
+          {
+            "file": "examples/universe-site/components/ui/alert-dialog.tsx",
+            "name": "AlertDialogAction",
+            "kind": "named"
+          },
+          {
+            "file": "examples/universe-site/components/ui/alert-dialog.tsx",
+            "name": "AlertDialogCancel",
+            "kind": "named"
+          },
+          {
+            "file": "examples/universe-site/components/ui/alert-dialog.tsx",
+            "name": "AlertDialogContent",
+            "kind": "named"
+          },
+          {
+            "file": "examples/universe-site/components/ui/alert-dialog.tsx",
+            "name": "AlertDialogDescription",
+            "kind": "named"
+          }
+        ],
+        "unusedImportFiles": 49,
+        "unusedImports": 110,
+        "todoFixmeCount": 0,
+        "rustAllowDeadCode": 2
+      },
+      "tests": {
+        "files": 2156,
+        "rustTestFns": 411,
+        "skipped": 349,
+        "sleepSignals": 712,
+        "networkCallRefs": 1330,
+        "networkCallSample": [
+          "benchmarks/resource-engineering-responsiveness.test.ts:161:  async function request(phase: string, path: string, body?: unknown): Promise<ReadResult> {",
+          "benchmarks/resource-engineering-responsiveness.test.ts:217:    const initialResponse = await console.request('initial-status', '/api/resources/engineering-super",
+          "benchmarks/resource-engineering-responsiveness.test.ts:231:    const admissionHealth = console.request('proposal-admission-health', '/health');",
+          "benchmarks/resource-engineering-responsiveness.test.ts:232:    const admissionStatus = console.request('proposal-admission-status', '/api/resources/engineering-",
+          "benchmarks/resource-engineering-responsiveness.test.ts:235:    const sourceHealth = console.request('source-proof-health', '/health');",
+          "benchmarks/resource-engineering-responsiveness.test.ts:236:    const sourceStatus = console.request('source-proof-status', '/api/resources/engineering-successor",
+          "benchmarks/resource-engineering-responsiveness.test.ts:241:      console.request('preparation-health', '/health'),",
+          "benchmarks/resource-engineering-responsiveness.test.ts:242:      console.request('preparation-status', '/api/resources/engineering-successors'),",
+          "benchmarks/resource-engineering-responsiveness.test.ts:243:      console.request('preparation-pause', '/api/resources/engineering-supervision', { paused: true, ",
+          "benchmarks/resource-engineering-responsiveness.test.ts:246:    const afterResponse = await console.request('after-pause-status', '/api/resources/engineering-sup"
+        ]
+      },
+      "docs": {
+        "markdownFiles": 444,
+        "brokenLinks": 7,
+        "linkExamples": [
+          {
+            "doc": "CHANGELOG.md",
+            "target": "docs/RUNTIME-FLEET-ACTIVATION.md"
+          },
+          {
+            "doc": "workplans/2026-09-10-firm/task_plan.md",
+            "target": "../../../src/core/resources/console-engineering-supervisor.ts"
+          },
+          {
+            "doc": "workplans/2026-09-10-firm/task_plan.md",
+            "target": "../../../src/core/resources/engineering-successor-coordinator.ts"
+          },
+          {
+            "doc": "workplans/2026-09-10-firm/task_plan.md",
+            "target": "../../../src/core/daemon/loop.ts"
+          },
+          {
+            "doc": "workplans/2026-09-10-firm/task_plan.md",
+            "target": "../../../src/core/daemon/state.ts"
+          },
+          {
+            "doc": "workplans/2026-09-10-firm/task_plan.md",
+            "target": "../../../src/core/resources/pool-policy.ts"
+          },
+          {
+            "doc": "workplans/2026-09-10-firm/task_plan.md",
+            "target": "../../../src/core/daemon/runtime-activation-resident-start-runtime.ts"
+          }
+        ],
+        "missingScriptRefs": 5,
+        "scriptExamples": [
+          {
+            "doc": "docs/ECOSYSTEM-MAP.md",
+            "ref": "check"
+          },
+          {
+            "doc": "docs/ECOSYSTEM-MAP.md",
+            "ref": "migrate"
+          },
+          {
+            "doc": "docs/internal/notes.md",
+            "ref": "check"
+          },
+          {
+            "doc": "docs/internal/notes.md",
+            "ref": "env"
+          },
+          {
+            "doc": "docs/internal/notes.md",
+            "ref": "check"
+          }
+        ]
+      },
+      "ci": {
+        "workflows": 12,
+        "pullRequestTargetRefs": 3
+      }
+    }
+  ]
+}

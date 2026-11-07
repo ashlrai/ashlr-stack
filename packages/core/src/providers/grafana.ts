@@ -1,5 +1,4 @@
 import { makeApiKeyProvider } from "./_api-key.ts";
-import { verifyFetch } from "./_helpers.ts";
 
 // Grafana is self-hosted or Grafana Cloud — we store both the token and the
 // base URL. The secretName for `makeApiKeyProvider` is the token slot; the URL

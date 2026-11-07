@@ -10,8 +10,8 @@ const HEAD =
   /^- ([A-Z][A-Z-]*?) (?:\d\d:\d\d )?(?:[a-z-]+ )?(?:[a-z-]+ )?([A-Za-z0-9][A-Za-z0-9._-]+)(?: r\d+)? \((.*?)\):?/;
 const LANDED = new Set(["MERGED", "LANDED", "DONE"]);
 const CAP = 32 * 1024 * 1024;
-export const BET_STATUSES = ["merged", "open", "empty", "running", "waiting", "vanished"] as const;
-export type BetStatus = (typeof BET_STATUSES)[number];
+const BET_STATUSES = ["merged", "open", "empty", "running", "waiting", "vanished"] as const;
+type BetStatus = (typeof BET_STATUSES)[number];
 
 /** Latest leader ledger line wins; a bet is a job id whose attrs carry `src=<src>`. */
 export function leaderBets(ledger: string, src: string) {

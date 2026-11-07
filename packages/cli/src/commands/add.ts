@@ -52,7 +52,7 @@ export const addCommand = defineCommand({
   },
 });
 
-export interface AddArgs {
+interface AddArgs {
   service?: unknown;
   use?: unknown;
   region?: unknown;

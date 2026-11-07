@@ -6,8 +6,8 @@
  */
 import type { EcosystemEntry } from "./ecosystem.ts";
 
-export type DoctorStatus = "ok" | "warn" | "fail";
-export interface DoctorCheck {
+type DoctorStatus = "ok" | "warn" | "fail";
+interface DoctorCheck {
   id?: string;
   status: "ok" | "warn" | "fail" | "info";
   summary: string;

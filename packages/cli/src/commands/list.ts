@@ -6,7 +6,7 @@ import { colors } from "../ui.ts";
  * Stable machine shape for `stack list --json`. Fields may be added but
  * existing ones must not change meaning. Secret *names* only, never values.
  */
-export interface ListReport {
+interface ListReport {
   schema: "ashlr.stack.list/v1";
   project_id: string | null;
   template: string | null;
@@ -20,7 +20,7 @@ export interface ListReport {
   }>;
 }
 
-export function buildListReport(config: StackConfig): ListReport {
+function buildListReport(config: StackConfig): ListReport {
   return {
     schema: "ashlr.stack.list/v1",
     project_id: config.stack.project_id ?? null,
