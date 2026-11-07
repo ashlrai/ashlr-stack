@@ -28,11 +28,8 @@ export class ConfigNotFoundError extends StackError {
   }
 }
 
-export class ScanDirectoryNotFoundError extends StackError {
-  constructor(path: string) {
-    super(
-      "SCAN_DIR_NOT_FOUND",
-      `Cannot scan "${path}": path does not exist or is not a directory.`,
-    );
+export class SourceDirectoryNotFoundError extends StackError {
+  constructor(path: string, options?: { cause?: unknown }) {
+    super("SOURCE_DIRECTORY_NOT_FOUND", `Source directory not found: ${path}`, options);
   }
 }

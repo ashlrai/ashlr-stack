@@ -16,7 +16,7 @@ const faq = faqPageSchema(
     {
       question: "Should I deploy on Railway or something else?",
       answer:
-        "Railway is a great choice if you want a single platform managing both runtime and databases with a polished UX. Pick Vercel or Cloudflare if you're frontend-heavy, Fly.io if you want global edge, or Railway if you want a single-platform Heroku-like experience. Stack works with all of them.",
+        "Railway is a great choice if you want a single platform managing both runtime and databases with a polished UX. Pick Vercel or Cloudflare if you're frontend-heavy, Fly.io if you want global edge, or Railway if you want a single-platform Heroku-like experience. Stack's source catalog lists these providers; setup and account requirements vary.",
     },
     {
       question: "Can I use Railway and Stack together?",
@@ -227,7 +227,8 @@ const faq = faqPageSchema(
     <li>
       <strong>Templates + community.</strong> Railway's template marketplace
       has hundreds of one-click starters maintained by a large community.
-      Stack has 5 first-party templates as of v{PUBLISHED_VERSION}.
+      Stack source includes provider presets; check <code>stack templates list</code>
+      for the installed catalog.
     </li>
   </ul>
 
@@ -247,7 +248,8 @@ const faq = faqPageSchema(
 
   <h2>Migration and caveats</h2>
   <p>
-    Stack is pre-alpha — these comparisons reflect v{PUBLISHED_VERSION} as of April 2026.
+    Stack is pre-alpha. These comparisons may change; check the installed version
+    and current vendor documentation.
     We don't claim parity with Railway's deploy UX or operational maturity.
     Pricing specifics shift; check Railway's current plans on their site
     rather than trusting a comparison page. For Stack's full provider
@@ -270,8 +272,8 @@ const faq = faqPageSchema(
     Railway is a great choice if you want a single platform managing both
     runtime and databases with a polished UX. Pick Vercel or Cloudflare if
     you're frontend-heavy, Fly.io if you want global edge, or Railway if you
-    want a single-platform Heroku-like experience. Stack works with all of
-    them.
+    want a single-platform Heroku-like experience. Stack's source catalog lists
+    these providers; setup and account requirements vary.
   </p>
 
   <h3>Can I use Railway and Stack together?</h3>

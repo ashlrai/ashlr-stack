@@ -1,7 +1,7 @@
-import { existsSync, readdirSync, statSync } from "node:fs";
-import { readFile } from "node:fs/promises";
+import { existsSync, readdirSync } from "node:fs";
+import { readFile, stat } from "node:fs/promises";
 import { join } from "node:path";
-import { ScanDirectoryNotFoundError } from "./errors.ts";
+import { SourceDirectoryNotFoundError } from "./errors.ts";
 
 /**
  * Source-level provider detection. Reads package.json / requirements.txt /
@@ -166,12 +166,18 @@ export async function scanSource(
   cwd: string,
   _opts: SourceScanOptions = {},
 ): Promise<SourceDetection[]> {
-  // A missing target must fail loudly: returning [] here is indistinguishable
-  // from a clean repo, which is exactly what `stack scan` callers can't tell
-  // apart. Read-only check — never creates the directory.
-  if (!statSync(cwd, { throwIfNoEntry: false })?.isDirectory()) {
-    throw new ScanDirectoryNotFoundError(cwd);
+  let root: Awaited<ReturnType<typeof stat>>;
+  try {
+    root = await stat(cwd);
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code === "ENOENT" || code === "ENOTDIR") {
+      throw new SourceDirectoryNotFoundError(cwd, { cause: error });
+    }
+    throw error;
   }
+  if (!root.isDirectory()) throw new SourceDirectoryNotFoundError(cwd);
+
   const hits = new Map<string, SourceDetection>();
 
   const add = (provider: string, signal: string, confidence: DetectionConfidence) => {

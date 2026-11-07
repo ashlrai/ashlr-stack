@@ -1,9 +1,10 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { writeShimmedExecutable } from "../../../core/src/__tests__/_harness.ts";
 
 import {
   expectRefusal,
@@ -169,8 +170,9 @@ describe.skipIf(process.platform === "win32")("stack exec --as end to end", () =
     const bin = tmp("stack-exec-as-bin-");
     const phantomRan = join(cwd, "phantom-ran");
     const envDump = join(cwd, "locus-env");
-    writeFileSync(
-      join(bin, "phantom"),
+    writeShimmedExecutable(
+      bin,
+      "phantom",
       `#!/bin/sh
 case "$1" in
   --version) echo "phantom fake 0.0.1" ;;
@@ -179,13 +181,12 @@ case "$1" in
 esac
 `,
     );
-    chmodSync(join(bin, "phantom"), 0o755);
     if (locusScript !== null) {
-      writeFileSync(
-        join(bin, "locus"),
+      writeShimmedExecutable(
+        bin,
+        "locus",
         `#!/bin/sh\nenv > ${JSON.stringify(envDump)}\n${locusScript}\n`,
       );
-      chmodSync(join(bin, "locus"), 0o755);
     }
     return { cwd, bin, phantomRan, envDump, marker: join(cwd, "child-ran") };
   }

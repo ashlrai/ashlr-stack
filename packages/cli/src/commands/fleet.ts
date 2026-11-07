@@ -1,10 +1,12 @@
 import { execFile } from "node:child_process";
-import { open, readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { defineCommand } from "citty";
 import { type GhRunner, checkRepos } from "../lib/doctor-repos.ts";
+import { readFleetText } from "../lib/fleet-jsonl.ts";
+import { fleetCollisionsSubcommand } from "./fleet-collisions.ts";
 import { fleetSloSubcommand } from "./fleet-slo.ts";
+import { fleetWasteSubcommand } from "./fleet-waste.ts";
 
 const unknown = "unknown" as const;
 const count = (value: unknown): number | "unknown" =>
@@ -61,41 +63,14 @@ const locusGh: GhRunner = (args, signal) =>
     );
   });
 
-async function readOrUnknown(path: string) {
-  try {
-    return await readFile(path, "utf8");
-  } catch {
-    return "";
-  }
-}
-
-/** Bound memory and I/O even for a long-lived dispatcher's log. */
-async function logTail(path: string) {
-  try {
-    const file = await open(path, "r");
-    try {
-      const size = (await file.stat()).size;
-      const start = Math.max(0, size - 65536);
-      const buffer = Buffer.alloc(Math.min(size, 65536));
-      const { bytesRead } = await file.read(buffer, 0, buffer.length, start);
-      const text = buffer.subarray(0, bytesRead).toString("utf8");
-      return start ? text.slice(text.indexOf("\n") + 1) : text;
-    } finally {
-      await file.close();
-    }
-  } catch {
-    return "";
-  }
-}
-
 export async function collectFleet(
   queue: string,
   runner: GhRunner = locusGh,
   logPath = join(queue, "dispatchd.log"),
 ) {
   const [slots, log, health] = await Promise.all([
-    readOrUnknown(join(queue, "slots.json")),
-    logTail(logPath),
+    readFleetText(join(queue, "slots.json")).then((source) => source.text),
+    readFleetText(logPath, { maxBytes: 65536, tail: true }).then((source) => source.text),
     checkRepos(runner),
   ]);
   return {
@@ -130,6 +105,8 @@ export const fleetCommand = defineCommand({
   },
   subCommands: {
     slo: fleetSloSubcommand,
+    collisions: fleetCollisionsSubcommand,
+    waste: fleetWasteSubcommand,
   },
   // citty 0.1.6 also calls this parent `run` after a matched subcommand, so
   // only act when none was given (the env command does the same). Option
