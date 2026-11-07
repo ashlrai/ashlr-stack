@@ -111,6 +111,59 @@ describe("fetchWithRetry", () => {
     expect(calls).toBe(1);
   });
 
+  test("a POST Request is not retried after a server or network failure", async () => {
+    for (const networkFailure of [false, true]) {
+      let calls = 0;
+      globalThis.fetch = (async () => {
+        calls++;
+        if (networkFailure) throw new TypeError("fetch failed");
+        return new Response(null, { status: 503 });
+      }) as unknown as typeof fetch;
+      const request = new Request("https://example.com/charge", { method: "POST" });
+      const result = fetchWithRetry(request, undefined, { baseDelayMs: 1 });
+      if (networkFailure) await expect(result).rejects.toThrow("fetch failed");
+      else expect((await result).status).toBe(503);
+      expect(calls).toBe(1);
+    }
+  });
+
+  test("init method overrides the Request method when deciding whether to retry", async () => {
+    let calls = 0;
+    globalThis.fetch = (async () => {
+      calls++;
+      return new Response(null, { status: 503 });
+    }) as unknown as typeof fetch;
+    await fetchWithRetry(
+      new Request("https://example.com"),
+      { method: "POST" },
+      { baseDelayMs: 1 },
+    );
+    expect(calls).toBe(1);
+  });
+
+  test("Request and init signals interrupt retry delays, including with an external signal", async () => {
+    for (const source of ["request", "init"] as const) {
+      const controller = new AbortController();
+      const external = new AbortController();
+      let calls = 0;
+      globalThis.fetch = (async () => {
+        calls++;
+        setTimeout(() => controller.abort(new Error("cancelled")), 5);
+        return new Response(null, { status: 503 });
+      }) as unknown as typeof fetch;
+      const request = new Request("https://example.com", {
+        signal: source === "request" ? controller.signal : undefined,
+      });
+      await expect(
+        fetchWithRetry(request, source === "init" ? { signal: controller.signal } : undefined, {
+          signal: external.signal,
+          baseDelayMs: 1000,
+        }),
+      ).rejects.toThrow("cancelled");
+      expect(calls).toBe(1);
+    }
+  });
+
   test("idempotent: true overrides method-based default, letting a POST retry", async () => {
     let calls = 0;
     globalThis.fetch = (async () => {
