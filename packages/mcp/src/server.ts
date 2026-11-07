@@ -165,4 +165,18 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
 });
 
 const transport = new StdioServerTransport();
+// The SDK transport does not treat stdin EOF as a disconnect. Once the host
+// goes away, close the protocol and exit even if other work holds the loop open.
+let shuttingDown = false;
+async function shutdown() {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  try {
+    await server.close();
+  } finally {
+    process.exit(0);
+  }
+}
+process.stdin.once("end", shutdown);
+process.stdin.once("close", shutdown);
 await server.connect(transport);

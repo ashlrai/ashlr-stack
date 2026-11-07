@@ -27,3 +27,9 @@ export class ConfigNotFoundError extends StackError {
     super("CONFIG_NOT_FOUND", `No .stack.toml at ${path}. Run \`stack init\` first.`);
   }
 }
+
+export class SourceDirectoryNotFoundError extends StackError {
+  constructor(path: string, options?: { cause?: unknown }) {
+    super("SOURCE_DIRECTORY_NOT_FOUND", `Source directory not found: ${path}`, options);
+  }
+}

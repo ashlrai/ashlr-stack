@@ -1,40 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import { CLI_COMMANDS } from "../src/lib/cli-ref.generated";
+import { ASTRO_COMMAND, fetchServerPage } from "./cli-ref-server";
 
 const CLI_ENTRY = join(import.meta.dir, "..", "..", "cli", "src", "index.ts");
-const SITE = join(import.meta.dir, "..");
-// Bun 1.2 hoists Astro to the root; newer installs may keep it site-local.
-const ASTRO_ENTRY = join(dirname(require.resolve("astro/package.json")), "astro.js");
-
-async function fetchServerPage(command: string[], url: string, attempts = 600): Promise<Response> {
-  const server = Bun.spawn(command, { cwd: SITE, stdout: "ignore", stderr: "pipe" });
-  // Drain immediately so a full stderr pipe cannot stall server startup.
-  const stderr = new Response(server.stderr).text();
-  let reason = "Astro server did not become ready";
-  try {
-    for (let attempt = 0; attempt < attempts; attempt++) {
-      let response: Response;
-      try {
-        response = await fetch(url);
-      } catch {
-        if (server.exitCode !== null) {
-          reason = "Astro server exited before becoming ready";
-          break;
-        }
-        await Bun.sleep(100);
-        continue;
-      }
-      // Finish reading before cleanup shuts down the server connection.
-      return new Response(await response.arrayBuffer(), response);
-    }
-  } finally {
-    server.kill();
-    await server.exited;
-  }
-  throw new Error(`${reason} (exit code ${server.exitCode}):\n${await stderr}`);
-}
 
 /** Top-level command names from `stack --help`'s USAGE line (citty's subCommands, in order). */
 function cliSubCommands(): string[] {
@@ -87,6 +57,18 @@ describe("site CLI reference", () => {
     expect(duplicateNames(CLI_COMMANDS)).toEqual([]);
   });
 
+  test("Astro runs on Node independently of the Bun test runner", async () => {
+    const probe = Bun.spawn([
+      ASTRO_COMMAND[0], "-p",
+      'JSON.stringify({ runtime: process.release.name, bun: !!process.versions.bun })',
+    ], { stdout: "pipe", stderr: "pipe" });
+    const [stdout, stderr, code] = await Promise.all([
+      new Response(probe.stdout).text(), new Response(probe.stderr).text(), probe.exited,
+    ]);
+    expect(code, stderr).toBe(0);
+    expect(JSON.parse(stdout)).toEqual({ runtime: "node", bun: false });
+  });
+
   test("startup failures include the exit code and drained stderr", async () => {
     // More than a pipe buffer: waiting for exit before draining would deadlock.
     const diagnostic = `startup failure: ${"x".repeat(128 * 1024)}`;
@@ -119,7 +101,7 @@ describe("site CLI reference", () => {
     const port = reservation.port;
     reservation.stop(true);
     const response = await fetchServerPage(
-      [process.execPath, ASTRO_ENTRY, "dev", "--host", "127.0.0.1", "--port", String(port), "--strictPort"],
+      [...ASTRO_COMMAND, "dev", "--host", "127.0.0.1", "--port", String(port)],
       `http://127.0.0.1:${port}/docs/cli`,
     );
     expect(response.status).toBe(200);

@@ -213,6 +213,24 @@ describe("stack deps --json", () => {
     expect(report.totals).toEqual({ services: 2, secrets: 2, mcp: 1 });
   });
 
+  test("emits an empty categories list for an empty stack", () => {
+    const cwd = tmp();
+    writeFileSync(join(cwd, ".stack.toml"), '[stack]\nversion = "1"\ntemplate = "starter"\n');
+    writeFileSync(join(cwd, ".stack.local.toml"), '[stack]\nproject_id = "stk_empty001"\n');
+
+    const r = stack(["deps", "--json"], cwd, true);
+    expect(r.code).toBe(0);
+    expect(r.stdout).not.toContain(ESC);
+    expect(JSON.parse(r.stdout)).toEqual({
+      schema: "ashlr.stack.deps/v1",
+      project_id: "stk_empty001",
+      template: "starter",
+      categories: [],
+      unresolved: [],
+      totals: { services: 0, secrets: 0, mcp: 0 },
+    });
+  });
+
   test("without a .stack.toml: JSON error on stdout, exit 1", () => {
     const r = stack(["deps", "--json"], tmp());
     expect(r.code).toBe(1);
