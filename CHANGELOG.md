@@ -2,15 +2,6 @@
 
 ## Unreleased
 
-## 0.3.2 (2026-11-04)
-
-This release carries main forward from 0.3.0. The 0.3.1 packages were published from a documentation-only release branch, so 0.3.2 is the first release whose source is the main line since 0.3.0.
-
-### Added
-
-- `packages/mcp/src/local-lane.ts` runs the locus, lexicon and stack MCP servers as stdio children and republishes their tools as `<server>__<tool>` on loopback only. It exposes mutating tools, and any local process can call the endpoint.
-- Agent entry points: root `llms.txt`, copy-paste agent commands in the docs and README, and PNG social cards for link previews (#487, #489, #490).
-
 ### Changed
 
 - `stack apply` does not create placeholder secrets. After at least one provider succeeds, wiring checks secret names for every provider in the recipe, including providers that failed; a missing name does not itself fail apply, while provider failures do. Wiring can also create webhook stubs for those recipe providers, even if the vault is unreadable. Supply required missing secrets as real values through Phantom; `--noWire` skips both checks and stubs.
@@ -24,6 +15,61 @@ This release carries main forward from 0.3.0. The 0.3.1 packages were published 
 ### Documentation
 
 - Setup, README and package READMEs separate the source version from the recorded npm publication (0.3.1 for `@ashlr/stack-core`, `@ashlr/stack` and `ashlr-stack-mcp`) and state that the published CLI and MCP packages declare Node.js 20 or newer. Source development uses Bun (#356, #361, #363).
+
+## 0.3.7 (2026-11-06)
+
+### Fixed
+
+- Fleet silent-run reads (`stack fleet` diagnostics) opt in to a short-read check: a non-tail read that reaches EOF before the file size observed at open is rejected as an incomplete source instead of being parsed as a truncated log (#297).
+
+### Documentation
+
+- Setup docs and site facts record the independently verified 0.3.6 npm publication; the source version moves to 0.3.7 while the recorded public version stays 0.3.6 until a later publication is verified.
+- Changelog parser coverage adds fixtures for CRLF, empty, hyphenated, horizontal-rule, bold-entry and multi-version layouts.
+
+## 0.3.6 (2026-11-06)
+
+### Fixed
+
+- The local MCP bridge closes its owned native HTTP connections before legacy Bun releases the server handle, awaits the actual server close event, and shares one shutdown promise across concurrent and repeated calls. The idle keepalive, unrelated socket and immediate port-reuse checks retain their five-second bound.
+
+## 0.3.5 (2026-11-06)
+
+### Fixed
+
+- The idle MCP bridge shutdown regression waits for an actual keepalive exchange before closing the accepted connection and continues consuming remote EOF. This removes Linux accept ordering and Bun 1.2 paused-reader races while retaining the five-second bound, unrelated-socket echo and port-reuse assertions.
+- The isolated npm upgrade fixture resolves Node through the same PATH as the real health-check runner, including runtime paths containing spaces; installation, rollback and cleanup checks remain unchanged.
+
+## 0.3.4 (2026-11-06)
+
+### Fixed
+
+- The local MCP lane bridge closes its own keepalive connections before releasing upstream clients, allowing shutdown to finish on Bun 1.2 without affecting unrelated sockets.
+- Release changelog fixtures and version assertions track the current source while preserving no-final-newline parser coverage.
+
+## 0.3.3 (2026-11-05)
+
+This source candidate carries forward the 0.3.2 main-line release and subsequent integrated changes. The apply behavior described under Unreleased also ships in this candidate; that entry remains there while documentation links to it.
+
+### Fixed
+
+- The MCP server exits when its host closes stdin, and optional tool arguments reject JSON `null` as a type error.
+- `stack scan` aligns next-step suggestions under their heading.
+- Fleet JSONL reads enforce their byte limit, including short reads and growing inputs; Homebrew formula rendering preserves literal placeholders.
+
+### Changed
+
+- Release qualification requires CI evidence for the exact immutable tagged source, and registry publication reconciles release state before publishing.
+- Documentation distinguishes source capabilities from published versions and provider acceptance.
+
+## 0.3.2 (2026-11-04)
+
+This release carries main forward from 0.3.0. The 0.3.1 packages were published from a documentation-only release branch, so 0.3.2 is the first release whose source is the main line since 0.3.0.
+
+### Added
+
+- `packages/mcp/src/local-lane.ts` runs the locus, lexicon and stack MCP servers as stdio children and republishes their tools as `<server>__<tool>` on loopback only. It exposes mutating tools, and any local process can call the endpoint.
+- Agent entry points: root `llms.txt`, copy-paste agent commands in the docs and README, and PNG social cards for link previews (#487, #489, #490).
 
 ## 0.3.0 (2026-10-31)
 

@@ -183,4 +183,45 @@ describe("normalizeKebabFlags", () => {
       " hello  world ",
     ]);
   });
+
+  describe("PR965: Unicode argv preservation", () => {
+    it("preserves a Unicode positional's exact characters and order", () => {
+      // CJK, emoji (astral plane, surrogate pair), a combining sequence (NFD "é"),
+      // and RTL text. Output must be code-point-identical: no NFC/NFD folding.
+      const positionals = ["プロジェクト", "🚀-ship", "café", "ñandú", "שלום"];
+      const out = normalizeKebabFlags(["add", ...positionals, "--dry-run"]);
+      expect(out).toEqual(["add", ...positionals, "--dryRun"]);
+      expect(out.slice(1, -1).map((s) => [...s])).toEqual(positionals.map((s) => [...s]));
+      expect(out[3]).toBe("café");
+      expect(out[3]).not.toBe("café");
+    });
+
+    it("keeps order when Unicode positionals sit between kebab flags", () => {
+      expect(normalizeKebabFlags(["--keep-from=clerk", "日本語", "--dry-run", "émoji😀"])).toEqual([
+        "--keepFrom=clerk",
+        "日本語",
+        "--dryRun",
+        "émoji😀",
+      ]);
+    });
+
+    it("leaves a Unicode value after `=` and hyphenated Unicode tokens alone", () => {
+      expect(normalizeKebabFlags(["add", "--keep-from=クラーク-ß"])).toEqual([
+        "add",
+        "--keepFrom=クラーク-ß",
+      ]);
+      // Non-ASCII "flag names" don't match the ASCII flag pattern, so pass through.
+      expect(normalizeKebabFlags(["--ドライ-ラン", "--é-à"])).toEqual(["--ドライ-ラン", "--é-à"]);
+    });
+
+    it("does not touch Unicode positionals after a bare `--`", () => {
+      expect(normalizeKebabFlags(["exec", "--", "echo", "你好", "--inner-flag"])).toEqual([
+        "exec",
+        "--",
+        "echo",
+        "你好",
+        "--inner-flag",
+      ]);
+    });
+  });
 });

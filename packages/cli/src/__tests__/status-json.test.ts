@@ -1,9 +1,10 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { writeShimmedExecutable } from "../../../core/src/__tests__/_harness.ts";
 import { buildStatusReport } from "../commands/status.ts";
 
 const CLI_ENTRY = join(dirname(fileURLToPath(import.meta.url)), "..", "index.ts");
@@ -83,9 +84,7 @@ function binDir(vault: VaultMode | false): string {
       );
     }
     lines.push("fi", "exit 1", "");
-    const fake = join(dir, "phantom");
-    writeFileSync(fake, lines.join("\n"));
-    chmodSync(fake, 0o755);
+    writeShimmedExecutable(dir, "phantom", lines.join("\n"));
   }
   return dir;
 }

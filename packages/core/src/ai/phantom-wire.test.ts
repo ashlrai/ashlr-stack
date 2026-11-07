@@ -102,9 +102,9 @@ describe("ai/phantom-wire empty wiring request", () => {
     const r = await wirePhantomForRecipe(recipeOf(), { cwd: projectDir });
 
     expect(r).toEqual(EMPTY_RESULT);
-    // Only the read-only probes ran: the install check and the vault-name
-    // list. No `add`, `remove`, or `init` — the vault is never written.
-    expect(calls).toEqual([["--version"], ["list", "--json"]]);
+    // Nothing requested, so no process ran at all: no install probe, no
+    // `list`, and certainly no `add`, `remove`, or `init`.
+    expect(calls).toEqual([]);
     expect(readdirSync(projectDir)).toEqual([]);
   });
 
@@ -114,7 +114,7 @@ describe("ai/phantom-wire empty wiring request", () => {
 
     // The unreadable vault leaves nothing to skip: every list stays empty.
     expect(r).toEqual(EMPTY_RESULT);
-    expect(calls).toEqual([["--version"], ["list", "--json"]]);
+    expect(calls).toEqual([]);
     expect(readdirSync(projectDir)).toEqual([]);
   });
 
@@ -125,7 +125,7 @@ describe("ai/phantom-wire empty wiring request", () => {
     // With no providers there is nothing to skip and no stub to write, so a
     // missing phantom still yields the documented empty result.
     expect(r).toEqual(EMPTY_RESULT);
-    expect(calls).toEqual([["--version"]]);
+    expect(calls).toEqual([]);
     expect(readdirSync(projectDir)).toEqual([]);
   });
 

@@ -1,19 +1,18 @@
 import { afterEach, describe, expect, it, setDefaultTimeout } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
-  chmodSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
   readdirSync,
   rmSync,
-  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { writePhantomShim } from "./_phantom-shim.ts";
 
 /**
  * End-to-end test for `stack apply` — specifically the auto-init behaviour.
@@ -52,23 +51,6 @@ afterEach(() => {
   }
 });
 
-// Like core's _harness.ts: macOS Gatekeeper's provenance policy refuses to
-// exec an extensionless file written by a non-platform process, while a
-// `*.sh` target passes the check. Write the stub as `phantom.sh` and link
-// `phantom` at it; fall back to the direct file where symlinks fail.
-function writeStubPhantom(bin: string, script: string): void {
-  const realPath = join(bin, "phantom.sh");
-  const binPath = join(bin, "phantom");
-  writeFileSync(realPath, script);
-  chmodSync(realPath, 0o755);
-  try {
-    symlinkSync(realPath, binPath);
-  } catch {
-    writeFileSync(binPath, script);
-    chmodSync(binPath, 0o755);
-  }
-}
-
 function mkTmp(): string {
   const dir = mkdtempSync(join(tmpdir(), "stack-apply-"));
   createdDirs.push(dir);
@@ -87,7 +69,7 @@ describe("stack apply", () => {
       const bin = join(home, "bin");
       const calls = join(home, "phantom-calls");
       mkdirSync(bin);
-      writeStubPhantom(bin, `#!/bin/sh\necho "$1" >> '${calls}'\nexit 1\n`);
+      writePhantomShim(bin, `#!/bin/sh\necho "$1" >> '${calls}'\nexit 1\n`);
       const recipes = join(dir, ".stack", "recipes");
       mkdirSync(recipes, { recursive: true });
       const recipe =
@@ -165,7 +147,7 @@ describe("stack apply", () => {
     const bin = join(home, "bin");
     mkdirSync(bin);
     // Inert Phantom: initialized, nothing stored, reveal refused (as headless).
-    writeStubPhantom(
+    writePhantomShim(
       bin,
       `#!/bin/sh
 case "$1" in
@@ -208,7 +190,7 @@ esac
     const bin = join(home, "bin");
     const calls = join(home, "phantom-calls");
     mkdirSync(bin);
-    writeStubPhantom(
+    writePhantomShim(
       bin,
       `#!/bin/sh
 echo "$1" >> '${calls}'

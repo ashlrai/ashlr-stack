@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it, setDefaultTimeout } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
-  chmodSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -9,12 +8,12 @@ import {
   readdirSync,
   rmSync,
   statSync,
-  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { writePhantomShim } from "./_phantom-shim.ts";
 
 /**
  * Regression: `stack apply` with a failing stubbed wiring command. When the
@@ -67,20 +66,7 @@ setDefaultTimeout(30_000);
 function writeStubPhantom(bin: string, calls: string, body: string): void {
   mkdirSync(bin);
   const script = `#!/bin/sh\necho "$@" >> '${calls}'\n${body}`;
-  // Like _harness.ts: macOS Gatekeeper's provenance policy refuses to exec an
-  // extensionless file written by a non-platform process, while a `*.sh`
-  // target passes the check. Write `phantom.sh` and link `phantom` at it;
-  // fall back to the direct file where symlinks fail.
-  const realPath = join(bin, "phantom.sh");
-  const binPath = join(bin, "phantom");
-  writeFileSync(realPath, script);
-  chmodSync(realPath, 0o755);
-  try {
-    symlinkSync(realPath, binPath);
-  } catch {
-    writeFileSync(binPath, script);
-    chmodSync(binPath, 0o755);
-  }
+  writePhantomShim(bin, script);
 }
 
 function seedRecipe(dir: string, id: string, providers: string[]): void {

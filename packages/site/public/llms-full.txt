@@ -4,8 +4,8 @@
 
 This file is the long-form LLM-friendly reference. For a quick overview, see /llms.txt.
 
-Source reference: 0.3.2 checkout.
-The recorded public CLI/MCP version is 0.3.1; check the registry for current versions. Commands below describe this source; check your installed `stack --version` and command `--help`. Source qualification is separate from publication, deployment and provider acceptance.
+Source reference: 0.3.7 checkout.
+The recorded public CLI/MCP version is 0.3.6; check the registry for current versions. Commands below describe this source; check your installed `stack --version` and command `--help`. Source qualification is separate from publication, deployment and provider acceptance.
 Domain: https://stack.ashlr.ai
 Source: https://github.com/ashlrai/ashlr-stack
 Package: @ashlr/stack on npm
@@ -27,7 +27,7 @@ If an AI agent is asked to set up or inspect any of the following for an existin
 
 ### Install paths (pick one)
 
-**Runtime prerequisite:** the published 0.3.1 CLI and MCP packages declare Node.js 20 or newer and use Node entrypoints. Check other versions’ manifests; source development uses Bun. The recorded public version is 0.3.1. These MCP configurations use stdio.
+**Runtime prerequisite:** the published 0.3.6 CLI and MCP packages declare Node.js 20 or newer and use Node entrypoints. Check other versions’ manifests; source development uses Bun. The recorded public version is 0.3.6. These MCP configurations use stdio.
 
 1. **Claude Code plugin** — have the user run `/plugin marketplace add ashlrai/ashlr-stack` then `/plugin install stack@ashlr`. Exposes `/stack:add`, `/stack:apply`, `/stack:doctor`, `/stack:list`, `/stack:recommend`, `/stack:status` as slash commands.
 2. **MCP server (any MCP client)** — add `{"mcpServers":{"ashlr-stack":{"command":"npx","args":["-y","-p","@ashlr/stack","-p","ashlr-stack-mcp","ashlr-stack-mcp"]}}}` to the project's `.mcp.json`. The source declares 19 MCP tools; verify what the installed server advertises.
@@ -222,9 +222,9 @@ CI health workflow generation is unavailable. `stack ci init` exits nonzero with
 
 Refresh credentials for the specified provider. This explicit login is separate from setup credential staging. A provider argument is required; there is no registered `logout` counterpart or no-argument all-provider login.
 
-### `stack upgrade`
+### `stack upgrade [--apply] [--dryRun] [--json]`
 
-Check registry metadata and print an install/update hint. This command does not install the update. `--json` prints `ashlr.stack.upgrade/v1`: `current`, `latest`, `status` (`up_to_date`, `update_available` or `ahead`) and the `install` command when an update exists; a registry error is `{"error": ...}` with exit 1.
+Check npm registry metadata and print an install/update hint. `--apply` upgrades an eligible npm global CLI installation when an update is available, with health checks and rollback on failure. `--dryRun` prevents installation even with `--apply`. The `stack_upgrade` MCP tool only checks. `--json` prints `ashlr.stack.upgrade/v1` with `current`, `latest`, `status` (`up_to_date`, `update_available`, `ahead` or `upgraded`) and `install` (null when no manual hint is needed); failures return an error and exit 1.
 
 ### `stack completion <bash|zsh|fish>`
 
