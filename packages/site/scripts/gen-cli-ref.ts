@@ -535,6 +535,7 @@ const COMMAND_ORDER = [
   "fleet-act",
   "fleet-stream",
   "fleet-graph",
+  "fleet-gc",
   "fleet-bets",
   "fleet-match",
   "fleet",
