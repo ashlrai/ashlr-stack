@@ -10,7 +10,7 @@ export const DOCTOR_REPOS = [
   "ashlr-md",
   "ashlr-plugin",
 ].map((name) => `ashlrai/${name}`);
-export const REPO_TIMEOUT_MS = 5000;
+const REPO_TIMEOUT_MS = 5000;
 export type GhRunner = (args: string[], signal: AbortSignal) => Promise<string>;
 
 export const runGh: GhRunner = (args, signal) =>

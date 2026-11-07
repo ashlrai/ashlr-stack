@@ -15,10 +15,10 @@ import { spawnSync } from "node:child_process";
  * refusal: the preflight degrades to "not evaluated".
  */
 
-export type PreflightMode = "off" | "on" | "strict";
+type PreflightMode = "off" | "on" | "strict";
 export type Verdict = "ready" | "degraded" | "blocked" | "unknown";
 
-export interface PreflightOutcome {
+interface PreflightOutcome {
   /** null when the preflight was off or could not run. */
   verdict: Verdict | null;
   /** Ids of the critical checks (`wrap.blocked_by`). Ids only, never values. */

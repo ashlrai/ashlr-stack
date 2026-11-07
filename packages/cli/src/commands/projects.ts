@@ -20,7 +20,7 @@ import { colors, intro, outro, outroError } from "../ui.ts";
  * Stable machine shape for `stack projects list --json`. Fields may be added
  * but existing ones must not change meaning.
  */
-export interface ProjectsReport {
+interface ProjectsReport {
   schema: "ashlr.stack.projects/v1";
   total: number;
   projects: Array<{
@@ -33,7 +33,7 @@ export interface ProjectsReport {
   }>;
 }
 
-export async function buildProjectsReport(): Promise<ProjectsReport> {
+async function buildProjectsReport(): Promise<ProjectsReport> {
   const projects = (await listProjects()).map((p) => ({
     name: p.name,
     path: p.path,
