@@ -1,10 +1,17 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawn } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { writeShimmedExecutable } from "../../../core/src/__tests__/_harness.ts";
 
 const CLI_ENTRY = join(dirname(fileURLToPath(import.meta.url)), "..", "index.ts");
 const quote = (value: string): string => `'${value.replace(/'/g, "'\\''")}'`;
@@ -75,7 +82,8 @@ case "$1" in
  *) exit 88;;
 esac
 `;
-    writeShimmedExecutable(bin, "phantom", script);
+    writeFileSync(join(bin, "phantom"), script);
+    chmodSync(join(bin, "phantom"), 0o700);
   }
 
   function runChild(command: string, args: string[], cwd: string, timeoutMs = 5_000) {

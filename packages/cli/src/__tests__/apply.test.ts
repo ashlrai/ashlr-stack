@@ -12,7 +12,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { writeShimmedExecutable } from "../../../core/src/__tests__/_harness.ts";
+import { writePhantomShim } from "./_phantom-shim.ts";
 
 /**
  * End-to-end test for `stack apply` — specifically the auto-init behaviour.
@@ -69,7 +69,7 @@ describe("stack apply", () => {
       const bin = join(home, "bin");
       const calls = join(home, "phantom-calls");
       mkdirSync(bin);
-      writeShimmedExecutable(bin, "phantom", `#!/bin/sh\necho "$1" >> '${calls}'\nexit 1\n`);
+      writePhantomShim(bin, `#!/bin/sh\necho "$1" >> '${calls}'\nexit 1\n`);
       const recipes = join(dir, ".stack", "recipes");
       mkdirSync(recipes, { recursive: true });
       const recipe =
@@ -147,9 +147,8 @@ describe("stack apply", () => {
     const bin = join(home, "bin");
     mkdirSync(bin);
     // Inert Phantom: initialized, nothing stored, reveal refused (as headless).
-    writeShimmedExecutable(
+    writePhantomShim(
       bin,
-      "phantom",
       `#!/bin/sh
 case "$1" in
  --version) echo fixture;;
@@ -191,9 +190,8 @@ esac
     const bin = join(home, "bin");
     const calls = join(home, "phantom-calls");
     mkdirSync(bin);
-    writeShimmedExecutable(
+    writePhantomShim(
       bin,
-      "phantom",
       `#!/bin/sh
 echo "$1" >> '${calls}'
 case "$1" in
