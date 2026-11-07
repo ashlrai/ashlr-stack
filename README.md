@@ -6,7 +6,7 @@
 [![npm version](https://img.shields.io/npm/v/@ashlr/stack.svg)](https://www.npmjs.com/package/@ashlr/stack)
 [![Stars](https://img.shields.io/github/stars/ashlrai/ashlr-stack?style=flat&label=stars)](https://github.com/ashlrai/ashlr-stack/stargazers)
 <!-- fresh:begin version-badge -->
-[![source v0.3.3](https://img.shields.io/badge/source-v0.3.3-blue.svg)](CHANGELOG.md)
+[![source v0.3.7](https://img.shields.io/badge/source-v0.3.7-blue.svg)](CHANGELOG.md)
 <!-- fresh:end -->
 
 **Configure supported services from your terminal or your AI agent.** Stack uses provider-specific OAuth or supplied credentials, provisions where the adapter supports it, and records selected credentials in [Phantom Secrets](https://phm.dev/secrets), Stack configuration and provider MCP entries. Vercel requires an existing personal access token; Stack does not create that token. Export an empty `.env.example` separately with `stack env export --example`.
@@ -19,7 +19,7 @@ New projects stall on account setup, copied keys, and agent config. Stack turns 
 
 Agents: read [llms.txt](https://stack.ashlr.ai/llms.txt) (short index) and [llms-full.txt](https://stack.ashlr.ai/llms-full.txt) (full reference). In this repo those files are [packages/site/public/llms.txt](packages/site/public/llms.txt) and [packages/site/public/llms-full.txt](packages/site/public/llms-full.txt).
 
-These four commands are read-only. They need no account and no API key. They print JSON and write nothing. Node.js 20 or newer is what the published 0.3.1 packages declare. More copy-paste blocks: [docs/examples.md](docs/examples.md).
+These four commands are read-only. They need no account and no API key. They print JSON and write nothing. Node.js 20 or newer is what the published 0.3.6 packages declare. More copy-paste blocks: [docs/examples.md](docs/examples.md).
 
 ```bash
 npx -y -p @ashlr/stack stack providers --json
@@ -101,6 +101,8 @@ That adds `/stack:add`, `/stack:apply`, `/stack:doctor`, `/stack:list`, `/stack:
 - **JSON for agents.** Put `--json` after the subcommand: `stack providers --json`. A flag the command does not declare exits 1 and names the closest real option.
 - **One MCP server.** Claude Code, Cursor, and Codex share the snippet above. The server declares <!-- fresh:begin tool-count -->19<!-- fresh:end --> tools, a subset of the CLI. Tool results are CLI text plus an `isError` flag. They are not a secret-redaction boundary.
 - **Phantom holds selected secrets.** Stack handles credential values in memory during setup. Persistent entries go through Phantom. Talk about slot names, not secret values.
+- **Fleet diagnostics.** `stack fleet` and the `stack fleet-*` commands report fleet state from local data or GitHub. `stack fleet-act --apply` appends an audit request; a separate dispatcher must consume it. See [fleet commands](docs/fleet-commands.md).
+- **Updates on request.** `stack upgrade` checks npm; `stack upgrade --apply` can upgrade an eligible npm global installation with health checks and rollback. `--dryRun` prevents installation. The MCP upgrade tool only checks.
 - **Catalog in this checkout.** It registers <!-- fresh:begin provider-count -->39<!-- fresh:end --> providers across <!-- fresh:begin category-count -->13<!-- fresh:end --> categories. Registration is not provider acceptance. Run `stack providers --json` for the install you have.
 
 ## Install
@@ -109,7 +111,7 @@ The one-liner above is the fastest path. Two more:
 
 npm / bun registry:
 
-> On November 1, 2026, npm reported 0.3.1 for all three Stack packages; the 0.3.1 CLI and MCP packages declare Node.js 20 or newer. Check `npm view @ashlr/stack-core version`, `npm view @ashlr/stack version` and `npm view ashlr-stack-mcp version` for current versions. This checkout declares the source version shown above and contains changes not in the v0.3.1 release tag; its version does not establish what is published. Source development uses Bun.
+> Verified November 6, 2026: npm serves 0.3.6 for all three Stack packages, and the [v0.3.6 GitHub release](https://github.com/ashlrai/ashlr-stack/releases/tag/v0.3.6) provides macOS/Linux arm64/x64 binaries and checksum sidecars. The published 0.3.6 CLI and MCP manifests declare Node.js 20 or newer. Check `npm view @ashlr/stack-core version`, `npm view @ashlr/stack version` and `npm view ashlr-stack-mcp version` for current versions. This checkout declares the source version shown above; a source version alone does not establish publication. Source development uses Bun.
 
 ```bash
 npm i -g @ashlr/stack ashlr-stack-mcp
@@ -126,7 +128,7 @@ bun run packages/cli/src/index.ts --help
 
 Run source commands with `bun run packages/cli/src/index.ts <command>`. For MCP from source, build the CLI (`bun run --cwd packages/cli build`) or set `STACK_BIN`. Agents working on this repo should read [AGENTS.md](AGENTS.md) and [STACK.md](STACK.md).
 
-**Status:** pre-alpha, active development. This source line adds fleet diagnostics and stricter input validation on top of the Node-compatible CLI and headless workflows; this checkout is version <!-- fresh:begin version-pin -->0.3.3<!-- fresh:end -->. See [CHANGELOG.md](./CHANGELOG.md) for compatibility notes and changes since 0.2.2. Source versions do not establish npm publication or provider readiness. Check `npm view @ashlr/stack version`, `npm view ashlr-stack-mcp version`, and your installed `stack --version` before relying on release-specific commands.
+**Status:** pre-alpha, active development. This source line adds fleet diagnostics and stricter input validation on top of the Node-compatible CLI and headless workflows; this checkout is version <!-- fresh:begin version-pin -->0.3.7<!-- fresh:end -->. See [CHANGELOG.md](./CHANGELOG.md) for compatibility notes and changes since 0.2.2. Source versions do not establish npm publication or provider readiness. Check `npm view @ashlr/stack version`, `npm view ashlr-stack-mcp version`, and your installed `stack --version` before relying on release-specific commands.
 
 ## Providers
 

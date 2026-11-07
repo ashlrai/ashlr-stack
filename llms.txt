@@ -6,7 +6,7 @@ This is the repo entry point for agents. The published short index is https://st
 
 ## Read-only commands
 
-No account. These print JSON and write nothing. Node.js 20 or newer matches the engines field of the published 0.3.1 packages.
+No account. These print JSON and write nothing. Node.js 20 or newer matches the engines field of the published 0.3.6 packages.
 
 ```bash
 npx -y -p @ashlr/stack stack providers --json

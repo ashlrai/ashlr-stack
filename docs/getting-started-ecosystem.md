@@ -2,14 +2,16 @@
 
 This guide sets up four tools side by side: Phantom (`phm`), Locus (`locus`), Stack (`stack`) and the ashlr plugin. Each step was run on a Linux box (except `stack exec --as`, checked from `--help` only, since it needs a `.stack.toml`) on Oct 25 2026 with a throwaway `HOME`, or checked against `--help`. Where the published package lags the source, it says so.
 
-## Version lag (check before you start)
+## Recorded versions (check before you start)
 
-| Tool | Published | Source (main) | Check |
+| Tool | Published | Reviewed source | Check |
 |---|---|---|---|
 | Phantom `@ashlr/phantom` | 3.29.15 | 3.29.15 | `npm view @ashlr/phantom version` |
 | Locus `locus-cli` | 0.5.0 | 0.5.1 | `npm view locus-cli version` |
-| Stack `@ashlr/stack` | 0.3.1 | <!-- fresh:begin version-pin -->0.3.3<!-- fresh:end --> | `npm view @ashlr/stack version` |
-| Stack MCP `ashlr-stack-mcp` | 0.3.1 | <!-- fresh:begin version-pin -->0.3.3<!-- fresh:end --> | `npm view ashlr-stack-mcp version` |
+| Stack `@ashlr/stack` | 0.3.6 | <!-- fresh:begin version-pin -->0.3.7<!-- fresh:end --> | `npm view @ashlr/stack version` |
+| Stack MCP `ashlr-stack-mcp` | 0.3.6 | <!-- fresh:begin version-pin -->0.3.7<!-- fresh:end --> | `npm view ashlr-stack-mcp version` |
+
+The Stack publication rows were independently verified on November 6, 2026. The other tool rows and walkthrough observations remain historical; check their current registry versions and installed help before setup.
 
 The Phantom observations below are from the October 25 run: `phm fleet receipt` (the published 3.29.15 answered `unknown fleet subcommand: receipt`) and `--ashlr-handshake` on `phm` were not in that build. The locus 0.5.0 npm build has a known `locus --version` loop; see the locus README. To try the newer features, build from source as shown below.
 
@@ -51,7 +53,7 @@ Notes from the run:
 
 ## 3. Stack
 
-On November 1, 2026, npm reported 0.3.1 as latest for `@ashlr/stack-core`, `@ashlr/stack`, and `ashlr-stack-mcp`; the published 0.3.1 CLI and MCP packages declare Node.js 20 or newer. The GitHub v0.3.1 release provides macOS/Linux arm64/x64 binaries and checksum sidecars. The main checkout declares the source version shown in the table and contains changes not in the v0.3.1 release tag; source and published versions describe different artifacts. Verify current registry versions and installed help; publication does not establish provider acceptance.
+Verified November 6, 2026: the public npm archives for `@ashlr/stack-core`, `@ashlr/stack`, and `ashlr-stack-mcp` are version 0.3.6 and identify source `0009a742d83d7f25761e1f9bc33739aca8dfbda5`. Their archive integrity and release provenance were verified. The published 0.3.6 CLI and MCP manifests declare Node.js 20 or newer. The [GitHub v0.3.6 release](https://github.com/ashlrai/ashlr-stack/releases/tag/v0.3.6) provides four macOS/Linux arm64/x64 binaries and four checksum sidecars. Actual Node.js 22 CLI and MCP initialization/tool-list checks passed for the published packages, with MCP protocol versions `2025-06-18` and `2025-03-26`; the Mac arm64 native version and handshake checks also passed. These checks do not establish Linux native execution on this Mac or provider acceptance. Source and published versions describe separate artifacts; verify current registry versions and installed help.
 
 To run the source checkout (which uses Bun):
 
@@ -93,7 +95,7 @@ The order follows the first-run measurements: Node 22.15+ is checked first, then
 One command previews the repairs every installed tool offers. It runs each tool's own `doctor --fix --json` (only for tools whose handshake advertises the `doctor-fix` capability) and changes nothing:
 
 ```bash
-stack doctor --ecosystem --fix   # available in this 0.3.3 source checkout; absent from the historical 0.1.1 build
+stack doctor --ecosystem --fix   # available in this 0.3.2 source checkout; absent from the historical 0.1.1 build
 ```
 
 Then make the repairs with each tool's own command. Run them yourself, directly in your shell:

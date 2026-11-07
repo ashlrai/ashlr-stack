@@ -16,26 +16,51 @@
 
 - Setup, README and package READMEs separate the source version from the recorded npm publication (0.3.1 for `@ashlr/stack-core`, `@ashlr/stack` and `ashlr-stack-mcp`) and state that the published CLI and MCP packages declare Node.js 20 or newer. Source development uses Bun (#356, #361, #363).
 
-## 0.3.3 (2026-11-06)
+## 0.3.7 (2026-11-06)
 
-This release carries main forward from 0.3.2. Most of the delta is release-pipeline hardening and test coverage; the user-facing addition is the `--dryRun` flag for `stack apply`.
+### Fixed
 
-### Added
+- Fleet silent-run reads (`stack fleet` diagnostics) opt in to a short-read check: a non-tail read that reaches EOF before the file size observed at open is rejected as an incomplete source instead of being parsed as a truncated log (#297).
 
-- The `--dryRun` flag previews an apply run without making changes: it prints the recipe id, runs provider provisioning in dry-run mode, and lists the secrets wiring would check in Phantom plus the webhook stubs it would create. `stack completion` suggests the flag (#977).
+### Documentation
+
+- Setup docs and site facts record the independently verified 0.3.6 npm publication; the source version moves to 0.3.7 while the recorded public version stays 0.3.6 until a later publication is verified.
+- Changelog parser coverage adds fixtures for CRLF, empty, hyphenated, horizontal-rule, bold-entry and multi-version layouts.
+
+## 0.3.6 (2026-11-06)
+
+### Fixed
+
+- The local MCP bridge closes its owned native HTTP connections before legacy Bun releases the server handle, awaits the actual server close event, and shares one shutdown promise across concurrent and repeated calls. The idle keepalive, unrelated socket and immediate port-reuse checks retain their five-second bound.
+
+## 0.3.5 (2026-11-06)
+
+### Fixed
+
+- The idle MCP bridge shutdown regression waits for an actual keepalive exchange before closing the accepted connection and continues consuming remote EOF. This removes Linux accept ordering and Bun 1.2 paused-reader races while retaining the five-second bound, unrelated-socket echo and port-reuse assertions.
+- The isolated npm upgrade fixture resolves Node through the same PATH as the real health-check runner, including runtime paths containing spaces; installation, rollback and cleanup checks remain unchanged.
+
+## 0.3.4 (2026-11-06)
+
+### Fixed
+
+- The local MCP lane bridge closes its own keepalive connections before releasing upstream clients, allowing shutdown to finish on Bun 1.2 without affecting unrelated sockets.
+- Release changelog fixtures and version assertions track the current source while preserving no-final-newline parser coverage.
+
+## 0.3.3 (2026-11-05)
+
+This source candidate carries forward the 0.3.2 main-line release and subsequent integrated changes. The apply behavior described under Unreleased also ships in this candidate; that entry remains there while documentation links to it.
+
+### Fixed
+
+- The MCP server exits when its host closes stdin, and optional tool arguments reject JSON `null` as a type error.
+- `stack scan` aligns next-step suggestions under their heading.
+- Fleet JSONL reads enforce their byte limit, including short reads and growing inputs; Homebrew formula rendering preserves literal placeholders.
 
 ### Changed
 
-- Apply no longer requires or probes Phantom when the recipe names no providers; the wiring helper returns an empty result for a providerless recipe without spawning `phantom` (#978, #988).
-
-### Release process
-
-- `release.yml` manual dispatch now requires an exact `vX.Y.Z` tag or `version` input resolving to a commit, and verifies a completed full-CI run on that commit before releasing; evidence uses bounded `gh api` reads (#1026).
-- `auto-tag.yml` only re-evaluates after a `workflow_run` whose head repository is this repository, so completed CI on a fork cannot arm tagging (#518).
-
-### Tests
-
-- Added the phantom-wire placeholder and expansion matrix (known, unknown, nested, adjacent and repeated placeholders; quoting, dollar-sign, tab and newline replacements), apply dry-run, empty-wiring and missing-value coverage, the MCP apply missing-value case, and the `release.yml` qualification fixtures (#973-#1026).
+- Release qualification requires CI evidence for the exact immutable tagged source, and registry publication reconciles release state before publishing.
+- Documentation distinguishes source capabilities from published versions and provider acceptance.
 
 ## 0.3.2 (2026-11-04)
 

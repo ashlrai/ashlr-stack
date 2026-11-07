@@ -38,3 +38,13 @@ test("history distinguishes failed attempts, their removal and current operation
   }
   expect(doc).toContain("`phantom add <NAME>` in a trusted terminal");
 });
+
+test("history describes webhook stubs as commented, unsigned and still generated without an inventory", () => {
+  const current = doc.split("## Current behavior")[1].replace(/\s+/g, " ");
+  expect(current).toContain("creates commented webhook examples for Stripe, Clerk, Supabase, and GitHub under `.stack/webhooks/`");
+  expect(current).toContain("even when the inventory is unreadable or the provider failed");
+  expect(current).toContain("Repeated wiring overwrites an existing stub.");
+  expect(current).toContain("These examples do not implement signature verification and must be completed before use.");
+  expect(current).toContain("`--noWire` skips both the inventory check and webhook stubs");
+  expect(current).toContain("A wiring error is reported as a warning and does not itself fail apply");
+});
