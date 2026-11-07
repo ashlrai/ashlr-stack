@@ -150,7 +150,7 @@ A subset of the catalog:
 
 ## Commands
 
-This checkout registers <!-- fresh:begin command-count -->44<!-- fresh:end --> top-level commands. Run `stack <command> --help` for the flags your install actually has. Options go after the subcommand.
+This checkout registers <!-- fresh:begin command-count -->45<!-- fresh:end --> top-level commands. Run `stack <command> --help` for the flags your install actually has. Options go after the subcommand.
 
 <!-- fresh:begin commands-table -->
 | Command | Purpose |
