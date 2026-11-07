@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import { isFleetRow, readFleetJson } from "./fleet-jsonl.ts";
+import { isFleetRow, readFleetJson } from "../../packages/cli/src/lib/fleet-jsonl.ts";
 
 const count = (value: unknown): number | null =>
   typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : null;

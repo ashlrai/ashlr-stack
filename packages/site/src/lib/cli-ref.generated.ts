@@ -904,6 +904,81 @@ export const CLI_COMMANDS: CliCommand[] = [
     ],
   },
   {
+    name: "stack fleet-gc",
+    description:
+      "Dry-run report classifying fleet worktrees as preserved or collect-candidates (read-only).",
+    synopsis:
+      "stack fleet-gc [--json] [--root <root>] [--runs <runs>] [--queue <queue>] [--reapIdleHours <reapIdleHours>] [--emptyIdleHours <emptyIdleHours>] [--budgetSeconds <budgetSeconds>] [--ghBin <ghBin>] [--lsofBin <lsofBin>] [--ghMax <ghMax>] [--dryRun]",
+    flags: [
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        description: "Emit schemaVersion 1 JSON.",
+      },
+      {
+        name: "root",
+        synopsis: "--root <root>",
+        type: "string",
+        description: "Worktree root (default: ~/Projects/ashlrai/wt).",
+      },
+      {
+        name: "runs",
+        synopsis: "--runs <runs>",
+        type: "string",
+        description: "Fleet runs dir (default: ~/.ashlr-runs); queue defaults to <runs>/queue.",
+      },
+      {
+        name: "queue",
+        synopsis: "--queue <queue>",
+        type: "string",
+        description: "Queue dir override (default: <runs>/queue).",
+      },
+      {
+        name: "reapIdleHours",
+        synopsis: "--reapIdleHours <reapIdleHours>",
+        type: "string",
+        description: "Idle hours before RESULT PR worktrees are candidates (default 2).",
+      },
+      {
+        name: "emptyIdleHours",
+        synopsis: "--emptyIdleHours <emptyIdleHours>",
+        type: "string",
+        description: "Idle hours before done/empty worktrees are candidates (default 6).",
+      },
+      {
+        name: "budgetSeconds",
+        synopsis: "--budgetSeconds <budgetSeconds>",
+        type: "string",
+        description: "Seconds allowed for deep git/tree/gh inspection (default 120).",
+      },
+      {
+        name: "ghBin",
+        synopsis: "--ghBin <ghBin>",
+        type: "string",
+        description: "gh binary override (default: PATH/install paths).",
+      },
+      {
+        name: "lsofBin",
+        synopsis: "--lsofBin <lsofBin>",
+        type: "string",
+        description: "lsof binary override (default: system lsof).",
+      },
+      {
+        name: "ghMax",
+        synopsis: "--ghMax <ghMax>",
+        type: "string",
+        description: "Cap on gh pr view calls (default 40).",
+      },
+      {
+        name: "dryRun",
+        synopsis: "--dryRun",
+        type: "boolean",
+        description: "Accepted for explicitness; this command is always a dry run.",
+      },
+    ],
+  },
+  {
     name: "stack fleet-bets",
     description:
       "Score leader bets: join queue ledger ids with dispatch state and job outcomes for per-bet status and per-lane merged rate.",
