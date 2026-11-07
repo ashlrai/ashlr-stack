@@ -1,7 +1,27 @@
-import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { __resetPhantomCache } from "../phantom.ts";
+
+/** Install a source-owned fake executable with an interpreter-appropriate target. */
+export function writeShimmedExecutable(
+  dir: string,
+  name: string,
+  script: string,
+  ext = "sh",
+): string {
+  const realPath = join(dir, `${name}.${ext}`);
+  const binPath = join(dir, name);
+  writeFileSync(realPath, script);
+  chmodSync(realPath, 0o700);
+  try {
+    symlinkSync(realPath, binPath);
+  } catch {
+    writeFileSync(binPath, script);
+    chmodSync(binPath, 0o700);
+  }
+  return binPath;
+}
 
 /**
  * Fake `phantom` binary for integration tests. Writes a bash script into a
@@ -163,9 +183,7 @@ case "\${1:-}" in
     ;;
 esac
 `;
-  const binPath = join(dir, "phantom");
-  writeFileSync(binPath, script);
-  chmodSync(binPath, 0o755);
+  writeShimmedExecutable(dir, "phantom", script);
 
   const previousPath = process.env.PATH ?? "";
   process.env.PATH = `${dir}:${previousPath}`;

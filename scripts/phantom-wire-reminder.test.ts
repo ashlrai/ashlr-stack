@@ -7,6 +7,64 @@ import { wirePhantomForRecipe } from "../packages/core/src/ai/phantom-wire.ts";
 setDefaultTimeout(30_000);
 
 describe("generated webhook signature-verification reminder", () => {
+  it("keeps the reminder inside every commented handler before any body-dependent action", async () => {
+    const providers = ["stripe", "clerk", "supabase", "github"];
+    const harness = setupFakePhantom();
+    try {
+      const result = await wirePhantomForRecipe(
+        {
+          id: "reminder-order",
+          query: "",
+          createdAt: "",
+          providers: providers.map((name) => ({ name })),
+        },
+        { cwd: harness.dir },
+      );
+      expect(result.webhooks).toHaveLength(providers.length);
+
+      for (const path of result.webhooks) {
+        const stub = readFileSync(path, "utf8");
+        // Original PR 466: preserve the exact emitted line boundaries and
+        // double-comment prefix across the entire reminder, not just its ends.
+        const lines = stub.split("\n");
+        const body = lines.indexOf("//   const body = await req.text();");
+        const successLine = lines.indexOf('//   return new Response("ok", { status: 200 });');
+        expect(body).toBeGreaterThanOrEqual(0);
+        expect(successLine).toBeGreaterThan(body + 1);
+        const emittedReminder = lines.slice(body + 1, successLine);
+        expect(emittedReminder.every((line) => line.startsWith("//   // "))).toBe(true);
+        expect(emittedReminder[0]).toContain("TODO(security): signature verification is NOT implemented");
+        expect(emittedReminder.join("\n")).toContain("parse, trust, or act on the body.");
+        const example = stub.match(/^\/\/ export async function [\s\S]*?^\/\/ }$/m)?.[0];
+        if (!example) throw new Error(`Missing commented handler in ${path}`);
+        expect(example.split("\n").every((line) => line.startsWith("//"))).toBe(true);
+
+        const runnable = example.replace(/^\/\/ ?/gm, "");
+        const bodyRead = "const body = await req.text();";
+        const todo = "// TODO(security): signature verification is NOT implemented here.";
+        const reminder = "// parse, trust, or act on the body.";
+        const success = 'return new Response("ok", { status: 200 });';
+        const bodyEnd = runnable.indexOf(bodyRead) + bodyRead.length;
+        const todoStart = runnable.indexOf(todo);
+        const reminderEnd = runnable.indexOf(reminder) + reminder.length;
+        const successStart = runnable.indexOf(success);
+        expect(runnable.indexOf(bodyRead)).toBeGreaterThanOrEqual(0);
+        expect(todoStart).toBeGreaterThanOrEqual(bodyEnd);
+        expect(runnable.indexOf(reminder)).toBeGreaterThan(todoStart);
+        expect(successStart).toBeGreaterThanOrEqual(reminderEnd);
+
+        // Once uncommented, nothing executable may run between reading the
+        // untrusted body and the end of the verification reminder.
+        const intervening = runnable.slice(bodyEnd, reminderEnd).split("\n");
+        expect(intervening.every((line) => !line.trim() || line.trimStart().startsWith("//"))).toBe(
+          true,
+        );
+      }
+    } finally {
+      harness.cleanup();
+    }
+  });
+
   it.each(["available", "unavailable"])("survives Phantom being %s", async (availability) => {
     const providers = [
       ["stripe", "stripe.webhooks.constructEvent"],

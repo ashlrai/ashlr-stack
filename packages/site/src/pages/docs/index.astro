@@ -10,6 +10,49 @@ import { PUBLISHED_VERSION, SOURCE_VERSION } from "~/lib/site-facts.generated";
   description="Reference for supported Stack provider setup, credential persistence and local configuration."
   eyebrow="Documentation"
 >
+  <h2>Copy-paste for agents</h2>
+  <p>
+    Read <a href="/llms.txt"><code>llms.txt</code></a> and
+    <a href="/llms-full.txt"><code>llms-full.txt</code></a>.
+    These four commands are read-only. They need no account and they write nothing.
+  </p>
+  <Code
+    code={`npx -y -p @ashlr/stack stack providers --json
+npx -y -p @ashlr/stack stack recommend "B2B SaaS with auth, AI, and payments" --json
+npx -y -p @ashlr/stack stack scan --json
+npx -y -p @ashlr/stack stack templates list --json`}
+    lang="bash"
+    theme="github-dark-dimmed"
+  />
+  <p>One command on macOS or Linux. It also installs Phantom Secrets if that CLI is missing.</p>
+  <Code
+    code={`curl -fsSL stack.ashlr.ai/install.sh | bash`}
+    lang="bash"
+    theme="github-dark-dimmed"
+  />
+  <p>
+    Claude Code, Cursor, and Codex use the same stdio server. Cursor file:
+    <code>~/.cursor/mcp.json</code> or the project <code>.mcp.json</code>.
+  </p>
+  <Code
+    code={`{
+  "mcpServers": {
+    "ashlr-stack": {
+      "command": "npx",
+      "args": ["-y", "-p", "@ashlr/stack", "-p", "ashlr-stack-mcp", "ashlr-stack-mcp"]
+    }
+  }
+}`}
+    lang="json"
+    theme="github-dark-dimmed"
+  />
+  <Code
+    code={`claude mcp add ashlr-stack -- npx -y -p @ashlr/stack -p ashlr-stack-mcp ashlr-stack-mcp
+codex mcp add ashlr-stack -- npx -y -p @ashlr/stack -p ashlr-stack-mcp ashlr-stack-mcp`}
+    lang="bash"
+    theme="github-dark-dimmed"
+  />
+
   <h2>Three paths to Stack</h2>
   <p>
     Pick the one that matches where you are. You can mix and match — most users
