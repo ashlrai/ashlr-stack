@@ -9,7 +9,7 @@
       <text x="64" y="132" fill="#f4f5f7" font-size="26" font-weight="650">Read</text>
       <text x="64" y="176" fill="#c5cad3" font-size="16">providers, recommend,</text>
       <text x="64" y="202" fill="#c5cad3" font-size="16">scan, and templates</text>
-      <text x="64" y="228" fill="#c5cad3" font-size="16">print JSON.</text>
+      <text x="64" y="228" fill="#c5cad3" font-size="16">print JSON with --json.</text>
       <text x="64" y="262" fill="#9aa3b2" font-size="14">Nothing is created.</text>
     </g>
     <g>

@@ -1,6 +1,6 @@
 # Copy-paste examples
 
-These `stack` commands exit 0 with no account on the published CLI: `stack providers --json`, `stack recommend "B2B SaaS with auth, AI, and payments" --json`, `stack scan --json`, `stack templates list --json`, `stack onboard --json`, and `stack doctor --ecosystem --json`. Node.js 20 or newer matches the engines field of the published 0.3.1 packages. Check `stack <command> --help` on your install before you rely on a flag.
+These `stack` commands exit 0 with no account on the published CLI: `stack providers --json`, `stack recommend "B2B SaaS with auth, AI, and payments" --json`, `stack scan --json`, `stack templates list --json`, `stack onboard --json`, and `stack doctor --ecosystem --json`. The published 0.3.6 CLI and MCP manifests declare Node.js 20 or newer. Check `stack <command> --help` on your install before you rely on a flag.
 
 Agent indexes: [llms.txt](https://stack.ashlr.ai/llms.txt) and [llms-full.txt](https://stack.ashlr.ai/llms-full.txt).
 
