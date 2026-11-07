@@ -1,9 +1,10 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { writeShimmedExecutable } from "../../../core/src/__tests__/_harness.ts";
 import { type PreflightRunner, preflightMode, runAgentPreflight } from "../lib/agent-preflight.ts";
 
 function doc(verdict: string, blockedBy: string[] = []) {
@@ -115,8 +116,9 @@ describe("stack exec with STACK_PHANTOM_PREFLIGHT", () => {
   function run(env: Record<string, string>, json: string, exit: number) {
     const bin = tmp("stack-pf-bin-");
     writeFileSync(join(bin, "pf.json"), json);
-    writeFileSync(
-      join(bin, "phantom"),
+    writeShimmedExecutable(
+      bin,
+      "phantom",
       `#!/bin/sh
 case "$1" in
   --version) echo "phantom fake 0.0.1" ;;
@@ -125,7 +127,6 @@ case "$1" in
 esac
 `,
     );
-    chmodSync(join(bin, "phantom"), 0o755);
     const cwd = tmp("stack-pf-proj-");
     writeFileSync(join(cwd, ".stack.toml"), '[stack]\nversion = "1"\n');
     const r = spawnSync("bun", [CLI_ENTRY, "exec", "--", "sh", "-c", "echo RAN"], {

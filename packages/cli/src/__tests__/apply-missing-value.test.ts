@@ -124,6 +124,33 @@ function readCalls(dir: string): Array<{ cmd: string; args: string[] }> {
 }
 
 describe("stack apply — missing vault value", () => {
+  for (const initial of [{}, { OPENAI_API_KEY: "sk-test-existing-not-real" }]) {
+    it(`preserves a ${Object.keys(initial).length ? "partially populated" : "empty"} vault while wiring two providers`, () => {
+      const dir = mkTmp();
+      const home = mkTmp();
+      seedProject(dir, "ai-and-payments", ["openai", "stripe"]);
+      const body = applyDriver(
+        "ai-and-payments",
+        '{ succeeded: ["openai", "stripe"], failures: [] }',
+        JSON.stringify(initial),
+        false,
+      );
+      const { stdout, stderr, status } = runApplyScript(dir, home, body);
+      expect(status).toBe(0);
+      expect(stdout).toContain("missing");
+      expect(stdout).toContain("STRIPE_SECRET_KEY");
+      const calls = readCalls(dir);
+      expect(calls).toEqual([
+        { cmd: "--version", args: [] },
+        { cmd: "list", args: ["--json"] },
+      ]);
+      expect(calls.flatMap((call) => call.args)).not.toContain(MARKER);
+      expect(stdout + stderr).not.toContain(MARKER);
+      for (const value of Object.values(initial)) expect(stdout + stderr).not.toContain(value);
+      expect(JSON.parse(readFileSync(join(dir, "vault-result.json"), "utf8"))).toEqual(initial);
+    });
+  }
+
   it("reports the missing secret and writes only the webhook stub, never a placeholder", () => {
     const dir = mkTmp();
     const home = mkTmp();
