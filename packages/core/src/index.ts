@@ -75,3 +75,4 @@ export {
   type UsageRecord,
 } from "./ai/cost-tracker.ts";
 export * from "./agent-onboard.ts";
+export * from "./fleet/capability-matrix.ts";

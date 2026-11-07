@@ -13,7 +13,7 @@ export const LATEST_RELEASE_DATE = "2026-11-07";
 export const PROVIDER_COUNT = 39;
 export const PROVIDER_CATEGORY_COUNT = 13;
 export const TEMPLATE_COUNT = 7;
-export const CLI_COMMAND_COUNT = 43;
+export const CLI_COMMAND_COUNT = 44;
 export const MCP_TOOL_COUNT = 19;
 export const MCP_TOOL_NAMES: string[] = [
   "stack_init",

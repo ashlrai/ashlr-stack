@@ -953,6 +953,70 @@ export const CLI_COMMANDS: CliCommand[] = [
       "Read-only. Bets are job ids on `- STATUS <id> (attrs)` lines of the leader queue ledger whose attrs carry src=leader (`--src` selects another marker). Queue state comes from ready.tsv; launch, finish, publish and outcome events come from metrics/jobs.jsonl (tail-read at 32 MiB). Statuses: vanished (no trace), waiting (queued), running (launched), empty (resolved with no merge: empty finish, empty publish, precheck skip or a terminal non-merge outcome), open (PR open or unresolved non-empty work) and merged (outcome state MERGED). Ledger MERGED/LANDED/DONE/PR-OPEN statuses are fallbacks when local evidence is absent. mergedRate is merged over resolved (merged + empty) bets per lane; null when nothing resolved.",
   },
   {
+    name: "stack fleet-match",
+    description:
+      "Map a job requirement to eligible fleet resources by capability, quota and availability.",
+    synopsis:
+      "stack fleet-match [--json] [--queue <queue>] [--role <role>] [--capability <capability>] [--tier <tier>] [--job <job>] [--capabilitiesFile <capabilitiesFile>] [--modelsFile <modelsFile>]",
+    flags: [
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        description: "Emit schemaVersion 1 JSON.",
+      },
+      {
+        name: "queue",
+        synopsis: "--queue <queue>",
+        type: "string",
+        description: "Fleet queue directory (default: ~/.ashlr-runs/queue).",
+      },
+      {
+        name: "role",
+        synopsis: "--role <role>",
+        type: "string",
+        description: "Required role: planner, implementer, reviewer, release-verifier.",
+      },
+      {
+        name: "capability",
+        synopsis: "--capability <capability>",
+        type: "string",
+        description: "Comma-separated capability tags the resource must declare.",
+      },
+      {
+        name: "tier",
+        synopsis: "--tier <tier>",
+        type: "string",
+        description: "Required tier (e.g. frontier, work, mid, fast).",
+      },
+      {
+        name: "job",
+        synopsis: "--job <job>",
+        type: "string",
+        description: "Derive the requirement from a queued job id (ready.tsv + journals).",
+      },
+      {
+        name: "capabilitiesFile",
+        synopsis: "--capabilitiesFile <capabilitiesFile>",
+        type: "string",
+        description: "Capabilities file (default: capabilities.json beside the queue directory).",
+      },
+      {
+        name: "modelsFile",
+        synopsis: "--modelsFile <modelsFile>",
+        type: "string",
+        description: "Models file (default: models.json beside the queue directory).",
+      },
+    ],
+    examples: [
+      { command: "stack fleet-match --json" },
+      { command: "stack fleet-match --role reviewer --json" },
+      { command: "stack fleet-match --job RQ-123 --json" },
+    ],
+    notes:
+      'Read-only. Joins slots.json quota, journal running/queued counts, capabilities.json role/capability/tier declarations and models.json into one capability matrix, then reports which resources are eligible for a requirement and why the rest are not. Matching never branches on a provider or lane name; undeclared resources serve the implementer role on every tier, the same contract dispatchd applies today. It does not change dispatchd lane admission. Declare resources in capabilities.json beside the queue directory ({ "schema": "fleet.capabilities.v1", "resources": { "<id>": { "roles": [...], "capabilities": [...], "tiers": [...] } } }); absent or invalid declarations fall back to the implementer default and are counted in capabilitiesDropped.',
+  },
+  {
     name: "stack fleet",
     description: "Show repository CI, open PR counts, and dispatcher lane status.",
     synopsis: "stack fleet <slo|collisions|waste>",
