@@ -2,6 +2,7 @@
   "name": "@ashlr/stack-site",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
   "description": "Marketing site for Ashlr Stack — stack.ashlr.ai",
   "type": "module",
   "scripts": {

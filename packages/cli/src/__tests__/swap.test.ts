@@ -4,6 +4,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { writeShimmedExecutable } from "../../../core/src/__tests__/_harness.ts";
 
 const CLI_ENTRY = join(dirname(fileURLToPath(import.meta.url)), "..", "index.ts");
 
@@ -207,10 +208,7 @@ print(v.get(sys.argv[2],""))
   *)       echo "fake: unknown: \${1:-}" >&2; exit 0 ;;
 esac
 `;
-    const binPath = join(phantomDir, "phantom");
-    writeFileSync(binPath, script);
-    // chmod +x
-    spawnSync("chmod", ["+x", binPath]);
+    writeShimmedExecutable(phantomDir, "phantom", script);
 
     process.env.PATH = `${phantomDir}:${originalPath}`;
 

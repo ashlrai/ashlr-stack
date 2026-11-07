@@ -164,3 +164,34 @@ test("historical stack apply entries use the same placeholder in both changelogs
     }
   }
 });
+
+
+function unreleasedApplyEntry(changelog: string): string {
+  const section = changelog.split(/^## Unreleased\s*$/m)[1]?.split(/^## /m)[0] ?? "";
+  const entries = section.split("\n").filter((line) => line.startsWith("- `stack apply`"));
+  expect(entries).toHaveLength(1);
+  return entries[0];
+}
+
+function expectUnreleasedPlaceholderRemoval(changelogs: string[]): void {
+  const entries = changelogs.map(unreleasedApplyEntry);
+  for (const entry of entries) {
+    expect(entry).toContain("`stack apply` does not create placeholder secrets.");
+  }
+  expect(entries[0]).toBe(entries[1]);
+}
+
+test("both Unreleased apply entries describe the removal of placeholder writes", () => {
+  const changelogs = paths.map((path) => readFileSync(join(import.meta.dir, "..", path), "utf8"));
+  expectUnreleasedPlaceholderRemoval(changelogs);
+
+  const claim = "`stack apply` does not create placeholder secrets.";
+  const contradiction = "`stack apply` creates placeholder secrets.";
+  for (const index of [0, 1]) {
+    const changed = [...changelogs];
+    changed[index] = changed[index].replace(claim, contradiction);
+    expect(() => expectUnreleasedPlaceholderRemoval(changed)).toThrow();
+  }
+  // Equal copies with the same incorrect claim must still fail.
+  expect(() => expectUnreleasedPlaceholderRemoval(changelogs.map((text) => text.replace(claim, contradiction)))).toThrow();
+});
