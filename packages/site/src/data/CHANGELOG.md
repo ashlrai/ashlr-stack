@@ -16,6 +16,16 @@
 
 - Setup, README and package READMEs separate the source version from the recorded npm publication (0.3.1 for `@ashlr/stack-core`, `@ashlr/stack` and `ashlr-stack-mcp`) and state that the published CLI and MCP packages declare Node.js 20 or newer. Source development uses Bun (#356, #361, #363).
 
+## 0.3.8 (2026-11-07)
+
+### Changed
+
+- Test fixtures share executable setup across CLI and core tests, improving isolation and portability.
+
+### Testing
+
+- Expanded coverage for `stack apply` when secrets are missing, Phantom is unavailable, or wiring fails, and for changelog parsing and ordering.
+
 ## 0.3.7 (2026-11-06)
 
 ### Fixed
