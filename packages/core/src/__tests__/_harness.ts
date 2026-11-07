@@ -3,6 +3,26 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { __resetPhantomCache } from "../phantom.ts";
 
+/** Install a source-owned fake executable with an interpreter-appropriate target. */
+export function writeShimmedExecutable(
+  dir: string,
+  name: string,
+  script: string,
+  ext = "sh",
+): string {
+  const realPath = join(dir, `${name}.${ext}`);
+  const binPath = join(dir, name);
+  writeFileSync(realPath, script);
+  chmodSync(realPath, 0o700);
+  try {
+    symlinkSync(realPath, binPath);
+  } catch {
+    writeFileSync(binPath, script);
+    chmodSync(binPath, 0o700);
+  }
+  return binPath;
+}
+
 /**
  * Fake `phantom` binary for integration tests. Writes a bash script into a
  * tmpdir, prepends that tmpdir to PATH, and exposes helpers to inspect the
@@ -53,19 +73,60 @@ export function setupFakePhantom(
   writeFileSync(vaultPath, JSON.stringify(initial));
   writeFileSync(logPath, "");
 
-  // The vault/log paths are trusted (we created them), but ALL args ($1..$N)
-  // come from tests that may contain user-shaped secret values with quotes,
-  // newlines, backslashes, etc. Those must NEVER be interpolated into Python
-  // source — instead we pass them via sys.argv so the shell + Python handle
-  // quoting for us.
+  // Each fake-phantom call used to spawn python3 twice; interpreter startup
+  // dominated the suite. One tiny Bun helper (same runtime as the tests) does
+  // the JSON work instead. ALL args ($1..$N) may contain user-shaped values
+  // with quotes, newlines or backslashes, so they reach the helper only through
+  // argv and are never interpolated into source.
+  const helperPath = join(dir, "helper.mjs");
+  writeFileSync(
+    helperPath,
+    `import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
+const [op, vault, ...rest] = process.argv.slice(2);
+const load = () => JSON.parse(readFileSync(vault, "utf8"));
+if (op === "log") {
+  appendFileSync(vault, JSON.stringify({ cmd: rest[0] ?? "", args: rest.slice(1) }) + "\\n");
+} else if (op === "add") {
+  const v = load();
+  if (rest[0] in v) {
+    process.stderr.write("Error: Secret '" + rest[0] + "' is already protected. phantom add creates new names only and refuses replacement before reading a value.\\n");
+    process.exit(1);
+  }
+  const value = readFileSync(0, "utf8").split("\\n")[0].replace(/\\r+$/, "");
+  if (!value) {
+    process.stderr.write("Error: Received empty value on stdin\\n");
+    process.exit(1);
+  }
+  v[rest[0]] = value;
+  writeFileSync(vault, JSON.stringify(v));
+} else if (op === "remove") {
+  const v = load();
+  delete v[rest[0]];
+  writeFileSync(vault, JSON.stringify(v));
+} else if (op === "list") {
+  const v = load();
+  const names = Object.keys(v);
+  if (rest.includes("--json")) {
+    console.log(JSON.stringify(names.map((name) => ({ name, detected_service: null })), null, 2));
+  } else {
+    console.log("-> " + names.length + " secret(s) in vault (encrypted-file):\\n");
+    for (const k of names) console.log("   - " + k);
+    console.log("\\nnote Values are never displayed. Use phantom add/remove to manage.");
+  }
+} else if (op === "reveal") {
+  console.log(load()[rest[0]] ?? "");
+}
+`,
+  );
   const script = `#!/usr/bin/env bash
 set -e
 VAULT=${JSON.stringify(vaultPath)}
 LOG=${JSON.stringify(logPath)}
+H() { ${JSON.stringify(process.execPath)} ${JSON.stringify(helperPath)} "$@"; }
 LEGACY_HEADLESS_REVEAL=${options.legacyHeadlessReveal ? 1 : 0}
 
 # Log the invocation as a single JSON line (args passed via argv, never interpolated).
-python3 -c 'import json,sys; open(sys.argv[1], "a").write(json.dumps({"cmd": sys.argv[2] if len(sys.argv) > 2 else "", "args": sys.argv[3:]}) + "\\n")' "$LOG" "$@" 2>/dev/null || true
+H log "$LOG" "$@" 2>/dev/null || true
 
 case "\${1:-}" in
   --version)
@@ -90,18 +151,7 @@ case "\${1:-}" in
       echo "Error: Positional secret values are disabled because command-line arguments can be exposed by process inspection. Omit the value for a hidden terminal prompt, or use --stdin." >&2
       exit 1
     fi
-    python3 -c 'import json,sys
-with open(sys.argv[1]) as f: v = json.load(f)
-if sys.argv[2] in v:
-    sys.stderr.write("Error: Secret %r is already protected. phantom add creates new names only and refuses replacement before reading a value.\\n" % sys.argv[2])
-    sys.exit(1)
-value = sys.stdin.readline().rstrip("\\r\\n")
-if not value:
-    sys.stderr.write("Error: Received empty value on stdin\\n")
-    sys.exit(1)
-v[sys.argv[2]] = value
-with open(sys.argv[1], "w") as f: json.dump(v, f)
-' "$VAULT" "$2"
+    H add "$VAULT" "$2"
     ;;
   remove)
     # Phantom Secrets >= 0.7.3: typed confirmation in an attached terminal.
@@ -109,23 +159,11 @@ with open(sys.argv[1], "w") as f: json.dump(v, f)
       echo "Error: phantom remove requires attached stdin, stdout, and stderr terminals and cannot run headlessly." >&2
       exit 1
     fi
-    python3 -c 'import json,sys
-with open(sys.argv[1]) as f: v = json.load(f)
-v.pop(sys.argv[2], None)
-with open(sys.argv[1], "w") as f: json.dump(v, f)
-' "$VAULT" "$2"
+    H remove "$VAULT" "$2"
     ;;
   list)
     # Real Phantom: \`list --json\` prints [{"name": ...}, ...] (names only).
-    python3 -c 'import json,sys
-with open(sys.argv[1]) as f: v = json.load(f)
-if "--json" in sys.argv[2:]:
-    print(json.dumps([{"name": k, "detected_service": None} for k in v], indent=2))
-else:
-    print("-> %d secret(s) in vault (encrypted-file):\\n" % len(v))
-    for k in v: print("   - " + k)
-    print("\\nnote Values are never displayed. Use phantom add/remove to manage.")
-' "$VAULT" "\${@:2}"
+    H list "$VAULT" "\${@:2}"
     ;;
   reveal)
     # Phantom Secrets >= 0.7.3: plaintext only into an attached terminal.
@@ -133,10 +171,7 @@ else:
       echo "Error: Refusing to reveal a secret without attached stdin and stderr terminals" >&2
       exit 1
     fi
-    python3 -c 'import json,sys
-with open(sys.argv[1]) as f: v = json.load(f)
-print(v.get(sys.argv[2], ""))
-' "$VAULT" "$2"
+    H reveal "$VAULT" "$2"
     ;;
   init)
     # no-op for the fake — the vault file already exists
@@ -148,20 +183,7 @@ print(v.get(sys.argv[2], ""))
     ;;
 esac
 `;
-  const binPath = join(dir, "phantom");
-  // Sandboxed runners and macOS Gatekeeper's provenance policy refuse to
-  // exec an extensionless file written by a non-platform process, while a
-  // `*.sh` target passes the check. Write the shim as `phantom.sh` and link
-  // `phantom` at it; fall back to the direct file where symlinks fail.
-  const realPath = join(dir, "phantom.sh");
-  writeFileSync(realPath, script);
-  chmodSync(realPath, 0o755);
-  try {
-    symlinkSync(realPath, binPath);
-  } catch {
-    writeFileSync(binPath, script);
-    chmodSync(binPath, 0o755);
-  }
+  writeShimmedExecutable(dir, "phantom", script);
 
   const previousPath = process.env.PATH ?? "";
   process.env.PATH = `${dir}:${previousPath}`;

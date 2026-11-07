@@ -2,9 +2,9 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { writeShimmedExecutable } from "../../../core/src/__tests__/_harness.ts";
 import { HANDSHAKE_CONTRACT } from "../lib/ecosystem.ts";
 import { checkDoctor } from "../lib/handshake-conformance.ts";
-import { linkPhantomShim } from "./_phantom-shim.ts";
 
 const entry = join(import.meta.dir, "..", "index.ts");
 let home: string;
@@ -20,19 +20,16 @@ afterEach(() => rmSync(home, { recursive: true, force: true }));
 
 // Absolute interpreter and an exclusive PATH keep real companions out of the run.
 function companion(command: string, body: string) {
-  writeFileSync(join(bin, command), `#!${process.execPath}\n${body}\n`, { mode: 0o755 });
+  writeShimmedExecutable(bin, command, `#!${process.execPath}\n${body}\n`, "mjs");
 }
 
 function phantom() {
-  linkPhantomShim(
-    bin,
-    `#!${process.execPath}
-const args = process.argv.slice(2);
+  companion(
+    "phantom",
+    `const args = process.argv.slice(2);
 if (args[0] === "--version") console.log("phantom 0.7.9");
 else if (args[0] === "list") console.log("[]");
-else process.exit(1);
-`,
-    "phantom.mjs",
+else process.exit(1);`,
   );
 }
 
@@ -100,12 +97,7 @@ console.log(${JSON.stringify(JSON.stringify(value))});`;
     }),
   );
   companion("lexicon", answer({ kind: "ashlr.handshake", schema_version: 1, version: "0.1.0" }));
-  // `phantom` resolves but refuses --ashlr-handshake: "too old", not missing.
-  linkPhantomShim(
-    bin,
-    `#!${process.execPath}\nconsole.log("unknown option --ashlr-handshake"); process.exitCode = 1;\n`,
-    "phantom.mjs",
-  );
+  companion("phantom", 'console.log("unknown option --ashlr-handshake"); process.exitCode = 1;');
 }
 
 describe("doctor CLI output snapshots", () => {

@@ -11,9 +11,9 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { delimiter, dirname, join } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { linkPhantomShim } from "./_phantom-shim.ts";
+import { writePhantomShim } from "./_phantom-shim.ts";
 
 /**
  * Regression: `stack apply` must surface a clear failure when Phantom Secrets
@@ -66,20 +66,19 @@ function runCli(
   return {
     stdout: result.stdout ?? "",
     stderr: result.stderr ?? "",
-    code: result.status ?? 0,
+    code: result.status ?? -1,
   };
 }
 
 /**
  * A child env whose PATH can never resolve `phantom`: `bin` is under our
- * control and `/usr/bin` + `/bin` hold system tools only — brew and npm
- * installs live elsewhere. HOME and the project registry are isolated.
+ * control. HOME and the project registry are isolated.
  */
 function phantomlessEnv(home: string, bin: string): Record<string, string> {
   return {
     HOME: home,
     USERPROFILE: home,
-    PATH: [bin, "/usr/bin", "/bin"].join(delimiter),
+    PATH: bin,
     STACK_REGISTRY_DIR: join(home, "registry"),
   };
 }
@@ -171,7 +170,7 @@ describe("stack apply without Phantom", () => {
     const calls = join(home, "phantom-calls");
     mkdirSync(bin);
     // Present but broken: resolves on PATH, fails every invocation.
-    linkPhantomShim(bin, `#!/bin/sh\necho "$@" >> '${calls}'\nexit 1\n`);
+    writePhantomShim(bin, `#!/bin/sh\necho "$@" >> '${calls}'\nexit 1\n`);
     writeFileSync(join(dir, ".stack.toml"), "");
     seedRecipe(dir, "example", ["openai"]);
 

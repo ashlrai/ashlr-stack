@@ -4,7 +4,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "no
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { linkPhantomShim } from "./_phantom-shim.ts";
+import { writeShimmedExecutable } from "../../../core/src/__tests__/_harness.ts";
 
 const CLI_ENTRY = join(dirname(fileURLToPath(import.meta.url)), "..", "index.ts");
 
@@ -43,7 +43,7 @@ function binDir(phantom: { removable: string[] } | false): string {
       "exit 1",
       "",
     ].join("\n");
-    linkPhantomShim(dir, script);
+    writeShimmedExecutable(dir, "phantom", script);
   }
   return dir;
 }

@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSy
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { linkPhantomShim } from "./_phantom-shim.ts";
+import { writeShimmedExecutable } from "../../../core/src/__tests__/_harness.ts";
 
 const CLI_ENTRY = join(dirname(fileURLToPath(import.meta.url)), "..", "index.ts");
 const quote = (value: string): string => `'${value.replace(/'/g, "'\\''")}'`;
@@ -75,7 +75,7 @@ case "$1" in
  *) exit 88;;
 esac
 `;
-    linkPhantomShim(bin, script);
+    writeShimmedExecutable(bin, "phantom", script);
   }
 
   function runChild(command: string, args: string[], cwd: string, timeoutMs = 5_000) {

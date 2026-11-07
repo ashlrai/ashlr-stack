@@ -4,8 +4,8 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { writeShimmedExecutable } from "../../../core/src/__tests__/_harness.ts";
 import { type PreflightRunner, preflightMode, runAgentPreflight } from "../lib/agent-preflight.ts";
-import { linkPhantomShim } from "./_phantom-shim.ts";
 
 function doc(verdict: string, blockedBy: string[] = []) {
   return JSON.stringify({
@@ -116,8 +116,9 @@ describe("stack exec with STACK_PHANTOM_PREFLIGHT", () => {
   function run(env: Record<string, string>, json: string, exit: number) {
     const bin = tmp("stack-pf-bin-");
     writeFileSync(join(bin, "pf.json"), json);
-    linkPhantomShim(
+    writeShimmedExecutable(
       bin,
+      "phantom",
       `#!/bin/sh
 case "$1" in
   --version) echo "phantom fake 0.0.1" ;;

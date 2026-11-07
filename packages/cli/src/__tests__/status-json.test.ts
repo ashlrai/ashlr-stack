@@ -4,8 +4,8 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { writeShimmedExecutable } from "../../../core/src/__tests__/_harness.ts";
 import { buildStatusReport } from "../commands/status.ts";
-import { linkPhantomShim } from "./_phantom-shim.ts";
 
 const CLI_ENTRY = join(dirname(fileURLToPath(import.meta.url)), "..", "index.ts");
 
@@ -84,7 +84,7 @@ function binDir(vault: VaultMode | false): string {
       );
     }
     lines.push("fi", "exit 1", "");
-    linkPhantomShim(dir, lines.join("\n"));
+    writeShimmedExecutable(dir, "phantom", lines.join("\n"));
   }
   return dir;
 }

@@ -4,7 +4,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { linkPhantomShim } from "./_phantom-shim.ts";
+import { writeShimmedExecutable } from "../../../core/src/__tests__/_harness.ts";
 
 /** `stack doctor` with the opt-in STACK_PHANTOM_PREFLIGHT, against a fake phantom. */
 
@@ -40,8 +40,9 @@ function doctor(
 ) {
   const bin = tmp("stack-docpf-bin-");
   writeFileSync(join(bin, "pf.json"), json);
-  linkPhantomShim(
+  writeShimmedExecutable(
     bin,
+    "phantom",
     `#!/bin/sh
 case "$1" in
   --version) echo "phantom 0.7.9" ;;
