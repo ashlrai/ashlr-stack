@@ -194,6 +194,14 @@ const EXTRAS: Record<string, CommandExtra> = {
     examples: [{ command: "stack fleet-bets --json" }],
     notes: "Read-only. Bets are job ids on `- STATUS <id> (attrs)` lines of the leader queue ledger whose attrs carry src=leader (`--src` selects another marker). Queue state comes from ready.tsv; launch, finish, publish and outcome events come from metrics/jobs.jsonl (tail-read at 32 MiB). Statuses: vanished (no trace), waiting (queued), running (launched), empty (resolved with no merge: empty finish, empty publish, precheck skip or a terminal non-merge outcome), open (PR open or unresolved non-empty work) and merged (outcome state MERGED). Ledger MERGED/LANDED/DONE/PR-OPEN statuses are fallbacks when local evidence is absent. mergedRate is merged over resolved (merged + empty) bets per lane; null when nothing resolved.",
   },
+  "fleet-match": {
+    examples: [
+      { command: "stack fleet-match --json" },
+      { command: "stack fleet-match --role reviewer --json" },
+      { command: "stack fleet-match --job RQ-123 --json" },
+    ],
+    notes: "Read-only. Joins slots.json quota, journal running/queued counts, capabilities.json role/capability/tier declarations and models.json into one capability matrix, then reports which resources are eligible for a requirement and why the rest are not. Matching never branches on a provider or lane name; undeclared resources serve the implementer role on every tier, the same contract dispatchd applies today. It does not change dispatchd lane admission. Declare resources in capabilities.json beside the queue directory ({ \"schema\": \"fleet.capabilities.v1\", \"resources\": { \"<id>\": { \"roles\": [...], \"capabilities\": [...], \"tiers\": [...] } } }); absent or invalid declarations fall back to the implementer default and are counted in capabilitiesDropped.",
+  },
   fleet: {
     subcommandExtras: {
       waste: {
@@ -528,6 +536,7 @@ const COMMAND_ORDER = [
   "fleet-stream",
   "fleet-graph",
   "fleet-bets",
+  "fleet-match",
   "fleet",
   "exec",
   "swap",

@@ -23,6 +23,7 @@ and `fleet-waste` also run nested as `stack fleet collisions|slo|waste`.
 | `fleet-lag` | Report per-repo commits since latest tag, tag age and median merge time for the last 20 PRs. |
 | `fleet-lanes` | Report lane targets, running and queued work, and dispatch idle reasons. |
 | `fleet-latency` | Report per-repo median and p90 open-to-merge seconds for PRs merged in the last six hours. |
+| `fleet-match` | Map a job requirement to eligible fleet resources by role, capability, tier, quota and availability. |
 | `fleet-reds` | List failed jobs and first failing tests in the latest completed schedule/push CI runs. |
 | `fleet-silent` | Name silent fleet failures in author, dispatch and job logs (read-only JSON). |
 | `fleet-slo` | Compare per-repo six-hour merges, open-to-merge latency and conflicting PRs with fleet SLO targets. |
@@ -45,6 +46,8 @@ and `fleet-waste` also run nested as `stack fleet collisions|slo|waste`.
 - **fleet-lag** — `--json`.
 - **fleet-lanes** — `--json`, `--queue`.
 - **fleet-latency** — `--json`.
+- **fleet-match** — `--json`, `--queue`, `--role`, `--capability`, `--tier`,
+  `--job`, `--capabilitiesFile`, `--modelsFile`.
 - **fleet-reds** — `--json`.
 - **fleet-silent** — `--runs`, `--json`.
 - **fleet-slo** — `--json`.
@@ -57,5 +60,20 @@ and `fleet-waste` also run nested as `stack fleet collisions|slo|waste`.
 it appends a request to `fleet-act.audit.jsonl` for a dispatcher consumer and
 never interpolates input into a shell. Everything else is read-only. Never put
 secrets in `--message` or other argument strings.
+
+`fleet-match` is the additive capability-matrix layer for the resource-agnostic
+scheduler: it joins `slots.json` quota, journal running/queued counts,
+`capabilities.json` role/capability/tier declarations and `models.json` into one
+report, then — given `--role`, `--capability`/`--tier`, or `--job` — lists which
+resources are eligible and why the rest are not (`missing-role:<role>`,
+`missing-capability:<tag>`, `tier-unsupported:<tier>`, `held`, `fleet-hold`,
+`fleet-at-capacity`, `at-capacity`). Matching never branches on a provider or
+lane name; undeclared resources serve the `implementer` role on every tier, the
+same contract dispatchd applies today. It does not change dispatchd's lane
+admission — it reports what a capability-driven scheduler would see. Declare
+resources in `capabilities.json` beside the queue directory
+(`{ "schema": "fleet.capabilities.v1", "resources": { "<id>": { "roles": [...],
+"capabilities": [...], "tiers": [...] } } }`); absent or invalid declarations
+fall back to the implementer default and are counted in `capabilitiesDropped`.
 
 For authoring and reviewing fleet jobs, see [Fleet job prompts](fleet-job-prompts.md).

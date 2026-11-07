@@ -3,7 +3,14 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const entry = fileURLToPath(new URL("../index.ts", import.meta.url));
-const commands = ["fleet-act", "fleet-stream", "fleet-graph", "fleet-bets", "fleet-lanes"];
+const commands = [
+  "fleet-act",
+  "fleet-stream",
+  "fleet-graph",
+  "fleet-bets",
+  "fleet-lanes",
+  "fleet-match",
+];
 
 function cli(...args: string[]) {
   const result = spawnSync(process.execPath, [entry, ...args], {
@@ -39,7 +46,18 @@ for (const command of commands) {
           ? ["--json", "--queue", "--router", "--ready", "--metrics", "--src"]
           : command === "fleet-lanes"
             ? ["--json", "--queue"]
-            : ["--json", "--queue", "--router"])
+            : command === "fleet-match"
+              ? [
+                  "--json",
+                  "--queue",
+                  "--role",
+                  "--capability",
+                  "--tier",
+                  "--job",
+                  "--capabilitiesFile",
+                  "--modelsFile",
+                ]
+              : ["--json", "--queue", "--router"])
       expect(help).toContain(flag);
   });
 }
