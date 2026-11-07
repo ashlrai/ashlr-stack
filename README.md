@@ -181,6 +181,7 @@ This checkout registers <!-- fresh:begin command-count -->44<!-- fresh:end --> t
 | `stack fleet-act` | Preview fleet requests; --apply appends a v1 audit request for a dispatcher consumer. |
 | `stack fleet-stream` | Translate fleet logs to typed NDJSON or localhost SSE. |
 | `stack fleet-graph` | Emit schema-versioned fleet pool, job, and repository nodes and edges. |
+| `stack fleet-gc` | Dry-run report classifying fleet worktrees as preserved or collect-candidates (read-only). |
 | `stack fleet-bets` | Score leader bets: join queue ledger ids with dispatch state and job outcomes for per-bet status and per-lane merged rate. |
 | `stack fleet-match` | Map a job requirement to eligible fleet resources by capability, quota and availability. |
 | `stack fleet` | Show repository CI, open PR counts, and dispatcher lane status. |
