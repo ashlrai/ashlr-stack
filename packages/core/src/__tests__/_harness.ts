@@ -3,6 +3,26 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { __resetPhantomCache } from "../phantom.ts";
 
+/** Install a source-owned fake executable with an interpreter-appropriate target. */
+export function writeShimmedExecutable(
+  dir: string,
+  name: string,
+  script: string,
+  ext = "sh",
+): string {
+  const realPath = join(dir, `${name}.${ext}`);
+  const binPath = join(dir, name);
+  writeFileSync(realPath, script);
+  chmodSync(realPath, 0o700);
+  try {
+    symlinkSync(realPath, binPath);
+  } catch {
+    writeFileSync(binPath, script);
+    chmodSync(binPath, 0o700);
+  }
+  return binPath;
+}
+
 /**
  * Fake `phantom` binary for integration tests. Writes a bash script into a
  * tmpdir, prepends that tmpdir to PATH, and exposes helpers to inspect the
@@ -163,20 +183,7 @@ case "\${1:-}" in
     ;;
 esac
 `;
-  const binPath = join(dir, "phantom");
-  // Sandboxed runners and macOS Gatekeeper's provenance policy refuse to
-  // exec an extensionless file written by a non-platform process, while a
-  // `*.sh` target passes the check. Write the shim as `phantom.sh` and link
-  // `phantom` at it; fall back to the direct file where symlinks fail.
-  const realPath = join(dir, "phantom.sh");
-  writeFileSync(realPath, script);
-  chmodSync(realPath, 0o755);
-  try {
-    symlinkSync(realPath, binPath);
-  } catch {
-    writeFileSync(binPath, script);
-    chmodSync(binPath, 0o755);
-  }
+  writeShimmedExecutable(dir, "phantom", script);
 
   const previousPath = process.env.PATH ?? "";
   process.env.PATH = `${dir}:${previousPath}`;
