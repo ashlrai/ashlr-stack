@@ -1,5 +1,7 @@
 # Fleet commands
 
+For the machinery and its verification limits, see the [fleet architecture map](fleet-architecture.md).
+
 The `stack fleet-*` commands report on the Ashlr build fleet: dispatch lanes,
 job outcomes, CI health and release lag. Most read from `~/.ashlr-runs`; the
 GitHub-backed reports reach GitHub through Locus. Every command accepts
