@@ -55,3 +55,5 @@ and `fleet-waste` also run nested as `stack fleet collisions|slo|waste`.
 it appends a request to `fleet-act.audit.jsonl` for a dispatcher consumer and
 never interpolates input into a shell. Everything else is read-only. Never put
 secrets in `--message` or other argument strings.
+
+For authoring and reviewing fleet jobs, see [Fleet job prompts](fleet-job-prompts.md).
