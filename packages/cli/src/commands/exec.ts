@@ -40,7 +40,7 @@ export function shouldRelaySignal(signal: NodeJS.Signals, onTerminal: boolean): 
  * exit code; map it to the shell convention 128 + signal number so callers
  * never read a killed command as success.
  */
-export function exitCodeFor(code: number | null, signal: NodeJS.Signals | null): number {
+function exitCodeFor(code: number | null, signal: NodeJS.Signals | null): number {
   if (code !== null) return code;
   if (signal) return 128 + (constants.signals[signal] ?? 0);
   return 1;

@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { defineCommand } from "citty";
 
-export type FleetEvent = {
+type FleetEvent = {
   schemaVersion: 1;
   type: "dispatch" | "job";
   event: string;

@@ -24,7 +24,7 @@ import { colors } from "../ui.ts";
  * fields may be added but existing ones must not change meaning.
  * Secret *names* only — never values.
  */
-export interface StatusReport {
+interface StatusReport {
   schema: "ashlr.stack.status/v1";
   config: {
     present: boolean;
@@ -95,7 +95,7 @@ export interface StatusDeps {
   countSecrets: (timeoutMs: number) => Promise<number | null>;
 }
 
-export function defaultStatusDeps(): StatusDeps {
+function defaultStatusDeps(): StatusDeps {
   return {
     hasConfig: () => hasConfig(),
     readConfig: () => readConfig(),

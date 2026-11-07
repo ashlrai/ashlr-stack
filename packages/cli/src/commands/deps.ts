@@ -8,7 +8,7 @@ import { colors, intro, outro } from "../ui.ts";
  * Services whose provider is not in the registry are listed in `unresolved`
  * (the human graph omits them) but still count toward `totals`.
  */
-export interface DepsReport {
+interface DepsReport {
   schema: "ashlr.stack.deps/v1";
   project_id: string | null;
   template: string | null;

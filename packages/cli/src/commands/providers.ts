@@ -18,7 +18,7 @@ interface ProviderRow {
  * that category; `unavailable` still lists every load failure, since a
  * provider that failed to load has no known category.
  */
-export interface ProvidersReport {
+interface ProvidersReport {
   schema: "ashlr.stack.providers/v1";
   category: string | null;
   total: number;
@@ -30,7 +30,7 @@ export interface ProvidersReport {
 const CATEGORIES = PROVIDER_CATEGORIES.map((c) => c.toLowerCase());
 
 /** The provider category matching `input` in any case, or null. */
-export function resolveCategory(input: string): string | null {
+function resolveCategory(input: string): string | null {
   const wanted = input.trim().toLowerCase();
   return CATEGORIES.find((c) => c === wanted) ?? null;
 }
@@ -39,7 +39,7 @@ export function unknownCategoryMessage(input: string): string {
   return `Unknown category "${input}". Use one of: ${CATEGORIES.join(", ")}`;
 }
 
-export async function buildProvidersReport(category?: string): Promise<ProvidersReport> {
+async function buildProvidersReport(category?: string): Promise<ProvidersReport> {
   const names = listProviderNames();
   const providers: ProviderRow[] = [];
   const unavailable: string[] = [];

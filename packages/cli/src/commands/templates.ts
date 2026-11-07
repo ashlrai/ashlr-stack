@@ -15,7 +15,7 @@ import { colors, intro, outro, outroError, prompts, spinnerBridge } from "../ui.
  * Stable machine shape for `stack templates list --json`. Fields may be added
  * but existing ones must not change meaning. Secret *names* only.
  */
-export interface TemplatesReport {
+interface TemplatesReport {
   schema: "ashlr.stack.templates/v1";
   total: number;
   templates: Array<{
@@ -24,7 +24,7 @@ export interface TemplatesReport {
   }>;
 }
 
-export async function buildTemplatesReport(): Promise<TemplatesReport> {
+async function buildTemplatesReport(): Promise<TemplatesReport> {
   const templates: TemplatesReport["templates"] = [];
   for (const name of listTemplates()) {
     const template = await loadTemplate(name);

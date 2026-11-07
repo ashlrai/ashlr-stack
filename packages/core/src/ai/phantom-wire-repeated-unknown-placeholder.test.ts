@@ -1,7 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it, setDefaultTimeout } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { type Harness, setupFakePhantom } from "../__tests__/_harness.ts";
 import { webhookStubFor } from "./phantom-wire.ts";
 

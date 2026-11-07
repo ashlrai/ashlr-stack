@@ -83,7 +83,7 @@ export function installTable(): InstallTool[] {
 }
 
 /** `phm doctor` is the last, read-only step; exit 1 for optional companions is expected. */
-export const PHM_DOCTOR_ARGV = ["phm", "doctor"];
+const PHM_DOCTOR_ARGV = ["phm", "doctor"];
 export const PHM_DOCTOR_NOTE =
   "exit 1 is expected while optional companions (locus, a local model) are missing";
 

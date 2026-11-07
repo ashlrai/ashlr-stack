@@ -36,7 +36,7 @@ import { checkEcosystem, ecosystemNextSteps, formatEcosystem } from "../lib/ecos
 import { requirePhantom } from "../lib/phantom-preflight.ts";
 import { colors, intro, logEvent, outro, outroError, prompts, spinnerBridge } from "../ui.ts";
 
-export interface ServiceCheck {
+interface ServiceCheck {
   name: string;
   status: "ok" | "warn" | "error" | "unchecked";
   detail?: string;
@@ -54,10 +54,10 @@ interface DoctorReport {
  * healthcheck that needs a stored token cannot read it from here. Such a
  * service is reported `unchecked` (stored, not verified), never "missing".
  */
-export const UNREADABLE_DETAIL =
+const UNREADABLE_DETAIL =
   "stored in Phantom; live check skipped because Phantom reveals values only in an attached terminal (run `phantom validate --check-all` there)";
 
-export interface ReconcileReport {
+interface ReconcileReport {
   configured: string[];
   detected: string[];
   orphans: string[];
@@ -483,7 +483,7 @@ async function runDoctor(
  * One service's doctor verdict. `inventory` is the set of names in the
  * Phantom vault, or undefined when it could not be read.
  */
-export async function checkService(
+async function checkService(
   name: string,
   entry: ServiceEntry,
   ctx: ProviderContext,
