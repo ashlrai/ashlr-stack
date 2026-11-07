@@ -12,7 +12,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { writeShimmedExecutable } from "../../../core/src/__tests__/_harness.ts";
+import { writePhantomShim } from "./_phantom-shim.ts";
 
 /**
  * Regression: running `stack apply` twice with a secret missing from Phantom
@@ -118,9 +118,8 @@ try {
     const calls = join(home, "phantom-calls");
     mkdirSync(bin);
     // Fake vault: empty, and records every subcommand so writes are detectable.
-    writeShimmedExecutable(
+    writePhantomShim(
       bin,
-      "phantom",
       `#!/bin/sh
 echo "$@" >> '${calls}'
 case "$1" in

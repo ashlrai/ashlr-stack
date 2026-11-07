@@ -103,6 +103,7 @@ try {
       env: { ...process.env, HOME: home, USERPROFILE: home, NO_COLOR: "1", CI: "1" },
       timeout: 20_000,
     });
+    if (result.status !== 0) console.error(result.stdout, result.stderr);
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("edge applied.");
 

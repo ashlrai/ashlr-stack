@@ -1,6 +1,15 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  lstatSync,
+  mkdtempSync,
+  readFileSync,
+  readlinkSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -20,6 +29,38 @@ function tmp(prefix: string): string {
   created.push(d);
   return d;
 }
+
+describe("shared executable fixture", () => {
+  test("executes a linked mjs target with literal arguments", () => {
+    const dir = tmp("stack-shim-js-");
+    const script = `#!${process.execPath}\nconsole.log(JSON.stringify(process.argv.slice(2)));\n`;
+    const executable = writeShimmedExecutable(dir, "locus", script, "mjs");
+    expect(lstatSync(executable).isSymbolicLink()).toBe(true);
+    expect(readlinkSync(executable)).toBe(join(dir, "locus.mjs"));
+    expect(statSync(join(dir, "locus.mjs")).mode & 0o777).toBe(0o700);
+    const args = ["a b", 'quote"and\\slash', "line\nbreak", "$(literal)"];
+    const result = spawnSync(executable, args, { encoding: "utf8" });
+    expect(result.status).toBe(0);
+    expect(JSON.parse(result.stdout)).toEqual(args);
+  });
+
+  test("installs a shell fixture and falls back to a direct executable", () => {
+    const dir = tmp("stack-shim-shell-");
+    const script = '#!/bin/sh\nprintf "%s\\n" "$@"\n';
+    const linked = writeShimmedExecutable(dir, "phantom", script);
+    expect(lstatSync(linked).isSymbolicLink()).toBe(true);
+    expect(readlinkSync(linked)).toBe(join(dir, "phantom.sh"));
+    const fallback = join(dir, "other");
+    writeFileSync(fallback, "old"); // Existing destination forces symlinkSync to fail.
+    expect(writeShimmedExecutable(dir, "other", script)).toBe(fallback);
+    expect(lstatSync(fallback).isFile()).toBe(true);
+    expect(readFileSync(fallback, "utf8")).toBe(script);
+    expect(statSync(fallback).mode & 0o777).toBe(0o700);
+    const result = spawnSync(fallback, ["literal argument", "$(literal)"], { encoding: "utf8" });
+    expect(result.status).toBe(0);
+    expect(result.stdout).toBe("literal argument\n$(literal)\n");
+  });
+});
 
 /** A `phantom` that answers --version and runs `exec -- cmd` directly. */
 function fakePhantomDir(): string {

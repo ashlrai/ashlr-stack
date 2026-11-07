@@ -120,6 +120,7 @@ for (const rollback of [false, true]) {
   test(`real subprocess health checks ${rollback ? "roll back" : "accept"} a staged fixture`, async () => {
     // Only npm is replaced. The production runner executes real CLI processes and
     // the real filesystem transaction, without network access or global writes.
+    // Resolve Node through the same PATH as production; a raw shebang cannot quote spaces.
     const cli = (version: string) => `
 const active = process.argv[1] === ${JSON.stringify(join(target, "dist/index.js"))};
 if (${rollback} && active && ${JSON.stringify(version)} === "0.3.0") process.exit(1);
@@ -130,7 +131,7 @@ console.log(process.argv.includes("--version")
     const npm = join(prefix, "bin/npm");
     await writeFile(
       npm,
-      `#!${Bun.which("node")}
+      `#!/usr/bin/env node
 const fs = require("node:fs");
 const path = require("node:path");
 const args = process.argv.slice(2);
