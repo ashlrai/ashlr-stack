@@ -85,7 +85,7 @@ test("representative documented examples run in an isolated project", async () =
     ["scan", "--json"],
     ["list", "--json"],
     ["deps", "--json"],
-    ["fleet-act", "pause", "--lane", "codex-personal", "--json"],
+    ["fleet-act", "pause", "--lane", "worker-1", "--json"],
     ["templates", "list", "--json"],
     ["providers", "--json"],
     ["projects", "list", "--json"],
