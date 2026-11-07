@@ -1,6 +1,6 @@
 # Proposal: safe fleet worktree GC
 
-Status: design only. No collector, quarantine operation, or deletion is implemented here. The `worktrees 695 > 40` warning is a count signal, not evidence that any particular directory is safe to remove. This proposal covers job worktrees directly under `~/Projects/ashlrai/wt/`; it does not authorize changes to other worktree pools.
+Status: report-only slice implemented as `stack fleet-gc` (`packages/cli/src/lib/fleet-gc.ts`), which inventories the worktree root, reconciles fleet markers and git registrations, and emits a schema-versioned dry-run JSON classification (`preserve` with reasons vs `collect-candidate` with evidence basis). It never deletes or moves anything; collection stays with the dispatcher's lock-aware reapers. No quarantine operation or deletion is implemented. The `worktrees 695 > 40` warning is a count signal, not evidence that any particular directory is safe to remove. This proposal covers job worktrees directly under `~/Projects/ashlrai/wt/`; it does not authorize changes to other worktree pools.
 
 ## Current boundaries
 

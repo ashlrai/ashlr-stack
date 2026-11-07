@@ -20,6 +20,7 @@ and `fleet-waste` also run nested as `stack fleet collisions|slo|waste`.
 | `fleet-collisions` | Rank touched files by open conflicting PR count from one repository's gh JSON. |
 | `fleet-delivery-lag` | Report undeployed merged commits and merge wait from a read-only JSON fixture. |
 | `fleet-graph` | Emit schema-versioned fleet pool, job, and repository nodes and edges. |
+| `fleet-gc` | Dry-run report classifying fleet worktrees as preserved or collect-candidates. |
 | `fleet-lag` | Report per-repo commits since latest tag, tag age and median merge time for the last 20 PRs. |
 | `fleet-lanes` | Report lane targets, running and queued work, and dispatch idle reasons. |
 | `fleet-latency` | Report per-repo median and p90 open-to-merge seconds for PRs merged in the last six hours. |
@@ -42,6 +43,9 @@ and `fleet-waste` also run nested as `stack fleet collisions|slo|waste`.
   `--json`.
 - **fleet-delivery-lag** — `--fixture` (required JSON snapshot), `--json`.
 - **fleet-graph** — `--json`, `--queue`, `--router`.
+- **fleet-gc** — `--json`, `--root`, `--runs`, `--queue`, `--reapIdleHours`,
+  `--emptyIdleHours`, `--budgetSeconds`, `--ghBin`, `--lsofBin`, `--ghMax`,
+  `--dryRun`. Always dry-run; there is no mutating mode.
 - **fleet-lag** — `--json`.
 - **fleet-lanes** — `--json`, `--queue`.
 - **fleet-latency** — `--json`.

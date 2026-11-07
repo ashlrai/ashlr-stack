@@ -42,6 +42,7 @@ are separate effects. A child command run through `exec` can do anything.
 | `fleet-act` | Preview a dispatcher request. | `stack fleet-act pause --lane worker-1 --json` | `--apply` appends an audit request for a dispatcher consumer; it does not execute the request. |
 | `fleet-stream` | Translate fleet logs into NDJSON or SSE. | `stack fleet-stream --dispatch dispatch-events.log --jobs jobs.jsonl` | Reads logs; `--sse` opens a localhost listener and `--follow` keeps running. |
 | `fleet-graph` | Report fleet nodes and relationships. | `stack fleet-graph --json` | Read. |
+| `fleet-gc` | Report stale fleet worktrees as dry-run collect-candidates. | `stack fleet-gc --json` | Read. |
 | `fleet-bets` | Report leader bet outcomes. | `stack fleet-bets --json` | Read. |
 | `fleet` | Summarize fleet status. | `stack fleet --json` | Read via Locus; also offers `slo`, `collisions`, and `waste`. |
 | `exec` | Run a command through Phantom. | `stack exec -- bun test` | The child command can change state. |
