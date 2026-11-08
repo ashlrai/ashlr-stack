@@ -76,3 +76,4 @@ export {
 } from "./ai/cost-tracker.ts";
 export * from "./agent-onboard.ts";
 export * from "./fleet/capability-matrix.ts";
+export * from "./fleet/job-run.ts";
