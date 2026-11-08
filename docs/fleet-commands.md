@@ -6,8 +6,9 @@ The `stack fleet-*` commands report on the Ashlr build fleet: dispatch lanes,
 job outcomes, CI health and release lag. Lanes, pools and roles such as leader
 and dispatcher are resource-agnostic — any connected model, company or runner
 can hold them. Most read from `~/.ashlr-runs`; the GitHub-backed reports reach
-GitHub through Locus. Every command accepts `--json` for a `schemaVersion 1`
-report. Sources are the `defineCommand` meta and args in
+GitHub through Locus. The report commands accept `--json` for a `schemaVersion 1` report.
+`fleet-stream` instead emits newline-delimited JSON, or localhost SSE with `--sse`;
+it does not accept `--json`. Sources are the `defineCommand` meta and args in
 `packages/cli/src/commands/fleet-*.ts`, tested by
 `packages/cli/src/commands/fleet-docs.test.ts`. Run
 `stack <command> --help` for current syntax. `fleet-collisions`, `fleet-slo`
