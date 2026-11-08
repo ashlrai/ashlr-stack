@@ -16,6 +16,19 @@
 
 - Setup, README and package READMEs separate the source version from the recorded npm publication (0.3.1 for `@ashlr/stack-core`, `@ashlr/stack` and `ashlr-stack-mcp`) and state that the published CLI and MCP packages declare Node.js 20 or newer. Source development uses Bun (#356, #361, #363).
 
+## 0.3.9 (2026-11-08)
+
+### Added
+
+- `stack fleet match` matches jobs to agent capabilities, and `stack fleet gc` reports stale worktrees for review.
+- Core exports fleet capability matching and job-run observability helpers.
+- Fleet documentation covers recovery, local models, release status, repository hygiene, and job prompts.
+
+### Fixed
+
+- HTTP response handling and fleet command output receive robustness improvements.
+- CI coverage and release checks receive maintenance fixes.
+
 ## 0.3.8 (2026-11-07)
 
 ### Changed
