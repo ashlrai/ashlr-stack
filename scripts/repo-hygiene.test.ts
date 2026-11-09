@@ -320,6 +320,42 @@ test("CLI counts each supported marker in a tracked source file", async () => {
   }
 });
 
+test("CLI reports zero unused import files for a clean fixture", async () => {
+  const { chmod, mkdir, mkdtemp, readFile, rm, writeFile } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const { spawnSync } = await import("node:child_process");
+  const dir = await mkdtemp(join(tmpdir(), "hygiene-clean-imports-"));
+  try {
+    const bin = join(dir, "bin");
+    const root = join(dir, "repos");
+    const repo = join(root, "clean-fixture");
+    await mkdir(bin);
+    await mkdir(repo, { recursive: true });
+    expect(spawnSync("git", ["init", "-q", repo]).status).toBe(0);
+    await writeFile(join(repo, "source.ts"), 'import { value } from "./value";\nconsole.log(value);\n');
+    await writeFile(join(repo, "value.ts"), "export const value = 42;\n");
+    expect(spawnSync("git", ["-C", repo, "add", "."]).status).toBe(0);
+    await writeFile(join(bin, "gh"), "#!/bin/sh\necho public\n");
+    await chmod(join(bin, "gh"), 0o755);
+    const md = join(dir, "report.md");
+    const result = spawnSync(process.execPath, [join(import.meta.dir, "repo-hygiene.ts"), "--root", root, "--json", "--md", md], {
+      env: { ...process.env, PATH: `${bin}:${process.env.PATH}` },
+      encoding: "utf8",
+    });
+    expect(result.status).toBe(0);
+    const json = JSON.parse(result.stdout);
+    expect(json.repos).toHaveLength(1);
+    expect(json.repos[0].deadCode.unusedImportFiles).toBe(0);
+    expect(json.repos[0].deadCode.unusedImports).toBe(0);
+    const markdown = await readFile(md, "utf8");
+    expect(markdown).toContain("0 files with fully-unused imports (0 statements)");
+    expect(markdown).not.toMatch(/(?:undefined|null) files with fully-unused imports/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test("CLI excludes private, unknown and failed visibility checks from JSON and Markdown", async () => {
   const { mkdtemp, mkdir, readFile, rm, writeFile, chmod } = await import("node:fs/promises");
   const { tmpdir } = await import("node:os");
