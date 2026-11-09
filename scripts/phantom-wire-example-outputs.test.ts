@@ -14,6 +14,27 @@ const applySource = readFileSync(
 );
 
 describe("Phantom wire example outputs", () => {
+  it("generates identical reminder text when the same recipe is wired twice", async () => {
+    const harness = setupFakePhantom({});
+    try {
+      const recipe = {
+        id: "repeat-outputs",
+        query: "",
+        createdAt: "",
+        providers: ["stripe", "clerk", "supabase", "github"].map((name) => ({ name })),
+      };
+      const first = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
+      expect(first.webhooks).toHaveLength(recipe.providers.length);
+      const reminders = first.webhooks.map((path) => readFileSync(path, "utf8"));
+
+      const second = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
+      expect(second.webhooks).toEqual(first.webhooks);
+      expect(second.webhooks.map((path) => readFileSync(path, "utf8"))).toEqual(reminders);
+    } finally {
+      harness.cleanup();
+    }
+  });
+
   it("keeps the documented outputs aligned with the wiring result and generated examples", async () => {
     const providers = ["stripe", "clerk", "supabase", "github"];
     const harness = setupFakePhantom({ STRIPE_SECRET_KEY: "test-value" });
