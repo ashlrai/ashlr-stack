@@ -392,3 +392,35 @@ test("TODO_MARKER_PATTERN ignores marker words embedded in longer identifiers", 
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+test("gitGrepCount counts FIXME, XXX and HACK lines and excludes words containing a marker", async () => {
+  const { mkdtemp, rm, writeFile } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const { spawnSync } = await import("node:child_process");
+  const dir = await mkdtemp(join(tmpdir(), "repo-hygiene-markers-all-"));
+  try {
+    expect(spawnSync("git", ["init", "-q", dir]).status).toBe(0);
+    await writeFile(
+      join(dir, "mixed.ts"),
+      [
+        "// FIXME: handle the empty case",
+        "// XXX: revisit this",
+        "// HACK: upstream workaround",
+        "const FIXMEs = 1;",
+        "const XXXL = 2;",
+        "const HACKER = 3;",
+        "const unHACKed = 4;",
+        "const my_XXX_id = 5;",
+        "",
+      ].join("\n"),
+    );
+    await writeFile(join(dir, "substrings-only.ts"), "const FIXMEs = 1;\nconst XXXL = 2;\nconst HACKER = 3;\n");
+    expect(spawnSync("git", ["-C", dir, "add", "."]).status).toBe(0);
+
+    await expect(gitGrepCount(dir, TODO_MARKER_PATTERN, ["mixed.ts"])).resolves.toBe(3);
+    await expect(gitGrepCount(dir, TODO_MARKER_PATTERN, ["substrings-only.ts"])).resolves.toBe(0);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
