@@ -57,6 +57,14 @@ test("node:test expected TODO failures do not hide the first real failing test",
     ),
   ).toBe("real failure");
 });
+test("node:test reports the first of two real failing tests", () => {
+  const log = [
+    "✖ expected failure (1ms) # TODO",
+    "✖ rejects expired tokens (2ms)",
+    "✖ rejects invalid signatures (3ms)",
+  ].join("\n");
+  expect(firstFailingTest(log)).toBe("rejects expired tokens");
+});
 test("a ✖ failure marked TODO is excluded from reported failures", () => {
   const ts = "Tests\tRun\t2026-11-09T05:00:00.0000000Z ";
   // Only TODO-marked failures: nothing to report.
