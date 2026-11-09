@@ -29,6 +29,7 @@ test("history cites the changelog in chronological order", () => {
 test("history distinguishes failed attempts, their removal and current operation", () => {
   const history = doc.split("## Current behavior")[0].replace(/\s+/g, " ");
   const fix = changelog.split("## 0.2.1 (2026-10-16)")[1].split("\n## ")[0];
+  expect(fix).toMatch(/Previously, wiring ran `phantom add <KEY> TODO_STACK_APPLY --rotate`[^.]*\. Phantom Secrets refuses values in argv and has no `--rotate`, so every call failed/);
   for (const detail of ["`phantom add <KEY> TODO_STACK_APPLY --rotate`", "`WireResult.envelopes`", "`present` and `missing`"]) {
     expect(fix).toContain(detail);
     expect(history).toContain(detail);
