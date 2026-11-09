@@ -3,7 +3,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DOCTOR_REPOS, type GhRunner } from "../lib/doctor-repos.ts";
-import { collectFleetReds, firstFailingTest } from "./fleet-reds.ts";
+import { collectFleetReds, failingTests, firstFailingTest } from "./fleet-reds.ts";
 
 const fixtures = [
   [
@@ -127,6 +127,37 @@ test("one SKIP-marked failure and one unmarked failure report only the unmarked 
     // A lone SKIP-marked failure reports nothing.
     expect(firstFailingTest(skipped)).toBeNull();
   }
+});
+
+test("mixed multiline TAP keeps unmarked failures in order and drops TODO and SKIP lines", () => {
+  const tap = [
+    "TAP version 13",
+    "# Subtest: auth",
+    "    not ok 1 - rejects expiry",
+    "      ---",
+    "      error: 'not ok 99 - assertion body, not a failure'",
+    "      ...",
+    "    not ok 2 - known gap # TODO not implemented yet",
+    "    ok 3 - passing",
+    "    not ok 4 - flaky on windows # SKIP no tty",
+    "    not ok 5 - rotates keys # todo",
+    "    not ok 6 - handles #TODOS",
+    "not ok 7 - auth suite",
+    "ok 8 - other suite # SKIP",
+    "not ok 9 - last failure",
+    "1..9",
+  ].join("\n");
+  const expected = ["rejects expiry", "handles #TODOS", "auth suite", "last failure"];
+  expect(failingTests(tap)).toEqual(expected);
+  expect(firstFailingTest(tap)).toBe("rejects expiry");
+  // Same log as GitHub prints it: timestamp prefix, ANSI colour, CRLF.
+  const gh = tap
+    .split("\n")
+    .map((line) => `Test job\tRun tests\t2026-11-09T05:00:00.0000000Z \x1b[31m${line}\x1b[0m`)
+    .join("\r\n");
+  expect(failingTests(gh)).toEqual(expected);
+  // Only marked failures: nothing to report.
+  expect(failingTests("not ok 1 - a # TODO\nnot ok 2 - b # SKIP\n")).toEqual([]);
 });
 
 const job = (id: number, conclusion = "failure") => ({ id, name: `Tests ${id}`, conclusion });
