@@ -62,6 +62,20 @@ test("two entries under one version retain source order", () => {
   ]);
 });
 
+test("a colon and inline code stay in one complete entry", () => {
+  const entry = "Configure `stack add`: pass `--url=https://example.com` to connect.";
+  const markdown = ["## 1.2.3 (2026-11-09)", "### Added", "- Before.", `- ${entry}`, "- After."].join("\n");
+
+  for (const input of [markdown, markdown.replace(/\n/g, "\r\n")]) {
+    expect(parseChangelog(input)).toEqual([
+      { version: "1.2.3", date: "2026-11-09", entries: ["Before.", entry, "After."] },
+    ]);
+    expect(sectionEntries(input)).toEqual([
+      { version: "## 1.2.3 (2026-11-09)", section: "Added", entries: ["Before.", entry, "After."] },
+    ]);
+  }
+});
+
 test("fenced version headings and entries do not affect real versions", () => {
   for (const fence of ["```", "~~~"]) {
     const markdown = [
@@ -528,6 +542,7 @@ test("unicode fixture keeps every parsed entry's characters and code points inta
   const md = read("./__fixtures__/changelog-unicode.md");
   const entries = {
     pending: "Café ☕ — naïve, “smart quotes”, ‘ticks’",
+    cafe: "Café résumé is ready ☕",
     cjkEmoji: "日本語のメモ: プロバイダーを追加 🚀 👩‍💻",
     rtl: "مرحبا بالعالم — שלום עולם",
     greek: "Ελληνικά: αβγδ → ✓ done",
@@ -536,7 +551,7 @@ test("unicode fixture keeps every parsed entry's characters and code points inta
   };
   expect(parseChangelog(md)).toEqual([
     { version: null, date: null, entries: [entries.pending] },
-    { version: "0.3.0", date: "2026-10-31", entries: [entries.cjkEmoji, entries.rtl, entries.greek, entries.accents] },
+    { version: "0.3.0", date: "2026-10-31", entries: [entries.cafe, entries.cjkEmoji, entries.rtl, entries.greek, entries.accents] },
     { version: "0.2.0", date: "2026-04-23", entries: [entries.cyrillic] },
   ]);
   // CRLF line endings must not disturb non-ASCII text either.
