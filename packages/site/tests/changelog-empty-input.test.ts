@@ -70,3 +70,11 @@ test("empty fixture yields no entries or sections, and no list items at all", ()
   expect(entriesBySection(fixture)).toEqual({});
   expect(marked.lexer(fixture).flatMap((t) => (t.type === "list" ? t.items : []))).toEqual([]);
 });
+
+test("a version heading without list items is recognized with no entries", () => {
+  const markdown = "# Changelog\n\n## 1.2.3\n";
+
+  expect(versionHeadings(markdown)).toEqual(["1.2.3"]);
+  expect(entriesBySection(markdown)).toEqual({ "1.2.3": {} });
+  expect(marked.lexer(markdown).flatMap((t) => (t.type === "list" ? t.items : []))).toEqual([]);
+});
