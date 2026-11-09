@@ -57,6 +57,18 @@ test("node:test expected TODO failures do not hide the first real failing test",
     ),
   ).toBe("real failure");
 });
+test("a ✖ failure marked TODO is excluded from reported failures", () => {
+  const ts = "Tests\tRun\t2026-11-09T05:00:00.0000000Z ";
+  // Only TODO-marked failures: nothing to report.
+  expect(firstFailingTest("✖ known broken (1.2ms) # TODO")).toBeNull();
+  // GitHub log timestamp and ANSI colour do not defeat the marker.
+  expect(firstFailingTest(`${ts}\u001b[31m✖ known broken (1ms) # TODO\u001b[39m`)).toBeNull();
+  expect(firstFailingTest(`${ts}✗ known broken # TODO\n${ts}✖ real failure (2ms)`)).toBe(
+    "real failure",
+  );
+  // The marker only exempts its own line; a later unmarked ✖ still reports.
+  expect(firstFailingTest("✖ a # TODO\n✖ b # TODO\n✖ c")).toBe("c");
+});
 
 const job = (id: number, conclusion = "failure") => ({ id, name: `Tests ${id}`, conclusion });
 const client: GhRunner = async (args, signal) => {
