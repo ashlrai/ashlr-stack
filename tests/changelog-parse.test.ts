@@ -35,6 +35,25 @@ export function parseChangelog(markdown: string): ChangelogVersion[] {
 
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), "utf8");
 
+test("bullets before the first version are not attached to any version", () => {
+  const preamble = ["# Changelog", "- Preamble first.", "- Preamble second."];
+  const markdown = [
+    ...preamble,
+    "## 1.2.3 (2026-11-09)",
+    "- First release entry.",
+    "## 1.2.2 (2026-11-08)",
+    "- Second release entry.",
+  ].join("\n");
+  const expected: ChangelogVersion[] = [
+    { version: "1.2.3", date: "2026-11-09", entries: ["First release entry."] },
+    { version: "1.2.2", date: "2026-11-08", entries: ["Second release entry."] },
+  ];
+
+  expect(parseChangelog(preamble.join("\n"))).toEqual([]);
+  expect(parseChangelog(markdown)).toEqual(expected);
+  expect(parseChangelog(markdown.replace(/\n/g, "\r\n"))).toEqual(expected);
+});
+
 test("two entries under one version retain source order", () => {
   const markdown = ["## 1.2.3 (2026-11-09)", "- Zebra change.", "- Alpha change."].join("\n");
 
