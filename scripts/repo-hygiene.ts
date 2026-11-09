@@ -745,7 +745,7 @@ async function gitGrepFiles(repo: string, pattern: string, pathspecs: string[]):
   }
 }
 
-async function gitGrepLines(
+export async function gitGrepLines(
   repo: string,
   pattern: string,
   pathspecs: string[],

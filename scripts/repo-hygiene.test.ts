@@ -5,6 +5,7 @@ import {
   extractPackageSpecifiers,
   findUnusedImports,
   gitGrepCount,
+  gitGrepLines,
   packageNameOf,
   parseBunOutdated,
   parseCargoDryRun,
@@ -281,6 +282,31 @@ test("gitGrepCount finds no marker in an eligible file without marker words", as
     // Control: the same pattern does count a real marker, so the zero above is meaningful.
     await expect(gitGrepCount(dir, todoPattern, ["marked.ts"])).resolves.toBe(1);
     await expect(gitGrepCount(dir, todoPattern, ["clean.ts", "marked.ts"])).resolves.toBe(1);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("marker on the final line without a trailing newline reports its line and marker", async () => {
+  const { mkdtemp, rm, writeFile } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const { spawnSync } = await import("node:child_process");
+  const dir = await mkdtemp(join(tmpdir(), "repo-hygiene-eof-"));
+  try {
+    const gitRun = (args: string[]) =>
+      spawnSync("git", ["-C", dir, "-c", "user.name=t", "-c", "user.email=t@example.com", ...args]);
+    expect(spawnSync("git", ["init", "-q", dir]).status).toBe(0);
+    // No "\n" after the marker: the last line must still be scanned.
+    await writeFile(join(dir, "eof.ts"), "export const a = 1;\nexport const b = 2;\n// FIXME: no trailing newline");
+    expect(gitRun(["add", "."]).status).toBe(0);
+    expect(gitRun(["commit", "-q", "-m", "fixture"]).status).toBe(0);
+
+    const pattern = "(TODO|FIXME|XXX|HACK)";
+    await expect(gitGrepCount(dir, pattern, ["eof.ts"])).resolves.toBe(1);
+    await expect(gitGrepLines(dir, pattern, ["eof.ts"])).resolves.toEqual([
+      "eof.ts:3:// FIXME: no trailing newline",
+    ]);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
