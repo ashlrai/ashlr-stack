@@ -35,6 +35,26 @@ export function parseChangelog(markdown: string): ChangelogVersion[] {
 
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), "utf8");
 
+test("LF and CRLF changelogs produce the same entries without a final newline", () => {
+  const lf = [
+    "## Unreleased",
+    "- Pending change.",
+    "```md",
+    "- Not an entry.",
+    "```",
+    "## [1.2.3] (2026-11-09)",
+    "- First change.",
+    "- Last change.",
+  ].join("\n");
+  const expected: ChangelogVersion[] = [
+    { version: null, date: null, entries: ["Pending change."] },
+    { version: "1.2.3", date: "2026-11-09", entries: ["First change.", "Last change."] },
+  ];
+
+  expect(parseChangelog(lf)).toEqual(expected);
+  expect(parseChangelog(lf.replace(/\n/g, "\r\n"))).toEqual(expected);
+});
+
 test("dated version fixture returns version, date and entry for every heading style", () => {
   expect(parseChangelog(read("./__fixtures__/changelog-dated-version.md"))).toEqual([
     { version: null, date: null, entries: ["Pending entry."] },
