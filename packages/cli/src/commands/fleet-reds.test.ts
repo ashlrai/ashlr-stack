@@ -105,6 +105,27 @@ test("TODO in a failure name without a directive is reported", () => {
   );
 });
 
+test("one SKIP-marked failure and one unmarked failure report only the unmarked one", () => {
+  const ts = "Tests\tRun\t2026-11-09T05:00:00.0000000Z ";
+  for (const [skipped, unmarked] of [
+    ["not ok 1 - flaky on windows # SKIP no tty", "not ok 2 - real failure"],
+    ["✖ flaky on windows (1ms) # skip", "✖ real failure (2ms)"],
+  ] as const) {
+    // Order must not matter: the skipped line never wins, before or after the real one.
+    for (const log of [`${skipped}\n${unmarked}`, `${unmarked}\n${skipped}`]) {
+      const expected = firstFailingTest(log);
+      expect(expected).toBe("real failure");
+      const gh = log
+        .split("\n")
+        .map((line) => `${ts}\u001b[31m${line}\u001b[39m`)
+        .join("\r\n");
+      expect(firstFailingTest(gh)).toBe(expected);
+    }
+    // A lone SKIP-marked failure reports nothing.
+    expect(firstFailingTest(skipped)).toBeNull();
+  }
+});
+
 const job = (id: number, conclusion = "failure") => ({ id, name: `Tests ${id}`, conclusion });
 const client: GhRunner = async (args, signal) => {
   expect(signal).toBeInstanceOf(AbortSignal);
