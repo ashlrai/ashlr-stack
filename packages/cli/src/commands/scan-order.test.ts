@@ -66,3 +66,28 @@ test("repeated CLI scans preserve result ordering at each confidence threshold",
     rmSync(project, { recursive: true, force: true });
   }
 }, 60_000);
+
+test("an unrelated dependency adds no provider and leaves detected evidence unchanged", () => {
+  const scan = (dependencies: Record<string, string>) => {
+    const project = mkdtempSync(join(tmpdir(), "stack-scan-unrelated-"));
+    try {
+      writeFileSync(join(project, "package.json"), JSON.stringify({ dependencies }));
+      const result = spawnSync(
+        "bun",
+        [CLI_ENTRY, "scan", "--json", "--confidence", "low", "--path", project],
+        { encoding: "utf8", env: { ...process.env, CI: "1", NO_COLOR: "1" }, timeout: 15_000 },
+      );
+      expect(result.status).toBe(0);
+      expect(result.stderr).toBe("");
+      return JSON.parse(result.stdout);
+    } finally {
+      rmSync(project, { recursive: true, force: true });
+    }
+  };
+
+  const baseline = scan({ stripe: "1" });
+  expect(baseline).toEqual({
+    hits: [{ provider: "stripe", confidence: "high", sources: ["package.json:stripe"] }],
+  });
+  expect(scan({ stripe: "1", "left-pad": "1" })).toEqual(baseline);
+}, 60_000);
