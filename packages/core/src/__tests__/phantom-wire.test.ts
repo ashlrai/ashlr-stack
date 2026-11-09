@@ -6557,6 +6557,13 @@ describe("webhookStubFor — signature-verification TODO stays a comment", () =>
     "keeps the %s signature-verification TODO and its warning lines as comments",
     async (provider) => {
       const check = (stub: string) => {
+        expect(stub).toContain(
+          `//   // TODO(security): signature verification is NOT implemented here. The
+//   // header check above proves only that a signature header arrived; its
+//   // value is never compared to anything. Until this TODO is done, \`body\`
+//   // is unauthenticated, attacker-controlled input — anyone who can POST
+//   // to this endpoint can forge a ${provider} webhook.`,
+        );
         const lines = stub.split("\n");
         const warned = lines.filter((l) => /TODO|NOT implemented|unauthenticated/.test(l));
         // The TODO line plus the two warning lines that follow it.
