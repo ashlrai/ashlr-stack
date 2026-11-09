@@ -135,6 +135,22 @@ test("lists both latest completed CI events for all seven default branches and p
     });
   }
 });
+test("reports real TAP failures without reporting TODO failures", async () => {
+  const report = await collectFleetReds(async (args, signal) => {
+    if (!args.includes("--job")) return client(args, signal);
+    const todo =
+      "Test job\tRun tests\t2026-10-30T12:00:00.1234567Z not ok 1 - expected failure # TODO pending fix";
+    return args.includes("1") ? todo : `${todo}\nnot ok 2 - actual failure`;
+  });
+  for (const repo of report.repos) {
+    for (const run of repo.runs ?? []) {
+      expect(run.jobs).toEqual([
+        { name: "Tests 1", firstFailingTest: null, logStatus: "unrecognized" },
+        { name: "Tests 3", firstFailingTest: "actual failure", logStatus: "parsed" },
+      ]);
+    }
+  }
+});
 test("newer green and absent completed runs never fetch historical failures or logs", async () => {
   const report = await collectFleetReds(async (args, signal) =>
     args[1] === "list"
