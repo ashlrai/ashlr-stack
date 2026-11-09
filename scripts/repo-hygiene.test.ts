@@ -186,8 +186,12 @@ test("CLI counts code markers without counting markers in non-code files", async
       expect(spawnSync("git", ["init", "-q", repo]).status).toBe(0);
       await writeFile(join(repo, "README.md"), "TODO: documentation marker\n");
       if (name === "mixed") await writeFile(join(repo, "source.ts"), "// FIXME: code marker\nconst TODO_suffix = 1;\n");
-      if (name === "spaced-filename") await writeFile(join(repo, "source with spaces.ts"), "// TODO: standalone marker\n");
+      if (name === "spaced-filename") {
+        await writeFile(join(repo, "source with spaces.ts"), "// TODO: standalone marker\n// TODO another marker\nconst TODO_suffix = 1;\n");
+        await writeFile(join(repo, "other.js"), "// TODO\nconst MYTODOS = 1;\n");
+      }
       expect(spawnSync("git", ["-C", repo, "add", "."]).status).toBe(0);
+      if (name === "spaced-filename") await writeFile(join(repo, "untracked.ts"), "// TODO: untracked\n");
     }
     const gh = join(bin, "gh");
     await writeFile(gh, "#!/bin/sh\necho public\n");
@@ -204,7 +208,7 @@ test("CLI counts code markers without counting markers in non-code files", async
         repo.deadCode.todoFixmeCount,
       ]),
     );
-    expect(counts).toEqual({ "docs-only": 0, mixed: 1, "spaced-filename": 1 });
+    expect(counts).toEqual({ "docs-only": 0, mixed: 1, "spaced-filename": 3 });
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
