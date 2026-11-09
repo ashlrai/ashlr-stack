@@ -78,3 +78,23 @@ test("a version heading without list items is recognized with no entries", () =>
   expect(entriesBySection(markdown)).toEqual({ "1.2.3": {} });
   expect(marked.lexer(markdown).flatMap((t) => (t.type === "list" ? t.items : []))).toEqual([]);
 });
+
+test("incomplete version headings and their entries are excluded", () => {
+  const markdown = `# Changelog
+
+## 1.2.3
+### Added
+- Complete release
+
+## 1.2
+### Added
+- Incomplete release
+
+## [2.3]
+### Fixed
+- Another incomplete release
+`;
+
+  expect(versionHeadings(markdown)).toEqual(["1.2.3"]);
+  expect(entriesBySection(markdown)).toEqual({ "1.2.3": { Added: ["Complete release"] } });
+});
