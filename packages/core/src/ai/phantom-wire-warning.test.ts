@@ -72,8 +72,10 @@ it("writes the signature warning into each generated webhook file", async () => 
       const todo = example.indexOf(
         "TODO(security): signature verification is NOT implemented here.",
       );
+      const bodyRead = example.indexOf("const body = await req.text();");
       const success = example.indexOf('return new Response("ok"');
-      expect(todo).toBeGreaterThanOrEqual(0);
+      expect(bodyRead).toBeGreaterThanOrEqual(0);
+      expect(todo).toBeGreaterThan(bodyRead);
       expect(success).toBeGreaterThan(todo);
       expect(example).toContain(
         "200 without authenticating the request. Implement verification first.",
