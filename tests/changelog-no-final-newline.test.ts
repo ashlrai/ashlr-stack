@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { parseChangelog } from "./changelog-parse.test";
 import { inlineLinks, sectionEntries, versionBodies, versionSections } from "./changelog-parser-utils";
 
 const fixture = readFileSync(new URL("./__fixtures__/changelog-no-final-newline.md", import.meta.url), "utf8");
@@ -79,4 +80,26 @@ test("two entries are retained in order without a final newline", () => {
   const doc = "## 0.1.0 (2026-04-19)\n\n### Added\n\n- First entry.\n- Second entry.";
   expect(doc.endsWith("\n")).toBe(false);
   expect(sectionEntries(doc).at(-1)?.entries).toEqual(["First entry.", "Second entry."]);
+});
+
+test("the final unterminated entry is parsed completely under its release", () => {
+  const md = [
+    "## 1.1.0 (2026-11-09)",
+    "### Added",
+    "- Earlier release.",
+    "## 1.0.0 (2026-11-01)",
+    "### Fixed",
+    "- First fix.",
+    "- Final fix with [details](docs/fix.md), café, and `code`.",
+  ].join("\n");
+
+  expect(md.endsWith("\n")).toBe(false);
+  expect(parseChangelog(md)).toEqual([
+    { version: "1.1.0", date: "2026-11-09", entries: ["Earlier release."] },
+    {
+      version: "1.0.0",
+      date: "2026-11-01",
+      entries: ["First fix.", "Final fix with [details](docs/fix.md), café, and `code`."],
+    },
+  ]);
 });
