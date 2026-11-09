@@ -28,19 +28,29 @@ function snapshot(root: string, dir = root): Record<string, string> {
 }
 
 describe("stack scan malformed manifest", () => {
-  test.each([
+  const modes: ReadonlyArray<readonly [string, readonly string[]]> = [
     ["human report", []],
     ["JSON report", ["--json"]],
     ["automatic mode", ["--auto"]],
     ["non-interactive automatic mode", ["--yes"]],
-  ])(
-    "rejects invalid JSON without changing the project in %s",
-    (_mode, flags) => {
+  ];
+  const manifests = [
+    ["trailing comma", '{"dependencies": {"openai": "^4",}}\n'],
+    ["trailing garbage", '{"dependencies": {"openai": "^4"}}\nextra\n'],
+  ] as const;
+
+  test.each(
+    manifests.flatMap(([fixture, manifest]) =>
+      modes.map(([mode, flags]) => [fixture, mode, manifest, flags] as const),
+    ),
+  )(
+    "rejects %s without changing the project in %s",
+    (_fixture, _mode, manifest, flags) => {
       for (const existingConfig of [false, true]) {
         const project = mkdtempSync(join(tmpdir(), "stack scan malformed "));
         projects.push(project);
         mkdirSync(join(project, "nested"));
-        writeFileSync(join(project, "package.json"), '{"dependencies": {"openai": "^4",}}\n');
+        writeFileSync(join(project, "package.json"), manifest);
         writeFileSync(join(project, "fly.toml"), 'app = "example"\n');
         writeFileSync(join(project, "nested", "keep.txt"), "unchanged\n");
         if (existingConfig) {
