@@ -12,7 +12,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { __resetPhantomCache, __setPhantomSpawn } from "../phantom.ts";
-import { wirePhantomForRecipe } from "./phantom-wire.ts";
+import { webhookStubFor, wirePhantomForRecipe } from "./phantom-wire.ts";
 import type { Recipe } from "./recipe.ts";
 
 // Stubbed `phantom` subprocess, like phantom-wire-order.test.ts, but recording
@@ -63,6 +63,18 @@ function recipeOf(...names: string[]): Recipe {
 }
 
 const EMPTY_RESULT = { present: [], missing: [], webhooks: [], skipped: [] };
+
+describe("ai/phantom-wire Unicode replacement", () => {
+  it("preserves Unicode characters exactly at every replacement site", () => {
+    // Include a combining sequence and an astral character, with no cased
+    // characters so capitalization does not change the expected replacement.
+    const name = "服務-◌́-🚀";
+    const sentinel = "123456789";
+    const expected = webhookStubFor(sentinel).replaceAll(sentinel, () => name);
+
+    expect(webhookStubFor(name)).toBe(expected);
+  });
+});
 
 describe("ai/phantom-wire empty wiring request", () => {
   const savedPath = process.env.PATH;
