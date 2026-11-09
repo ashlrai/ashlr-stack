@@ -31,6 +31,7 @@ test("parsed version content preserves every Unicode character", () => {
   const bodies = versionBodies(fixture);
   const newer = bodies.get("## 0.3.0 (2026-10-31)") ?? "";
   for (const text of [
+    "Café résumé is ready ☕",
     "日本語のメモ: プロバイダーを追加 🚀 👩‍💻",
     "مرحبا بالعالم — שלום עולם",
     "Ελληνικά: αβγδ → ✓ done",
@@ -70,6 +71,7 @@ test("sectionEntries keeps Unicode entry text verbatim, under LF and CRLF", () =
       version: "## 0.3.0 (2026-10-31)",
       section: "Added",
       entries: [
+        "Café résumé is ready ☕",
         "日本語のメモ: プロバイダーを追加 🚀 👩‍💻",
         "مرحبا بالعالم — שלום עולם",
         "Ελληνικά: αβγδ → ✓ done",
