@@ -1,6 +1,14 @@
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { EventEmitter } from "node:events";
-import { chmodSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { __resetPhantomCache, __setPhantomSpawn } from "../phantom.ts";
@@ -156,10 +164,14 @@ describe("ai/phantom-wire result ordering with multiple providers", () => {
 
   it("is deterministic across repeated runs of the same recipe", async () => {
     vault = ["SENTRY_DSN", "RESEND_API_KEY"];
-    const recipe = recipeOf("sentry", "nope", "resend", "stripe", "supabase");
+    const recipe = recipeOf("sentry", "nope", "resend", "stripe", "supabase", "clerk", "github");
     const first = await wirePhantomForRecipe(recipe, { cwd: dir });
+    expect(first.webhooks).toHaveLength(4);
+    const webhookBytes = first.webhooks.map((path) => readFileSync(path));
     for (let i = 0; i < 5; i++) {
-      expect(await wirePhantomForRecipe(recipe, { cwd: dir })).toEqual(first);
+      const repeated = await wirePhantomForRecipe(recipe, { cwd: dir });
+      expect(repeated).toEqual(first);
+      expect(repeated.webhooks.map((path) => readFileSync(path))).toEqual(webhookBytes);
     }
   });
 
