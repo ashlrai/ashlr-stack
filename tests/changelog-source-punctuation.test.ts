@@ -8,6 +8,20 @@ const punctuation = (entry: string) => entry.replace(/[^,():;]/g, "");
 const source = readFileSync(new URL("../CHANGELOG.md", import.meta.url), "utf8");
 const fixture = readFileSync(new URL("./__fixtures__/changelog-punctuation.md", import.meta.url), "utf8");
 
+test("parsed entry preserves parentheses and colons inside and outside them", () => {
+  const markdown = `## Unreleased
+### Fixed
+- Diagnostics (scope: fleet): retain the original message (including nested (details)).
+`;
+  expect(sectionEntries(markdown)).toEqual([
+    {
+      version: "## Unreleased",
+      section: "Fixed",
+      entries: ["Diagnostics (scope: fleet): retain the original message (including nested (details))."],
+    },
+  ]);
+});
+
 test("CHANGELOG.md entry keeps commas, parentheses and a colon in order", () => {
   const unreleased = sectionEntries(source).find((g) => g.version === "## Unreleased" && g.section === "Fixed");
   const entry = unreleased?.entries.find((e) => e.startsWith("Fleet JSONL reads"));
