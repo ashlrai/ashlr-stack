@@ -8,8 +8,20 @@ setDefaultTimeout(30_000);
 
 const docUrl = new URL("../docs/phantom-wire-example-trust.md", import.meta.url);
 const doc = readFileSync(docUrl, "utf8");
+const signatureWarning = "TODO(security): signature verification is NOT implemented here.";
+
+function assertExampleWarning(provider: string, example: string): void {
+  if (!example.includes(signatureWarning)) {
+    throw new Error(`${provider} example is missing the signature-verification warning`);
+  }
+}
 
 describe("Phantom wire example trust", () => {
+  it("identifies an example missing its signature-verification warning", () => {
+    expect(() => assertExampleWarning("stripe", "// export async function handler() {}"))
+      .toThrow("stripe example is missing the signature-verification warning");
+  });
+
   it("describes the behavior of each generated example", async () => {
     const providers = ["stripe", "clerk", "supabase", "github"];
     const harness = setupFakePhantom();
@@ -28,10 +40,11 @@ describe("Phantom wire example trust", () => {
       const examples = providers.map((provider, index) => {
         const stub = readFileSync(result.webhooks[index], "utf8");
         expect(stub.split("\n").every((line) => !line || line.startsWith("//"))).toBe(true);
-        expect(stub).toContain("TODO(security): signature verification is NOT implemented here.");
+        expect(stub).toContain(signatureWarning);
         const header = stub.match(/req\.headers\.get\("([^"]+)"\)/)?.[1];
         const example = stub.match(/^\/\/ export async function [\s\S]*?^\/\/ }$/m)?.[0];
         if (!header || !example) throw new Error(`Incomplete ${provider} example`);
+        assertExampleWarning(provider, example);
         const path = join(harness.dir, `${provider}-trust-example.ts`);
         writeFileSync(path, example.replace(/^\/\/ ?/gm, ""));
         return { provider, header, path };
