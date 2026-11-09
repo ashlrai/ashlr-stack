@@ -40,6 +40,14 @@ for (const [format, log, expected] of fixtures) {
 test("empty output has no failing test", () => {
   expect(firstFailingTest("")).toBeNull();
 });
+test("the first of multiple TAP failures wins in log order", () => {
+  const first = "not ok 2 - rejects expired token";
+  const later = "not ok 3 - rejects invalid signature";
+  expect(
+    firstFailingTest(`TAP version 13\nok 1 - accepts valid token\n${first}\n${later}\n1..3`),
+  ).toBe("rejects expired token");
+  expect(firstFailingTest(`${later}\n${first}`)).toBe("rejects invalid signature");
+});
 test("a TAP not ok line marked SKIP is not a failure", () => {
   expect(firstFailingTest("not ok 1 - unavailable feature # SKIP")).toBeNull();
 });
