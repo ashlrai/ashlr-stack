@@ -3,7 +3,6 @@ import { resolveOAuthClientId } from "../env.ts";
 import { StackError } from "../errors.ts";
 import { fetchWithRetry } from "../http.ts";
 import { runPkceFlow } from "../oauth.ts";
-import { exec as phantomExec } from "../phantom.ts";
 import type {
   AuthHandle,
   HealthStatus,
@@ -333,6 +332,3 @@ function generateStrongPassword(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(24));
   return Buffer.from(bytes).toString("base64").replace(/[/+=]/g, "").slice(0, 32);
 }
-
-// Silence unused-import linters — phantomExec may be used in future extensions.
-void phantomExec;
