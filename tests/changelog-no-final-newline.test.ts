@@ -66,3 +66,11 @@ test.each([
 test("a CRLF final newline parses the same as no final newline", () => {
   expect(parsed(`${withoutNewline(fixture)}\r\n`)).toEqual(parsed(withoutNewline(fixture)));
 });
+
+test("the same single entry parses to the same text with and without a final newline", () => {
+  const entry = "Same entry, with a [link](docs/x.md) and `code`.";
+  const doc = `## 0.1.0 (2026-04-19)\n\n### Added\n\n- ${entry}`;
+  const [bare, terminated] = [doc, `${doc}\n`].map((md) => sectionEntries(md).at(-1)?.entries);
+  expect(bare).toEqual([entry]);
+  expect(terminated).toEqual(bare);
+});
