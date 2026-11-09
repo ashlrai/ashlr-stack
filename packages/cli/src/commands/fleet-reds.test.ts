@@ -37,6 +37,26 @@ for (const [format, log, expected] of fixtures) {
     ).toBe(expected!);
   });
 }
+test("node:test spec failure keeps the complete Unicode test name", () => {
+  const names = [
+    "rejeita sessão expirada — café ☕ 日本語 🚀",
+    "обработка ошибки (retry) ✓ не падает",
+    "名前 with (parens) and ✖ glyph",
+  ];
+  for (const name of names) {
+    const spec = `✔ accepts token (1.2ms)\n✖ ${name} (2.1ms)\n✖ later failure (1ms)`;
+    expect(firstFailingTest(spec)).toBe(name);
+    // Nested suite indentation and GitHub timestamp + ANSI colour prefixes.
+    const nested = `▶ suite\n  ✔ ok (1ms)\n  ✖ ${name} (2.1ms)\n▶ suite (3ms)`;
+    expect(firstFailingTest(nested)).toBe(name);
+    const gh = spec
+      .split("\n")
+      .map((line) => `Test job\tRun tests\t2026-11-09T12:00:00.1234567Z \x1b[31m${line}\x1b[0m`)
+      .join("\r\n");
+    expect(firstFailingTest(gh)).toBe(name);
+  }
+});
+
 test("empty output has no failing test", () => {
   expect(firstFailingTest("")).toBeNull();
 });
