@@ -441,6 +441,9 @@ async function collectManifests(repo: string, files: string[]): Promise<Manifest
   return manifests;
 }
 
+/** Standalone TODO/FIXME/XXX/HACK marker (POSIX classes: BSD git grep -E lacks `\b`). */
+export const TODO_MARKER_PATTERN = String.raw`(^|[^[:alnum:]_])(TODO|FIXME|XXX|HACK)([^[:alnum:]_]|$)`;
+
 const CODE_EXTS = new Set(["ts", "tsx", "js", "jsx", "mjs", "cjs", "mts", "cts"]);
 const JS_ANALYSIS_EXTS = new Set(["ts", "tsx", "js", "jsx", "mjs", "cjs"]);
 const REF_SCAN_EXTS = new Set([
@@ -993,7 +996,7 @@ async function collectRepo(repoPath: string): Promise<Record<string, unknown>> {
       : "renovate"
     : null;
 
-  const todoCount = await gitGrepCount(repoPath, String.raw`(^|[^[:alnum:]_])(TODO|FIXME|XXX|HACK)([^[:alnum:]_]|$)`, files.filter((f) => CODE_EXTS.has(extOf(f)) || extOf(f) === "rs"));
+  const todoCount = await gitGrepCount(repoPath, TODO_MARKER_PATTERN, files.filter((f) => CODE_EXTS.has(extOf(f)) || extOf(f) === "rs"));
   const allowDeadCode = await gitGrepCount(repoPath, String.raw`#\[allow\(dead_code\)\]`, rustFiles);
   const pullRequestTarget = await gitGrepCount(
     repoPath,

@@ -12,6 +12,7 @@ import {
   parseWorktreesPorcelain,
   resolveDocLink,
   stripMarkdownCode,
+  TODO_MARKER_PATTERN,
 } from "./repo-hygiene.ts";
 
 test("parseWorktreesPorcelain counts worktrees, detached and prunable", () => {
@@ -314,6 +315,34 @@ test("gitGrepCount finds a marker on the first line of an eligible file", async 
     const located = gitRun(["grep", "-n", "-E", pattern, "--", "first-line.ts", "other.ts"]);
     expect(located.status).toBe(0);
     expect(located.stdout.trim().split("\n")).toEqual(["first-line.ts:1:// FIXME: marker on line 1"]);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("a standalone XXX marker in an eligible code file counts as a TODO", async () => {
+  const { mkdtemp, rm, writeFile } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const { spawnSync } = await import("node:child_process");
+  const dir = await mkdtemp(join(tmpdir(), "repo-hygiene-xxx-"));
+  try {
+    const gitRun = (args: string[]) =>
+      spawnSync("git", ["-C", dir, "-c", "user.name=t", "-c", "user.email=t@example.com", ...args]);
+    expect(spawnSync("git", ["init", "-q", dir]).status).toBe(0);
+    await writeFile(join(dir, "xxx.ts"), "export const a = 1;\n// XXX revisit this\n");
+    await writeFile(join(dir, "embedded.ts"), "export const size = 'XXXL'; // not a marker\n");
+    await writeFile(join(dir, "clean.ts"), "export const b = 2;\n");
+    expect(gitRun(["add", "."]).status).toBe(0);
+    expect(gitRun(["commit", "-q", "-m", "fixture"]).status).toBe(0);
+
+    await expect(gitGrepCount(dir, TODO_MARKER_PATTERN, ["xxx.ts"])).resolves.toBe(1);
+    // Embedded in a longer word: not standalone, so not counted.
+    await expect(gitGrepCount(dir, TODO_MARKER_PATTERN, ["embedded.ts"])).resolves.toBe(0);
+    await expect(gitGrepCount(dir, TODO_MARKER_PATTERN, ["clean.ts"])).resolves.toBe(0);
+    await expect(
+      gitGrepCount(dir, TODO_MARKER_PATTERN, ["xxx.ts", "embedded.ts", "clean.ts"]),
+    ).resolves.toBe(1);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
