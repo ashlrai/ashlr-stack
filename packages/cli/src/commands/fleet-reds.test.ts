@@ -57,6 +57,20 @@ test("node:test expected TODO failures do not hide the first real failing test",
     ),
   ).toBe("real failure");
 });
+test("a ✗ failure marked SKIP is excluded from reported failures", async () => {
+  const skipped = "✗ skipped test (1.2ms) # SKIP";
+  expect(firstFailingTest(skipped)).toBeNull();
+  expect(firstFailingTest(`${skipped}\n✗ real failure (2ms)`)).toBe("real failure");
+
+  const report = await collectFleetReds(async (args, signal) =>
+    args.includes("--job") ? `${skipped}\n✗ real failure (2ms)` : client(args, signal),
+  );
+  expect(report.repos[0]?.runs?.[0]?.jobs?.[0]).toEqual({
+    name: "Tests 1",
+    firstFailingTest: "real failure",
+    logStatus: "parsed",
+  });
+});
 
 const job = (id: number, conclusion = "failure") => ({ id, name: `Tests ${id}`, conclusion });
 const client: GhRunner = async (args, signal) => {
