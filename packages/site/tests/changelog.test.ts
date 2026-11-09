@@ -799,6 +799,13 @@ test("marker survival check detects a mangled TODO_STACK_APPLY marker", () => {
   expect(nested.some((entry) => entry.codespans.includes("TODO_STACK_APPLY"))).toBe(true);
 });
 
+test("a changelog entry preserves two inline code spans in order", async () => {
+  const input = "## 0.2.0\n\n### Changed\n\n- Run `stack scan` before `stack apply`.\n";
+  expect(sectionEntries(input, "0.2.0", "Changed")).toEqual(["Run `stack scan` before `stack apply`."]);
+  expect(codespansByEntry(input).map((entry) => entry.codespans)).toEqual([["stack scan", "stack apply"]]);
+  expect(await marked.parse(input)).toContain("<li>Run <code>stack scan</code> before <code>stack apply</code>.</li>");
+});
+
 function entryLinks(entry: { tokens: { type: string; tokens?: unknown[] }[] }): { text: string; href: string }[] {
   const links: { text: string; href: string }[] = [];
   const walk = (tokens: unknown[]) => {
