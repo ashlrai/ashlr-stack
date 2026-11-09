@@ -62,6 +62,20 @@ test("two entries under one version retain source order", () => {
   ]);
 });
 
+test("a colon and inline code stay in one complete entry", () => {
+  const entry = "Configure `stack add`: pass `--url=https://example.com` to connect.";
+  const markdown = ["## 1.2.3 (2026-11-09)", "### Added", "- Before.", `- ${entry}`, "- After."].join("\n");
+
+  for (const input of [markdown, markdown.replace(/\n/g, "\r\n")]) {
+    expect(parseChangelog(input)).toEqual([
+      { version: "1.2.3", date: "2026-11-09", entries: ["Before.", entry, "After."] },
+    ]);
+    expect(sectionEntries(input)).toEqual([
+      { version: "## 1.2.3 (2026-11-09)", section: "Added", entries: ["Before.", entry, "After."] },
+    ]);
+  }
+});
+
 test("fenced version headings and entries do not affect real versions", () => {
   for (const fence of ["```", "~~~"]) {
     const markdown = [
