@@ -36,6 +36,15 @@ test("the docs page transform renders empty input as empty HTML", async () => {
   expect(await marked.parse(body)).toBe("");
 });
 
+test("the docs page renders a whitespace-only fixture without version entries", async () => {
+  const fixture = " \t\n\r\n  \n";
+  const body = fixture.replace(/^#\s+Changelog\s*\n+/, "");
+  const html = await marked.parse(body);
+
+  expect(html.trim()).toBe("");
+  expect(versionHeadings(fixture)).toEqual([]);
+});
+
 /** Version → section → entries, the same shape the entry-level fixture tests use. */
 function entriesBySection(markdown: string): Record<string, Record<string, string[]>> {
   const out: Record<string, Record<string, string[]>> = {};
