@@ -24,6 +24,19 @@ function duplicateNameErrors(manifests: { dir: string; name: unknown }[]): strin
     .map(([name, dirs]) => `duplicate name "${name}" in: ${dirs.join(", ")}`);
 }
 
+/** One message per package whose name is not a non-empty string unchanged by trimming. */
+function nameShapeErrors(manifests: { dir: string; name: unknown }[]): string[] {
+  const errors: string[] = [];
+  for (const { dir, name } of manifests) {
+    if (typeof name !== "string" || name.length === 0) {
+      errors.push(`${dir}: name must be a non-empty string`);
+    } else if (name !== name.trim()) {
+      errors.push(`${dir}: name ${JSON.stringify(name)} has surrounding whitespace`);
+    }
+  }
+  return errors;
+}
+
 function discoverWorkspaceManifests(packagesPath: string): { dir: string; name: unknown; version: unknown }[] {
   const manifests: { dir: string; name: unknown; version: unknown }[] = [];
   for (const entry of readdirSync(packagesPath, { withFileTypes: true })) {
@@ -95,11 +108,8 @@ test("discovers a workspace package whose path contains spaces once", () => {
 });
 
 test("each package directory has a package.json with name and version", () => {
-  const errors: string[] = [];
-  for (const { dir, name, version } of workspaceManifests) {
-    if (typeof name !== "string" || name.length === 0) {
-      errors.push(`${dir}: name must be a non-empty string`);
-    }
+  const errors: string[] = nameShapeErrors(workspaceManifests);
+  for (const { dir, version } of workspaceManifests) {
     if (typeof version !== "string" || version.length === 0) {
       errors.push(`${dir}: version must be a non-empty string`);
     }
@@ -110,6 +120,25 @@ test("each package directory has a package.json with name and version", () => {
 test("workspace package names are unique, including the root package", () => {
   const root = JSON.parse(readFileSync(join(rootDir, "package.json"), "utf8")) as { name?: unknown };
   expect(duplicateNameErrors([{ dir: ".", name: root.name }, ...workspaceManifests])).toEqual([]);
+});
+
+test("names with surrounding whitespace or no content are reported", () => {
+  expect(
+    nameShapeErrors([
+      { dir: "packages/ok", name: "@ashlr/ok" },
+      { dir: "packages/lead", name: " lead" },
+      { dir: "packages/trail", name: "trail\n" },
+      { dir: "packages/blank", name: "" },
+      { dir: "packages/ws", name: "  " },
+      { dir: "packages/num", name: 5 },
+    ]),
+  ).toEqual([
+    'packages/lead: name " lead" has surrounding whitespace',
+    'packages/trail: name "trail\\n" has surrounding whitespace',
+    "packages/blank: name must be a non-empty string",
+    'packages/ws: name "  " has surrounding whitespace',
+    "packages/num: name must be a non-empty string",
+  ]);
 });
 
 test("duplicate names are reported with every directory that uses them", () => {
