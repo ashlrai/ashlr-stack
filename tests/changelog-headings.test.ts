@@ -65,6 +65,21 @@ test("detects malformed version headings in a fixture", () => {
   ]);
 });
 
+test("ignores malformed headings inside a tilde fence but catches them afterward", () => {
+  const fixture = ["~~~markdown", "## inside fence", "~~~", "## after fence"].join("\n");
+  expect(malformedHeadings(fixture)).toEqual(["## after fence"]);
+});
+
+test("returns malformed headings in source order around prose", () => {
+  const fixture = ["## first malformed", "Valid prose between headings.", "## second malformed"].join("\n");
+  expect(malformedHeadings(fixture)).toEqual(["## first malformed", "## second malformed"]);
+});
+
+test("ignores a level-3 look-alike next to a malformed level-2 heading", () => {
+  const fixture = ["### malformed look-alike", "## malformed heading"].join("\n");
+  expect(malformedHeadings(fixture)).toEqual(["## malformed heading"]);
+});
+
 test("empty changelog fixture parses with no results from every parser function", () => {
   const fixture = readFileSync(new URL("./__fixtures__/changelog-empty.md", import.meta.url), "utf8");
   expect(fixture).toBe("");
