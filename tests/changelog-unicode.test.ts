@@ -138,3 +138,18 @@ test("sectionEntries keeps several combining-character entries intact and in ord
   expect(sectionEntries(markdown)).toEqual(expected);
   expect(sectionEntries(markdown.replace(/\n/g, "\r\n"))).toEqual(expected);
 });
+
+test("sectionEntries keeps an accented-text and emoji entry exactly, with markdown and Unicode punctuation", () => {
+  const entries = [
+    "Crème brûlée à la façon d’Zoë: déjà-vu, Ångström, Łódź, São Paulo ✨ 🥐",
+    "Emoji modifiers 👍🏽 👨‍👩‍👧‍👦 🇫🇷 🏳️‍🌈 beside `código` and [lien café](https://example.com/caf%C3%A9) (#2)",
+    "Ñandú — «guillemets» „Anführungszeichen“ … ½ ™ ©",
+  ];
+  const markdown = `## 0.5.1 (2026-11-09)\n\n### Fixed\n\n${entries.map((e) => `- ${e}`).join("\n")}\n`;
+  const expected = [{ version: "## 0.5.1 (2026-11-09)", section: "Fixed", entries }];
+
+  expect(sectionEntries(markdown)).toEqual(expected);
+  expect(sectionEntries(markdown.replace(/\n/g, "\r\n"))).toEqual(expected);
+  // Parsed text is byte-identical, not merely canonically equivalent.
+  expect(Buffer.from(sectionEntries(markdown)[0].entries.join("\n"), "utf8").equals(Buffer.from(entries.join("\n"), "utf8"))).toBe(true);
+});
