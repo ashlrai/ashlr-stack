@@ -54,3 +54,41 @@ test.each(["absolute", "relative"])(
   },
   20_000,
 );
+
+test.each(["absolute", "relative"])(
+  "scan selects a nested project with spaces in its %s path",
+  (kind) => {
+    const root = mkdtempSync(join(tmpdir(), "stack-scan-nested-"));
+    try {
+      const relativePath = join(" apps ", " my project ");
+      const project = join(root, relativePath);
+      const decoy = join(root, "apps", "my project");
+      mkdirSync(project, { recursive: true });
+      mkdirSync(decoy, { recursive: true });
+      writeFileSync(join(project, "vercel.json"), "{}\n");
+      writeFileSync(join(decoy, "fly.toml"), "app = 'decoy'\n");
+
+      const result = spawnSync(
+        "bun",
+        [cli, "scan", "--json", "--path", kind === "absolute" ? project : relativePath],
+        {
+          cwd: root,
+          encoding: "utf8",
+          env: { ...process.env, CI: "1", NO_COLOR: "1" },
+          timeout: 15_000,
+        },
+      );
+
+      expect(result.status).toBe(0);
+      expect(result.stderr).toBe("");
+      expect(JSON.parse(result.stdout)).toEqual({
+        hits: [{ provider: "vercel", confidence: "high", sources: ["vercel.json"] }],
+      });
+      expect(existsSync(join(project, ".stack.toml"))).toBe(false);
+      expect(existsSync(join(decoy, ".stack.toml"))).toBe(false);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  },
+  20_000,
+);
