@@ -38,7 +38,10 @@ for (const [format, log, expected] of fixtures) {
   });
 }
 test("empty output has no failing test", () => {
-  expect(firstFailingTest("")).toBeNull();
+  for (const log of ["", "\n", " \t\r\n", "Tests\tRun\t2026-11-09T05:00:00.0000000Z "]) {
+    expect(failingTests(log)).toEqual([]);
+    expect(firstFailingTest(log)).toBeNull();
+  }
 });
 test("a TAP not ok line marked SKIP is not a failure", () => {
   expect(firstFailingTest("not ok 1 - unavailable feature # SKIP")).toBeNull();
