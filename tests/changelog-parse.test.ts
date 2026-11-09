@@ -241,6 +241,29 @@ test("inline-code fixture keeps backtick text verbatim in parsed entries", () =>
   expect(entries[1]).toContain("## not a heading");
 });
 
+test("inline code and Unicode stay verbatim in their original section", () => {
+  const md = [
+    "## 1.2.3 (2026-11-09)",
+    "### Added",
+    "- Before the Unicode entry.",
+    "### Fixed",
+    "- Run `stack café --name=東京` for 🚀 and cafe\u0301.",
+    "### Changed",
+    "- After the Unicode entry.",
+  ].join("\n");
+  const sections = [
+    { version: "## 1.2.3 (2026-11-09)", section: "Added", entries: ["Before the Unicode entry."] },
+    { version: "## 1.2.3 (2026-11-09)", section: "Fixed", entries: ["Run `stack café --name=東京` for 🚀 and cafe\u0301."] },
+    { version: "## 1.2.3 (2026-11-09)", section: "Changed", entries: ["After the Unicode entry."] },
+  ];
+  for (const source of [md, md.replace(/\n/g, "\r\n")]) {
+    expect(sectionEntries(source)).toEqual(sections);
+    expect(parseChangelog(source)).toEqual([
+      { version: "1.2.3", date: "2026-11-09", entries: sections.flatMap((section) => section.entries) },
+    ]);
+  }
+});
+
 test("site CHANGELOG.md retains inline-code text (backticks) in parsed entries", () => {
   const site = parseChangelog(read("../packages/site/src/data/CHANGELOG.md"));
   const v030 = site.find((v) => v.version === "0.3.0");
@@ -528,6 +551,7 @@ test("unicode fixture keeps every parsed entry's characters and code points inta
   const md = read("./__fixtures__/changelog-unicode.md");
   const entries = {
     pending: "Café ☕ — naïve, “smart quotes”, ‘ticks’",
+    cafe: "Café résumé is ready ☕",
     cjkEmoji: "日本語のメモ: プロバイダーを追加 🚀 👩‍💻",
     rtl: "مرحبا بالعالم — שלום עולם",
     greek: "Ελληνικά: αβγδ → ✓ done",
@@ -536,7 +560,7 @@ test("unicode fixture keeps every parsed entry's characters and code points inta
   };
   expect(parseChangelog(md)).toEqual([
     { version: null, date: null, entries: [entries.pending] },
-    { version: "0.3.0", date: "2026-10-31", entries: [entries.cjkEmoji, entries.rtl, entries.greek, entries.accents] },
+    { version: "0.3.0", date: "2026-10-31", entries: [entries.cafe, entries.cjkEmoji, entries.rtl, entries.greek, entries.accents] },
     { version: "0.2.0", date: "2026-04-23", entries: [entries.cyrillic] },
   ]);
   // CRLF line endings must not disturb non-ASCII text either.
