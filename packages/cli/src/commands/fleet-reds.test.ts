@@ -57,6 +57,11 @@ test("node:test expected TODO failures do not hide the first real failing test",
     ),
   ).toBe("real failure");
 });
+test("a TAP SKIP failure does not hide a subsequent real failure", () => {
+  expect(firstFailingTest("not ok 1 - unavailable # SKIP\nnot ok 2 - real failure")).toBe(
+    "real failure",
+  );
+});
 test("a ✖ failure marked TODO is excluded from reported failures", () => {
   const ts = "Tests\tRun\t2026-11-09T05:00:00.0000000Z ";
   // Only TODO-marked failures: nothing to report.
