@@ -11,6 +11,7 @@ import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createInterface } from "node:readline";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import packageManifest from "../package.json";
@@ -88,6 +89,27 @@ afterAll(async () => {
 });
 
 describe("MCP server smoke tests", () => {
+  test("unknown protocol methods return an error with the request ID", async () => {
+    const server = spawn("node", [SERVER_PATH], { stdio: ["pipe", "pipe", "pipe"] });
+    const lines = createInterface({ input: server.stdout });
+    try {
+      const response = new Promise<string>((resolve, reject) => {
+        lines.once("line", resolve);
+        server.once("error", reject);
+        server.once("exit", (code) => reject(new Error(`Server exited before responding: ${code}`)));
+      });
+      server.stdin.write(`${JSON.stringify({ jsonrpc: "2.0", id: "unknown-method-1", method: "unknown/method" })}\n`);
+      const message = JSON.parse(await response);
+      expect(message.jsonrpc).toBe("2.0");
+      expect(message.id).toBe("unknown-method-1");
+      expect(message.error?.code).toBe(-32601);
+      expect(typeof message.error?.message).toBe("string");
+    } finally {
+      lines.close();
+      server.kill();
+    }
+  });
+
   test("initialize reports the source package version", () => {
     expect(client.getServerVersion()?.version).toBe(packageManifest.version);
   });
