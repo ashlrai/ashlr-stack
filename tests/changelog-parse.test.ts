@@ -502,7 +502,18 @@ test("a final newline never changes parsed entries, for the fixture or the site 
       expect(a).toEqual([...versionBodies(md)].map(([k, v]) => [k, v.trimEnd()]));
     }
   }
-  expect(parseChangelog(bare).at(-1)?.entries).toEqual(["First version entry, final line has no newline."]);
+  for (const md of [bare, bare.replace(/\n/g, "\r\n")]) {
+    expect(parseChangelog(md).at(-1)).toEqual({
+      version: "0.1.0",
+      date: "2026-04-19",
+      entries: ["First version entry, final line has no newline."],
+    });
+    expect(sectionEntries(md).at(-1)).toEqual({
+      version: "## 0.1.0 (2026-04-19)",
+      section: "Added",
+      entries: ["First version entry, final line has no newline."],
+    });
+  }
 });
 
 test("input that ends right after the final entry's text still yields that entry", () => {
@@ -528,6 +539,7 @@ test("unicode fixture keeps every parsed entry's characters and code points inta
   const md = read("./__fixtures__/changelog-unicode.md");
   const entries = {
     pending: "Café ☕ — naïve, “smart quotes”, ‘ticks’",
+    latin: "Café résumé is ready ☕",
     cjkEmoji: "日本語のメモ: プロバイダーを追加 🚀 👩‍💻",
     rtl: "مرحبا بالعالم — שלום עולם",
     greek: "Ελληνικά: αβγδ → ✓ done",
@@ -536,7 +548,7 @@ test("unicode fixture keeps every parsed entry's characters and code points inta
   };
   expect(parseChangelog(md)).toEqual([
     { version: null, date: null, entries: [entries.pending] },
-    { version: "0.3.0", date: "2026-10-31", entries: [entries.cjkEmoji, entries.rtl, entries.greek, entries.accents] },
+    { version: "0.3.0", date: "2026-10-31", entries: [entries.latin, entries.cjkEmoji, entries.rtl, entries.greek, entries.accents] },
     { version: "0.2.0", date: "2026-04-23", entries: [entries.cyrillic] },
   ]);
   // CRLF line endings must not disturb non-ASCII text either.
