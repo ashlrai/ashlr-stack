@@ -66,3 +66,44 @@ test("repeated CLI scans preserve result ordering at each confidence threshold",
     rmSync(project, { recursive: true, force: true });
   }
 }, 60_000);
+
+test("scan results do not depend on the order dependencies are written", () => {
+  const scan = (dependencies: Record<string, string>, envLines: string[]) => {
+    const project = mkdtempSync(join(tmpdir(), "stack-scan-order-"));
+    try {
+      writeFileSync(join(project, "package.json"), JSON.stringify({ dependencies }));
+      writeFileSync(join(project, ".env.example"), `${envLines.join("\n")}\n`);
+      writeFileSync(join(project, "amplify.yml"), "version: 1\n");
+      const result = spawnSync(
+        "bun",
+        [CLI_ENTRY, "scan", "--json", "--confidence", "low", "--path", project],
+        { encoding: "utf8", env: { ...process.env, CI: "1", NO_COLOR: "1" }, timeout: 15_000 },
+      );
+      expect(result.status).toBe(0);
+      expect(result.stderr).toBe("");
+      return result.stdout;
+    } finally {
+      rmSync(project, { recursive: true, force: true });
+    }
+  };
+
+  const dependencies = {
+    stripe: "1",
+    "@vercel/analytics": "1",
+    openai: "1",
+    "@supabase/supabase-js": "1",
+  };
+  const envLines = ["STRIPE_SECRET_KEY=", "RESEND_API_KEY="];
+
+  const forward = scan(dependencies, envLines);
+  const reversed = scan(
+    Object.fromEntries(Object.entries(dependencies).reverse()),
+    [...envLines].reverse(),
+  );
+
+  const providers = (out: string) =>
+    (JSON.parse(out) as { hits: { provider: string }[] }).hits.map((hit) => hit.provider);
+  expect(providers(forward)).toEqual(["openai", "stripe", "supabase", "resend", "vercel", "aws"]);
+  expect(providers(reversed)).toEqual(providers(forward));
+  expect(reversed).toBe(forward);
+}, 60_000);
