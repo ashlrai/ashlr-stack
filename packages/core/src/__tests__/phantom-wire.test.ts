@@ -6743,3 +6743,47 @@ describe("wirePhantomForRecipe — repeated webhook writes", () => {
     ]);
   });
 });
+
+describe("ai/phantom-wire output directory with spaces", () => {
+  let harness: Harness;
+  let parent: string;
+
+  beforeEach(() => {
+    harness = setupFakePhantom();
+    // A fresh parent so any stray sibling of the project dir is detectable.
+    parent = realpathSync(mkdtempSync(join(tmpdir(), "stack wire parent ")));
+  });
+
+  afterEach(() => {
+    harness.cleanup();
+    rmSync(parent, { recursive: true, force: true });
+  });
+
+  it("writes stubs only under <cwd>/.stack/webhooks when cwd contains spaces", async () => {
+    const cwd = join(parent, "my  project dir");
+    mkdirSync(cwd);
+    const recipe: Recipe = {
+      id: "spaces",
+      query: "payments and repos",
+      createdAt: "2026-04-18T00:00:00.000Z",
+      providers: [{ name: "stripe" }, { name: "github" }],
+    };
+
+    const result = await wirePhantomForRecipe(recipe, { cwd });
+
+    const webhooksDir = join(cwd, ".stack", "webhooks");
+    expect(result.webhooks.sort()).toEqual([
+      join(webhooksDir, "github.ts"),
+      join(webhooksDir, "stripe.ts"),
+    ]);
+    expect(readFileSync(join(webhooksDir, "stripe.ts"), "utf-8")).toBe(webhookStubFor("stripe"));
+    expect(readFileSync(join(webhooksDir, "github.ts"), "utf-8")).toBe(webhookStubFor("github"));
+
+    // Nothing split at a space: the parent holds only the project dir, the
+    // project dir only `.stack`, and `.stack` only `webhooks`.
+    expect(readdirSync(parent)).toEqual(["my  project dir"]);
+    expect(readdirSync(cwd)).toEqual([".stack"]);
+    expect(readdirSync(join(cwd, ".stack"))).toEqual(["webhooks"]);
+    expect(readdirSync(webhooksDir).sort()).toEqual(["github.ts", "stripe.ts"]);
+  });
+});
