@@ -20,11 +20,15 @@ for (const [runtime, command, args] of [
   test(`${runtime} exits cleanly without a response on immediate EOF`, async () => {
     const child = spawn(command, [...args], { stdio: ["pipe", "pipe", "pipe"] });
     let stdout = "";
+    let stderr = "";
     child.stdout.setEncoding("utf8");
     child.stdout.on("data", (chunk: string) => {
       stdout += chunk;
     });
-    child.stderr.resume();
+    child.stderr.setEncoding("utf8");
+    child.stderr.on("data", (chunk: string) => {
+      stderr += chunk;
+    });
     const closed = new Promise<{ code: number | null; signal: string | null }>((resolve, reject) => {
       child.once("error", reject);
       child.once("close", (code, signal) => resolve({ code, signal }));
@@ -40,6 +44,7 @@ for (const [runtime, command, args] of [
       ]);
       expect(result).toEqual({ code: 0, signal: null });
       expect(stdout).toBe("");
+      expect(stderr).toBe("");
     } finally {
       clearTimeout(timer);
       if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
