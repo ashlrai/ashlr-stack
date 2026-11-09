@@ -36,37 +36,42 @@ describe("stack scan malformed manifest", () => {
   ])(
     "rejects invalid JSON without changing the project in %s",
     (_mode, flags) => {
-      for (const existingConfig of [false, true]) {
-        const project = mkdtempSync(join(tmpdir(), "stack scan malformed "));
-        projects.push(project);
-        mkdirSync(join(project, "nested"));
-        writeFileSync(join(project, "package.json"), '{"dependencies": {"openai": "^4",}}\n');
-        writeFileSync(join(project, "fly.toml"), 'app = "example"\n');
-        writeFileSync(join(project, "nested", "keep.txt"), "unchanged\n");
-        if (existingConfig) {
-          writeFileSync(join(project, ".stack.toml"), '[project]\nname = "example"\n');
-          writeFileSync(join(project, ".stack.local.toml"), "# existing local configuration\n");
-        }
-        const before = snapshot(project);
-        const result = spawnSync("bun", [cli, "scan", ...flags, "--path", project], {
-          encoding: "utf8",
-          timeout: 10_000,
-          env: { ...process.env, CI: "1", NO_COLOR: "1" },
-        });
+      for (const manifest of [
+        '{"dependencies": {"openai": "^4",}}\n',
+        '{"dependencies": {"openai": "^4}\n',
+      ]) {
+        for (const existingConfig of [false, true]) {
+          const project = mkdtempSync(join(tmpdir(), "stack scan malformed "));
+          projects.push(project);
+          mkdirSync(join(project, "nested"));
+          writeFileSync(join(project, "package.json"), manifest);
+          writeFileSync(join(project, "fly.toml"), 'app = "example"\n');
+          writeFileSync(join(project, "nested", "keep.txt"), "unchanged\n");
+          if (existingConfig) {
+            writeFileSync(join(project, ".stack.toml"), '[project]\nname = "example"\n');
+            writeFileSync(join(project, ".stack.local.toml"), "# existing local configuration\n");
+          }
+          const before = snapshot(project);
+          const result = spawnSync("bun", [cli, "scan", ...flags, "--path", project], {
+            encoding: "utf8",
+            timeout: 10_000,
+            env: { ...process.env, CI: "1", NO_COLOR: "1" },
+          });
 
-        expect(result.status).toBe(1);
-        const output = `${result.stdout ?? ""}${result.stderr ?? ""}`;
-        expect(output).toContain("Invalid JSON in dependency manifest");
-        expect(output).toContain(join(project, "package.json"));
-        expect(output).toContain("Fix it and retry the scan");
-        expect(output).not.toContain("provider(s) detected");
-        expect(output).not.toContain("No providers detected");
-        expect(output).not.toContain("scan complete");
-        if (flags.includes("--json")) {
-          expect(result.stdout).toBe("");
-          expect(result.stderr).toContain("Invalid JSON");
+          expect(result.status).toBe(1);
+          const output = `${result.stdout ?? ""}${result.stderr ?? ""}`;
+          expect(output).toContain("Invalid JSON in dependency manifest");
+          expect(output).toContain(join(project, "package.json"));
+          expect(output).toContain("Fix it and retry the scan");
+          expect(output).not.toContain("provider(s) detected");
+          expect(output).not.toContain("No providers detected");
+          expect(output).not.toContain("scan complete");
+          if (flags.includes("--json")) {
+            expect(result.stdout).toBe("");
+            expect(result.stderr).toContain("Invalid JSON");
+          }
+          expect(snapshot(project)).toEqual(before);
         }
-        expect(snapshot(project)).toEqual(before);
       }
     },
     30_000,
