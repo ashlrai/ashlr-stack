@@ -214,6 +214,27 @@ export async function commandPath<T extends ArgsDef = ArgsDef>(
   return commandPath(sub, rawArgs.slice(index + 1), `${command} ${name}`);
 }
 
+/** Find an unknown command on the way to a help target, without running it. */
+export async function unknownHelpCommand<T extends ArgsDef = ArgsDef>(
+  cmd: CommandDef<T>,
+  rawArgs: string[],
+  command = "stack",
+): Promise<{ name: string; command: string } | null> {
+  const subCommands = await resolveValue(
+    cmd.subCommands as Resolvable<Record<string, Resolvable<CommandDef>>> | undefined,
+  );
+  if (!subCommands || Object.keys(subCommands).length === 0) return null;
+  const end = rawArgs.indexOf("--");
+  const own = end < 0 ? rawArgs : rawArgs.slice(0, end);
+  const index = own.findIndex((arg) => !arg.startsWith("-"));
+  if (index < 0) return null;
+  const name = own[index];
+  if (!Object.hasOwn(subCommands, name)) return { name, command };
+  const sub = await resolveValue(subCommands[name]);
+  if (!sub) return { name, command };
+  return unknownHelpCommand(sub, own.slice(index + 1), `${command} ${name}`);
+}
+
 /** One line naming the option, the closest declared one, and where to look. */
 export function describeUnknownFlag(unknown: UnknownFlag): string {
   if (unknown.missingValue) {

@@ -5,6 +5,7 @@ import {
   commandPath,
   describeUnknownFlag,
   findUnknownFlag,
+  unknownHelpCommand,
 } from "./unknown-flags.ts";
 
 export interface RunCliIo {
@@ -34,6 +35,16 @@ export async function runCli<T extends ArgsDef = ArgsDef>(
   const rawArgs = await bindParentOptionValues(cmd, argv);
   const wantsHelp = rawArgs.includes("--help") || rawArgs.includes("-h");
   const wantsVersion = rawArgs.length === 1 && rawArgs[0] === "--version";
+  if (wantsHelp) {
+    const unknown = await unknownHelpCommand(cmd, rawArgs);
+    if (unknown) {
+      io.stderr(
+        `  ${pc.red("✗")} Unknown command "${unknown.name}". Run \`${unknown.command} --help\` for available commands.`,
+      );
+      process.exitCode = 1;
+      return 1;
+    }
+  }
   if (wantsHelp || wantsVersion) {
     await runMain(cmd, { rawArgs });
     return 0;

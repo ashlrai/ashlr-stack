@@ -6,10 +6,10 @@ import { fileURLToPath } from "node:url";
 
 const entry = fileURLToPath(new URL("../packages/cli/src/index.ts", import.meta.url));
 
-test("--help exits successfully and prints usage", () => {
+function runHelp(args: string[]) {
   const home = mkdtempSync(join(tmpdir(), "stack-cli-help-"));
   try {
-    const result = Bun.spawnSync([process.execPath, entry, "--help"], {
+    return Bun.spawnSync([process.execPath, entry, ...args], {
       cwd: home,
       stdout: "pipe",
       stderr: "pipe",
@@ -25,10 +25,30 @@ test("--help exits successfully and prints usage", () => {
       },
     });
 
-    expect(result.signalCode).toBeUndefined();
-    expect(result.exitCode).toBe(0);
-    expect(result.stdout.toString()).toMatch(/usage\s+`?stack\b/i);
   } finally {
     rmSync(home, { recursive: true, force: true });
   }
+}
+
+test("--help exits successfully and prints usage", () => {
+  const result = runHelp(["--help"]);
+  expect(result.signalCode).toBeUndefined();
+  expect(result.exitCode).toBe(0);
+  expect(result.stdout.toString()).toMatch(/usage\s+`?stack\b/i);
+}, 25_000);
+
+test("help for an unknown command fails with a useful diagnostic", () => {
+  for (const args of [["imaginary-command", "--help"], ["templates", "imaginary-command", "-h"]]) {
+    const result = runHelp(args);
+    expect(result.signalCode).toBeUndefined();
+    expect(result.exitCode).not.toBe(0);
+    expect(result.stderr.toString()).toMatch(/unknown command.*imaginary-command/i);
+    expect(result.stderr.toString()).toContain(args[0] === "templates" ? "stack templates --help" : "stack --help");
+  }
+}, 50_000);
+
+test("help for a known command succeeds", () => {
+  const result = runHelp(["templates", "list", "--help"]);
+  expect(result.exitCode).toBe(0);
+  expect(result.stdout.toString()).toMatch(/usage/i);
 }, 25_000);
