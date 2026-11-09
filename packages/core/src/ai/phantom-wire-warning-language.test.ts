@@ -7,6 +7,13 @@ describe("webhook signature warning language", () => {
       const stub = webhookStubFor(provider);
       const warning = stub.slice(stub.indexOf("TODO(security)"), stub.indexOf("//   return"));
 
+      expect(stub).toContain(
+        "This entire example is commented out and does not verify signatures.",
+      );
+      expect(stub).toContain(
+        "it accepts any non-empty signature header and returns\n// 200 without authenticating the request",
+      );
+      expect(stub.split("\n").every((line) => line === "" || line.startsWith("//"))).toBe(true);
       expect(warning).toContain("signature verification is NOT implemented here");
       expect(warning).toContain("header check above proves only that a signature header arrived");
       expect(warning).toContain("value is never compared to anything");

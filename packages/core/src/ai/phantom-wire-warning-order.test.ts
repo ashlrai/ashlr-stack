@@ -15,7 +15,8 @@ describe("webhook example warning order", () => {
       // secret retrieval that the implementer must fill in.
       const hint = lines.indexOf(`//   // ${verificationHintFor(provider)}`);
       const reveal = lines.findIndex(
-        (line, i) => i > warning && line.includes("`phantom reveal ") && line.includes("compare in"),
+        (line, i) =>
+          i > warning && line.includes("`phantom reveal ") && line.includes("compare in"),
       );
       const response = lines.indexOf('//   return new Response("ok", { status: 200 });');
 
