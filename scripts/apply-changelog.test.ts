@@ -19,6 +19,22 @@ test("original apply entry describes placeholder writes as past attempts", () =>
   expect(entries[0]).not.toMatch(/\b(?:wiring|`stack apply`|it) (?:now |still )?(?:writes|creates|stores|adds) (?:a |the )?placeholder/i);
 });
 
+test("apply fix documents read-only wiring and its results", () => {
+  const changelog = readFileSync(join(root, "CHANGELOG.md"), "utf8");
+  const release = changelog.split("## 0.2.1 (2026-10-16)\n")[1]?.split("\n## ")[0];
+  const entries = (release ?? "").split("\n").filter((line) =>
+    line.startsWith("- **`stack apply` stops attempting to write placeholder secrets.**"),
+  );
+  expect(entries).toHaveLength(1);
+  const entry = entries[0] ?? "";
+  expect(entry).toContain("The wiring step never writes to the vault or fills in missing values.");
+  expect(entry).toContain("wiring checks names using `phantom list --json`");
+  expect(entry).toContain("`secrets in vault N · missing M · webhooks K`");
+  expect(entry).toContain("a `not in Phantom:` line for missing names");
+  expect(entry).toContain("it reports providers as skipped instead of identifying missing names");
+  expect(entry).toContain("`WireResult.envelopes` is replaced by `present` and `missing`");
+});
+
 test("the changelog's unreadable vault example matches apply output", () => {
   const dir = mkdtempSync(join(tmpdir(), "stack-apply-doc-"));
   try {
