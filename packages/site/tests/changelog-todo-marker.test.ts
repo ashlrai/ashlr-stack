@@ -24,6 +24,21 @@ function findEntriesWith(markdown: string, needle: string): Array<{ raw: string;
   return results;
 }
 
+test("marker search excludes an unmarked neighboring entry", () => {
+  const markdown = `## 1.0.0
+
+- Apply the change with \`TODO_STACK_APPLY\`.
+- Another change without the marker.
+`;
+
+  expect(findEntriesWith(markdown, "TODO_STACK_APPLY")).toEqual([
+    {
+      raw: "- Apply the change with `TODO_STACK_APPLY`.\n",
+      text: "Apply the change with `TODO_STACK_APPLY`.",
+    },
+  ]);
+});
+
 test("TODO_STACK_APPLY marker is intact in parsed root CHANGELOG.md entries", () => {
   const entries = findEntriesWith(changelog, "TODO_STACK_APPLY");
   expect(entries.length).toBeGreaterThanOrEqual(2);
