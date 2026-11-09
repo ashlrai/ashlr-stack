@@ -720,7 +720,7 @@ async function countLines(repo: string, patterns: string[]): Promise<number> {
   }
 }
 
-async function gitGrepCount(repo: string, pattern: string, pathspecs: string[]): Promise<number> {
+export async function gitGrepCount(repo: string, pattern: string, pathspecs: string[]): Promise<number> {
   if (pathspecs.length === 0) return 0;
   try {
     const out = await git(repo, ["grep", "-c", "-E", pattern, "--", ...pathspecs], 60_000);

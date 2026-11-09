@@ -4,6 +4,7 @@ import {
   extractMarkdownLinks,
   extractPackageSpecifiers,
   findUnusedImports,
+  gitGrepCount,
   packageNameOf,
   parseBunOutdated,
   parseCargoDryRun,
@@ -203,4 +204,11 @@ test("CLI excludes private, unknown and failed visibility checks from JSON and M
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
+});
+
+test("gitGrepCount returns 0 for an empty eligible file list (TODO count)", async () => {
+  // An empty pathspec list must short-circuit: no git call, so even a
+  // nonexistent repo path succeeds with a zero count.
+  const todoPattern = String.raw`\b(TODO|FIXME|XXX|HACK)\b`;
+  await expect(gitGrepCount("/nonexistent/repo-hygiene-empty", todoPattern, [])).resolves.toBe(0);
 });
