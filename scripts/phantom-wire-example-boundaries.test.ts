@@ -37,6 +37,16 @@ describe("Phantom wire example boundaries", () => {
       for (const path of result.webhooks) {
         const stub = readFileSync(path, "utf8");
         expect(stub.split("\n").every((line) => !line || line.startsWith("//"))).toBe(true);
+
+        // The reminder must still be comments when the example is uncommented.
+        const lines = stub.split("\n");
+        const start = lines.findIndex((line) => line.includes("TODO(security): signature verification"));
+        const end = lines.findIndex((line) => line.includes("parse, trust, or act on the body."));
+        expect(start).toBeGreaterThanOrEqual(0);
+        expect(end).toBeGreaterThan(start);
+        for (const line of lines.slice(start, end + 1)) {
+          expect(line).toMatch(/^\/\/\s+\/\//);
+        }
       }
 
       // The shown operations the doc names exist in the generated example;
