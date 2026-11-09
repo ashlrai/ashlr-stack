@@ -25,6 +25,10 @@ test("whitespace-only and heading-only input also yield no entries", () => {
   }
 });
 
+test("an HTML comment containing a version heading yields no entries", () => {
+  expect(versionHeadings("<!--\n## 1.2.3\n-->\n")).toEqual([]);
+});
+
 test("the published changelog is not empty, so the empty fixture is a real contrast", () => {
   const published = readFileSync(join(import.meta.dir, "../src/data/CHANGELOG.md"), "utf8");
   expect(versionHeadings(published).length).toBeGreaterThan(0);
