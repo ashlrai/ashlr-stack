@@ -30,6 +30,14 @@ describe("generated webhook examples", () => {
       const warning = lines.findIndex((line) => line.includes("does not verify signatures"));
       expect(warning).toBeGreaterThanOrEqual(0);
       expect(handler).toBeGreaterThan(warning);
+      for (const text of [
+        "If uncommented as-is, it accepts any non-empty signature header and returns",
+        "200 without authenticating the request. Implement verification first.",
+      ]) {
+        const warningLine = lines.findIndex((line) => line.includes(text));
+        expect(warningLine).toBeGreaterThan(warning);
+        expect(warningLine).toBeLessThan(handler);
+      }
       expect(success).toBeGreaterThan(handler);
       expect(lines[success]).toMatch(/^\/\/\s+return new Response/);
       expect(lines.every((line) => line.trim() === "" || line.startsWith("//"))).toBe(true);
