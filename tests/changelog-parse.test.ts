@@ -35,6 +35,14 @@ export function parseChangelog(markdown: string): ChangelogVersion[] {
 
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), "utf8");
 
+test("two entries under one version retain source order", () => {
+  const markdown = ["## 1.2.3 (2026-11-09)", "- Zebra change.", "- Alpha change."].join("\n");
+
+  expect(parseChangelog(markdown)).toEqual([
+    { version: "1.2.3", date: "2026-11-09", entries: ["Zebra change.", "Alpha change."] },
+  ]);
+});
+
 test("LF and CRLF changelogs produce the same entries without a final newline", () => {
   const lf = [
     "## Unreleased",
