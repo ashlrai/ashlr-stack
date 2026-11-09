@@ -43,6 +43,29 @@ test("two entries under one version retain source order", () => {
   ]);
 });
 
+test("fenced version headings and entries do not affect real versions", () => {
+  for (const fence of ["```", "~~~"]) {
+    const markdown = [
+      "## 1.2.3 (2026-11-09)",
+      "- Before the example.",
+      `${fence}md`,
+      "## 9.9.9 (2026-11-08)",
+      "- Example entry.",
+      fence,
+      "- After the example.",
+      "## 1.2.2 (2026-11-07)",
+      "- Older entry.",
+    ].join("\n");
+    const expected: ChangelogVersion[] = [
+      { version: "1.2.3", date: "2026-11-09", entries: ["Before the example.", "After the example."] },
+      { version: "1.2.2", date: "2026-11-07", entries: ["Older entry."] },
+    ];
+
+    expect(parseChangelog(markdown)).toEqual(expected);
+    expect(parseChangelog(markdown.replace(/\n/g, "\r\n"))).toEqual(expected);
+  }
+});
+
 test("LF and CRLF changelogs produce the same entries without a final newline", () => {
   const lf = [
     "## Unreleased",
