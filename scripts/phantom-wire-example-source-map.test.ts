@@ -1,5 +1,5 @@
 import { describe, expect, it, setDefaultTimeout } from "bun:test";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { setupFakePhantom } from "../packages/core/src/__tests__/_harness.ts";
 import { wirePhantomForRecipe } from "../packages/core/src/ai/phantom-wire.ts";
@@ -53,6 +53,24 @@ describe("Phantom wire example source map", () => {
     for (const [, link] of doc.matchAll(/\]\(([^)#]+)(?:#[^)]+)?\)/g)) {
       expect(existsSync(new URL(link, docUrl))).toBe(true);
     }
+  });
+
+  it("links only to existing files, never directories, and covers the source and sibling docs", () => {
+    const targets = [...doc.matchAll(/\]\(([^)#\s]+)(?:#[^)\s]+)?\)/g)].map((m) => m[1]);
+    expect(targets.length).toBeGreaterThan(0);
+    // External links are out of scope; everything else is a relative source-file link.
+    const relative = targets.filter((t) => !/^[a-z][a-z0-9+.-]*:/i.test(t));
+    expect(relative).toEqual(targets);
+    for (const target of relative) {
+      const url = new URL(target, docUrl);
+      expect(existsSync(url)).toBe(true);
+      expect(statSync(url).isFile()).toBe(true);
+    }
+    expect(relative).toContain("../packages/core/src/ai/phantom-wire.ts");
+    expect(relative).toContain("phantom-wire-example-reading-guide.md");
+    expect(relative).toContain("phantom-wire-code-map.md");
+    expect(relative).toContain("phantom-wire-comment-inventory.md");
+    expect(relative).toContain("phantom-wire-signature-note.md");
   });
 
   it("matches the live generated stub, reminder between body read and success", async () => {
