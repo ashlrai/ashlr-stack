@@ -6743,3 +6743,81 @@ describe("wirePhantomForRecipe — repeated webhook writes", () => {
     ]);
   });
 });
+
+describe("wirePhantomForRecipe — existing destination file", () => {
+  const RECIPE: Recipe = {
+    id: "existing-destination",
+    query: "payments",
+    createdAt: "2026-04-18T00:00:00.000Z",
+    providers: [{ name: "stripe" }],
+  };
+  let harness: Harness;
+
+  beforeEach(() => {
+    harness = setupFakePhantom();
+  });
+  afterEach(() => {
+    harness.cleanup();
+  });
+
+  it("overwrites a hand-edited stub with the generated one and leaves sibling files alone", async () => {
+    // Documented behavior: stubs are regenerated on every wire, so local edits
+    // to `.stack/webhooks/<provider>.ts` are replaced. Other files in the
+    // directory are never touched.
+    const dir = join(harness.dir, ".stack/webhooks");
+    mkdirSync(dir, { recursive: true });
+    const stubPath = join(dir, "stripe.ts");
+    const siblingPath = join(dir, "custom.ts");
+    writeFileSync(stubPath, "// my edits\n");
+    writeFileSync(siblingPath, "// keep me\n");
+
+    const result = await wirePhantomForRecipe(RECIPE, { cwd: harness.dir });
+
+    expect(result.webhooks).toEqual([stubPath]);
+    expect(readFileSync(stubPath, "utf-8")).toBe(webhookStubFor("stripe"));
+    expect(readFileSync(stubPath, "utf-8")).not.toContain("my edits");
+    expect(readFileSync(siblingPath, "utf-8")).toBe("// keep me\n");
+    expect(readdirSync(dir).sort()).toEqual(["custom.ts", "stripe.ts"]);
+  });
+
+  it("overwrites an existing stub the same way when Phantom is not installed", async () => {
+    const emptyBin = join(harness.dir, "empty-bin");
+    mkdirSync(emptyBin);
+    process.env.PATH = emptyBin;
+    __resetPhantomCache();
+
+    const dir = join(harness.dir, ".stack/webhooks");
+    mkdirSync(dir, { recursive: true });
+    const stubPath = join(dir, "stripe.ts");
+    writeFileSync(stubPath, "");
+
+    const result = await wirePhantomForRecipe(RECIPE, { cwd: harness.dir });
+
+    expect(result.skipped).toEqual(["stripe"]);
+    expect(result.webhooks).toEqual([stubPath]);
+    expect(readFileSync(stubPath, "utf-8")).toBe(webhookStubFor("stripe"));
+  });
+
+  it("does not touch an existing stub when wiring is disabled", async () => {
+    const dir = join(harness.dir, ".stack/webhooks");
+    mkdirSync(dir, { recursive: true });
+    const stubPath = join(dir, "stripe.ts");
+    writeFileSync(stubPath, "// my edits\n");
+
+    const result = await wirePhantomForRecipe(RECIPE, { cwd: harness.dir, noWire: true });
+
+    expect(result.webhooks).toEqual([]);
+    expect(readFileSync(stubPath, "utf-8")).toBe("// my edits\n");
+  });
+
+  it("refuses a destination that is a directory and leaves its contents intact", async () => {
+    const stubPath = join(harness.dir, ".stack/webhooks/stripe.ts");
+    mkdirSync(stubPath, { recursive: true });
+    writeFileSync(join(stubPath, "inner.txt"), "inner");
+
+    await expect(wirePhantomForRecipe(RECIPE, { cwd: harness.dir })).rejects.toThrow();
+
+    expect(readdirSync(stubPath)).toEqual(["inner.txt"]);
+    expect(readFileSync(join(stubPath, "inner.txt"), "utf-8")).toBe("inner");
+  });
+});
