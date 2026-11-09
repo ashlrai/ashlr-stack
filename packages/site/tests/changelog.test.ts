@@ -725,6 +725,14 @@ test("parseReleases keeps two successive releases and their entries in source or
   ]);
 });
 
+test("consecutive release headings leave the first release empty", () => {
+  const sample = "# Changelog\n\n## 2.0.0\n\n## 1.0.0\n\n### Added\n\n- First entry\n";
+  expect(parseReleases(sample)).toEqual([
+    { heading: "2.0.0", entries: [] },
+    { heading: "1.0.0", entries: ["First entry"] },
+  ]);
+});
+
 test("source changelog 0.3.0 and 0.2.2 are successive and their entries stay in source order", () => {
   const source = readFileSync(join(root, "CHANGELOG.md"), "utf8");
   const releases = parseReleases(source);
