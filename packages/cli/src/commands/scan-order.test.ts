@@ -66,3 +66,34 @@ test("repeated CLI scans preserve result ordering at each confidence threshold",
     rmSync(project, { recursive: true, force: true });
   }
 }, 60_000);
+
+test("repeated CLI scans of a project with no provider evidence return an empty result", () => {
+  const project = mkdtempSync(join(tmpdir(), "stack-scan-empty-"));
+  try {
+    // Files exist but name no provider: no known dependency, env key or config file.
+    writeFileSync(
+      join(project, "package.json"),
+      JSON.stringify({ name: "plain", dependencies: { "left-pad": "1" } }),
+    );
+    writeFileSync(join(project, ".env.example"), "PORT=3000\nLOG_LEVEL=info\n");
+    writeFileSync(join(project, "README.md"), "# plain\n");
+
+    for (const confidence of ["low", "medium", "high"]) {
+      let firstOutput = "";
+      for (let run = 0; run < 3; run++) {
+        const result = spawnSync(
+          "bun",
+          [CLI_ENTRY, "scan", "--json", "--confidence", confidence, "--path", project],
+          { encoding: "utf8", env: { ...process.env, CI: "1", NO_COLOR: "1" }, timeout: 15_000 },
+        );
+        expect(result.status).toBe(0);
+        expect(result.stderr).toBe("");
+        expect(JSON.parse(result.stdout)).toEqual({ hits: [] });
+        if (run === 0) firstOutput = result.stdout;
+        else expect(result.stdout).toBe(firstOutput);
+      }
+    }
+  } finally {
+    rmSync(project, { recursive: true, force: true });
+  }
+}, 60_000);
