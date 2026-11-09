@@ -70,3 +70,12 @@ test("empty fixture yields no entries or sections, and no list items at all", ()
   expect(entriesBySection(fixture)).toEqual({});
   expect(marked.lexer(fixture).flatMap((t) => (t.type === "list" ? t.items : []))).toEqual([]);
 });
+
+test("tabs and CRLF alone produce no version headings or entries", async () => {
+  const fixture = "\t \r\n \t\r\n\t\r\n";
+
+  expect(versionHeadings(fixture)).toEqual([]);
+  expect(entriesBySection(fixture)).toEqual({});
+  expect(marked.lexer(fixture).flatMap((t) => (t.type === "list" ? t.items : []))).toEqual([]);
+  expect((await marked.parse(fixture)).trim()).toBe("");
+});
