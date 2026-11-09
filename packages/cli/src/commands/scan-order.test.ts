@@ -7,6 +7,33 @@ import { fileURLToPath } from "node:url";
 
 const CLI_ENTRY = fileURLToPath(new URL("../index.ts", import.meta.url));
 
+test("a provider detected from two sources appears once with both sources", () => {
+  const project = mkdtempSync(join(tmpdir(), "stack-scan-sources-"));
+  try {
+    writeFileSync(join(project, "package.json"), JSON.stringify({ dependencies: { stripe: "1" } }));
+    writeFileSync(join(project, "requirements.txt"), "stripe==1.0.0\n");
+
+    const result = spawnSync("bun", [CLI_ENTRY, "scan", "--json", "--path", project], {
+      encoding: "utf8",
+      env: { ...process.env, CI: "1", NO_COLOR: "1" },
+      timeout: 15_000,
+    });
+    expect(result.status).toBe(0);
+    expect(result.stderr).toBe("");
+    expect(JSON.parse(result.stdout)).toEqual({
+      hits: [
+        {
+          provider: "stripe",
+          confidence: "high",
+          sources: ["package.json:stripe", "requirements.txt:stripe"],
+        },
+      ],
+    });
+  } finally {
+    rmSync(project, { recursive: true, force: true });
+  }
+});
+
 test("repeated CLI scans preserve result ordering at each confidence threshold", () => {
   const project = mkdtempSync(join(tmpdir(), "stack-scan-order-"));
   try {
