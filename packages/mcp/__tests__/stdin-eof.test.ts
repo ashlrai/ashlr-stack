@@ -17,6 +17,36 @@ for (const [runtime, command, args] of [
   ["Bun source", process.execPath, [join(packageDir, "src/server.ts")]],
   ["Node bundle", "node", [join(packageDir, "dist/server.js")]],
 ] as const) {
+  test(`${runtime} exits cleanly without a response on immediate EOF`, async () => {
+    const child = spawn(command, [...args], { stdio: ["pipe", "pipe", "pipe"] });
+    let stdout = "";
+    child.stdout.setEncoding("utf8");
+    child.stdout.on("data", (chunk: string) => {
+      stdout += chunk;
+    });
+    child.stderr.resume();
+    const closed = new Promise<{ code: number | null; signal: string | null }>((resolve, reject) => {
+      child.once("error", reject);
+      child.once("close", (code, signal) => resolve({ code, signal }));
+    });
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      child.stdin.end();
+      const result = await Promise.race([
+        closed,
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(() => reject(new Error("Server did not exit within 5s of immediate EOF")), 5_000);
+        }),
+      ]);
+      expect(result).toEqual({ code: 0, signal: null });
+      expect(stdout).toBe("");
+    } finally {
+      clearTimeout(timer);
+      if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
+      await closed;
+    }
+  }, 10_000);
+
   test(`${runtime} stays alive with open stdin and exits within 5s of EOF`, async () => {
     const child = spawn(command, [...args], { stdio: ["pipe", "pipe", "pipe"] });
     const exited = new Promise<{ code: number | null; signal: string | null }>((resolve, reject) => {
