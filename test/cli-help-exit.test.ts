@@ -47,6 +47,20 @@ test("help for an unknown command fails with a useful diagnostic", () => {
   }
 }, 50_000);
 
+test("repeated help invocations exit successfully with identical output", () => {
+  for (const args of [["--help"], ["templates", "list", "--help"]]) {
+    const first = runHelp(args);
+    const second = runHelp(args);
+    for (const result of [first, second]) {
+      expect(result.signalCode).toBeUndefined();
+      expect(result.exitCode).toBe(0);
+    }
+    expect(first.stdout.toString()).not.toBe("");
+    expect(second.stdout.toString()).toBe(first.stdout.toString());
+    expect(second.stderr.toString()).toBe(first.stderr.toString());
+  }
+}, 100_000);
+
 test("help for a known command succeeds", () => {
   const result = runHelp(["templates", "list", "--help"]);
   expect(result.exitCode).toBe(0);
