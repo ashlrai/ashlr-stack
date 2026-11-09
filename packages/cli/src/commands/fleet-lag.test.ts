@@ -105,6 +105,28 @@ test("no tags remains explicit and still reports PR latency without a comparison
   });
 });
 
+test("empty fleet reports every repository with no tags or merged PRs", async () => {
+  const report = await collectFleetLag(async (args, signal) => {
+    expect(args[1]).not.toContain("/compare/");
+    return client([], [])(args, signal);
+  }, now);
+
+  expect(report).toEqual({
+    schemaVersion: 1,
+    generatedAt: date(now),
+    repos: DOCTOR_REPOS.map((repo) => ({
+      repo,
+      status: "no-tags",
+      defaultBranch: "release/main",
+      latestTag: null,
+      tagAgeDays: null,
+      commitsSinceTag: null,
+      mergedPrCount: 0,
+      medianSeconds: null,
+    })),
+  });
+});
+
 test("last 20 means merge order across pages, ignoring closed PRs, duplicates and old merges updated recently", async () => {
   const pages = new Set<string>();
   const report = await collectFleetLag(async (args, signal) => {
