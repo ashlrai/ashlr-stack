@@ -99,6 +99,28 @@ test("unmarked TAP failures are reported, including names that only resemble a d
   expect(firstFailingTest("not ok 1 - handles #TODOS\nnot ok 2 - other")).toBe("handles #TODOS");
 });
 
+test("colored Vitest failure with CRLF line endings returns a clean name", () => {
+  const red = (s: string) => `\x1b[31m${s}\x1b[39m`;
+  const bold = (s: string) => `\x1b[1m${s}\x1b[22m`;
+  const summary = [
+    " \x1b[31m❯\x1b[39m test/a.test.ts (2 tests | 1 failed)",
+    ` ${red(bold(" FAIL "))} test/a.test.ts > auth > rejects expiry`,
+    red("AssertionError: private body"),
+  ].join("\r\n");
+  const name = firstFailingTest(summary);
+  expect(name).toBe("test/a.test.ts > auth > rejects expiry");
+  expect(name).not.toContain("\r");
+  expect(name).not.toContain("\u001b");
+  expect(failingTests(summary)).toEqual(["test/a.test.ts > auth > rejects expiry"]);
+
+  // Verbose reporter: coloured cross, coloured duration, trailing CRLF.
+  const verbose = `${red("×")} rejects expiry \x1b[2m12ms\x1b[22m\r\n${red("×")} later failure 1ms\r\n`;
+  const verboseName = firstFailingTest(verbose);
+  expect(verboseName).toBe("rejects expiry");
+  expect(verboseName).not.toContain("\r");
+  expect(verboseName).not.toContain("\u001b");
+});
+
 test("TODO in a failure name without a directive is reported", () => {
   expect(firstFailingTest("not ok 1 - handles TODO items\nnot ok 2 - later failure")).toBe(
     "handles TODO items",
