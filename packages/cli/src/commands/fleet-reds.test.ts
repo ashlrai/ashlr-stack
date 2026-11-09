@@ -175,6 +175,14 @@ test("malformed or truncated job pages remain unavailable; unrecognized logs pre
     logStatus: "unrecognized",
   });
 });
+test("malformed later jobs do not expose a partial job list as a complete result", async () => {
+  const report = await collectFleetReds(async (args, signal) =>
+    args[1]?.includes("/jobs?")
+      ? JSON.stringify([{ total_count: 2, jobs: [job(1), { id: 2 }] }])
+      : client(args, signal),
+  );
+  expect(report.repos[0]?.runs?.[0]).toMatchObject({ status: "unavailable", jobs: null });
+});
 test("invalid run metadata is unknown, and infrastructure failures can have no job logs", async () => {
   for (const response of [
     "null",

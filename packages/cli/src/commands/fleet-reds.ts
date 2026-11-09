@@ -92,7 +92,7 @@ async function collectEvent(repo: string, branch: string, event: string, runner:
       new Set(jobs.map((job) => job?.id)).size !== jobs.length
     )
       throw new Error();
-    result.jobs = [];
+    const failedJobs: NonNullable<typeof result.jobs> = [];
     for (const job of jobs) {
       if (!id(job?.id) || typeof job.name !== "string" || !job.name || !completed(job.conclusion))
         throw new Error();
@@ -119,8 +119,9 @@ async function collectEvent(repo: string, branch: string, event: string, runner:
       } catch {
         /* Expired logs must not hide the failed job or echo private stderr. */
       }
-      result.jobs.push({ name: job.name, firstFailingTest: test, logStatus });
+      failedJobs.push({ name: job.name, firstFailingTest: test, logStatus });
     }
+    result.jobs = failedJobs;
     result.status =
       !result.jobs.length || result.jobs.some((job) => job.logStatus === "unavailable")
         ? "partial"
