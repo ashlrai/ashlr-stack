@@ -22,3 +22,25 @@ test("entries stay with their own versions; the empty version owns none", () => 
   ]);
   expect(rows.some((r) => r.version.startsWith("## 0.3.1"))).toBe(false);
 });
+
+test("a version with an empty section does not capture the next version's entries", () => {
+  const markdown = `# Changelog
+
+## 1.1.0 (2026-11-02)
+
+### Added
+
+## 1.0.0 (2026-10-31)
+
+### Added
+
+- First release.
+`;
+
+  expect(versionBodies(markdown).get("## 1.1.0 (2026-11-02)")?.trim()).toBe("### Added");
+  expect(versionBodies(markdown).get("## 1.0.0 (2026-10-31)")?.trim()).toBe("### Added\n\n- First release.");
+  expect(sectionEntries(markdown)).toEqual([
+    { version: "## 1.1.0 (2026-11-02)", section: "Added", entries: [] },
+    { version: "## 1.0.0 (2026-10-31)", section: "Added", entries: ["First release."] },
+  ]);
+});
