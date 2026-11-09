@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, symlinkSync } from "node:fs";
+import { lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, extname, isAbsolute, join, posix, relative, resolve, sep, win32 } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -81,6 +81,39 @@ function producedByBuild(packageDir: string, manifest: Manifest, binPath: string
   return posix.normalize(binPath) === output;
 }
 
+// A bin target must be a regular file. An existing directory, FIFO or other
+// non-file entry at the bin path is never valid, even if the build would
+// rewrite it; only a path that does not exist yet may fall back to the build.
+function binTargetIsFile(packageDir: string, manifest: Manifest, binPath: string): boolean {
+  const stat = statSync(join(packageDir, binPath), { throwIfNoEntry: false });
+  if (stat) return stat.isFile();
+  return producedByBuild(packageDir, manifest, binPath);
+}
+
+test("bin target check accepts files and rejects directories and missing paths", () => {
+  const dir = mkdtempSync(join(tmpdir(), "stack-bin-file-"));
+  try {
+    mkdirSync(join(dir, "dist", "isdir.js"), { recursive: true });
+    mkdirSync(join(dir, "src"));
+    writeFileSync(join(dir, "dist", "cli.js"), "");
+    writeFileSync(join(dir, "src", "index.ts"), "");
+    symlinkSync(join(dir, "dist", "cli.js"), join(dir, "dist", "link.js"));
+    const built: Manifest = { scripts: { build: "bun build src/index.ts --outdir dist" } };
+    expect(binTargetIsFile(dir, {}, "dist/cli.js")).toBe(true);
+    expect(binTargetIsFile(dir, {}, "dist/link.js")).toBe(true);
+    expect(binTargetIsFile(dir, built, "dist/index.js")).toBe(true);
+    expect(binTargetIsFile(dir, {}, "dist/index.js")).toBe(false);
+    expect(binTargetIsFile(dir, {}, "dist/missing.js")).toBe(false);
+    expect(binTargetIsFile(dir, built, "dist/other.js")).toBe(false);
+    // Directory is rejected even when the build would produce that name.
+    expect(binTargetIsFile(dir, { scripts: { build: "bun build src/isdir.ts --outdir dist" } }, "dist/isdir.js")).toBe(false);
+    expect(binTargetIsFile(dir, built, "dist")).toBe(false);
+    expect(binTargetIsFile(dir, built, "src")).toBe(false);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("package bin entries reference existing files", () => {
   const missing: string[] = [];
   for (const entry of readdirSync(packagesDir, { withFileTypes: true })) {
@@ -91,9 +124,7 @@ test("package bin entries reference existing files", () => {
     const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as Manifest;
     const bins = typeof manifest.bin === "string" ? { bin: manifest.bin } : (manifest.bin ?? {});
     for (const [name, path] of Object.entries(bins)) {
-      if (statSync(join(packageDir, path), { throwIfNoEntry: false })?.isFile()) continue;
-      if (producedByBuild(packageDir, manifest, path)) continue;
-      missing.push(`${entry.name} (${name}): ${path}`);
+      if (!binTargetIsFile(packageDir, manifest, path)) missing.push(`${entry.name} (${name}): ${path}`);
     }
   }
   expect(missing).toEqual([]);
