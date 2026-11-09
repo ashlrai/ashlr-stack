@@ -210,6 +210,19 @@ test("reports real TAP failures without reporting TODO failures", async () => {
     }
   }
 });
+test("empty job output retains failed jobs without identifying a failing test", async () => {
+  const report = await collectFleetReds(async (args, signal) =>
+    args.includes("--job") ? "" : client(args, signal),
+  );
+  for (const repo of report.repos) {
+    for (const run of repo.runs ?? []) {
+      expect(run.jobs).toEqual([
+        { name: "Tests 1", firstFailingTest: null, logStatus: "unrecognized" },
+        { name: "Tests 3", firstFailingTest: null, logStatus: "unrecognized" },
+      ]);
+    }
+  }
+});
 test("newer green and absent completed runs never fetch historical failures or logs", async () => {
   const report = await collectFleetReds(async (args, signal) =>
     args[1] === "list"
