@@ -346,7 +346,7 @@ jobs:
 
       - if: steps.gate.outputs.enabled == 'true'
         name: Use an npm CLI that supports trusted publishing
-        run: npm install -g "npm@^11.5.1" && npm --version
+        run: npm install -g npm@11.19.0 && npm --version
 
       - if: steps.gate.outputs.enabled == 'true'
         name: Install deps
