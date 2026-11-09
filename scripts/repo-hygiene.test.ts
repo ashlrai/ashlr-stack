@@ -382,6 +382,30 @@ test("counts a TODO comment in a temporary source file offline", async () => {
   }
 });
 
+test("gitGrepCount counts markers across eligible paths containing spaces", async () => {
+  const { mkdir, mkdtemp, rm, writeFile } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const { spawnSync } = await import("node:child_process");
+  const dir = await mkdtemp(join(tmpdir(), "repo-hygiene-spaces-"));
+  try {
+    expect(spawnSync("git", ["init", "-q", dir]).status).toBe(0);
+    await mkdir(join(dir, "source files"));
+    await writeFile(join(dir, "source files", "first file.ts"), "// TODO: one\n// FIXME: two\n");
+    await writeFile(join(dir, "source files", "second file.rs"), "// HACK: three\n");
+    await writeFile(join(dir, "source files", "notes.md"), "TODO: excluded\n");
+    expect(spawnSync("git", ["-C", dir, "add", "."]).status).toBe(0);
+
+    const first = "source files/first file.ts";
+    const second = "source files/second file.rs";
+    await expect(gitGrepCount(dir, TODO_MARKER_PATTERN, [first])).resolves.toBe(2);
+    await expect(gitGrepCount(dir, TODO_MARKER_PATTERN, [second])).resolves.toBe(1);
+    await expect(gitGrepCount(dir, TODO_MARKER_PATTERN, [first, second])).resolves.toBe(3);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test("gitGrepCount finds no marker in an eligible file without marker words", async () => {
   const { mkdtemp, rm, writeFile } = await import("node:fs/promises");
   const { tmpdir } = await import("node:os");
