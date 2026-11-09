@@ -40,6 +40,35 @@ for (const [format, log, expected] of fixtures) {
 test("empty output has no failing test", () => {
   expect(firstFailingTest("")).toBeNull();
 });
+test("empty and blank input returns no failure without throwing", () => {
+  for (const log of [
+    "",
+    " ",
+    "\n",
+    "\r\n\r\n",
+    "\t \n  \n",
+    "Test job\tRun tests\t2026-11-09T05:00:00.0000000Z ",
+  ])
+    expect(() => firstFailingTest(log)).not.toThrow();
+  for (const log of [
+    "",
+    " ",
+    "\n",
+    "\r\n\r\n",
+    "\t \n  \n",
+    "Test job\tRun tests\t2026-11-09T05:00:00.0000000Z ",
+  ])
+    expect(firstFailingTest(log)).toBeNull();
+});
+test("an empty job log is reported as unrecognized, not as a failure", async () => {
+  const report = await collectFleetReds(async (args, signal) =>
+    args.includes("--job") ? "" : client(args, signal),
+  );
+  expect(report.repos[0]?.runs?.[0]?.jobs).toEqual([
+    { name: "Tests 1", firstFailingTest: null, logStatus: "unrecognized" },
+    { name: "Tests 3", firstFailingTest: null, logStatus: "unrecognized" },
+  ]);
+});
 test("non-test failures and passing summaries remain unknown", () => {
   for (const log of [
     "FAIL test/a.test.ts\nError: cannot import",
