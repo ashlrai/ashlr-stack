@@ -6587,4 +6587,25 @@ describe("webhookStubFor — signature-verification TODO stays a comment", () =>
       }
     },
   );
+
+  it.each(["stripe", "clerk", "supabase", "github", "acme"])(
+    "never claims in the whole %s stub that the received signature was verified",
+    (provider) => {
+      // Every sentence that mentions verification must also negate it
+      // ("not", "never", "NOT implemented") or be an imperative to-do
+      // ("Implement verification first", "Verify over ...", "Fill in ...").
+      const text = webhookStubFor(provider)
+        .replace(/^\/\/ ?/gm, "")
+        .replace(/\s+/g, " ");
+      expect(text).not.toMatch(
+        /\b(?:signature|request|webhook|payload|body)\b[^.]{0,40}\b(?:is|was|has been|been|gets|already)\s+(?:verified|authenticated|validated|trusted)\b/i,
+      );
+      expect(text).not.toMatch(
+        /\b(?:verified|validated|authenticated) (?:the )?(?:signature|request|webhook)\b/i,
+      );
+      // The two explicit disclaimers stay in the generated text.
+      expect(text).toContain("does not verify signatures");
+      expect(text).toContain("signature verification is NOT implemented here");
+    },
+  );
 });
