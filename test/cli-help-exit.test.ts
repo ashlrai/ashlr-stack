@@ -37,6 +37,13 @@ test("--help exits successfully and prints usage", () => {
   expect(result.stdout.toString()).toMatch(/usage\s+`?stack\b/i);
 }, 25_000);
 
+test("-h exits successfully and prints usage", () => {
+  const result = runHelp(["-h"]);
+  expect(result.signalCode).toBeUndefined();
+  expect(result.exitCode).toBe(0);
+  expect(result.stdout.toString()).toMatch(/usage\s+`?stack\b/i);
+}, 25_000);
+
 test("help for an unknown command fails with a useful diagnostic", () => {
   for (const args of [["imaginary-command", "--help"], ["templates", "imaginary-command", "-h"]]) {
     const result = runHelp(args);
