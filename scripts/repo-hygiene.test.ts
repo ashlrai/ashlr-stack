@@ -185,6 +185,10 @@ test("CLI counts code markers without counting markers in non-code files", async
       await mkdir(repo);
       expect(spawnSync("git", ["init", "-q", repo]).status).toBe(0);
       await writeFile(join(repo, "README.md"), "TODO: documentation marker\n");
+      // These tracked files contain valid markers, but none has a counted extension.
+      for (const file of ["config.json", "script.py", "script.sh", "source.ts.md", "NOTES"]) {
+        await writeFile(join(repo, file), "TODO: excluded\nFIXME: excluded\nXXX: excluded\nHACK: excluded\n");
+      }
       if (name === "mixed") await writeFile(join(repo, "source.ts"), "// FIXME: code marker\nconst TODO_suffix = 1;\n");
       if (name === "spaced-filename") {
         await writeFile(join(repo, "source with spaces.ts"), "// TODO: standalone marker\n// TODO another marker\nconst TODO_suffix = 1;\n");
