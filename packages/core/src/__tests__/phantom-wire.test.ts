@@ -138,6 +138,33 @@ describe("ai/phantom-wire", () => {
     }
   });
 
+  it("keeps the missing-or-empty signature guard before the unimplemented-verification warning", () => {
+    // `!signature` rejects both a missing header (null) and an empty one (""),
+    // and must run before the body is read. The TODO(security) warning must
+    // stay next to it so the example never reads as verified.
+    const header: Record<string, string> = {
+      stripe: "stripe-signature",
+      clerk: "svix-signature",
+      supabase: "x-supabase-signature",
+      github: "x-hub-signature-256",
+      acme: "x-webhook-signature",
+    };
+    for (const provider of Object.keys(header)) {
+      const stub = webhookStubFor(provider);
+      const read = `//   const signature = req.headers.get("${header[provider]}");\n`;
+      const guard = `//   if (!signature) return new Response("Missing signature", { status: 400 });\n`;
+      expect(stub).toContain(read + guard);
+      const guardAt = stub.indexOf(guard);
+      expect(guardAt).toBeGreaterThan(-1);
+      expect(guardAt).toBeLessThan(stub.indexOf("req.text()"));
+      const warningAt = stub.indexOf(
+        "// TODO(security): signature verification is NOT implemented here.",
+      );
+      expect(warningAt).toBeGreaterThan(guardAt);
+      expect(stub).toContain("does not verify signatures.");
+    }
+  });
+
   it("gives every repeated provider slot in the stub the same supplied value", () => {
     // The provider shows up verbatim in the title and the forgery warning,
     // capitalized in the handler name, and as the secret key in both
