@@ -110,8 +110,14 @@ export async function readRecipe(id: string, cwd: string = process.cwd()): Promi
   } catch (err) {
     throw new StackError("RECIPE_NOT_FOUND", `No recipe "${id}" at ${path}`, { cause: err });
   }
-  const raw = parseToml(text) as Record<string, unknown>;
-  const recipe = coerceRecipe(raw, id);
+  let recipe: Recipe;
+  try {
+    recipe = coerceRecipe(parseToml(text) as Record<string, unknown>, id);
+  } catch (err) {
+    throw new StackError("INVALID_RECIPE", `Recipe "${id}" at ${path} is not valid TOML.`, {
+      cause: err,
+    });
+  }
   for (const p of recipe.providers) assertKnownProvider(p.name);
   return recipe;
 }
@@ -164,7 +170,7 @@ function coerceRecipe(raw: Record<string, unknown>, fallbackId: string): Recipe 
   const createdAt = typeof raw.createdAt === "string" ? raw.createdAt : new Date(0).toISOString();
   const providersRaw = Array.isArray(raw.providers) ? raw.providers : [];
   const providers = providersRaw.map((entry) => {
-    const e = entry as Record<string, unknown>;
+    const e = (entry && typeof entry === "object" ? entry : {}) as Record<string, unknown>;
     const name = typeof e.name === "string" ? e.name : "";
     const rationale = typeof e.rationale === "string" ? e.rationale : undefined;
     return rationale === undefined ? { name } : { name, rationale };
