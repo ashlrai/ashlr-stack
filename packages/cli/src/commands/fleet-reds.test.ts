@@ -57,6 +57,23 @@ test("node:test expected TODO failures do not hide the first real failing test",
     ),
   ).toBe("real failure");
 });
+test("output containing only TODO and SKIP failures has no failing test", () => {
+  const log = [
+    "not ok 1 - expected failure # TODO pending fix",
+    "not ok 2 - skipped failure # SKIP unavailable",
+    "✖ expected failure (1ms) # TODO",
+    "✗ skipped failure (2ms) # SKIP",
+  ].join("\n");
+  expect(firstFailingTest(log)).toBeNull();
+  expect(
+    firstFailingTest(
+      log
+        .split("\n")
+        .map((line) => `Tests\tRun\t2026-11-09T05:00:00.0000000Z \x1b[31m${line}\x1b[0m`)
+        .join("\r\n"),
+    ),
+  ).toBeNull();
+});
 test("a ✖ failure marked TODO is excluded from reported failures", () => {
   const ts = "Tests\tRun\t2026-11-09T05:00:00.0000000Z ";
   // Only TODO-marked failures: nothing to report.
