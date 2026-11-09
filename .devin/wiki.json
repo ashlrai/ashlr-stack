@@ -1,0 +1,51 @@
+{
+  "repo_notes": [
+    {
+      "content": "Ashlr Stack is a Bun/TypeScript monorepo for configuring third-party services. Follow the source for actual behavior and distinguish source capabilities from published versions and provider readiness."
+    },
+    {
+      "content": "The core package implements providers and orchestration; the CLI and MCP server expose them. Credentials pass through provider flows and Phantom Secrets; describe the actual trust boundaries and avoid implying all output is redacted."
+    }
+  ],
+  "pages": [
+    {
+      "title": "Architecture Overview",
+      "purpose": "Explain the monorepo, package relationships, and the flow from CLI and MCP requests through core to providers."
+    },
+    {
+      "title": "CLI Commands and Workflows",
+      "purpose": "Describe command registration in packages/cli/src/index.ts and the init, scan, recommend, apply, add and doctor workflows in packages/cli/src/commands.",
+      "parent": "Architecture Overview"
+    },
+    {
+      "title": "Providers and Provisioning",
+      "purpose": "Explain the provider registry, adapters, authentication and provisioning pipeline in packages/core/src/providers and packages/core/src/pipeline.ts.",
+      "parent": "Architecture Overview"
+    },
+    {
+      "title": "Configuration and Secrets",
+      "purpose": "Describe Stack configuration, local instance data, Phantom Secrets integration and credential handling in packages/core/src/config.ts and phantom.ts.",
+      "parent": "Architecture Overview"
+    },
+    {
+      "title": "MCP Server and Local Lane",
+      "purpose": "Explain tool definitions, CLI dispatch and the loopback local lane bridge in packages/mcp/src.",
+      "parent": "Architecture Overview"
+    },
+    {
+      "title": "Templates and Detection",
+      "purpose": "Describe project detection, templates and their use in initialization and recommendations in packages/core/src and templates/.",
+      "parent": "Architecture Overview"
+    },
+    {
+      "title": "Site and Generated Documentation",
+      "purpose": "Explain the Astro site in packages/site, generated reference material and documentation freshness scripts in scripts/freshness.",
+      "parent": "Architecture Overview"
+    },
+    {
+      "title": "Development and Testing",
+      "purpose": "Describe local setup, package tests, typechecking and linting using STACK.md and the repository scripts.",
+      "parent": "Architecture Overview"
+    }
+  ]
+}

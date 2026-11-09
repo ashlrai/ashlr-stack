@@ -144,3 +144,15 @@ new provider — follow the "Add a new provider" flow above.
 - `docs/provider-auth-matrix.md` — OAuth app status per provider
 - `docs/stack-toml-schema.md` — canonical config schema
 - `packages/site/public/llms.txt` — public agent-facing summary
+
+## DeepWiki configuration
+
+The root [`.devin/wiki.json`](.devin/wiki.json) steers DeepWiki using repository
+notes and an explicit page list. DeepWiki generates only the listed pages when
+this file is present, so update the list when major areas or relationships
+change. Keep page purposes tied to source paths and distinguish source behavior
+from released capabilities. Both `repo_notes` and a nonempty `pages` array are
+required; page titles must be unique, and a `parent` names another page title.
+See [Devin's configuration reference](https://docs.devin.ai/work-with-devin/deepwiki#steering-deepwiki)
+for current limits and regeneration instructions. The configuration guides wiki
+generation; adding it alone does not connect or regenerate a repository wiki.
