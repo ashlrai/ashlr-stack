@@ -46,3 +46,11 @@ test("human output and malformed JSON retain their formatting", () => {
   );
   expect(compactJsonOutput("", ["--json"])).toBe("");
 });
+
+test("multiline command output preserves line order and content", () => {
+  const input = "First result\n  indented detail\n\nThird result: \tready\nFinal result";
+
+  expect(compactJsonOutput(input, ["list"])).toBe(input);
+  // Mixed diagnostics and data are not a single JSON document, even with --json.
+  expect(compactJsonOutput(input, ["list", "--json"])).toBe(input);
+});
