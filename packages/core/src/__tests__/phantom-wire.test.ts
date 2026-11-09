@@ -6481,4 +6481,23 @@ describe("webhookStubFor — $1 in replacement text (original PR 1023)", () => {
     // Each $1 is a standalone $ at its own site — five total.
     expect(count(stub, "$1")).toBe(5);
   });
+
+  it("preserves an unknown placeholder with whitespace inside its name and the surrounding text", () => {
+    // `${ UNKNOWN NAME }` has spaces both around and inside the name. It
+    // matches no slot, so it must survive byte-for-byte: not trimmed, not
+    // collapsed, not joined, not re-expanded. The known slots still expand.
+    const name = "before${ UNKNOWN NAME }after";
+    const stub = webhookStubFor(name);
+    const count = (s: string, needle: string) => s.split(needle).length - 1;
+
+    expect(stub).toContain(`webhook handler stub for ${name}.`);
+    expect(stub).toContain(`forge a ${name} webhook.`);
+    expect(stub).toContain("handleBefore${ UNKNOWN NAME }afterWebhook(req: Request)");
+    expect(count(stub, "phantom reveal BEFORE${ UNKNOWN NAME }AFTER_WEBHOOK_SECRET")).toBe(2);
+
+    // Five sites carry the name; every occurrence keeps its inner spaces.
+    expect(count(stub, "${ UNKNOWN NAME }")).toBe(5);
+    expect(stub).not.toContain("${UNKNOWN");
+    expect(stub).not.toContain("${ UNKNOWN NAME}");
+  });
 });
