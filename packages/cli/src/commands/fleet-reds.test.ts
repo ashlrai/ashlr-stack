@@ -123,6 +123,21 @@ test("lists both latest completed CI events for all seven default branches and p
     });
   }
 });
+test("reports an unmarked spec failure after expected failures", async () => {
+  const report = await collectFleetReds(async (args, signal) =>
+    args.includes("--job")
+      ? "✖ expected failure (1ms) # TODO\n✖ skipped failure (2ms) # SKIP\n✖ rejects expiry (3ms)"
+      : client(args, signal),
+  );
+  for (const repo of report.repos) {
+    for (const run of repo.runs ?? []) {
+      expect(run.jobs).toEqual([
+        { name: "Tests 1", firstFailingTest: "rejects expiry", logStatus: "parsed" },
+        { name: "Tests 3", firstFailingTest: "rejects expiry", logStatus: "parsed" },
+      ]);
+    }
+  }
+});
 test("newer green and absent completed runs never fetch historical failures or logs", async () => {
   const report = await collectFleetReds(async (args, signal) =>
     args[1] === "list"
