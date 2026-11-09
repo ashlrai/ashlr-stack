@@ -1,5 +1,9 @@
 import { describe, expect, it } from "bun:test";
-import { webhookStubFor } from "./phantom-wire.ts";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { setupFakePhantom } from "../__tests__/_harness.ts";
+import { webhookStubFor, wirePhantomForRecipe } from "./phantom-wire.ts";
 
 describe("generated webhook examples", () => {
   for (const [provider, header] of [
@@ -30,5 +34,42 @@ describe("generated webhook examples", () => {
       expect(lines[success]).toMatch(/^\/\/\s+return new Response/);
       expect(lines.every((line) => line.trim() === "" || line.startsWith("//"))).toBe(true);
     });
+  }
+});
+
+it("writes the signature warning into each generated webhook file", async () => {
+  const harness = setupFakePhantom();
+  const dir = mkdtempSync(join(tmpdir(), "wire-webhook-warning-"));
+  try {
+    const providers = ["stripe", "clerk", "supabase", "github"];
+    const result = await wirePhantomForRecipe(
+      {
+        id: "webhook-examples",
+        query: "webhook examples",
+        createdAt: "2026-04-18T00:00:00.000Z",
+        providers: providers.map((name) => ({ name })),
+      },
+      { cwd: dir },
+    );
+
+    expect(result.webhooks).toEqual(
+      providers.map((provider) => join(dir, ".stack", "webhooks", `${provider}.ts`)),
+    );
+    for (const path of result.webhooks) {
+      const example = readFileSync(path, "utf8");
+      expect(example).toContain(
+        "This entire example is commented out and does not verify signatures.",
+      );
+      expect(example).toContain("signature verification is NOT implemented here");
+      expect(example).toContain(
+        "200 without authenticating the request. Implement verification first.",
+      );
+      expect(example.split("\n").every((line) => line.trim() === "" || line.startsWith("//"))).toBe(
+        true,
+      );
+    }
+  } finally {
+    harness.cleanup();
+    rmSync(dir, { recursive: true, force: true });
   }
 });
