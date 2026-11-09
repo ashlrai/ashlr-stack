@@ -294,6 +294,22 @@ test("gitGrepCount returns 0 for an empty eligible file list (TODO count)", asyn
   await expect(gitGrepCount("/nonexistent/repo-hygiene-empty", todoPattern, [])).resolves.toBe(0);
 });
 
+test("counts a TODO comment in a temporary source file offline", async () => {
+  const { mkdtemp, rm, writeFile } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const { spawnSync } = await import("node:child_process");
+  const dir = await mkdtemp(join(tmpdir(), "repo-hygiene-todo-"));
+  try {
+    expect(spawnSync("git", ["init", "-q", dir]).status).toBe(0);
+    await writeFile(join(dir, "source.ts"), "// TODO: finish this locally\nexport const value = 1;\n");
+    expect(spawnSync("git", ["-C", dir, "add", "source.ts"]).status).toBe(0);
+    await expect(gitGrepCount(dir, TODO_MARKER_PATTERN, ["source.ts"])).resolves.toBe(1);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test("gitGrepCount finds no marker in an eligible file without marker words", async () => {
   const { mkdtemp, rm, writeFile } = await import("node:fs/promises");
   const { tmpdir } = await import("node:os");
