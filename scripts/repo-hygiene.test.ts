@@ -465,16 +465,25 @@ test("TODO_MARKER_PATTERN ignores marker words embedded in longer identifiers", 
       "end-of-line.ts": "// remember to fix this: HACK\n",
       "start-of-line.ts": "XXX leading marker\n",
     };
+    // Exercise both boundaries for every marker, including digits and underscores.
+    files["boundary-matrix.ts"] = ["TODO", "FIXME", "XXX", "HACK"]
+      .flatMap((marker) => ["a", "Z", "0", "_"].flatMap((neighbor) => [
+        `${neighbor}${marker}`,
+        `${marker}${neighbor}`,
+        `${neighbor}${marker}${neighbor}`,
+      ]))
+      .join("\n");
     for (const [name, body] of Object.entries(files)) await writeFile(join(dir, name), body);
     expect(spawnSync("git", ["-C", dir, "add", "."]).status).toBe(0);
 
-    // Embedded-only file contributes nothing; each standalone form counts exactly once.
+    // Embedded-only files contribute nothing; each standalone form counts exactly once.
+    await expect(gitGrepCount(dir, TODO_MARKER_PATTERN, ["boundary-matrix.ts"])).resolves.toBe(0);
     await expect(gitGrepCount(dir, TODO_MARKER_PATTERN, ["embedded.ts"])).resolves.toBe(0);
     await expect(gitGrepCount(dir, TODO_MARKER_PATTERN, ["standalone.ts"])).resolves.toBe(1);
     await expect(gitGrepCount(dir, TODO_MARKER_PATTERN, ["end-of-line.ts"])).resolves.toBe(1);
     await expect(gitGrepCount(dir, TODO_MARKER_PATTERN, ["start-of-line.ts"])).resolves.toBe(1);
     await expect(
-      gitGrepCount(dir, TODO_MARKER_PATTERN, ["embedded.ts", "standalone.ts", "end-of-line.ts", "start-of-line.ts"]),
+      gitGrepCount(dir, TODO_MARKER_PATTERN, ["embedded.ts", "boundary-matrix.ts", "standalone.ts", "end-of-line.ts", "start-of-line.ts"]),
     ).resolves.toBe(3);
   } finally {
     await rm(dir, { recursive: true, force: true });
