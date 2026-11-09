@@ -758,7 +758,7 @@ function codespansByEntry(markdown: string): { raw: string; codespans: string[] 
       if (token.type !== "list") continue;
       for (const item of token.items) {
         const spans: string[] = [];
-        marked.walkTokens(item.tokens, (t) => {
+        marked.walkTokens(item.tokens.filter((token) => token.type !== "list"), (t) => {
           if (t.type === "codespan") spans.push(t.text);
         });
         found.push({ raw: item.raw, codespans: spans });
@@ -797,6 +797,15 @@ test("marker survival check detects a mangled TODO_STACK_APPLY marker", () => {
   // Nested list items are visited too.
   const nested = codespansByEntry("- outer\n  - inner `TODO_STACK_APPLY`\n");
   expect(nested.some((entry) => entry.codespans.includes("TODO_STACK_APPLY"))).toBe(true);
+});
+
+test("nested entries retain their own inline code spans", () => {
+  const entries = codespansByEntry("- parent `parent-code`\n  - child `child-code`\n- sibling `sibling-code`\n");
+  expect(entries).toHaveLength(3);
+  expect(entries.map((entry) => entry.codespans)).toEqual([["parent-code"], ["child-code"], ["sibling-code"]]);
+  expect(entries[0].raw).toStartWith("- parent `parent-code`");
+  expect(entries[1].raw.trim()).toBe("- child `child-code`");
+  expect(entries[2].raw.trim()).toBe("- sibling `sibling-code`");
 });
 
 function entryLinks(entry: { tokens: { type: string; tokens?: unknown[] }[] }): { text: string; href: string }[] {
