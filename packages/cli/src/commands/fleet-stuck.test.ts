@@ -105,6 +105,15 @@ test("empty repos are successful empty lists", async () => {
   ).toBe(true);
 });
 
+test("an empty fleet fixture reports no invented PRs", async () => {
+  const report = await collectFleetStuck(client([page([], 0, false)]), now);
+  expect(report).toEqual({
+    schemaVersion: 1,
+    generatedAt: new Date(now).toISOString(),
+    repos: DOCTOR_REPOS.map((repo) => ({ repo, status: "ok", prs: [] })),
+  });
+});
+
 test("all PR pages are included and ordered by state then oldest first", async () => {
   const nodes = [{ ...pr(2), createdAt: new Date(now).toISOString() }, pr(1)];
   const report = await collectFleetStuck(
