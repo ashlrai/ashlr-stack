@@ -7,6 +7,40 @@ import { fileURLToPath } from "node:url";
 
 const CLI_ENTRY = fileURLToPath(new URL("../index.ts", import.meta.url));
 
+test("repeated CLI scans preserve evidence order for a single provider", () => {
+  const project = mkdtempSync(join(tmpdir(), "stack-scan-single-order-"));
+  try {
+    writeFileSync(
+      join(project, "package.json"),
+      JSON.stringify({ dependencies: { stripe: "1", "@stripe/stripe-js": "1" } }),
+    );
+
+    const outputs = Array.from({ length: 2 }, () => {
+      const result = spawnSync("bun", [CLI_ENTRY, "scan", "--json", "--path", project], {
+        encoding: "utf8",
+        env: { ...process.env, CI: "1", NO_COLOR: "1" },
+        timeout: 15_000,
+      });
+      expect(result.status).toBe(0);
+      expect(result.stderr).toBe("");
+      return JSON.parse(result.stdout);
+    });
+
+    expect(outputs[0]).toEqual({
+      hits: [
+        {
+          provider: "stripe",
+          confidence: "high",
+          sources: ["package.json:stripe", "package.json:@stripe/stripe-js"],
+        },
+      ],
+    });
+    expect(outputs[1]).toEqual(outputs[0]);
+  } finally {
+    rmSync(project, { recursive: true, force: true });
+  }
+}, 60_000);
+
 test("repeated CLI scans preserve result ordering at each confidence threshold", () => {
   const project = mkdtempSync(join(tmpdir(), "stack-scan-order-"));
   try {
