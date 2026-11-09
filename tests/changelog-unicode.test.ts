@@ -108,3 +108,18 @@ test("CHANGELOG.md plus the Unicode fixture entry parses with the entry intact, 
   expect(find(merged)?.entries).toEqual([ROOT_ENTRY, ...before]);
   expect(find(merged.replace(/\n/g, "\r\n"))?.entries[0]).toBe(ROOT_ENTRY);
 });
+
+test("sectionEntries keeps invisible and separator characters, and Unicode section names, unchanged", () => {
+  // ZWSP, ZWNJ, RLM, NBSP, LS and PS (must not split an entry), VS16, a tag character, trailing NBSP.
+  const entry = "zero​width‌ joiner‏ rlm nbsp line sep para sep ❤️ \u{E0067} end ";
+  const markdown = `## Unreleased\n\n### Ajouté — 追加\n\n- ${entry}\n- \`\`\`mid-line backticks stay in the entry\`\`\`\n`;
+  const expected = [
+    {
+      version: "## Unreleased",
+      section: "Ajouté — 追加",
+      entries: [entry, "```mid-line backticks stay in the entry```"],
+    },
+  ];
+  expect(sectionEntries(markdown)).toEqual(expected);
+  expect(sectionEntries(markdown.replace(/\n/g, "\r\n"))).toEqual(expected);
+});
