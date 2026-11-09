@@ -94,6 +94,19 @@ test("missing files produce an explicit empty graph through the CLI", () =>
     expect(JSON.parse(output)).toEqual(await collectFleetGraph(dir));
   }));
 
+test("present but empty sources return an empty graph without throwing", () =>
+  fixture(async (dir) => {
+    await writeFile(join(dir, "slots.json"), "{}");
+    await writeFile(join(dir, "queue.jsonl"), "");
+    await writeFile(join(dir, "jobs.jsonl"), "");
+    expect(await collectFleetGraph(dir)).toEqual({
+      schemaVersion: 1,
+      sources: { slots: "ok", queue: "ok", jobs: "ok" },
+      nodes: [],
+      edges: [],
+    });
+  }));
+
 test("malformed sources are isolated; custom router arrays are sorted and deduplicated", () =>
   fixture(async (dir) => {
     await writeFile(join(dir, "slots.json"), "[]");
