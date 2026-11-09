@@ -30,6 +30,11 @@ describe("defaults are unchanged", () => {
 });
 
 describe("overrides are honored", () => {
+  test("anthropic trims surrounding whitespace from an override", () => {
+    expect(anthropicBaseUrl({ ANTHROPIC_BASE_URL: " \t https://gw.example/anthropic \n" })).toBe(
+      "https://gw.example/anthropic",
+    );
+  });
   test("anthropic and openai: used as given, trailing slashes trimmed", () => {
     expect(anthropicBaseUrl({ ANTHROPIC_BASE_URL: "http://127.0.0.1:4000" })).toBe(
       "http://127.0.0.1:4000",
@@ -121,7 +126,7 @@ describe("callers read the variables at call time", () => {
   });
 
   test("key checks follow ANTHROPIC_BASE_URL and OPENAI_BASE_URL", async () => {
-    process.env.ANTHROPIC_BASE_URL = "http://127.0.0.1:4000/";
+    process.env.ANTHROPIC_BASE_URL = " \t http://127.0.0.1:4000/ \n";
     process.env.OPENAI_BASE_URL = "http://127.0.0.1:4000/v1/";
     await anthropic.healthcheck!(ctx, entry("anthropic", "ANTHROPIC_API_KEY"));
     await openai.healthcheck!(ctx, entry("openai", "OPENAI_API_KEY"));
