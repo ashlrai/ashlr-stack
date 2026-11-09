@@ -39,10 +39,14 @@ describe("config", () => {
 
   test("emptyConfig produces a fresh project id and default dev env", () => {
     const config = emptyConfig();
+    const other = emptyConfig();
     expect(config.stack.version).toBe("1");
     expect(config.stack.project_id).toMatch(/^stk_[a-f0-9]{12}$/);
     expect(config.environments).toEqual([{ name: "dev", default: true }]);
     expect(config.services).toEqual({});
+    expect(other.stack.project_id).toMatch(/^stk_[a-f0-9]{12}$/);
+    expect(other.stack.project_id).not.toBe(config.stack.project_id);
+    expect(other.environments).toEqual([{ name: "dev", default: true }]);
   });
 
   test("writeConfig → readConfig round-trips", async () => {
