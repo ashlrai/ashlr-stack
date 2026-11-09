@@ -792,3 +792,23 @@ test("Original PR 725: punctuation fixture keeps commas, colons, parentheses, an
   expect(all.some((e) => e.includes("("))).toBe(true);
   expect(all.some((e) => e.includes("#123)"))).toBe(true);
 });
+
+test("tilde-fenced block drops its bullet and keeps the next ordinary bullet", () => {
+  const md = [
+    "## 1.2.3 (2026-11-09)",
+    "### Fixed",
+    "- Before the fence.",
+    "~~~md",
+    "- Fenced bullet.",
+    "## 9.9.9 (2026-01-01)",
+    "~~~",
+    "- After the fence.",
+  ].join("\n");
+  const expected: ChangelogVersion[] = [
+    { version: "1.2.3", date: "2026-11-09", entries: ["Before the fence.", "After the fence."] },
+  ];
+  expect(parseChangelog(md)).toEqual(expected);
+  expect(parseChangelog(md.replace(/\n/g, "\r\n"))).toEqual(expected);
+  expect(malformedHeadings(md)).toEqual([]);
+  expect(versionSections(md)).toHaveLength(1);
+});
