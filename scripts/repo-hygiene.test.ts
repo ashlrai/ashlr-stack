@@ -244,6 +244,37 @@ test("CLI counts a HACK marker in an eligible code file toward the TODO count", 
   }
 });
 
+test("CLI counts each supported marker in a tracked source file", async () => {
+  const { chmod, mkdir, mkdtemp, rm, writeFile } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const { spawnSync } = await import("node:child_process");
+  const dir = await mkdtemp(join(tmpdir(), "hygiene-all-markers-"));
+  try {
+    const bin = join(dir, "bin");
+    const root = join(dir, "repos");
+    const repo = join(root, "markers");
+    await mkdir(bin);
+    await mkdir(repo, { recursive: true });
+    expect(spawnSync("git", ["init", "-q", repo]).status).toBe(0);
+    await writeFile(join(repo, "source.ts"), "// TODO: one\n// FIXME: two\n// XXX: three\n// HACK: four\n");
+    expect(spawnSync("git", ["-C", repo, "add", "source.ts"]).status).toBe(0);
+    const gh = join(bin, "gh");
+    await writeFile(gh, "#!/bin/sh\necho public\n");
+    await chmod(gh, 0o755);
+    const result = spawnSync(process.execPath, [join(import.meta.dir, "repo-hygiene.ts"), "--root", root, "--json"], {
+      env: { ...process.env, PATH: `${bin}:${process.env.PATH}` },
+      encoding: "utf8",
+    });
+    expect(result.status).toBe(0);
+    const json = JSON.parse(result.stdout);
+    expect(json.repos).toHaveLength(1);
+    expect(json.repos[0].deadCode.todoFixmeCount).toBe(4);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test("CLI excludes private, unknown and failed visibility checks from JSON and Markdown", async () => {
   const { mkdtemp, mkdir, readFile, rm, writeFile, chmod } = await import("node:fs/promises");
   const { tmpdir } = await import("node:os");
