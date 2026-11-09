@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { webhookStubFor } from "./phantom-wire.ts";
+import { verificationHintFor, webhookStubFor } from "./phantom-wire.ts";
 
 describe("generated webhook example stays inert and keeps its warning", () => {
   for (const provider of ["stripe", "clerk", "supabase", "github", "other"]) {
@@ -23,6 +23,13 @@ describe("generated webhook example stays inert and keeps its warning", () => {
       expect(handler).toBeGreaterThan(warning);
       expect(todo).toBeGreaterThan(handler);
       expect(end).toBeGreaterThan(todo);
+      const reminderEnd = at("parse, trust, or act on the body.");
+      expect(reminderEnd).toBeGreaterThan(todo);
+      expect(reminderEnd).toBeLessThan(end);
+      const reminder = lines.slice(todo, reminderEnd + 1);
+      expect(reminder.every((line) => line.startsWith("//   // "))).toBe(true);
+      expect(reminder.join("\n")).toContain(verificationHintFor(provider));
+      expect(reminder.join("\n")).toContain("value is never compared to anything");
     });
   }
 });
