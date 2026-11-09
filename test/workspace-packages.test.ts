@@ -39,7 +39,44 @@ function discoverWorkspaceManifests(packagesPath: string): { dir: string; name: 
   return manifests;
 }
 
+/** One message per version that is not a string, is empty, or has surrounding whitespace. */
+function versionWhitespaceErrors(manifests: { dir: string; version: unknown }[]): string[] {
+  const errors: string[] = [];
+  for (const { dir, version } of manifests) {
+    if (typeof version !== "string" || version.length === 0) {
+      errors.push(`${dir}: version must be a non-empty string`);
+    } else if (version !== version.trim()) {
+      errors.push(`${dir}: version ${JSON.stringify(version)} has surrounding whitespace`);
+    }
+  }
+  return errors;
+}
+
 const workspaceManifests = discoverWorkspaceManifests(packagesDir);
+
+test("workspace package versions are nonempty and unchanged by trimming", () => {
+  expect(workspaceManifests.length).toBeGreaterThan(0);
+  expect(versionWhitespaceErrors(workspaceManifests)).toEqual([]);
+});
+
+test("version check flags empty, non-string and whitespace-padded versions", () => {
+  expect(
+    versionWhitespaceErrors([
+      { dir: "packages/ok", version: "1.0.0" },
+      { dir: "packages/lead", version: " 1.0.0" },
+      { dir: "packages/trail", version: "1.0.0\n" },
+      { dir: "packages/blank", version: "  " },
+      { dir: "packages/empty", version: "" },
+      { dir: "packages/none", version: undefined },
+    ]),
+  ).toEqual([
+    'packages/lead: version " 1.0.0" has surrounding whitespace',
+    'packages/trail: version "1.0.0\\n" has surrounding whitespace',
+    'packages/blank: version "  " has surrounding whitespace',
+    "packages/empty: version must be a non-empty string",
+    "packages/none: version must be a non-empty string",
+  ]);
+});
 
 test("discovers a workspace package whose path contains spaces once", () => {
   const fixture = mkdtempSync(join(tmpdir(), "workspace packages "));
