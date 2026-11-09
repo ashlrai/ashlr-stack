@@ -6695,3 +6695,51 @@ describe("webhookStubFor — reminder states verification is not implemented", (
     },
   );
 });
+
+describe("webhookStubFor — repeated generation is deterministic", () => {
+  it.each(["stripe", "clerk", "supabase", "github", "acme"])(
+    "returns the identical %s stub on every call",
+    (provider) => {
+      const first = webhookStubFor(provider);
+      for (let i = 0; i < 5; i++) expect(webhookStubFor(provider)).toBe(first);
+    },
+  );
+
+  it("is not affected by generating other providers in between", () => {
+    const first = webhookStubFor("stripe");
+    for (const other of ["clerk", "github", "acme", "supabase"]) webhookStubFor(other);
+    expect(webhookStubFor("stripe")).toBe(first);
+  });
+});
+
+describe("wirePhantomForRecipe — repeated webhook writes", () => {
+  let harness: Harness;
+
+  beforeEach(() => {
+    harness = setupFakePhantom();
+  });
+
+  afterEach(() => {
+    harness.cleanup();
+  });
+
+  it("rewrites a byte-identical stub and returns the same result on a second run", async () => {
+    const recipe: Recipe = {
+      id: "stripe-github",
+      query: "payments and repos",
+      createdAt: "2026-04-18T00:00:00.000Z",
+      providers: [{ name: "stripe" }, { name: "github" }],
+    };
+    const first = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
+    const snapshot = first.webhooks.map((p) => readFileSync(p, "utf-8"));
+    const second = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
+
+    expect(second).toEqual(first);
+    expect(second.webhooks.map((p) => readFileSync(p, "utf-8"))).toEqual(snapshot);
+    expect(snapshot).toEqual([webhookStubFor("stripe"), webhookStubFor("github")]);
+    expect(readdirSync(join(harness.dir, ".stack/webhooks")).sort()).toEqual([
+      "github.ts",
+      "stripe.ts",
+    ]);
+  });
+});
