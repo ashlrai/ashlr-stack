@@ -175,6 +175,31 @@ test("two-section fixture keeps section names and per-section entries in source 
   expect(sectionEntries(md.replace(/\n/g, "\r\n"))).toEqual(sectionEntries(md));
 });
 
+test("CRLF two-section fixture preserves section names and entries in source order", () => {
+  const markdown = [
+    "## 0.4.0 (2026-11-03)",
+    "### Fixed",
+    "- Zebra fix.",
+    "- Alpha fix.",
+    "### Added",
+    "- Zebra addition.",
+    "- Alpha addition.",
+    "",
+  ].join("\r\n");
+
+  expect(sectionEntries(markdown)).toEqual([
+    { version: "## 0.4.0 (2026-11-03)", section: "Fixed", entries: ["Zebra fix.", "Alpha fix."] },
+    { version: "## 0.4.0 (2026-11-03)", section: "Added", entries: ["Zebra addition.", "Alpha addition."] },
+  ]);
+  expect(parseChangelog(markdown)).toEqual([
+    {
+      version: "0.4.0",
+      date: "2026-11-03",
+      entries: ["Zebra fix.", "Alpha fix.", "Zebra addition.", "Alpha addition."],
+    },
+  ]);
+});
+
 test("single-section fixture parses the section name and its entries", () => {
   const sections = sectionEntries(read("./__fixtures__/changelog-single-section.md"));
   expect(sections).toEqual([
@@ -528,6 +553,7 @@ test("unicode fixture keeps every parsed entry's characters and code points inta
   const md = read("./__fixtures__/changelog-unicode.md");
   const entries = {
     pending: "Café ☕ — naïve, “smart quotes”, ‘ticks’",
+    cafe: "Café résumé is ready ☕",
     cjkEmoji: "日本語のメモ: プロバイダーを追加 🚀 👩‍💻",
     rtl: "مرحبا بالعالم — שלום עולם",
     greek: "Ελληνικά: αβγδ → ✓ done",
@@ -536,7 +562,11 @@ test("unicode fixture keeps every parsed entry's characters and code points inta
   };
   expect(parseChangelog(md)).toEqual([
     { version: null, date: null, entries: [entries.pending] },
-    { version: "0.3.0", date: "2026-10-31", entries: [entries.cjkEmoji, entries.rtl, entries.greek, entries.accents] },
+    {
+      version: "0.3.0",
+      date: "2026-10-31",
+      entries: [entries.cafe, entries.cjkEmoji, entries.rtl, entries.greek, entries.accents],
+    },
     { version: "0.2.0", date: "2026-04-23", entries: [entries.cyrillic] },
   ]);
   // CRLF line endings must not disturb non-ASCII text either.
