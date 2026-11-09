@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 // and exit 0 for an unmatched first argument, so this guards the exit code.
 const entry = fileURLToPath(new URL("../packages/cli/src/index.ts", import.meta.url));
 
-test.each(["definitely-not-a-stack-command", "命令-🚀"])(
+test.each(["definitely-not-a-stack-command", "命令-🚀", "unknown.command!?@"])(
   "unknown command %s exits non-zero with a plain message",
   (command) => {
     const home = mkdtempSync(join(tmpdir(), "stack-cli-unknown-"));
