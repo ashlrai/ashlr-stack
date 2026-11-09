@@ -55,6 +55,7 @@ let root: string;
 let serverDir: string; // A: where the MCP server runs
 let projectDir: string; // B: the project the agent targets
 let initDir: string; // C: an empty directory stack_init scaffolds into
+let spacedDir: string; // D: a project whose path contains spaces
 let client: Client;
 
 const SERVICE_TOML =
@@ -65,16 +66,18 @@ beforeAll(async () => {
   serverDir = join(root, "a-server");
   projectDir = join(root, "b-project");
   initDir = join(root, "c-init");
+  spacedDir = join(root, "d project with spaces");
   const home = join(root, "home");
   const bin = join(root, "bin");
-  for (const d of [serverDir, projectDir, initDir, home, bin]) mkdirSync(d, { recursive: true });
+  for (const d of [serverDir, projectDir, initDir, spacedDir, home, bin]) mkdirSync(d, { recursive: true });
   writeFileSync(join(projectDir, ".stack.toml"), SERVICE_TOML);
+  writeFileSync(join(spacedDir, ".stack.toml"), SERVICE_TOML);
   writeFileSync(join(projectDir, ".stack.local.toml"), '[stack]\nproject_id = "stk_cwd00001"\n');
   writeFileSync(join(root, "a-file"), "not a directory\n");
   symlinkSync(projectDir, join(root, "b-link"));
 
   const launcher = join(bin, "stack");
-  writeFileSync(launcher, `#!/bin/sh\nexec "${process.execPath}" "${CLI_SRC}" "$@"\n`);
+  writeFileSync(launcher, `#!/bin/sh\npwd -P > "${join(root, "command-cwd")}"\nexec "${process.execPath}" "${CLI_SRC}" "$@"\n`);
   chmodSync(launcher, 0o755);
 
   const transport = new StdioClientTransport({
@@ -237,6 +240,14 @@ describe("cwd input: stdio server started in another directory", () => {
     };
     expect(parsed.schema).toBe("ashlr.stack.list/v1");
     expect(parsed.services.map((s) => s.name)).toEqual(["openai"]);
+  }, 20_000);
+
+  test("a cwd containing spaces reaches the invoked command intact", async () => {
+    const result = await call("stack_list", { json: true, cwd: spacedDir });
+    expect(result.isError).toBeFalsy();
+    expect(readFileSync(join(root, "command-cwd"), "utf8").trimEnd()).toBe(spacedDir);
+    const parsed = JSON.parse(result.content[0]?.text ?? "") as { services: Array<{ name: string }> };
+    expect(parsed.services.map((service) => service.name)).toEqual(["openai"]);
   }, 20_000);
 
   test("stack_status json with cwd reports the project's config, not the server's", async () => {
