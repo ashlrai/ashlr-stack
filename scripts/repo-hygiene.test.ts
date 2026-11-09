@@ -210,6 +210,43 @@ test("CLI counts code markers without counting markers in non-code files", async
   }
 });
 
+test("CLI excludes untracked source markers from the tracked-source count", async () => {
+  const { chmod, mkdir, mkdtemp, rm, writeFile } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const { spawnSync } = await import("node:child_process");
+  const dir = await mkdtemp(join(tmpdir(), "hygiene-untracked-"));
+  try {
+    const bin = join(dir, "bin");
+    const root = join(dir, "repos");
+    const repo = join(root, "fixture");
+    await mkdir(bin);
+    await mkdir(repo, { recursive: true });
+    expect(spawnSync("git", ["init", "-q", repo]).status).toBe(0);
+    await writeFile(join(repo, "tracked.ts"), "// FIXME: tracked marker\n");
+    expect(spawnSync("git", ["-C", repo, "add", "tracked.ts"]).status).toBe(0);
+    await writeFile(join(bin, "gh"), "#!/bin/sh\necho public\n");
+    await chmod(join(bin, "gh"), 0o755);
+    const count = () => {
+      const result = spawnSync(process.execPath, [join(import.meta.dir, "repo-hygiene.ts"), "--root", root, "--json"], {
+        env: { ...process.env, PATH: `${bin}:${process.env.PATH}` },
+        encoding: "utf8",
+      });
+      expect(result.status).toBe(0);
+      const json = JSON.parse(result.stdout);
+      expect(json.repos).toHaveLength(1);
+      return json.repos[0].deadCode.todoFixmeCount;
+    };
+    expect(count()).toBe(1);
+    await writeFile(join(repo, "untracked.ts"), "// TODO: untracked marker\n");
+    expect(count()).toBe(1);
+    expect(spawnSync("git", ["-C", repo, "add", "untracked.ts"]).status).toBe(0);
+    expect(count()).toBe(2);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test("CLI counts a HACK marker in an eligible code file toward the TODO count", async () => {
   const { chmod, mkdir, mkdtemp, rm, writeFile } = await import("node:fs/promises");
   const { tmpdir } = await import("node:os");
