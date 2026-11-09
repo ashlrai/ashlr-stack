@@ -1,7 +1,7 @@
 import { describe, expect, it, setDefaultTimeout } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { setupFakePhantom } from "../packages/core/src/__tests__/_harness.ts";
-import { wirePhantomForRecipe } from "../packages/core/src/ai/phantom-wire.ts";
+import { webhookStubFor, wirePhantomForRecipe } from "../packages/core/src/ai/phantom-wire.ts";
 
 setDefaultTimeout(30_000);
 
@@ -40,6 +40,31 @@ describe("Phantom wire example caveats", () => {
       }
     } finally {
       harness.cleanup();
+    }
+  });
+
+  it("quotes the security reminder exactly as the generated stub words it", () => {
+    const flat = (text: string) =>
+      text
+        .split("\n")
+        .map((line) => line.replace(/^\s*\/\/ ?/, ""))
+        .join(" ")
+        .replace(/\s+/g, " ");
+    const docText = doc.replace(/\s+/g, " ");
+    for (const provider of ["stripe", "clerk", "supabase", "github"]) {
+      const stub = flat(webhookStubFor(provider));
+      // The reminder sentence the doc quotes is taken from the generated stub, not hardcoded.
+      const todo = stub.match(/TODO\(security\): [^.]+\./)?.[0];
+      expect(todo).toBeDefined();
+      expect(docText).toContain(todo as string);
+      // The stub's behavior claims: any non-empty header reaches 200, nothing authenticated.
+      expect(stub).toContain("accepts any non-empty signature header and returns 200 without authenticating");
+      expect(stub).toContain("does not verify signatures");
+      expect(stub).toContain("attacker-controlled");
+      expect(docText).toContain("any non-empty value for the expected header reaches the 200 response");
+      expect(docText).toContain("neither sender nor payload is authenticated");
+      expect(docText).toContain("attacker-controlled");
+      expect(docText).toContain("Do not deploy or act on this example as-is.");
     }
   });
 });
