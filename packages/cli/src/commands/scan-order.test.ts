@@ -1,11 +1,28 @@
 import { expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const CLI_ENTRY = fileURLToPath(new URL("../index.ts", import.meta.url));
+
+test("an empty project returns an empty scan without writing files", () => {
+  const project = mkdtempSync(join(tmpdir(), "stack-scan-empty-"));
+  try {
+    const result = spawnSync("bun", [CLI_ENTRY, "scan", "--json", "--path", project], {
+      encoding: "utf8",
+      env: { ...process.env, CI: "1", NO_COLOR: "1" },
+      timeout: 15_000,
+    });
+    expect(result.status).toBe(0);
+    expect(result.stderr).toBe("");
+    expect(JSON.parse(result.stdout)).toEqual({ hits: [] });
+    expect(readdirSync(project)).toEqual([]);
+  } finally {
+    rmSync(project, { recursive: true, force: true });
+  }
+});
 
 test("a provider detected from two sources appears once with both sources", () => {
   const project = mkdtempSync(join(tmpdir(), "stack-scan-sources-"));
