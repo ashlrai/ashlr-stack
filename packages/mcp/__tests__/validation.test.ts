@@ -80,6 +80,25 @@ for (const tool of TOOLS) {
           );
         }
       });
+
+      test(`${key} is required before command arguments are built`, () => {
+        const input = validInput(tool);
+        delete input[key];
+        let built = false;
+        const trackedTool: ToolDef = {
+          ...tool,
+          cliArgs: (args) => {
+            built = true;
+            return tool.cliArgs(args);
+          },
+        };
+
+        expect(planToolCall(trackedTool, input)).toEqual({
+          ok: false,
+          error: `${tool.name}: missing required argument "${key}".`,
+        });
+        expect(built).toBe(false);
+      });
     }
   });
 }
