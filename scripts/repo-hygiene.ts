@@ -720,6 +720,9 @@ async function countLines(repo: string, patterns: string[]): Promise<number> {
   }
 }
 
+/** Standalone TODO/FIXME/XXX/HACK markers; the word must not touch an alphanumeric or `_` (so `TODO_suffix` and `MYTODOS` are not markers). POSIX classes, not `\b`, because BSD git grep -E lacks `\b`. */
+export const TODO_MARKER_PATTERN = String.raw`(^|[^[:alnum:]_])(TODO|FIXME|XXX|HACK)([^[:alnum:]_]|$)`;
+
 export async function gitGrepCount(repo: string, pattern: string, pathspecs: string[]): Promise<number> {
   if (pathspecs.length === 0) return 0;
   try {
@@ -993,7 +996,7 @@ async function collectRepo(repoPath: string): Promise<Record<string, unknown>> {
       : "renovate"
     : null;
 
-  const todoCount = await gitGrepCount(repoPath, String.raw`(^|[^[:alnum:]_])(TODO|FIXME|XXX|HACK)([^[:alnum:]_]|$)`, files.filter((f) => CODE_EXTS.has(extOf(f)) || extOf(f) === "rs"));
+  const todoCount = await gitGrepCount(repoPath, TODO_MARKER_PATTERN, files.filter((f) => CODE_EXTS.has(extOf(f)) || extOf(f) === "rs"));
   const allowDeadCode = await gitGrepCount(repoPath, String.raw`#\[allow\(dead_code\)\]`, rustFiles);
   const pullRequestTarget = await gitGrepCount(
     repoPath,
