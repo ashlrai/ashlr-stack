@@ -15,6 +15,16 @@ async function fixture(run: (dir: string) => Promise<void>) {
   }
 }
 
+test("an empty lane list returns an empty result", () =>
+  fixture(async (dir) => {
+    await writeFile(join(dir, "slots.json"), "{}");
+    expect(await collectFleetLanes(dir)).toEqual({
+      schemaVersion: 1,
+      sources: { slots: "ok", queue: "ok", jobs: "ok" },
+      lanes: [],
+    });
+  }));
+
 test("each dispatch blocker, precedence, ready lanes and latest job state", () =>
   fixture(async (dir) => {
     await writeFile(
