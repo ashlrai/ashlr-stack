@@ -58,6 +58,12 @@ test("node:test expected TODO failures do not hide the first real failing test",
   ).toBe("real failure");
 });
 
+test("unmarked TAP failures are reported, including names that only resemble a directive", () => {
+  expect(firstFailingTest("ok 1 - passing\nnot ok 2 - plain failure")).toBe("plain failure");
+  expect(firstFailingTest("not ok 1 no dash failure")).toBe("no dash failure");
+  expect(firstFailingTest("not ok 1 - handles #TODOS\nnot ok 2 - other")).toBe("handles #TODOS");
+});
+
 const job = (id: number, conclusion = "failure") => ({ id, name: `Tests ${id}`, conclusion });
 const client: GhRunner = async (args, signal) => {
   expect(signal).toBeInstanceOf(AbortSignal);
@@ -241,3 +247,19 @@ test("CLI uses Locus, emits one JSON document by default and registers help and 
     await rm(home, { recursive: true, force: true });
   }
 }, 30000); // Seven CLI subprocesses include root help, which loads every command.
+
+test("an unmarked TAP failure in a job log is included in the reported failures", async () => {
+  const tap = [
+    "TAP version 13",
+    "not ok 1 - expected failure # TODO",
+    "not ok 2 - flaky # SKIP",
+    "not ok 3 - rejects expiry",
+  ].join("\n");
+  const report = await collectFleetReds(async (args, signal) =>
+    args.includes("--job") ? tap : client(args, signal),
+  );
+  expect(report.repos[0]?.runs?.[0]?.jobs).toEqual([
+    { name: "Tests 1", firstFailingTest: "rejects expiry", logStatus: "parsed" },
+    { name: "Tests 3", firstFailingTest: "rejects expiry", logStatus: "parsed" },
+  ]);
+});
