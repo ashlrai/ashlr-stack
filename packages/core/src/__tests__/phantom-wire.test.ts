@@ -6635,4 +6635,20 @@ describe("webhookStubFor — signature-verification TODO stays a comment", () =>
       expect(text).toContain("signature verification is NOT implemented here");
     },
   );
+
+  it("keeps the signature-verification reminder as comment text and leaves no live code", () => {
+    for (const provider of ["stripe", "clerk", "supabase", "github", "acme"]) {
+      const lines = webhookStubFor(provider).split("\n");
+      const start = lines.findIndex((l) => l.includes("TODO(security): signature verification"));
+      const end = lines.findIndex((l) => l.includes('return new Response("ok"'));
+      expect(start).toBeGreaterThan(-1);
+      expect(end).toBeGreaterThan(start);
+      // The whole reminder (warning, hint, verify instructions) is nested comment text.
+      const reminder = lines.slice(start, end);
+      expect(reminder.length).toBeGreaterThanOrEqual(8);
+      for (const line of reminder) expect(line.startsWith("//   //")).toBe(true);
+      // Stripping comment lines leaves nothing executable.
+      expect(lines.filter((l) => l.trim() !== "" && !l.startsWith("//"))).toEqual([]);
+    }
+  });
 });
