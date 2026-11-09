@@ -77,3 +77,5 @@ export {
 export * from "./agent-onboard.ts";
 export * from "./fleet/capability-matrix.ts";
 export * from "./fleet/job-run.ts";
+export * from "./fleet/sheet-status.ts";
+export * from "./fleet/stage-retry.ts";

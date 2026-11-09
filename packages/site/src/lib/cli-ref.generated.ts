@@ -1092,9 +1092,56 @@ export const CLI_COMMANDS: CliCommand[] = [
       'Read-only. Joins slots.json quota, journal running/queued counts, capabilities.json role/capability/tier declarations and models.json into one capability matrix, then reports which resources are eligible for a requirement and why the rest are not. Matching never branches on a provider or lane name; undeclared resources serve the implementer role on every tier, the same contract dispatchd applies today. It does not change dispatchd lane admission. Declare resources in capabilities.json beside the queue directory ({ "schema": "fleet.capabilities.v1", "resources": { "<id>": { "roles": [...], "capabilities": [...], "tiers": [...] } } }); absent or invalid declarations fall back to the implementer default and are counted in capabilitiesDropped.',
   },
   {
+    name: "stack fleet-sheet-status",
+    description:
+      "Report per-sheet last successful sync and staleness, or reconcile one failed execution.",
+    synopsis:
+      "stack fleet-sheet-status [--runs <runs>] [--sheet <sheet>] [--execution <execution>] [--expect <expect>] [--json]",
+    flags: [
+      {
+        name: "runs",
+        synopsis: "--runs <runs>",
+        type: "string",
+        description: "Job-run JSONL table (default: ~/.ashlr-runs/stacksync/job-runs.jsonl).",
+      },
+      {
+        name: "sheet",
+        synopsis: "--sheet <sheet>",
+        type: "string",
+        description: "Restrict the report to one sheet name.",
+      },
+      {
+        name: "execution",
+        synopsis: "--execution <execution>",
+        type: "string",
+        description:
+          "Reconcile one execution id: did a later sync write its sheet, or is it still stale?",
+      },
+      {
+        name: "expect",
+        synopsis: "--expect <expect>",
+        type: "string",
+        description:
+          "Expected sync cadence in ms; an ok sheet whose last write is older is reported overdue.",
+      },
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        description: "Emit schemaVersion 1 JSON.",
+      },
+    ],
+    examples: [
+      { command: "stack fleet-sheet-status --json" },
+      { command: "stack fleet sheet-status --execution 5d2b848b" },
+    ],
+    notes:
+      "Read-only. Reads the stacksync job-run JSONL table (fleet.job-run.v1 records; default ~/.ashlr-runs/stacksync/job-runs.jsonl) and reports one row per sheet: last successful write, its age, attempts since, and a state of ok, overdue (past --expect cadence), failing or never-ok, worst first. With --execution it reconciles one run: recovered when a later execution wrote that sheet, still-stale otherwise, not-found when no record carries the id, unknown when the table itself cannot be read. A run only counts as a write when it is ok and a write_sheet* stage is ok. Reads are capped, malformed lines flag the source but keep good rows, and raw row contents are never echoed.",
+  },
+  {
     name: "stack fleet",
     description: "Show repository CI, open PR counts, and dispatcher lane status.",
-    synopsis: "stack fleet <slo|collisions|waste>",
+    synopsis: "stack fleet <slo|collisions|waste|sheet-status>",
     flags: [
       {
         name: "json",
@@ -1182,6 +1229,50 @@ export const CLI_COMMANDS: CliCommand[] = [
         ],
         examples: [{ command: "stack fleet waste --json" }],
         notes: "Read-only JSON. Same report, metrics path and window as stack fleet-waste.",
+      },
+      {
+        name: "stack fleet sheet-status",
+        description:
+          "Report per-sheet last successful sync and staleness, or reconcile one failed execution.",
+        synopsis:
+          "stack fleet sheet-status [--runs <runs>] [--sheet <sheet>] [--execution <execution>] [--expect <expect>] [--json]",
+        flags: [
+          {
+            name: "runs",
+            synopsis: "--runs <runs>",
+            type: "string",
+            description: "Job-run JSONL table (default: ~/.ashlr-runs/stacksync/job-runs.jsonl).",
+          },
+          {
+            name: "sheet",
+            synopsis: "--sheet <sheet>",
+            type: "string",
+            description: "Restrict the report to one sheet name.",
+          },
+          {
+            name: "execution",
+            synopsis: "--execution <execution>",
+            type: "string",
+            description:
+              "Reconcile one execution id: did a later sync write its sheet, or is it still stale?",
+          },
+          {
+            name: "expect",
+            synopsis: "--expect <expect>",
+            type: "string",
+            description:
+              "Expected sync cadence in ms; an ok sheet whose last write is older is reported overdue.",
+          },
+          {
+            name: "json",
+            synopsis: "--json",
+            type: "boolean",
+            description: "Emit schemaVersion 1 JSON.",
+          },
+        ],
+        examples: [{ command: "stack fleet sheet-status --json" }],
+        notes:
+          "Read-only. Same report as stack fleet-sheet-status, nested under the fleet namespace.",
       },
     ],
   },
