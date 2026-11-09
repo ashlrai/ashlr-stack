@@ -43,6 +43,33 @@ test("two entries under one version retain source order", () => {
   ]);
 });
 
+test("a version with two entries keeps both texts verbatim and in source order between neighbours", () => {
+  const first = "zulu  entry with  double spaces and trailing space. ";
+  const second = "Alpha entry: `code`, **bold**, [link](x) & 100%.";
+  const md = [
+    "## 1.3.0 (2026-11-09)",
+    "- Newer neighbour.",
+    "## 1.2.0 (2026-11-08)",
+    `- ${first}`,
+    `- ${second}`,
+    "## 1.1.0 (2026-11-07)",
+    "- Older neighbour.",
+  ].join("\n");
+  const expected: ChangelogVersion[] = [
+    { version: "1.3.0", date: "2026-11-09", entries: ["Newer neighbour."] },
+    { version: "1.2.0", date: "2026-11-08", entries: [first, second] },
+    { version: "1.1.0", date: "2026-11-07", entries: ["Older neighbour."] },
+  ];
+
+  const parsed = parseChangelog(md);
+  expect(parsed).toEqual(expected);
+  // Text is neither trimmed nor sorted, and the two entries never merge.
+  expect(parsed[1].entries).toHaveLength(2);
+  expect(parsed[1].entries[0]).toBe(first);
+  expect(parsed[1].entries).not.toEqual([...parsed[1].entries].sort());
+  expect(parseChangelog(md.replace(/\n/g, "\r\n"))).toEqual(expected);
+});
+
 test("LF and CRLF changelogs produce the same entries without a final newline", () => {
   const lf = [
     "## Unreleased",
