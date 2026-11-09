@@ -5,6 +5,7 @@ import {
   extractPackageSpecifiers,
   findUnusedImports,
   gitGrepCount,
+  gitGrepMatches,
   packageNameOf,
   parseBunOutdated,
   parseCargoDryRun,
@@ -281,6 +282,34 @@ test("gitGrepCount finds no marker in an eligible file without marker words", as
     // Control: the same pattern does count a real marker, so the zero above is meaningful.
     await expect(gitGrepCount(dir, todoPattern, ["marked.ts"])).resolves.toBe(1);
     await expect(gitGrepCount(dir, todoPattern, ["clean.ts", "marked.ts"])).resolves.toBe(1);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("gitGrepCount and gitGrepMatches report markers on two different lines of one eligible file", async () => {
+  const { mkdtemp, rm, writeFile } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const { spawnSync } = await import("node:child_process");
+  const dir = await mkdtemp(join(tmpdir(), "repo-hygiene-two-markers-"));
+  try {
+    expect(spawnSync("git", ["init", "-q", dir]).status).toBe(0);
+    // TODO on line 1, FIXME on line 4, with unmarked lines between and after.
+    await writeFile(
+      join(dir, "two.ts"),
+      "// TODO: first\nexport const a = 1;\nexport const b = 2;\n// FIXME: second\nexport const c = 3;\n",
+    );
+    expect(spawnSync("git", ["-C", dir, "add", "."]).status).toBe(0);
+
+    // Plain alternation: BSD/macOS git grep -E has no `\b`.
+    const pattern = "(TODO|FIXME|XXX|HACK)";
+    await expect(gitGrepCount(dir, pattern, ["two.ts"])).resolves.toBe(2);
+    await expect(gitGrepMatches(dir, pattern, ["two.ts"])).resolves.toEqual([
+      { file: "two.ts", line: 1 },
+      { file: "two.ts", line: 4 },
+    ]);
+    await expect(gitGrepMatches(dir, pattern, [])).resolves.toEqual([]);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

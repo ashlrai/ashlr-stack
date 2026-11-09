@@ -735,6 +735,24 @@ export async function gitGrepCount(repo: string, pattern: string, pathspecs: str
   }
 }
 
+export type GrepMatch = { file: string; line: number };
+
+/** Per-line matches (`git grep -n`), so each marker reports its own line number. */
+export async function gitGrepMatches(repo: string, pattern: string, pathspecs: string[]): Promise<GrepMatch[]> {
+  if (pathspecs.length === 0) return [];
+  try {
+    const out = await git(repo, ["grep", "-n", "-E", pattern, "--", ...pathspecs], 60_000);
+    const matches: GrepMatch[] = [];
+    for (const row of out.split("\n")) {
+      const m = row.match(/^(.+?):(\d+):/);
+      if (m) matches.push({ file: m[1]!, line: Number(m[2]) });
+    }
+    return matches;
+  } catch {
+    return [];
+  }
+}
+
 async function gitGrepFiles(repo: string, pattern: string, pathspecs: string[]): Promise<string[]> {
   if (pathspecs.length === 0) return [];
   try {
