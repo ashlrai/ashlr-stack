@@ -129,6 +129,15 @@ describe("ai/phantom-wire", () => {
     expect(harness.callsTo("add")).toEqual([]);
   });
 
+  it("reads the request body exactly once in the generated example", () => {
+    // A Request body is a one-shot stream: a second read throws "Body already
+    // used", and verification must run over the same raw bytes that get parsed.
+    const bodyReads = /\breq\.(?:text|json|arrayBuffer|blob|formData|bytes)\(\)|\breq\.body\b/g;
+    for (const provider of ["stripe", "clerk", "supabase", "github", "acme"]) {
+      expect(webhookStubFor(provider).match(bodyReads)).toEqual(["req.text()"]);
+    }
+  });
+
   it("gives every repeated provider slot in the stub the same supplied value", () => {
     // The provider shows up verbatim in the title and the forgery warning,
     // capitalized in the handler name, and as the secret key in both
