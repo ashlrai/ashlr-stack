@@ -3,6 +3,7 @@ import { EventEmitter } from "node:events";
 import {
   chmodSync,
   mkdtempSync,
+  readFileSync,
   readdirSync,
   realpathSync,
   rmSync,
@@ -134,6 +135,22 @@ describe("ai/phantom-wire empty wiring request", () => {
     expect(r).toEqual(EMPTY_RESULT);
     expect(calls).toEqual([]);
     expect(readdirSync(projectDir)).toEqual([]);
+  });
+
+  it("includes the signature warning in every webhook example when Phantom is missing", async () => {
+    installed = false;
+    const providers = ["stripe", "clerk", "supabase", "github"];
+    const result = await wirePhantomForRecipe(recipeOf(...providers), { cwd: projectDir });
+
+    expect(result.skipped).toEqual(providers);
+    expect(result.webhooks).toEqual(
+      providers.map((provider) => join(projectDir, ".stack", "webhooks", `${provider}.ts`)),
+    );
+    for (const path of result.webhooks) {
+      const example = readFileSync(path, "utf8");
+      expect(example).toContain("signature verification is NOT implemented here");
+      expect(example).toContain("does not verify signatures");
+    }
   });
 
   it("spawns nothing and writes nothing when the request opts out with noWire", async () => {
