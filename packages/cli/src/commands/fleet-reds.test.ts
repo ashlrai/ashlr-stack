@@ -68,6 +68,14 @@ test("the first of multiple TAP failures wins in log order", () => {
   ).toBe("rejects expired token");
   expect(firstFailingTest(`${later}\n${first}`)).toBe("rejects invalid signature");
 });
+test("the first real failure wins across reporter formats", () => {
+  const tap = "not ok 2 - rejects expired token";
+  const vitest = " FAIL  test/auth.test.ts > auth > rejects invalid signature";
+  expect(firstFailingTest(`${tap}\n${vitest}`)).toBe("rejects expired token");
+  expect(firstFailingTest(`${vitest}\n${tap}`)).toBe(
+    "test/auth.test.ts > auth > rejects invalid signature",
+  );
+});
 test("a TAP not ok line marked SKIP is not a failure", () => {
   expect(firstFailingTest("not ok 1 - unavailable feature # SKIP")).toBeNull();
 });
