@@ -10,14 +10,12 @@ are heuristics — verify before deleting anything.
 | ashlr-md | yes | 253 (25/199) | 134,012 | 51 | 34 | 130 | 141 | 0 | 0 |
 | ashlr-stack | yes | 119 (9/92) | 45,674 | 36 | 25 | 143 | 108 | 1 | 1 |
 | phantom-secrets | yes | 130 (34/65) | 208,103 | 26 | 0 | 67 | 37 | 0 | 1 |
-| measurably † | local | 12 (0/1) | 187,675 | 44 | 12 | 273 | 112 | 0 | 0 |
-| ashlar-landing † | local | 9 (1/1) | 61,909 | 35 | 17 | 104 | 39 | 0 | 0 |
 | locus | yes | 112 (43/55) | 89,495 | 0 | 0 | 1 | 2 | 0 | 1 |
 | lexicon | yes | 74 (34/16) | 213,977 | 33 | 6 | 266 | 132 | 0 | 1 |
 | ashlr-plugin | yes | 100 (31/53) | 236,365 | 69 | 43 | 468 | 339 | 1 | 1 |
 | phantom | yes | 337 (56/144) | 1,557,640 | 89 | 24 | 4,539 | 2,156 | 7 | 26 |
 
-Fleet totals: 1146 worktrees (233 prunable, 626 detached), 2,734,850 code LOC, 161 outdated deps, 5991 dead-export candidates, 3066 test files. † = local checkout not in DOCTOR_REPOS.
+Fleet totals: 1125 worktrees (232 prunable, 624 detached), 2,485,266 code LOC, 132 outdated deps, 5614 dead-export candidates, 2915 test files. Private repositories are left out of this committed report.
 
 ## ashlr-md
 
@@ -68,42 +66,6 @@ Fleet totals: 1146 worktrees (233 prunable, 626 detached), 2,734,850 code LOC, 1
 - Tests: 37 files, ~2968 #[test] fns; skipped 39; sleep/timeout signals 31; network-call refs 156
 - Docs: 102 markdown files; 0 broken relative links; 0 doc-referenced scripts missing from package.json
 - CI: 8 workflows; pull_request_target refs: 0
-
-## measurably
-
-- HEAD `main` @ `28ff9a7` (2026-10-16T01:54:22-04:00), default `main`, 0 dirty files
-- Deps: 44 declared across 6 manifests; stale check: npm outdated → 12 outdated (0 majors behind); lockfile drift: 0 updates / 0 adds / 0 removals; 5 possibly-unused; update automation: dependabot
-  - possibly unused dep: `@tauri-apps/cli` (apps/desktop)
-  - possibly unused dep: `@supabase/auth-helpers-nextjs` (measurably)
-  - possibly unused dep: `@testing-library/jest-dom` (measurably)
-  - possibly unused dep: `@testing-library/react` (measurably)
-  - possibly unused dep: `@remotion/cli` (remotion)
-  - e.g. @supabase/auth-helpers-nextjs →0.15.0, @supabase/ssr →0.12.7, @supabase/supabase-js →2.119.0, html2canvas-pro →2.6.3, jspdf →4.2.1
-- Dead code: 273 unique-name exports with no external identifier reference; 2 files with fully-unused imports (2 statements); TODO/FIXME: 0; #[allow(dead_code)]: 6
-  - `apps/desktop/src/desktop-api.ts` exports `PromptVaultEmbedding` (type)
-  - `apps/desktop/src/desktop-api.ts` exports `PromptVaultSourceSurface` (type)
-  - `apps/desktop/src/desktop-api.ts` exports `PromptVaultState` (type)
-  - `apps/desktop/src/desktop-api.ts` exports `SavePromptVaultItemRequest` (type)
-  - `apps/desktop/src/desktop-api.ts` exports `SearchPromptVaultRequest` (type)
-- Tests: 112 files, ~240 #[test] fns; skipped 13; sleep/timeout signals 22; network-call refs 102
-- Docs: 27 markdown files; 0 broken relative links; 0 doc-referenced scripts missing from package.json
-- CI: 5 workflows; pull_request_target refs: 0
-
-## ashlar-landing
-
-- HEAD `master` @ `fdbfb36` (2026-10-22T06:57:46-04:00), default `master`, 0 dirty files
-- Deps: 35 declared across 2 manifests; stale check: npm outdated → 17 outdated (0 majors behind); lockfile drift: n/a; 1 possibly-unused; update automation: dependabot
-  - possibly unused dep: `postcss` (ashlar-landing)
-  - e.g. @floating-ui/react →0.27.20, @neondatabase/serverless →1.2.0, @upstash/ratelimit →2.2.0, @upstash/redis →1.41.0, @vercel/analytics →2.0.1
-- Dead code: 104 unique-name exports with no external identifier reference; 5 files with fully-unused imports (5 statements); TODO/FIXME: 0
-  - `components/brand/keystone.ts` exports `KEYSTONE_AXIS` (const)
-  - `components/brand/keystone.ts` exports `KEYSTONE_PIECES` (const)
-  - `components/chat/chatSession.ts` exports `PersistedChatMessage` (interface)
-  - `components/chat/RichContentRenderer.tsx` exports `RichContentRenderer` (function)
-  - `components/studio/StudioSignals.tsx` exports `StudioSignals` (function)
-- Tests: 39 files; skipped 0; sleep/timeout signals 3; network-call refs 45
-- Docs: 55 markdown files; 0 broken relative links; 0 doc-referenced scripts missing from package.json
-- CI: 2 workflows; pull_request_target refs: 0
 
 ## locus
 
