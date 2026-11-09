@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -23,17 +24,38 @@ function duplicateNameErrors(manifests: { dir: string; name: unknown }[]): strin
     .map(([name, dirs]) => `duplicate name "${name}" in: ${dirs.join(", ")}`);
 }
 
-const workspaceManifests: { dir: string; name: unknown; version: unknown }[] = [];
-for (const entry of readdirSync(packagesDir, { withFileTypes: true })) {
-  if (!entry.isDirectory()) continue;
-  const manifestPath = join(packagesDir, entry.name, "package.json");
-  if (!statSync(manifestPath, { throwIfNoEntry: false })?.isFile()) continue;
-  const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as {
-    name?: unknown;
-    version?: unknown;
-  };
-  workspaceManifests.push({ dir: `packages/${entry.name}`, name: manifest.name, version: manifest.version });
+function discoverWorkspaceManifests(packagesPath: string): { dir: string; name: unknown; version: unknown }[] {
+  const manifests: { dir: string; name: unknown; version: unknown }[] = [];
+  for (const entry of readdirSync(packagesPath, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const manifestPath = join(packagesPath, entry.name, "package.json");
+    if (!statSync(manifestPath, { throwIfNoEntry: false })?.isFile()) continue;
+    const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as {
+      name?: unknown;
+      version?: unknown;
+    };
+    manifests.push({ dir: `packages/${entry.name}`, name: manifest.name, version: manifest.version });
+  }
+  return manifests;
 }
+
+const workspaceManifests = discoverWorkspaceManifests(packagesDir);
+
+test("discovers a workspace package whose path contains spaces once", () => {
+  const fixture = mkdtempSync(join(tmpdir(), "workspace packages "));
+  try {
+    const fixturePackages = join(fixture, "packages");
+    const packageDir = join(fixturePackages, "package with spaces");
+    mkdirSync(packageDir, { recursive: true });
+    writeFileSync(join(packageDir, "package.json"), JSON.stringify({ name: "space-package", version: "1.0.0" }));
+
+    expect(discoverWorkspaceManifests(fixturePackages)).toEqual([
+      { dir: "packages/package with spaces", name: "space-package", version: "1.0.0" },
+    ]);
+  } finally {
+    rmSync(fixture, { recursive: true, force: true });
+  }
+});
 
 test("each package directory has a package.json with name and version", () => {
   const errors: string[] = [];
