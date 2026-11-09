@@ -71,4 +71,39 @@ describe("stack scan malformed manifest", () => {
     },
     30_000,
   );
+
+  test.each([
+    ["human report", []],
+    ["JSON report", ["--json"]],
+    ["automatic mode", ["--auto"]],
+  ])(
+    "rejects a CRLF manifest with a trailing comma without changing the project in %s",
+    (_mode, flags) => {
+      const project = mkdtempSync(join(tmpdir(), "stack scan malformed crlf "));
+      projects.push(project);
+      mkdirSync(join(project, "nested"));
+      const manifest = '{\r\n  "dependencies": {\r\n    "openai": "^4",\r\n  }\r\n}\r\n';
+      writeFileSync(join(project, "package.json"), manifest);
+      writeFileSync(join(project, "fly.toml"), 'app = "example"\r\n');
+      writeFileSync(join(project, "nested", "keep.txt"), "unchanged\r\n");
+      const before = snapshot(project);
+      const result = spawnSync("bun", [cli, "scan", ...flags, "--path", project], {
+        encoding: "utf8",
+        timeout: 10_000,
+        env: { ...process.env, CI: "1", NO_COLOR: "1" },
+      });
+
+      expect(result.status).toBe(1);
+      const output = `${result.stdout ?? ""}${result.stderr ?? ""}`;
+      expect(output).toContain("Invalid JSON in dependency manifest");
+      expect(output).toContain(join(project, "package.json"));
+      expect(output).toContain("Fix it and retry the scan");
+      expect(output).not.toContain("provider(s) detected");
+      expect(output).not.toContain("scan complete");
+      if (flags.includes("--json")) expect(result.stdout).toBe("");
+      expect(readFileSync(join(project, "package.json"), "utf8")).toBe(manifest);
+      expect(snapshot(project)).toEqual(before);
+    },
+    30_000,
+  );
 });
