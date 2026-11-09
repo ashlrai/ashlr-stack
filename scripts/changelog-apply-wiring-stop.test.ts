@@ -33,6 +33,18 @@ test("the historical stack apply entry states the wiring step stopped writing pl
   expect(entry).toContain("Previously, wiring ran `phantom add <KEY> TODO_STACK_APPLY --rotate`");
 });
 
+test("current wiring guidance stays separate from the historical command", () => {
+  const entry = applyStopEntry(changelog);
+  expect(entry).toBeDefined();
+  const [current, historical, ...extra] = entry!.replace(/\s+/g, " ").split("Previously, wiring ran ");
+  expect(extra).toHaveLength(0);
+  expect(current).toContain("The wiring step never writes to the vault or fills in missing values.");
+  expect(current).toContain("run `phantom add <NAME>` from a trusted terminal and enter the real value.");
+  expect(current).not.toContain("TODO_STACK_APPLY");
+  expect(historical).toStartWith("`phantom add <KEY> TODO_STACK_APPLY --rotate`");
+  expect(historical).toContain("for every declared secret.");
+});
+
 test("the original 0.1.0 stack apply entry records the same stop", () => {
   const release = changelog.split("## 0.1.0 — 2026-04-19 (superseded by 0.1.1)\n")[1]?.split("\n## ")[0];
   const entries = release?.split("\n").filter((line) => line.startsWith("- **`stack apply [recipe-id]`**")) ?? [];
