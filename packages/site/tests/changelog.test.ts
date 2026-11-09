@@ -448,6 +448,12 @@ function sectionEntries(markdown: string, release: string, title: string): strin
   return entries;
 }
 
+test("ordinary ampersand text keeps its adjacent words when parsed and rendered", async () => {
+  const input = "## 0.2.0\n\n### Added\n\n- Improved search & discovery for projects.\n";
+  expect(sectionEntries(input, "0.2.0", "Added")).toEqual(["Improved search & discovery for projects."]);
+  expect(await marked.parse(input)).toContain("<li>Improved search &amp; discovery for projects.</li>");
+});
+
 test("two entries in one section are returned in source order", () => {
   const input = "## 0.2.0\n\n### Added\n\n- zebra entry\n- alpha entry\n\n### Fixed\n\n- other entry\n";
   expect(sectionEntries(input, "0.2.0", "Added")).toEqual(["zebra entry", "alpha entry"]);
