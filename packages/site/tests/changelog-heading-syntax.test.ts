@@ -115,6 +115,32 @@ test("canonical release text at the wrong heading depth is flagged", () => {
   ]);
 });
 
+test("a populated section after an empty section stays under its version", () => {
+  const markdown = [
+    "## 0.4.0 (2026-11-01)",
+    "",
+    "### Added",
+    "",
+    "### Fixed",
+    "",
+    "- Corrected an issue.",
+    "",
+  ].join("\n");
+
+  expect(malformedVersionHeadings(markdown)).toEqual([]);
+  const structure = marked.lexer(markdown).flatMap((token) => {
+    if (token.type === "heading") return [{ depth: token.depth, text: token.text }];
+    if (token.type === "list") return token.items.map((item) => ({ depth: 0, text: item.text }));
+    return [];
+  });
+  expect(structure).toEqual([
+    { depth: 2, text: "0.4.0 (2026-11-01)" },
+    { depth: 3, text: "Added" },
+    { depth: 3, text: "Fixed" },
+    { depth: 0, text: "Corrected an issue." },
+  ]);
+});
+
 test("non-release ## headings and fenced text are ignored", () => {
   const markdown = [
     "# Changelog",
