@@ -7,6 +7,7 @@ describe("generated webhook examples", () => {
     ["clerk", "svix-signature"],
     ["supabase", "x-supabase-signature"],
     ["github", "x-hub-signature-256"],
+    ["other", "x-webhook-signature"],
   ])("warns about and demonstrates the unverified %s handler", async (provider, header) => {
     const example = webhookStubFor(provider);
     expect(example).toContain("does not verify signatures");
@@ -26,7 +27,20 @@ describe("generated webhook examples", () => {
     const request = (headers: Record<string, string>) =>
       new Request("https://example.test/webhook", { method: "POST", headers, body: "{}" });
 
-    expect((await handle(request({}))).status).toBe(400);
-    expect((await handle(request({ [header]: "forged" }))).status).toBe(200);
+    const missingSignature = request({ "unrelated-header": "present" });
+    let bodyRead = false;
+    missingSignature.text = async () => {
+      bodyRead = true;
+      throw new Error("body must not be read without a signature");
+    };
+    const rejection = await handle(missingSignature);
+    expect(rejection.status).toBe(400);
+    expect(await rejection.text()).toBe("Missing signature");
+    expect(bodyRead).toBe(false);
+    expect(missingSignature.bodyUsed).toBe(false);
+
+    const signed = request({ [header]: "forged" });
+    expect((await handle(signed)).status).toBe(200);
+    expect(signed.bodyUsed).toBe(true);
   });
 });
