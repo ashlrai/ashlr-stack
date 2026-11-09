@@ -1,7 +1,9 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { acceptsCwd, planToolCall, resolveToolCwd } from "../src/cwd.ts";
 import { TOOLS, type ToolDef, validateToolInput } from "../src/tools.ts";
 
@@ -112,6 +114,32 @@ test("import validates its default .env path", () => {
   const tool = TOOLS.find((tool) => tool.name === "stack_import") as ToolDef;
   expect(planToolCall(tool, { cwd: project }).ok).toBe(false);
 });
+
+test("wrong type for a required argument returns an error without running the command", async () => {
+  const fake = join(root, "stack");
+  const marker = join(root, "invoked");
+  writeFileSync(fake, `#!/bin/sh\ntouch "${marker}"\necho invoked\n`);
+  chmodSync(fake, 0o700);
+  const client = new Client({ name: "validation-test", version: "0.0.1" });
+  const transport = new StdioClientTransport({
+    command: process.execPath,
+    args: ["run", join(import.meta.dir, "../src/server.ts")],
+    env: { HOME: root, PATH: process.env.PATH ?? "", STACK_BIN: fake },
+  });
+  try {
+    await client.connect(transport);
+    const invalid = await client.callTool({ name: "stack_add", arguments: { service: 42 } });
+    expect(invalid.isError).toBe(true);
+    expect(invalid.content).toEqual([{ type: "text", text: 'stack_add: argument "service" must be a string.' }]);
+    expect(existsSync(marker)).toBe(false);
+
+    const valid = await client.callTool({ name: "stack_add", arguments: { service: "example" } });
+    expect(valid.isError).toBe(false);
+    expect(existsSync(marker)).toBe(true);
+  } finally {
+    await client.close();
+  }
+}, 20_000);
 
 test("apply rejects recipe traversal and escaping recipe storage", () => {
   const tool = TOOLS.find((tool) => tool.name === "stack_apply") as ToolDef;
