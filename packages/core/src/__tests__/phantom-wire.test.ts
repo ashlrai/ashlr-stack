@@ -2513,6 +2513,40 @@ describe("ai/phantom-wire", () => {
     expect(JSON.parse(readFileSync(harness.vaultPath, "utf-8"))).toEqual({});
   });
 
+  it("reports every unreadable list response as skipped and only ever reads the vault", async () => {
+    const recipe: Recipe = { ...STRIPE_RECIPE, providers: [{ name: "stripe" }, { name: "neon" }] };
+    const stubPath = join(harness.dir, ".stack/webhooks/stripe.ts");
+    const unreadable: Array<{ label: string; body: string }> = [
+      { label: "empty output", body: "" },
+      { label: "plain text", body: "printf '%s' 'vault locked'" },
+      { label: "non-array JSON", body: 'echo \'{"name":"STRIPE_SECRET_KEY"}\'' },
+      { label: "non-zero exit", body: "echo 'boom' >&2; exit 2" },
+    ];
+
+    for (const { label, body } of unreadable) {
+      writeFileSync(
+        join(harness.dir, "phantom"),
+        `#!/usr/bin/env bash\ncase "$1" in\n  --version) echo "phantom fake 0.0.1" ;;\n  list) ${body.replace(/^$/, ":")} ;;\n  *) echo "unexpected: $*" >> "${harness.dir}/unexpected.log"; exit 1 ;;\nesac\n`,
+      );
+      rmSync(join(harness.dir, ".stack"), { recursive: true, force: true });
+
+      // The failure is reported (every provider skipped, nothing guessed as
+      // present or missing) rather than thrown or silently treated as empty.
+      expect(await wirePhantomForRecipe(recipe, { cwd: harness.dir }), label).toEqual({
+        present: [],
+        missing: [],
+        webhooks: [stubPath],
+        skipped: ["stripe", "neon"],
+      });
+      // No add, rotate, remove, or any other command reached the shim.
+      expect(existsSync(join(harness.dir, "unexpected.log")), label).toBe(false);
+      expect(harness.callsTo("add"), label).toEqual([]);
+      expect(JSON.parse(readFileSync(harness.vaultPath, "utf-8")), label).toEqual({});
+    }
+    // Every logged call, across all attempts, was a read-only `list`.
+    expect(harness.calls().every((c) => c.cmd === "list")).toBe(true);
+  });
+
   it("treats surrounding whitespace in vault inventory JSON the same as compact JSON", async () => {
     const inventory = '[{"name":"STRIPE_SECRET_KEY"}]';
     const setListOutput = (output: string) => {
