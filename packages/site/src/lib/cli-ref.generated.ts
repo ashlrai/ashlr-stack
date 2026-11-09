@@ -904,6 +904,31 @@ export const CLI_COMMANDS: CliCommand[] = [
     ],
   },
   {
+    name: "stack worktree-disk",
+    description: "Rank registered worktrees by disk usage (read-only).",
+    synopsis: "stack worktree-disk [--repo <repo>] [--base <base>] [--json]",
+    flags: [
+      {
+        name: "repo",
+        synopsis: "--repo <repo>",
+        type: "string",
+        description: "Repository path (default: current directory).",
+      },
+      {
+        name: "base",
+        synopsis: "--base <base>",
+        type: "string",
+        description: "Merge target (default: origin/HEAD, or main).",
+      },
+      {
+        name: "json",
+        synopsis: "--json",
+        type: "boolean",
+        description: "Emit schemaVersion 1 JSON.",
+      },
+    ],
+  },
+  {
     name: "stack fleet-gc",
     description:
       "Dry-run report classifying fleet worktrees as preserved or collect-candidates (read-only).",
