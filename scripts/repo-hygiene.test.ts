@@ -224,6 +224,9 @@ test("CLI excludes private, unknown and failed visibility checks from JSON and M
       await mkdir(repo);
       expect(spawnSync("git", ["init", "-q", repo]).status).toBe(0);
     }
+    const publicRepo = join(root, "public-fixture");
+    await writeFile(join(publicRepo, "clean.ts"), "export const answer = 42;\n");
+    expect(spawnSync("git", ["-C", publicRepo, "add", "clean.ts"]).status).toBe(0);
     const gh = join(bin, "gh");
     await writeFile(gh, '#!/bin/sh\ncase "$2" in\n  repos/ashlrai/public-fixture) echo public ;;\n  repos/ashlrai/private-fixture) echo private ;;\n  repos/ashlrai/unknown-fixture) echo unknown ;;\n  *) exit 1 ;;\nesac\n');
     await chmod(gh, 0o755);
@@ -235,6 +238,8 @@ test("CLI excludes private, unknown and failed visibility checks from JSON and M
     expect(result.status).toBe(0);
     const json = JSON.parse(result.stdout);
     expect(json.repos.map((repo: { name: string }) => repo.name)).toEqual(["public-fixture"]);
+    expect(json.repos[0].code.files).toBe(1);
+    expect(json.repos[0].deadCode.todoFixmeCount).toBe(0);
     const markdown = await readFile(md, "utf8");
     expect(markdown).toContain("public-fixture");
     for (const name of ["private-fixture", "unknown-fixture", "error-fixture"]) {
