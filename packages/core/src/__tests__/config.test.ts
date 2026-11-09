@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -106,6 +106,12 @@ describe("config", () => {
     expect(readFileSync(join(cwd, CONFIG_FILENAME), "utf-8")).toBe(shapeBefore);
     expect(readFileSync(join(cwd, LOCAL_FILENAME), "utf-8")).toBe(localBefore);
     expect(await readConfig(cwd)).toEqual(original);
+  });
+
+  test("hasConfig returns false without creating files when configuration is missing", () => {
+    const cwd = freshCwd();
+    expect(hasConfig(cwd)).toBe(false);
+    expect(readdirSync(cwd)).toEqual([]);
   });
 
   test("readConfig throws ConfigNotFoundError when file is missing", async () => {
