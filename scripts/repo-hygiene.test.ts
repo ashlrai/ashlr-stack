@@ -285,3 +285,36 @@ test("gitGrepCount finds no marker in an eligible file without marker words", as
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+test("gitGrepCount finds a marker on the first line of an eligible file", async () => {
+  const { mkdtemp, rm, writeFile } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const { spawnSync } = await import("node:child_process");
+  const dir = await mkdtemp(join(tmpdir(), "repo-hygiene-line1-"));
+  try {
+    const gitRun = (args: string[]) =>
+      spawnSync("git", ["-C", dir, "-c", "user.name=t", "-c", "user.email=t@example.com", ...args], {
+        encoding: "utf8",
+      });
+    expect(spawnSync("git", ["init", "-q", dir]).status).toBe(0);
+    await writeFile(join(dir, "first-line.ts"), "// FIXME: marker on line 1\nexport const a = 1;\nexport const b = 2;\n");
+    await writeFile(join(dir, "other.ts"), "export const c = 3;\n");
+    expect(gitRun(["add", "."]).status).toBe(0);
+    expect(gitRun(["commit", "-q", "-m", "fixture"]).status).toBe(0);
+
+    const pattern = "(TODO|FIXME|XXX|HACK)";
+    // gitGrepCount only returns totals, so it sees the line-1 marker (not skipped as a header)
+    // and attributes it to the right file alone.
+    await expect(gitGrepCount(dir, pattern, ["first-line.ts"])).resolves.toBe(1);
+    await expect(gitGrepCount(dir, pattern, ["other.ts"])).resolves.toBe(0);
+    await expect(gitGrepCount(dir, pattern, ["first-line.ts", "other.ts"])).resolves.toBe(1);
+
+    // Same pattern and pathspecs with -n: the one finding is first-line.ts, line 1.
+    const located = gitRun(["grep", "-n", "-E", pattern, "--", "first-line.ts", "other.ts"]);
+    expect(located.status).toBe(0);
+    expect(located.stdout.trim().split("\n")).toEqual(["first-line.ts:1:// FIXME: marker on line 1"]);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
