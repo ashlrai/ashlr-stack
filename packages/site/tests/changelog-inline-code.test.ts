@@ -53,9 +53,9 @@ test("inline code entries are retained as codespan tokens with delimiters", () =
 
   // Each version body retains its inline code as codespan tokens.
   const newerSpans = collectCodespans(newer.body);
-  expect(newerSpans.map((s) => s.text)).toEqual(["stack apply", "OPENAI_API_KEY", "~/.env", "--noWire"]);
+  expect(newerSpans.map((s) => s.text)).toEqual(["stack apply", "OPENAI_API_KEY", "~/.env", "--noWire", "bun run build:site"]);
   // The `raw` field keeps the backtick delimiters.
-  expect(newerSpans.map((s) => s.raw)).toEqual(["`stack apply`", "`OPENAI_API_KEY`", "`~/.env`", "`--noWire`"]);
+  expect(newerSpans.map((s) => s.raw)).toEqual(["`stack apply`", "`OPENAI_API_KEY`", "`~/.env`", "`--noWire`", "`bun run build:site`"]);
 
   const olderSpans = collectCodespans(older.body);
   expect(olderSpans.map((s) => s.text)).toEqual(["stack scan"]);
@@ -66,6 +66,7 @@ test("inline code entries are retained as codespan tokens with delimiters", () =
   expect(newer.raw).toContain("`OPENAI_API_KEY`");
   expect(newer.raw).toContain("`~/.env`");
   expect(newer.raw).toContain("`--noWire`");
+  expect(marked.parser(newer.body)).toContain("<li>Run <code>bun run build:site</code> to build the site.</li>");
   expect(older.raw).toContain("`stack scan`");
 });
 
