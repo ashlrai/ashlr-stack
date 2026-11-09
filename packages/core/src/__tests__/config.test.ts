@@ -17,8 +17,8 @@ afterEach(() => {
   for (const dir of scratch.splice(0)) rmSync(dir, { recursive: true, force: true });
 });
 
-function freshCwd(): string {
-  const dir = mkdtempSync(join(tmpdir(), "stack-test-"));
+function freshCwd(prefix = "stack-test-"): string {
+  const dir = mkdtempSync(join(tmpdir(), prefix));
   scratch.push(dir);
   return dir;
 }
@@ -70,6 +70,26 @@ describe("config", () => {
     expect(roundTripped.stack.project_id).toBe(original.stack.project_id);
     expect(roundTripped.stack.template).toBe("nextjs-supabase-posthog");
     expect(roundTripped.services.supabase).toEqual(original.services.supabase);
+  });
+
+  test("configuration round-trips in a temporary directory with spaces", async () => {
+    const cwd = freshCwd("stack test with spaces ");
+    try {
+      const original = emptyConfig("saas");
+      original.services.example = {
+        provider: "example",
+        resource_id: "resource-1",
+        secrets: ["EXAMPLE_KEY"],
+        created_at: "2026-04-17T05:00:00Z",
+      };
+
+      await writeConfig(original, cwd);
+      expect(hasConfig(cwd)).toBe(true);
+      expect(await readConfig(cwd)).toEqual(original);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+    expect(existsSync(cwd)).toBe(false);
   });
 
   test("a full configuration survives serialize → parse with every value preserved", async () => {
