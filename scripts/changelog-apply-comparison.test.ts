@@ -6,6 +6,17 @@ const root = join(import.meta.dir, "..");
 const comparison = readFileSync(join(root, "docs/changelog-apply-comparison.md"), "utf8");
 const copies = ["CHANGELOG.md", "packages/site/src/data/CHANGELOG.md"];
 const title = "- **`stack apply` stops attempting to write placeholder secrets.**";
+const descriptions = [
+  { section: "## Unreleased\n", start: "- `stack apply` does not create placeholder secrets." },
+  { section: "## 0.1.0 — 2026-04-19 (superseded by 0.1.1)\n", start: "- **`stack apply [recipe-id]`**" },
+];
+
+function expectApplyDescriptions(changelog: string) {
+  for (const { section, start } of descriptions) {
+    const release = changelog.split(section)[1]?.split("\n## ")[0];
+    expect(release?.split("\n").filter((line) => line.startsWith(start))).toHaveLength(1);
+  }
+}
 
 function matchingApplyEntries(changelogs: string[]): string {
   const entries = changelogs.map((changelog, index) => {
@@ -58,6 +69,18 @@ test("both historical apply entries retain the later removal of --rotate", () =>
   expect(entry).toContain(
     "Previously, wiring ran `phantom add <KEY> TODO_STACK_APPLY --rotate` (then without `--rotate`) for every declared secret.",
   );
+});
+
+test("each changelog retains its current and historical apply descriptions", () => {
+  for (const path of copies) {
+    const changelog = readFileSync(join(root, path), "utf8");
+    expectApplyDescriptions(changelog);
+    for (const { start } of descriptions) {
+      const line = changelog.split("\n").find((candidate) => candidate.startsWith(start));
+      expect(line).toBeDefined();
+      expect(() => expectApplyDescriptions(changelog.replace(line ?? "", ""))).toThrow();
+    }
+  }
 });
 
 test("the entry comparison detects wording-only differences in either changelog", () => {
