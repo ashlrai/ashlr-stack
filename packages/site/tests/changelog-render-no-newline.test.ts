@@ -29,6 +29,17 @@ test("rendered HTML is identical with or without the final newline", async () =>
   expect((await render(`${fixture}\n`)).trimEnd()).toBe((await render(fixture)).trimEnd());
 });
 
+test("a final Unicode entry without a trailing newline renders in full once", async () => {
+  const entry = "Café — 日本語 🚀 and decomposed e\u0301";
+  const unicodeFixture = `# Changelog\n\n## 0.1.0 (2026-01-01)\n\n- ${entry}`;
+  expect(unicodeFixture.endsWith("\n")).toBe(false);
+
+  const html = await render(unicodeFixture);
+  expect(html.match(/<li>/g)).toHaveLength(1);
+  expect(html).toContain(`<li>${entry}</li>`);
+  expect(html).toBe(await render(`${unicodeFixture}\n`));
+});
+
 test("published changelog renders its last entry with the trailing newline removed", async () => {
   const published = readFileSync(join(import.meta.dir, "../src/data/CHANGELOG.md"), "utf8");
   const stripped = published.replace(/\n+$/, "");
