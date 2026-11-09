@@ -15,21 +15,20 @@ describe("webhook example verification warning", () => {
     });
   }
 
-  for (const provider of ["stripe", "github", "unknown"]) {
-    it(`places the warning between the body read and response for ${provider}`, () => {
+  for (const provider of ["stripe", "clerk", "supabase", "github", "unknown"]) {
+    it(`places the complete warning between the body read and placeholder response for ${provider}`, () => {
       const lines = webhookStubFor(provider).split("\n");
       const bodyRead = lines.indexOf("//   const body = await req.text();");
       const warning = lines.indexOf(
         "//   // TODO(security): signature verification is NOT implemented here. The",
       );
+      const warningEnd = lines.indexOf("//   // parse, trust, or act on the body.");
       const response = lines.indexOf('//   return new Response("ok", { status: 200 });');
 
       expect(bodyRead).toBeGreaterThanOrEqual(0);
       expect(warning).toBeGreaterThan(bodyRead);
-      expect(response).toBeGreaterThan(warning);
-      expect(lines.slice(warning, response).join("\n")).toContain(
-        "//   // parse, trust, or act on the body.",
-      );
+      expect(warningEnd).toBeGreaterThan(warning);
+      expect(response).toBeGreaterThan(warningEnd);
     });
   }
 });
