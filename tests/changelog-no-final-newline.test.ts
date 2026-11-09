@@ -74,3 +74,9 @@ test("the same single entry parses to the same text with and without a final new
   expect(bare).toEqual([entry]);
   expect(terminated).toEqual(bare);
 });
+
+test("two entries are retained in order without a final newline", () => {
+  const doc = "## 0.1.0 (2026-04-19)\n\n### Added\n\n- First entry.\n- Second entry.";
+  expect(doc.endsWith("\n")).toBe(false);
+  expect(sectionEntries(doc).at(-1)?.entries).toEqual(["First entry.", "Second entry."]);
+});
