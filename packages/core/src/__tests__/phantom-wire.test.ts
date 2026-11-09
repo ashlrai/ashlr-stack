@@ -165,6 +165,33 @@ describe("ai/phantom-wire", () => {
     }
   });
 
+  it("keeps the signature-verification reminder in comments, never in executable code", () => {
+    // The reminder (TODO, provider hint, raw-body/constant-time guidance) must
+    // stay prose. If any line of the stub is live code, the example would
+    // present verification as done, or ship an unauthenticated handler.
+    for (const provider of ["stripe", "clerk", "supabase", "github", "acme"]) {
+      const stub = webhookStubFor(provider);
+      const lines = stub.split("\n");
+      const executable = lines.filter(
+        (line) => line.trim() !== "" && !line.trimStart().startsWith("//"),
+      );
+      expect(executable).toEqual([]);
+
+      // Every line carrying the reminder is itself a comment line.
+      const reminder = lines.filter((line) =>
+        /signature verification|TODO\(security\)|constant time/i.test(line),
+      );
+      expect(reminder.length).toBeGreaterThanOrEqual(3);
+      for (const line of reminder) expect(line.trimStart().startsWith("//")).toBe(true);
+
+      // The provider hint is inlined as a comment, not as a call.
+      expect(stub).toContain(`//   // ${verificationHintFor(provider)}\n`);
+
+      // No block comment can hide live code either.
+      expect(stub).not.toContain("/*");
+    }
+  });
+
   it("gives every repeated provider slot in the stub the same supplied value", () => {
     // The provider shows up verbatim in the title and the forgery warning,
     // capitalized in the handler name, and as the secret key in both
