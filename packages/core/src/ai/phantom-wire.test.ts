@@ -12,7 +12,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { __resetPhantomCache, __setPhantomSpawn } from "../phantom.ts";
-import { wirePhantomForRecipe } from "./phantom-wire.ts";
+import { webhookStubFor, wirePhantomForRecipe } from "./phantom-wire.ts";
 import type { Recipe } from "./recipe.ts";
 
 // Stubbed `phantom` subprocess, like phantom-wire-order.test.ts, but recording
@@ -63,6 +63,15 @@ function recipeOf(...names: string[]): Recipe {
 }
 
 const EMPTY_RESULT = { present: [], missing: [], webhooks: [], skipped: [] };
+
+it("preserves a placeholder-free verification hint in the rendered stub", () => {
+  const hint = "Verify per the provider's documented signature scheme.";
+  const hintLine = webhookStubFor("example")
+    .split("\n")
+    .find((line) => line.includes(hint));
+
+  expect(hintLine).toBe(`//   // ${hint}`);
+});
 
 describe("ai/phantom-wire empty wiring request", () => {
   const savedPath = process.env.PATH;
