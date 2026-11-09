@@ -1184,7 +1184,16 @@ async function main() {
     ? candidates.filter((p) => reposFilter!.some((f) => basename(p).includes(f)))
     : candidates;
 
-  const repos = await pool(selected, 3, collectRepo);
+  // Never inspect a checkout unless GitHub confirms its organization repo is public.
+  const visibility = await pool(selected, 3, async (path) => {
+    try {
+      return (await run("gh", ["api", `repos/ashlrai/${basename(path)}`, "--jq", ".visibility"])).trim() === "public";
+    } catch {
+      return false;
+    }
+  });
+  const publicRepos = selected.filter((_, index) => visibility[index]);
+  const repos = await pool(publicRepos, 3, collectRepo);
   const data = {
     schemaVersion: 1,
     generatedAt: new Date().toISOString(),

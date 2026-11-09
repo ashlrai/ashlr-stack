@@ -166,3 +166,41 @@ test("stripMarkdownCode removes fenced blocks and inline code", () => {
   const stripped = stripMarkdownCode(md);
   expect(extractMarkdownLinks(stripped)).toEqual(["./a.md", "./d.md"]);
 });
+
+test("CLI excludes private, unknown and failed visibility checks from JSON and Markdown", async () => {
+  const { mkdtemp, mkdir, readFile, rm, writeFile, chmod } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const { spawnSync } = await import("node:child_process");
+  const dir = await mkdtemp(join(tmpdir(), "hygiene-test-"));
+  try {
+    const bin = join(dir, "bin");
+    const root = join(dir, "repos");
+    await mkdir(bin);
+    await mkdir(root);
+    for (const name of ["public-fixture", "private-fixture", "unknown-fixture", "error-fixture"]) {
+      const repo = join(root, name);
+      await mkdir(repo);
+      expect(spawnSync("git", ["init", "-q", repo]).status).toBe(0);
+    }
+    const gh = join(bin, "gh");
+    await writeFile(gh, '#!/bin/sh\ncase "$2" in\n  repos/ashlrai/public-fixture) echo public ;;\n  repos/ashlrai/private-fixture) echo private ;;\n  repos/ashlrai/unknown-fixture) echo unknown ;;\n  *) exit 1 ;;\nesac\n');
+    await chmod(gh, 0o755);
+    const md = join(dir, "report.md");
+    const result = spawnSync(process.execPath, [join(import.meta.dir, "repo-hygiene.ts"), "--root", root, "--json", "--md", md], {
+      env: { ...process.env, PATH: `${bin}:${process.env.PATH}` },
+      encoding: "utf8",
+    });
+    expect(result.status).toBe(0);
+    const json = JSON.parse(result.stdout);
+    expect(json.repos.map((repo: { name: string }) => repo.name)).toEqual(["public-fixture"]);
+    const markdown = await readFile(md, "utf8");
+    expect(markdown).toContain("public-fixture");
+    for (const name of ["private-fixture", "unknown-fixture", "error-fixture"]) {
+      expect(result.stdout).not.toContain(name);
+      expect(markdown).not.toContain(name);
+    }
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
