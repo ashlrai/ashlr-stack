@@ -24,6 +24,24 @@ test("wiring history agrees with the changelog about the attempted command and f
   expect(doc).toContain("not published to npm");
 });
 
+test("apply changelog entry separates failed historical attempts from current wiring", () => {
+  const release = changelog.split("## 0.1.0 — 2026-04-19")[1]?.split("\n## ")[0];
+  const entry = release?.split("\n").find((line) => line.startsWith("- **`stack apply [recipe-id]`**"));
+  expect(entry).toBeDefined();
+  for (const detail of [
+    "Historically, wiring attempted to write a `TODO_STACK_APPLY` placeholder",
+    "those calls failed",
+    "the 0.2.1 fix above removed the attempts",
+    "Wiring no longer attempts to write placeholder values",
+    "it does not write to the vault or fill in missing values",
+    "Provider setup may already store real values",
+    "Missing names alone do not make apply fail; provider failures still do",
+    "`phantom add <NAME>` from a trusted terminal",
+  ]) {
+    expect(entry).toContain(detail);
+  }
+});
+
 test("historical marker is not presented as a usable credential", () => {
   expect(doc).toContain("do not run it");
   expect(doc).toContain("not a usable");
