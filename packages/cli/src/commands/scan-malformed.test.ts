@@ -28,19 +28,28 @@ function snapshot(root: string, dir = root): Record<string, string> {
 }
 
 describe("stack scan malformed manifest", () => {
-  test.each([
+  const modes: [string, string[]][] = [
     ["human report", []],
     ["JSON report", ["--json"]],
     ["automatic mode", ["--auto"]],
     ["non-interactive automatic mode", ["--yes"]],
-  ])(
-    "rejects invalid JSON without changing the project in %s",
-    (_mode, flags) => {
+  ];
+  const manifests: [string, string][] = [
+    ["invalid JSON", '{"dependencies": {"openai": "^4",}}\n'],
+    ["an empty file", ""],
+  ];
+  test.each(
+    manifests.flatMap(([fixture, contents]) =>
+      modes.map(([mode, flags]) => [fixture, mode, contents, flags] as const),
+    ),
+  )(
+    "rejects %s without changing the project in %s",
+    (_fixture, _mode, contents, flags) => {
       for (const existingConfig of [false, true]) {
         const project = mkdtempSync(join(tmpdir(), "stack scan malformed "));
         projects.push(project);
         mkdirSync(join(project, "nested"));
-        writeFileSync(join(project, "package.json"), '{"dependencies": {"openai": "^4",}}\n');
+        writeFileSync(join(project, "package.json"), contents);
         writeFileSync(join(project, "fly.toml"), 'app = "example"\n');
         writeFileSync(join(project, "nested", "keep.txt"), "unchanged\n");
         if (existingConfig) {
@@ -59,6 +68,7 @@ describe("stack scan malformed manifest", () => {
         expect(output).toContain("Invalid JSON in dependency manifest");
         expect(output).toContain(join(project, "package.json"));
         expect(output).toContain("Fix it and retry the scan");
+        expect(output).not.toContain("SyntaxError");
         expect(output).not.toContain("provider(s) detected");
         expect(output).not.toContain("No providers detected");
         expect(output).not.toContain("scan complete");
