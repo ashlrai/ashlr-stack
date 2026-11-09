@@ -80,6 +80,16 @@ test("sectionEntries keeps Unicode entry text verbatim, under LF and CRLF", () =
   expect(sectionEntries(fixture.replace(/\n/g, "\r\n"))).toEqual(sections);
 });
 
+test("sectionEntries preserves combining characters in an entry", () => {
+  const entry = "Decomposed cafe\u0301 and stacked a\u0323\u0301 remain unchanged";
+  const markdown = `## Unreleased\n\n### Fixed\n\n- ${entry}\n`;
+  const expected = [{ version: "## Unreleased", section: "Fixed", entries: [entry] }];
+
+  expect(entry.normalize("NFC")).not.toBe(entry);
+  expect(sectionEntries(markdown)).toEqual(expected);
+  expect(sectionEntries(markdown.replace(/\n/g, "\r\n"))).toEqual(expected);
+});
+
 const ROOT_ENTRY = "Café résumé naïve: Zoë’s “señor” 日本語 مرحبا — entry keeps its Unicode text 🚀 👩‍💻 (#1).";
 
 test("root-CHANGELOG fixture entry keeps its Unicode text", () => {
