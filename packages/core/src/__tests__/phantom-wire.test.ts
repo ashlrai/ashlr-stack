@@ -6505,3 +6505,41 @@ describe("webhookStubFor — $1 in replacement text (original PR 1023)", () => {
     expect(stub).not.toContain("${ UNKNOWN NAME}");
   });
 });
+
+describe("webhookStubFor — signature-verification TODO stays a comment", () => {
+  let harness: Harness;
+  beforeEach(() => {
+    harness = setupFakePhantom();
+  });
+  afterEach(() => {
+    harness.cleanup();
+  });
+
+  it.each(["stripe", "clerk", "supabase", "github", "zzq"])(
+    "keeps the %s signature-verification TODO and its warning lines as comments",
+    async (provider) => {
+      const check = (stub: string) => {
+        const lines = stub.split("\n");
+        const warned = lines.filter((l) => /TODO|NOT implemented|unauthenticated/.test(l));
+        // The TODO line plus the two warning lines that follow it.
+        expect(warned.length).toBeGreaterThanOrEqual(3);
+        for (const line of warned) expect(line.trimStart().startsWith("//")).toBe(true);
+        expect(lines.some((l) => l.includes("TODO(security): signature verification"))).toBe(true);
+      };
+      check(webhookStubFor(provider));
+
+      // The file written by `stack apply` carries the same commented warning.
+      const known = provider !== "zzq";
+      if (known) {
+        const recipe: Recipe = {
+          id: "wh",
+          query: "webhooks",
+          createdAt: "2026-04-18T00:00:00.000Z",
+          providers: [{ name: provider }],
+        };
+        const result = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
+        check(readFileSync(result.webhooks[0], "utf-8"));
+      }
+    },
+  );
+});
