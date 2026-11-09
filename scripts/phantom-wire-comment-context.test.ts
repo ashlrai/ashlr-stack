@@ -8,6 +8,10 @@ setDefaultTimeout(30_000);
 const docUrl = new URL("../docs/phantom-wire-comment-context.md", import.meta.url);
 const doc = readFileSync(docUrl, "utf8");
 
+function entirelyCommented(stub: string): boolean {
+  return stub.split("\n").every((line) => !line || line.startsWith("//"));
+}
+
 describe("Phantom wire verification comment context", () => {
   it("describes the TODO in each generated, entirely commented handler", async () => {
     const providers = ["stripe", "clerk", "supabase", "github"];
@@ -20,7 +24,14 @@ describe("Phantom wire verification comment context", () => {
       expect(result.webhooks).toHaveLength(providers.length);
       for (const path of result.webhooks) {
         const stub = readFileSync(path, "utf8");
-        expect(stub.split("\n").every((line) => !line || line.startsWith("//"))).toBe(true);
+        expect(entirelyCommented(stub)).toBe(true);
+        for (const line of [
+          "//   const body = await req.text();",
+          '//   return new Response("ok", { status: 200 });',
+        ]) {
+          expect(stub).toContain(line);
+          expect(entirelyCommented(stub.replace(line, line.slice(2)))).toBe(false);
+        }
         const handler = stub.match(/^\/\/ export async function [\s\S]*?^\/\/ }$/m)?.[0];
         expect(handler).toBeDefined();
         if (!handler) throw new Error(`Missing handler in ${path}`);
