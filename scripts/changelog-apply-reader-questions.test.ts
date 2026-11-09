@@ -91,6 +91,18 @@ test("every restated entry the doc names exists verbatim in both sources", () =>
   expect(doc).toContain("](site-changelog-source-map.md)");
 });
 
+test("the original apply description explains that missing values need user action", () => {
+  for (const path of copies) {
+    const changelog = readFileSync(join(root, path), "utf8");
+    const section = changelog.split("## 0.1.0 — 2026-04-19 (superseded by 0.1.1)\n")[1]?.split("\n## ")[0];
+    expect(section, path).toBeDefined();
+    const entry = section?.split("\n").find((line) => line.startsWith("- **`stack apply [recipe-id]`**"));
+    expect(entry, path).toBeDefined();
+    expect(entry, path).toContain("does not write to the vault or fill in missing values");
+    expect(entry, path).toContain("Users must supply each required missing value");
+  }
+});
+
 test("linked files exist and the verification commands name real paths", () => {
   for (const match of doc.matchAll(/\]\(([^)#]+)(?:#[^)]*)?\)/g)) {
     expect(existsSync(join(dirname(docPath), match[1])), `broken link: ${match[1]}`).toBe(true);
