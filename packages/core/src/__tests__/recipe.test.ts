@@ -11,6 +11,7 @@ import {
   slugifyQuery,
   writeRecipe,
 } from "../ai/recipe.ts";
+import { StackError } from "../errors.ts";
 
 function scratchDir(): { dir: string; cleanup: () => void } {
   const dir = mkdtempSync(join(tmpdir(), "stack-recipe-"));
@@ -185,6 +186,72 @@ name = "totally-made-up-provider"
     expect(slugifyQuery("")).toBe("recipe");
     expect(slugifyQuery("!!!")).toBe("recipe");
     expect(slugifyQuery("  B2B  SaaS  ")).toBe("b2b-saas");
+  });
+});
+
+describe("ai/recipe readRecipe malformed input", () => {
+  function writeRaw(dir: string, id: string, body: string): void {
+    mkdirSync(join(dir, ".stack", "recipes"), { recursive: true });
+    writeFileSync(join(dir, ".stack", "recipes", `${id}.toml`), body);
+  }
+
+  it("fails with INVALID_RECIPE on malformed TOML instead of returning a recipe", async () => {
+    const { dir, cleanup } = scratchDir();
+    try {
+      writeRaw(dir, "broken", 'id = "broken"\nquery = "unterminated\n[[providers\n');
+      const err = await readRecipe("broken", dir).catch((e) => e);
+      expect(err).toBeInstanceOf(StackError);
+      expect(err.code).toBe("INVALID_RECIPE");
+    } finally {
+      cleanup();
+    }
+  });
+
+  it("fails on JSON content saved as a recipe", async () => {
+    const { dir, cleanup } = scratchDir();
+    try {
+      writeRaw(dir, "json", '{"id":"json","providers":[{"name":"supabase"}]}');
+      await expect(readRecipe("json", dir)).rejects.toMatchObject({ code: "INVALID_RECIPE" });
+    } finally {
+      cleanup();
+    }
+  });
+
+  it("fails with RECIPE_NOT_FOUND when the file is missing", async () => {
+    const { dir, cleanup } = scratchDir();
+    try {
+      await expect(readRecipe("missing", dir)).rejects.toMatchObject({
+        code: "RECIPE_NOT_FOUND",
+      });
+    } finally {
+      cleanup();
+    }
+  });
+
+  it("does not parse a non-table providers entry into a usable provider", async () => {
+    const { dir, cleanup } = scratchDir();
+    try {
+      writeRaw(dir, "scalar", 'id = "scalar"\nproviders = [1, "x"]\n');
+      await expect(readRecipe("scalar", dir)).rejects.toMatchObject({
+        code: "UNKNOWN_PROVIDER_IN_RECIPE",
+      });
+    } finally {
+      cleanup();
+    }
+  });
+
+  it("listRecipes skips the malformed file and keeps valid ones", async () => {
+    const { dir, cleanup } = scratchDir();
+    try {
+      await writeRecipe(
+        { id: "ok", query: "q", createdAt: "2026-01-01T00:00:00.000Z", providers: [] },
+        dir,
+      );
+      writeRaw(dir, "broken", "not = [valid");
+      expect((await listRecipes(dir)).map((r) => r.id)).toEqual(["ok"]);
+    } finally {
+      cleanup();
+    }
   });
 });
 
