@@ -76,6 +76,15 @@ test("unmarked TAP failures are reported, including names that only resemble a d
   expect(firstFailingTest("not ok 1 - handles #TODOS\nnot ok 2 - other")).toBe("handles #TODOS");
 });
 
+test("TODO in a failure name without a directive is reported", () => {
+  expect(firstFailingTest("not ok 1 - handles TODO items\nnot ok 2 - later failure")).toBe(
+    "handles TODO items",
+  );
+  expect(firstFailingTest("✖ handles TODO items (2ms)\n✖ later failure (1ms)")).toBe(
+    "handles TODO items",
+  );
+});
+
 const job = (id: number, conclusion = "failure") => ({ id, name: `Tests ${id}`, conclusion });
 const client: GhRunner = async (args, signal) => {
   expect(signal).toBeInstanceOf(AbortSignal);
