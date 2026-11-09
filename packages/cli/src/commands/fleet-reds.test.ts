@@ -60,6 +60,24 @@ test("node:test spec failure keeps the complete Unicode test name", () => {
 test("empty output has no failing test", () => {
   expect(firstFailingTest("")).toBeNull();
 });
+test("ordinary text containing not ok is not a TAP failure", () => {
+  const text = [
+    "The response was not ok 1 - retrying the request",
+    "# diagnostic: not ok 2 - this is ordinary text",
+  ].join("\n");
+  for (const log of [
+    text,
+    text
+      .split("\n")
+      .map((line) => `Tests\tRun\t2026-11-09T12:00:00.0000000Z \u001b[31m${line}\u001b[0m`)
+      .join("\r\n"),
+  ]) {
+    expect(failingTests(log)).toEqual([]);
+    expect(firstFailingTest(log)).toBeNull();
+    expect(failingTests(`${log}\nnot ok 3 - real failure`)).toEqual(["real failure"]);
+    expect(firstFailingTest(`${log}\nnot ok 3 - real failure`)).toBe("real failure");
+  }
+});
 test("the first of multiple TAP failures wins in log order", () => {
   const first = "not ok 2 - rejects expired token";
   const later = "not ok 3 - rejects invalid signature";
