@@ -175,6 +175,27 @@ test("two-section fixture keeps section names and per-section entries in source 
   expect(sectionEntries(md.replace(/\n/g, "\r\n"))).toEqual(sectionEntries(md));
 });
 
+test("an empty section does not affect the populated section that follows", () => {
+  const markdown = [
+    "## 1.2.3 (2026-11-09)",
+    "### Removed",
+    "",
+    "### Added",
+    "- First addition.",
+    "- Second addition.",
+  ].join("\n");
+  const expected = [
+    { version: "## 1.2.3 (2026-11-09)", section: "Removed", entries: [] },
+    { version: "## 1.2.3 (2026-11-09)", section: "Added", entries: ["First addition.", "Second addition."] },
+  ];
+
+  expect(sectionEntries(markdown)).toEqual(expected);
+  expect(sectionEntries(markdown.replace(/\n/g, "\r\n"))).toEqual(expected);
+  expect(parseChangelog(markdown)).toEqual([
+    { version: "1.2.3", date: "2026-11-09", entries: ["First addition.", "Second addition."] },
+  ]);
+});
+
 test("single-section fixture parses the section name and its entries", () => {
   const sections = sectionEntries(read("./__fixtures__/changelog-single-section.md"));
   expect(sections).toEqual([
@@ -528,6 +549,7 @@ test("unicode fixture keeps every parsed entry's characters and code points inta
   const md = read("./__fixtures__/changelog-unicode.md");
   const entries = {
     pending: "Café ☕ — naïve, “smart quotes”, ‘ticks’",
+    cafe: "Café résumé is ready ☕",
     cjkEmoji: "日本語のメモ: プロバイダーを追加 🚀 👩‍💻",
     rtl: "مرحبا بالعالم — שלום עולם",
     greek: "Ελληνικά: αβγδ → ✓ done",
@@ -536,7 +558,7 @@ test("unicode fixture keeps every parsed entry's characters and code points inta
   };
   expect(parseChangelog(md)).toEqual([
     { version: null, date: null, entries: [entries.pending] },
-    { version: "0.3.0", date: "2026-10-31", entries: [entries.cjkEmoji, entries.rtl, entries.greek, entries.accents] },
+    { version: "0.3.0", date: "2026-10-31", entries: [entries.cafe, entries.cjkEmoji, entries.rtl, entries.greek, entries.accents] },
     { version: "0.2.0", date: "2026-04-23", entries: [entries.cyrillic] },
   ]);
   // CRLF line endings must not disturb non-ASCII text either.
