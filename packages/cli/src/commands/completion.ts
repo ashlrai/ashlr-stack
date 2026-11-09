@@ -85,6 +85,7 @@ const CMD_META: Record<string, CmdMeta> = {
     subcommands: ["show", "diff", "export"],
   },
   deps: {},
+  "worktree-disk": { flags: ["repo", "base", "json"].map((name) => ({ name })) },
   "fleet-lanes": { flags: ["json", "queue"].map((name) => ({ name })) },
   "fleet-supply": { flags: ["json", "queue", "log"].map((name) => ({ name })) },
   "fleet-latency": { flags: [{ name: "json" }] },
