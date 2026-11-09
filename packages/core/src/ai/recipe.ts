@@ -158,12 +158,32 @@ export function recipeFromRetrieval(
   };
 }
 
+function describeType(value: unknown): string {
+  if (value === null) return "null";
+  return Array.isArray(value) ? "array" : typeof value;
+}
+
 function coerceRecipe(raw: Record<string, unknown>, fallbackId: string): Recipe {
   const id = typeof raw.id === "string" ? raw.id : fallbackId;
   const query = typeof raw.query === "string" ? raw.query : "";
   const createdAt = typeof raw.createdAt === "string" ? raw.createdAt : new Date(0).toISOString();
-  const providersRaw = Array.isArray(raw.providers) ? raw.providers : [];
-  const providers = providersRaw.map((entry) => {
+  // A missing `providers` key is an empty recipe; a present-but-malformed one
+  // (e.g. `providers = "stripe"`) is a hand-edit mistake we must surface, not
+  // silently turn into a recipe that applies nothing.
+  if (raw.providers !== undefined && !Array.isArray(raw.providers)) {
+    throw new StackError(
+      "INVALID_RECIPE",
+      `Recipe "${id}" has an invalid "providers" field: expected an array of { name } tables ([[providers]]), got ${describeType(raw.providers)}.`,
+    );
+  }
+  const providersRaw: unknown[] = raw.providers ?? [];
+  const providers = providersRaw.map((entry, i) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      throw new StackError(
+        "INVALID_RECIPE",
+        `Recipe "${id}" has an invalid providers[${i}]: expected a table with a "name", got ${describeType(entry)}.`,
+      );
+    }
     const e = entry as Record<string, unknown>;
     const name = typeof e.name === "string" ? e.name : "";
     const rationale = typeof e.rationale === "string" ? e.rationale : undefined;
@@ -197,18 +217,25 @@ export async function listRemoteRecipes(): Promise<Recipe[]> {
     if (!res.ok) return [];
     const json = (await res.json()) as { recipes?: unknown[] };
     const rows = Array.isArray(json.recipes) ? json.recipes : [];
-    return rows.map((row) => {
+    return rows.flatMap((row) => {
       const r = row as Record<string, unknown>;
-      return coerceRecipe(
-        {
-          id: r.slug,
-          query: r.query,
-          createdAt: r.created_at,
-          providers: r.providers,
-          guidance: undefined,
-        },
-        String(r.slug ?? ""),
-      );
+      try {
+        return [
+          coerceRecipe(
+            {
+              id: r.slug,
+              query: r.query,
+              createdAt: r.created_at,
+              providers: r.providers,
+              guidance: undefined,
+            },
+            String(r.slug ?? ""),
+          ),
+        ];
+      } catch {
+        // One malformed marketplace row must not hide the rest.
+        return [];
+      }
     });
   } catch {
     return [];

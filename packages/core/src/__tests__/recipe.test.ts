@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { parseRecipeDraft } from "../ai/inference.ts";
@@ -11,6 +11,7 @@ import {
   slugifyQuery,
   writeRecipe,
 } from "../ai/recipe.ts";
+import { StackError } from "../errors.ts";
 
 function scratchDir(): { dir: string; cleanup: () => void } {
   const dir = mkdtempSync(join(tmpdir(), "stack-recipe-"));
@@ -114,6 +115,52 @@ name = "totally-made-up-provider"
           dir,
         ),
       ).rejects.toThrow(/unknown provider/i);
+    } finally {
+      cleanup();
+    }
+  });
+
+  it("rejects reading a recipe whose providers field is not an array", async () => {
+    const { dir, cleanup } = scratchDir();
+    try {
+      const recipesDir = join(dir, ".stack", "recipes");
+      mkdirSync(recipesDir, { recursive: true });
+      const bad: Record<string, string> = {
+        "string-providers": 'providers = "neon"',
+        "number-providers": "providers = 3",
+        "table-providers": '[providers]\nname = "neon"',
+      };
+      for (const [id, providers] of Object.entries(bad)) {
+        writeFileSync(
+          join(recipesDir, `${id}.toml`),
+          `id = "${id}"\nquery = "q"\ncreatedAt = "2026-01-01T00:00:00.000Z"\n${providers}\n`,
+        );
+        const err = await readRecipe(id, dir).catch((e) => e);
+        expect(err).toBeInstanceOf(StackError);
+        expect(err.code).toBe("INVALID_RECIPE");
+        expect(err.message).toContain('invalid "providers" field');
+        expect(err.message).toContain(id);
+      }
+      // listRecipes skips them rather than failing the picker.
+      expect(await listRecipes(dir)).toEqual([]);
+    } finally {
+      cleanup();
+    }
+  });
+
+  it("rejects a providers array containing a non-table entry", async () => {
+    const { dir, cleanup } = scratchDir();
+    try {
+      const recipesDir = join(dir, ".stack", "recipes");
+      mkdirSync(recipesDir, { recursive: true });
+      writeFileSync(
+        join(recipesDir, "bad-entry.toml"),
+        'id = "bad-entry"\nquery = "q"\ncreatedAt = "2026-01-01T00:00:00.000Z"\nproviders = ["neon"]\n',
+      );
+      const err = await readRecipe("bad-entry", dir).catch((e) => e);
+      expect(err).toBeInstanceOf(StackError);
+      expect(err.code).toBe("INVALID_RECIPE");
+      expect(err.message).toContain("providers[0]");
     } finally {
       cleanup();
     }
