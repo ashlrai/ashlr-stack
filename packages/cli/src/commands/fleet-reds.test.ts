@@ -347,13 +347,13 @@ test("an unmarked TAP failure in a job log is included in the reported failures"
     "TAP version 13",
     "not ok 1 - expected failure # TODO",
     "not ok 2 - flaky # SKIP",
-    "not ok 3 - rejects expiry",
+    "not ok 3 - handles TODO items",
   ].join("\n");
   const report = await collectFleetReds(async (args, signal) =>
     args.includes("--job") ? tap : client(args, signal),
   );
   expect(report.repos[0]?.runs?.[0]?.jobs).toEqual([
-    { name: "Tests 1", firstFailingTest: "rejects expiry", logStatus: "parsed" },
-    { name: "Tests 3", firstFailingTest: "rejects expiry", logStatus: "parsed" },
+    { name: "Tests 1", firstFailingTest: "handles TODO items", logStatus: "parsed" },
+    { name: "Tests 3", firstFailingTest: "handles TODO items", logStatus: "parsed" },
   ]);
 });
