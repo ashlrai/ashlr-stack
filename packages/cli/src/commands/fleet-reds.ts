@@ -3,8 +3,9 @@ import { defineCommand } from "citty";
 import { DOCTOR_REPOS, type GhRunner } from "../lib/doctor-repos.ts";
 import { locusGh } from "./fleet-latency.ts";
 
-/** First named failure in log order; raw logs and assertion bodies never enter the report. */
-export function firstFailingTest(log: string): string | null {
+/** Named failures in log order, minus TODO/SKIP-marked ones; raw logs and assertion bodies never enter the report. */
+export function failingTests(log: string): string[] {
+  const names: string[] = [];
   for (const raw of log.split(/\r?\n/)) {
     const line = stripVTControlCharacters(raw)
       .replace(/^.*?\d{4}-\d\d-\d\dT[\d:.]+Z\s*/, "")
@@ -15,9 +16,14 @@ export function firstFailingTest(log: string): string | null {
       /^FAIL\s+(.+ > .+)$/.exec(line) ?? // vitest failure summary
       /^not ok\s+\d+(?:\s+-)?\s+(.+)$/.exec(line) ?? // node:test TAP
       /^[×✕✖✗]\s+(.+)$/.exec(line); // vitest verbose / node:test spec
-    if (match) return match[1]!.replace(/\s+(?:\([\d.]+m?s\)|[\d.]+m?s)$/, "").trim();
+    if (match) names.push(match[1]!.replace(/\s+(?:\([\d.]+m?s\)|[\d.]+m?s)$/, "").trim());
   }
-  return null;
+  return names;
+}
+
+/** First named failure in log order. */
+export function firstFailingTest(log: string): string | null {
+  return failingTests(log)[0] ?? null;
 }
 
 const failed = (conclusion: string) =>
