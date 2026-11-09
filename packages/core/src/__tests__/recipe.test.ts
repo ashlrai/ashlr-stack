@@ -70,31 +70,26 @@ describe("ai/recipe", () => {
   it("rejects reading a recipe referencing an unknown provider", async () => {
     const { dir, cleanup } = scratchDir();
     try {
-      // Write a valid recipe first, then corrupt it to contain an unknown provider.
-      await writeRecipe(
-        {
-          id: "bad",
-          query: "bad",
-          createdAt: "2026-01-01T00:00:00.000Z",
-          providers: [{ name: "supabase" }],
-        },
-        dir,
-      );
-      const fs = await import("node:fs/promises");
-      await fs.writeFile(
+      // Write directly: writeRecipe itself rejects unknown providers.
+      mkdirSync(join(dir, ".stack", "recipes"), { recursive: true });
+      writeFileSync(
         join(dir, ".stack/recipes/bad.toml"),
         `id = "bad"
 query = "bad"
 createdAt = "2026-01-01T00:00:00.000Z"
 
 [[providers]]
+name = "supabase"
+
+[[providers]]
 name = "totally-made-up-provider"
 `,
         "utf-8",
       );
-      await expect(readRecipe("bad", dir)).rejects.toThrow(
-        /UNKNOWN_PROVIDER_IN_RECIPE|unknown provider/i,
-      );
+      await expect(readRecipe("bad", dir)).rejects.toMatchObject({
+        code: "UNKNOWN_PROVIDER_IN_RECIPE",
+        message: 'Recipe references unknown provider "totally-made-up-provider" (not in catalog).',
+      });
     } finally {
       cleanup();
     }
