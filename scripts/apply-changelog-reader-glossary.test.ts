@@ -6,6 +6,17 @@ const read = (path: string) => readFileSync(new URL(path, root), "utf8");
 const paths = ["CHANGELOG.md", "packages/site/src/data/CHANGELOG.md"];
 const guide = read("docs/apply-changelog-reader-glossary.md");
 
+function duplicateTerms(source: string): string[] {
+  const table = source.split("| Term | Meaning in these notes |\n")[1]?.split("\n\n")[0];
+  if (!table) throw new Error("Glossary table not found");
+  const terms = table.split("\n").slice(1).map((row) => {
+    const term = row.match(/^\|\s*(.*?)\s*\|/)?.[1];
+    if (!term) throw new Error(`Invalid glossary row: ${row}`);
+    return term.replaceAll("`", "").trim().replace(/\s+/g, " ").toLowerCase();
+  });
+  return terms.filter((term, index) => terms.indexOf(term) !== index);
+}
+
 function historicalFix(source: string): string {
   const section = source.split("## 0.2.1 (2026-10-16)\n")[1]?.split("\n## ")[0];
   const fix = section?.split("\n").find((line) =>
@@ -16,6 +27,11 @@ function historicalFix(source: string): string {
 }
 
 describe("apply changelog reader glossary", () => {
+  test("glossary terms are unique", () => {
+    expect(duplicateTerms(guide)).toEqual([]);
+    expect(duplicateTerms("| Term | Meaning in these notes |\n| --- | --- |\n| `Example` | One |\n| example | Two |")).toEqual(["example"]);
+  });
+
   test("links both source files and their matching historical fix", () => {
     for (const path of paths) {
       expect(guide).toContain(`](../${path})`);
