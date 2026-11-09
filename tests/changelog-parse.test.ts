@@ -43,6 +43,21 @@ test("two entries under one version retain source order", () => {
   ]);
 });
 
+test("adjacent version headings leave the first version empty and assign entries to the second", () => {
+  const lines = [
+    "## 1.2.0 (2026-11-09)",
+    "## 1.1.0 (2026-11-08)",
+    "- First older entry.",
+    "- Second older entry.",
+  ];
+  const expected: ChangelogVersion[] = [
+    { version: "1.2.0", date: "2026-11-09", entries: [] },
+    { version: "1.1.0", date: "2026-11-08", entries: ["First older entry.", "Second older entry."] },
+  ];
+
+  for (const newline of ["\n", "\r\n"]) expect(parseChangelog(lines.join(newline))).toEqual(expected);
+});
+
 test("LF and CRLF changelogs produce the same entries without a final newline", () => {
   const lf = [
     "## Unreleased",
