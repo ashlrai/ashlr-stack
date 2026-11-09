@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { sectionEntries, versionSections } from "./changelog-parser-utils";
+import { parseChangelog } from "./changelog-parse.test";
 
 const fixture = readFileSync(new URL("./__fixtures__/changelog-two-section-order.md", import.meta.url), "utf8");
 
@@ -24,4 +25,22 @@ test("two entries in one section keep source order (not alphabetical)", () => {
   expect(sectionEntries(md)).toEqual([
     { version: "## Unreleased", section: "Added", entries: ["Zebra support.", "Apple support."] },
   ]);
+});
+
+test("entries under separate sections retain section and entry order", () => {
+  const md = [
+    "## Unreleased", "", "### Fixed", "", "- Zebra fix.", "- Apple fix.",
+    "", "### Added", "", "- Zebra feature.", "- Apple feature.", "",
+  ].join("\n");
+  const sections = [
+    { version: "## Unreleased", section: "Fixed", entries: ["Zebra fix.", "Apple fix."] },
+    { version: "## Unreleased", section: "Added", entries: ["Zebra feature.", "Apple feature."] },
+  ];
+
+  for (const markdown of [md, md.replace(/\n/g, "\r\n")]) {
+    expect(sectionEntries(markdown)).toEqual(sections);
+    expect(parseChangelog(markdown)).toEqual([
+      { version: null, date: null, entries: ["Zebra fix.", "Apple fix.", "Zebra feature.", "Apple feature."] },
+    ]);
+  }
 });
