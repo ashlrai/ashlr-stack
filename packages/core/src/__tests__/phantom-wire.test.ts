@@ -6743,3 +6743,58 @@ describe("wirePhantomForRecipe — repeated webhook writes", () => {
     ]);
   });
 });
+
+describe("wirePhantomForRecipe — phantom exits unsuccessfully with diagnostic stderr", () => {
+  let harness: Harness;
+
+  beforeEach(() => {
+    harness = setupFakePhantom();
+    const phantomPath = join(harness.dir, "phantom");
+    const shim = readFileSync(phantomPath, "utf-8");
+    expect(shim).toContain("  list)\n");
+    writeFileSync(
+      phantomPath,
+      shim.replace(
+        "  list)\n",
+        "  list)\n    echo 'phantom: vault locked: DIAG-7731 permission denied' >&2\n    exit 3\n",
+      ),
+    );
+  });
+
+  afterEach(() => {
+    harness.cleanup();
+  });
+
+  it("fails the inventory for the caller without echoing stderr and runs no mutating command", async () => {
+    const recipe: Recipe = {
+      id: "stripe-github",
+      query: "payments and repos",
+      createdAt: "2026-04-18T00:00:00.000Z",
+      providers: [{ name: "stripe" }, { name: "github" }],
+    };
+
+    const failure = await listSecrets(harness.dir).then(
+      () => undefined,
+      (err: unknown) => err,
+    );
+    expect(failure).toMatchObject({ code: "PHANTOM_METADATA_UNAVAILABLE" });
+    // Diagnostic stderr is for the operator's terminal, never the typed error.
+    expect(String((failure as Error).message)).not.toContain("DIAG-7731");
+
+    // The wire step degrades to "unknown inventory": nothing is reported as
+    // present or missing, every provider is skipped, and only stubs land.
+    const result = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
+    expect(result.present).toEqual([]);
+    expect(result.missing).toEqual([]);
+    expect(result.skipped).toEqual(["stripe", "github"]);
+    expect(result.webhooks).toHaveLength(2);
+
+    // Only read-only probes (`--version`, `list`) ran; no add/set/delete/etc. followed.
+    const calls = harness.calls();
+    expect(calls.length).toBeGreaterThan(0);
+    expect(calls.map((c) => c.cmd).filter((cmd) => cmd !== "list" && cmd !== "--version")).toEqual(
+      [],
+    );
+    expect(JSON.parse(readFileSync(harness.vaultPath, "utf-8"))).toEqual({});
+  });
+});
