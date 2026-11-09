@@ -6679,3 +6679,19 @@ describe("webhookStubFor — signature-verification TODO stays a comment", () =>
     }
   });
 });
+
+describe("webhookStubFor — reminder states verification is not implemented", () => {
+  it.each(["stripe", "clerk", "supabase", "github", "acme"])(
+    "opens the %s stub with a plain-words reminder, before any code",
+    (provider) => {
+      const lines = webhookStubFor(provider).split("\n");
+      const firstCode = lines.findIndex((l) => l.trim() !== "" && !l.startsWith("//"));
+      expect(firstCode).toBe(-1); // the whole stub is comments
+      const reminder = lines.slice(0, 5).join("\n");
+      expect(reminder).toContain("does not verify signatures");
+      expect(reminder).toContain("accepts any non-empty signature header");
+      expect(reminder).toContain("without authenticating the request");
+      expect(reminder).toContain("Implement verification first");
+    },
+  );
+});
