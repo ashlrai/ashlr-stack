@@ -78,3 +78,12 @@ test("a version heading without list items is recognized with no entries", () =>
   expect(entriesBySection(markdown)).toEqual({ "1.2.3": {} });
   expect(marked.lexer(markdown).flatMap((t) => (t.type === "list" ? t.items : []))).toEqual([]);
 });
+
+test("LF and CRLF inputs retain the same version headings in order", () => {
+  const lf = "# Changelog\n\n## Unreleased\n\n## 1.2.3 (2026-01-02)\n\n## [1.2.2] — 2026-01-01\n";
+  const crlf = lf.replaceAll("\n", "\r\n");
+  const expected = ["1.2.3 (2026-01-02)", "[1.2.2] — 2026-01-01"];
+
+  expect(versionHeadings(lf)).toEqual(expected);
+  expect(versionHeadings(crlf)).toEqual(expected);
+});
