@@ -26,10 +26,12 @@ describe("Phantom wire verification comment context", () => {
         if (!handler) throw new Error(`Missing handler in ${path}`);
         const body = handler.indexOf("const body = await req.text();");
         const todo = handler.indexOf("TODO(security): signature verification is NOT implemented here.");
+        const reminder = handler.indexOf("Verify over the exact raw body bytes with the webhook secret");
         const success = handler.indexOf('return new Response("ok", { status: 200 })');
         expect(body).toBeGreaterThanOrEqual(0);
         expect(todo).toBeGreaterThan(body);
-        expect(success).toBeGreaterThan(todo);
+        expect(reminder).toBeGreaterThan(todo);
+        expect(success).toBeGreaterThan(reminder);
       }
       expect(harness.callsTo("reveal")).toEqual([]);
       expect(doc).toContain("Every\nline of the generated example is commented out.");
