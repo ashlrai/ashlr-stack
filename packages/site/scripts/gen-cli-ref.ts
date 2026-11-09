@@ -546,6 +546,7 @@ const COMMAND_ORDER = [
   "fleet-act",
   "fleet-stream",
   "fleet-graph",
+  "worktree-disk",
   "fleet-gc",
   "fleet-bets",
   "fleet-match",
