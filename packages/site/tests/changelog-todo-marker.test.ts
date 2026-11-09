@@ -36,14 +36,14 @@ test("TODO_STACK_APPLY marker is intact in parsed root CHANGELOG.md entries", ()
   }
 });
 
-test("entries with TODO_STACK_APPLY are under version headings, not unreleased prose", () => {
-  const entries = findEntriesWith(changelog, "TODO_STACK_APPLY");
-  expect(entries.length).toBeGreaterThanOrEqual(2);
-
-  // Walk headings to confirm each entry falls under a version section.
+function findEntryReleases(markdown: string, needle: string): Array<{
+  release: string | null;
+  raw: string;
+  text: string;
+}> {
   let release: string | null = null;
-  const releases: (string | null)[] = [];
-  for (const token of marked.lexer(changelog)) {
+  const entries: Array<{ release: string | null; raw: string; text: string }> = [];
+  for (const token of marked.lexer(markdown)) {
     if (token.type === "heading" && token.depth <= 2) {
       release =
         token.depth === 2 && /^\[?\d+\.\d+\.\d+\]?(?:\s|$)/.test(token.text)
@@ -52,14 +52,51 @@ test("entries with TODO_STACK_APPLY are under version headings, not unreleased p
     }
     if (token.type === "list") {
       for (const item of (token as Tokens.List).items) {
-        if (item.raw.includes("TODO_STACK_APPLY")) {
-          releases.push(release);
+        if (item.raw.includes(needle)) {
+          entries.push({ release, raw: item.raw, text: item.text });
         }
       }
     }
   }
-  // Every entry with the marker should be under a version heading (not null).
-  for (const r of releases) {
-    expect(r).not.toBeNull();
+  return entries;
+}
+
+test("entries with TODO_STACK_APPLY are under version headings, not unreleased prose", () => {
+  const entries = findEntryReleases(changelog, "TODO_STACK_APPLY");
+  expect(entries.length).toBeGreaterThanOrEqual(2);
+
+  for (const entry of entries) {
+    expect(entry.release).not.toBeNull();
   }
+});
+
+test("marked entries retain their own version headings and marker text", () => {
+  const fixture = `# Changelog
+
+## [2.0.0] - 2026-01-02
+
+### Added
+
+- First entry: \`TODO_STACK_APPLY first\`.
+
+## [1.0.0] - 2026-01-01
+
+### Changed
+
+- Second entry: \`TODO_STACK_APPLY second\`.
+`;
+  const entries = findEntryReleases(fixture, "TODO_STACK_APPLY");
+
+  expect(entries).toEqual([
+    {
+      release: "[2.0.0] - 2026-01-02",
+      raw: expect.stringContaining("TODO_STACK_APPLY first"),
+      text: expect.stringContaining("TODO_STACK_APPLY first"),
+    },
+    {
+      release: "[1.0.0] - 2026-01-01",
+      raw: expect.stringContaining("TODO_STACK_APPLY second"),
+      text: expect.stringContaining("TODO_STACK_APPLY second"),
+    },
+  ]);
 });
