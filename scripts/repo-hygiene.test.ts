@@ -167,6 +167,46 @@ test("stripMarkdownCode removes fenced blocks and inline code", () => {
   expect(extractMarkdownLinks(stripped)).toEqual(["./a.md", "./d.md"]);
 });
 
+test("CLI counts standalone markers but not words embedded in identifiers", async () => {
+  const { mkdtemp, mkdir, rm, writeFile, chmod } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const { spawnSync } = await import("node:child_process");
+  const dir = await mkdtemp(join(tmpdir(), "hygiene-markers-"));
+  try {
+    const bin = join(dir, "bin");
+    const root = join(dir, "repos");
+    const repo = join(root, "marker-fixture");
+    await mkdir(bin);
+    await mkdir(repo, { recursive: true });
+    expect(spawnSync("git", ["init", "-q", repo]).status).toBe(0);
+    await writeFile(join(repo, "markers.ts"), [
+      "const preTODO = 1;",
+      "const FIXMEafter = 1;",
+      "const XXX2 = 1;",
+      "const _HACK_ = 1;",
+      "// TODO: first",
+      "// (FIXME) second",
+      "// XXX third",
+      "// HACK: fourth",
+      "",
+    ].join("\n"));
+    expect(spawnSync("git", ["-C", repo, "add", "markers.ts"]).status).toBe(0);
+    await writeFile(join(bin, "gh"), "#!/bin/sh\necho public\n");
+    await chmod(join(bin, "gh"), 0o755);
+    const result = spawnSync(process.execPath, [join(import.meta.dir, "repo-hygiene.ts"), "--root", root, "--json"], {
+      env: { ...process.env, PATH: `${bin}:${process.env.PATH}` },
+      encoding: "utf8",
+    });
+    expect(result.status).toBe(0);
+    const report = JSON.parse(result.stdout);
+    expect(report.repos).toHaveLength(1);
+    expect(report.repos[0].deadCode.todoFixmeCount).toBe(4);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test("CLI excludes private, unknown and failed visibility checks from JSON and Markdown", async () => {
   const { mkdtemp, mkdir, readFile, rm, writeFile, chmod } = await import("node:fs/promises");
   const { tmpdir } = await import("node:os");
