@@ -40,6 +40,23 @@ for (const [format, log, expected] of fixtures) {
 test("empty output has no failing test", () => {
   expect(firstFailingTest("")).toBeNull();
 });
+test("passing test output has no failing test", () => {
+  for (const log of [
+    " ✓ test/a.test.ts (2 tests)\n ✓ accepts token 1ms\n Test Files  1 passed (1)",
+    "TAP version 13\nok 1 - accepts token\nok 2 - rotates keys\n1..2\n# fail 0",
+    "✔ accepts token (1.2ms)\n✔ rotates keys (2ms)\nℹ fail 0",
+    "     PASS [ 0.002s] auth tests::accepts\n     PASS [ 0.003s] auth tests::rotates",
+  ]) {
+    const ghLog = log
+      .split("\n")
+      .map((line) => `Test job\tRun tests\t2026-10-30T12:00:00.1234567Z \x1b[32m${line}\x1b[0m`)
+      .join("\r\n");
+    for (const output of [log, ghLog]) {
+      expect(firstFailingTest(output)).toBeNull();
+      expect(failingTests(output)).toEqual([]);
+    }
+  }
+});
 test("a TAP not ok line marked SKIP is not a failure", () => {
   expect(firstFailingTest("not ok 1 - unavailable feature # SKIP")).toBeNull();
 });
