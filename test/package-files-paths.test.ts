@@ -65,6 +65,29 @@ test("explicit package file validation detects missing and escaping paths", () =
   }
 });
 
+test("explicit package file validation handles ./, trailing slash, absolute and dot-dot paths", () => {
+  const fixture = mkdtempSync(join(tmpdir(), "stack-package-files-"));
+  try {
+    const packageDir = join(fixture, "package");
+    mkdirSync(join(packageDir, "dir"), { recursive: true });
+    writeFileSync(join(packageDir, "dir", "a.txt"), "");
+    writeFileSync(join(fixture, "outside.txt"), "");
+    expect(
+      invalidLiteralEntries(packageDir, [
+        "./dir",
+        "dir/",
+        "dir/../dir/a.txt",
+        join(fixture, "outside.txt"),
+        "dir/../../outside.txt",
+        "src/*.ts",
+        "lib/@(a|b)",
+      ]),
+    ).toEqual([join(fixture, "outside.txt"), "dir/../../outside.txt"]);
+  } finally {
+    rmSync(fixture, { recursive: true, force: true });
+  }
+});
+
 test("package files entries reference existing paths", () => {
   const missing: string[] = [];
   for (const entry of readdirSync(packagesDir, { withFileTypes: true })) {
