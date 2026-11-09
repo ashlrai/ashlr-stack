@@ -12,6 +12,7 @@ import {
   parseWorktreesPorcelain,
   resolveDocLink,
   stripMarkdownCode,
+  TODO_MARKER_PATTERN,
 } from "./repo-hygiene.ts";
 
 test("parseWorktreesPorcelain counts worktrees, detached and prunable", () => {
@@ -314,6 +315,44 @@ test("gitGrepCount finds a marker on the first line of an eligible file", async 
     const located = gitRun(["grep", "-n", "-E", pattern, "--", "first-line.ts", "other.ts"]);
     expect(located.status).toBe(0);
     expect(located.stdout.trim().split("\n")).toEqual(["first-line.ts:1:// FIXME: marker on line 1"]);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("TODO_MARKER_PATTERN ignores marker words embedded in longer identifiers", async () => {
+  const { mkdtemp, rm, writeFile } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const { spawnSync } = await import("node:child_process");
+  const dir = await mkdtemp(join(tmpdir(), "repo-hygiene-embedded-"));
+  try {
+    expect(spawnSync("git", ["init", "-q", dir]).status).toBe(0);
+    const files: Record<string, string> = {
+      "embedded.ts": [
+        "const TODO_suffix = 1;",
+        "const prefix_TODO = 2;",
+        "const MYTODOS = 3;",
+        "const TODOList = 4;",
+        "const aFIXMEb = 5;",
+        "const HACK2 = 6;",
+        "",
+      ].join("\n"),
+      "standalone.ts": "// TODO: real marker\n",
+      "end-of-line.ts": "// remember to fix this: HACK\n",
+      "start-of-line.ts": "XXX leading marker\n",
+    };
+    for (const [name, body] of Object.entries(files)) await writeFile(join(dir, name), body);
+    expect(spawnSync("git", ["-C", dir, "add", "."]).status).toBe(0);
+
+    // Embedded-only file contributes nothing; each standalone form counts exactly once.
+    await expect(gitGrepCount(dir, TODO_MARKER_PATTERN, ["embedded.ts"])).resolves.toBe(0);
+    await expect(gitGrepCount(dir, TODO_MARKER_PATTERN, ["standalone.ts"])).resolves.toBe(1);
+    await expect(gitGrepCount(dir, TODO_MARKER_PATTERN, ["end-of-line.ts"])).resolves.toBe(1);
+    await expect(gitGrepCount(dir, TODO_MARKER_PATTERN, ["start-of-line.ts"])).resolves.toBe(1);
+    await expect(
+      gitGrepCount(dir, TODO_MARKER_PATTERN, ["embedded.ts", "standalone.ts", "end-of-line.ts", "start-of-line.ts"]),
+    ).resolves.toBe(3);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
