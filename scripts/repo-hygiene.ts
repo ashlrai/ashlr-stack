@@ -993,7 +993,8 @@ async function collectRepo(repoPath: string): Promise<Record<string, unknown>> {
       : "renovate"
     : null;
 
-  const todoCount = await gitGrepCount(repoPath, String.raw`\b(TODO|FIXME|XXX|HACK)\b`, files.filter((f) => CODE_EXTS.has(extOf(f)) || extOf(f) === "rs"));
+  // POSIX classes, not \b: macOS's regex engine rejects \b in git grep -E and silently counts 0.
+  const todoCount = await gitGrepCount(repoPath, String.raw`(^|[^[:alnum:]_])(TODO|FIXME|XXX|HACK)([^[:alnum:]_]|$)`, files.filter((f) => CODE_EXTS.has(extOf(f)) || extOf(f) === "rs"));
   const allowDeadCode = await gitGrepCount(repoPath, String.raw`#\[allow\(dead_code\)\]`, rustFiles);
   const pullRequestTarget = await gitGrepCount(
     repoPath,
