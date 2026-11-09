@@ -257,3 +257,31 @@ test("gitGrepCount returns 0 for an empty eligible file list (TODO count)", asyn
   const todoPattern = String.raw`\b(TODO|FIXME|XXX|HACK)\b`;
   await expect(gitGrepCount("/nonexistent/repo-hygiene-empty", todoPattern, [])).resolves.toBe(0);
 });
+
+test("gitGrepCount finds no marker in an eligible file without marker words", async () => {
+  const { mkdtemp, rm, writeFile } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const { spawnSync } = await import("node:child_process");
+  const dir = await mkdtemp(join(tmpdir(), "repo-hygiene-marker-"));
+  try {
+    const gitRun = (args: string[]) =>
+      spawnSync("git", ["-C", dir, "-c", "user.name=t", "-c", "user.email=t@example.com", ...args]);
+    expect(spawnSync("git", ["init", "-q", dir]).status).toBe(0);
+    await writeFile(join(dir, "clean.ts"), "export const answer = 42;\n// Plain comment, nothing to flag.\n");
+    await writeFile(join(dir, "marked.ts"), "// TODO: tidy this up\nexport const x = 1;\n");
+    expect(gitRun(["add", "."]).status).toBe(0);
+    expect(gitRun(["commit", "-q", "-m", "fixture"]).status).toBe(0);
+
+    // Plain alternation, not `\b`: BSD/macOS git grep -E does not support `\b`, so the
+    // control below would read 0 there and the test would not prove anything.
+    const todoPattern = "(TODO|FIXME|XXX|HACK)";
+    // Clean file: git grep exits 1 (no match), which must surface as a zero count, not an error.
+    await expect(gitGrepCount(dir, todoPattern, ["clean.ts"])).resolves.toBe(0);
+    // Control: the same pattern does count a real marker, so the zero above is meaningful.
+    await expect(gitGrepCount(dir, todoPattern, ["marked.ts"])).resolves.toBe(1);
+    await expect(gitGrepCount(dir, todoPattern, ["clean.ts", "marked.ts"])).resolves.toBe(1);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
