@@ -6504,6 +6504,35 @@ describe("webhookStubFor — $1 in replacement text (original PR 1023)", () => {
     expect(stub).not.toContain("${UNKNOWN");
     expect(stub).not.toContain("${ UNKNOWN NAME}");
   });
+
+  it("places the unauthenticated-body warning after the body read, before any success response", () => {
+    // The warning explains that `body` is attacker-controlled, so it only
+    // makes sense once `body` exists. Guard the order in the generated stub:
+    // signature header check -> body read -> warning -> verification hint ->
+    // success response.
+    for (const provider of ["stripe", "clerk", "supabase", "github", "acme"]) {
+      const stub = webhookStubFor(provider);
+      const at = (needle: string) => {
+        const i = stub.indexOf(needle);
+        expect(i, `${provider}: missing ${needle}`).toBeGreaterThanOrEqual(0);
+        return i;
+      };
+      const header = at("req.headers.get(");
+      const bodyRead = at("const body = await req.text();");
+      const warning = at("TODO(security): signature verification is NOT implemented");
+      const forge = at(`forge a ${provider} webhook.`);
+      const hint = at(verificationHintFor(provider));
+      const success = at('return new Response("ok", { status: 200 });');
+      expect(header).toBeLessThan(bodyRead);
+      expect(bodyRead).toBeLessThan(warning);
+      expect(warning).toBeLessThan(forge);
+      expect(forge).toBeLessThan(hint);
+      expect(hint).toBeLessThan(success);
+      // Each marker appears once, so the indexes above are unambiguous.
+      expect(stub.split("const body = await req.text();").length - 1).toBe(1);
+      expect(stub.split("TODO(security)").length - 1).toBe(1);
+    }
+  });
 });
 
 describe("webhookStubFor — signature-verification TODO stays a comment", () => {
