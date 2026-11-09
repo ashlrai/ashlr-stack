@@ -37,9 +37,11 @@ for (const [format, log, expected] of fixtures) {
     ).toBe(expected!);
   });
 }
+test("empty output has no failing test", () => {
+  expect(firstFailingTest("")).toBeNull();
+});
 test("non-test failures and passing summaries remain unknown", () => {
   for (const log of [
-    "",
     "FAIL test/a.test.ts\nError: cannot import",
     "Tests 1 failed | 2 passed",
     "error: linker failed",
