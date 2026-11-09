@@ -45,6 +45,16 @@ async function rejects(name: string, args: Record<string, unknown> | undefined, 
   expect(existsSync(marker)).toBe(false);
 }
 
+test("live tool names are unique", () => {
+  const seen = new Set<string>();
+  const duplicates = new Set<string>();
+  for (const { name } of tools) {
+    if (seen.has(name)) duplicates.add(name);
+    seen.add(name);
+  }
+  expect([...duplicates]).toEqual([]);
+});
+
 test("live tools reject missing required fields and every wrong field type without dispatch", async () => {
   for (const tool of tools) {
     const properties = tool.inputSchema.properties ?? {};
