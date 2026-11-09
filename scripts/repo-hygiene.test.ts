@@ -168,6 +168,46 @@ test("stripMarkdownCode removes fenced blocks and inline code", () => {
   expect(extractMarkdownLinks(stripped)).toEqual(["./a.md", "./d.md"]);
 });
 
+test("CLI counts code markers without counting markers in non-code files", async () => {
+  const { chmod, mkdir, mkdtemp, rm, writeFile } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const { spawnSync } = await import("node:child_process");
+  const dir = await mkdtemp(join(tmpdir(), "hygiene-markers-"));
+  try {
+    const bin = join(dir, "bin");
+    const root = join(dir, "repos");
+    await mkdir(bin);
+    await mkdir(root);
+    for (const name of ["docs-only", "mixed"]) {
+      const repo = join(root, name);
+      await mkdir(repo);
+      expect(spawnSync("git", ["init", "-q", repo]).status).toBe(0);
+      await writeFile(join(repo, "README.md"), "TODO: documentation marker\n");
+      if (name === "mixed") await writeFile(join(repo, "source.ts"), "// FIXME: code marker\nconst TODO_suffix = 1;\n");
+      expect(spawnSync("git", ["-C", repo, "add", "."]).status).toBe(0);
+    }
+    const gh = join(bin, "gh");
+    await writeFile(gh, "#!/bin/sh\necho public\n");
+    await chmod(gh, 0o755);
+    const result = spawnSync(process.execPath, [join(import.meta.dir, "repo-hygiene.ts"), "--root", root, "--json"], {
+      env: { ...process.env, PATH: `${bin}:${process.env.PATH}` },
+      encoding: "utf8",
+    });
+    expect(result.status).toBe(0);
+    const json = JSON.parse(result.stdout);
+    const counts = Object.fromEntries(
+      json.repos.map((repo: { name: string; deadCode: { todoFixmeCount: number } }) => [
+        repo.name,
+        repo.deadCode.todoFixmeCount,
+      ]),
+    );
+    expect(counts).toEqual({ "docs-only": 0, mixed: 1 });
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test("CLI excludes private, unknown and failed visibility checks from JSON and Markdown", async () => {
   const { mkdtemp, mkdir, readFile, rm, writeFile, chmod } = await import("node:fs/promises");
   const { tmpdir } = await import("node:os");
