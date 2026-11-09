@@ -392,3 +392,44 @@ test("TODO_MARKER_PATTERN ignores marker words embedded in longer identifiers", 
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+test("CLI reports a zero TODO count for a fixture repo with no markers", async () => {
+  const { chmod, mkdir, mkdtemp, rm, writeFile } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const { spawnSync } = await import("node:child_process");
+  const dir = await mkdtemp(join(tmpdir(), "hygiene-no-markers-"));
+  try {
+    const bin = join(dir, "bin");
+    const root = join(dir, "repos");
+    await mkdir(bin);
+    await mkdir(root);
+    const repo = join(root, "clean-fixture");
+    await mkdir(repo);
+    expect(spawnSync("git", ["init", "-q", repo]).status).toBe(0);
+    // Several eligible code types, none with a marker; marker-like substrings
+    // inside longer words are not markers either.
+    const files: Record<string, string> = {
+      "a.ts": "export const answer = 42;\nconst TODO_suffix = 1;\nconst MYTODOS = 2;\n",
+      "b.js": "module.exports = { ok: true };\n",
+      "c.rs": "pub fn ok() -> bool { true }\n",
+      "README.md": "# Clean fixture\nNothing to flag here.\n",
+    };
+    for (const [name, body] of Object.entries(files)) await writeFile(join(repo, name), body);
+    expect(spawnSync("git", ["-C", repo, "add", "."]).status).toBe(0);
+    const gh = join(bin, "gh");
+    await writeFile(gh, "#!/bin/sh\necho public\n");
+    await chmod(gh, 0o755);
+    const result = spawnSync(process.execPath, [join(import.meta.dir, "repo-hygiene.ts"), "--root", root, "--json"], {
+      env: { ...process.env, PATH: `${bin}:${process.env.PATH}` },
+      encoding: "utf8",
+    });
+    expect(result.status).toBe(0);
+    const json = JSON.parse(result.stdout);
+    expect(json.repos).toHaveLength(1);
+    expect(json.repos[0].deadCode.todoFixmeCount).toBe(0);
+    await expect(gitGrepCount(repo, TODO_MARKER_PATTERN, ["a.ts", "b.js", "c.rs"])).resolves.toBe(0);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
