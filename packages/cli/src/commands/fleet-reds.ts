@@ -9,7 +9,7 @@ export function firstFailingTest(log: string): string | null {
     const line = stripVTControlCharacters(raw)
       .replace(/^.*?\d{4}-\d\d-\d\dT[\d:.]+Z\s*/, "")
       .trim();
-    if (/^(?:not ok\b|[✖✗]).*\s+#\s*(?:TODO|SKIP)\b/.test(line)) continue;
+    if (/^(?:not ok\b|[✖✗]).*\s+#\s*(?:TODO|SKIP)\b/i.test(line)) continue;
     const match =
       /^FAIL\s+\[[^\]]+\]\s+(.+)$/.exec(line) ?? // nextest: binary + test path
       /^FAIL\s+(.+ > .+)$/.exec(line) ?? // vitest failure summary

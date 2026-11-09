@@ -57,6 +57,24 @@ test("node:test expected TODO failures do not hide the first real failing test",
     ),
   ).toBe("real failure");
 });
+test("TAP TODO failure followed by a real failure reports the real failure", () => {
+  const tap = [
+    "TAP version 13",
+    "not ok 1 - known gap # TODO not implemented yet",
+    "    not ok 2 - nested known gap # todo",
+    "ok 3 - passing",
+    "not ok 4 - real failure",
+    "not ok 5 - later failure",
+  ].join("\n");
+  expect(firstFailingTest(tap)).toBe("real failure");
+  // Same log as GitHub prints it: timestamp prefix, ANSI colour, CRLF.
+  const ghLog = tap
+    .split("\n")
+    .map((line) => `Test job\tRun tests\t2026-11-09T05:00:00.0000000Z \x1b[31m${line}\x1b[0m`)
+    .join("\r\n");
+  expect(firstFailingTest(ghLog)).toBe("real failure");
+});
+
 test("a ✖ failure marked TODO is excluded from reported failures", () => {
   const ts = "Tests\tRun\t2026-11-09T05:00:00.0000000Z ";
   // Only TODO-marked failures: nothing to report.
