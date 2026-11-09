@@ -276,6 +276,29 @@ test("inline-code fixture keeps backtick text verbatim in parsed entries", () =>
   expect(entries[1]).toContain("## not a heading");
 });
 
+test("inline code and Unicode stay verbatim in their original section", () => {
+  const md = [
+    "## 1.2.3 (2026-11-09)",
+    "### Added",
+    "- Before the Unicode entry.",
+    "### Fixed",
+    "- Run `stack café --name=東京` for 🚀 and cafe\u0301.",
+    "### Changed",
+    "- After the Unicode entry.",
+  ].join("\n");
+  const sections = [
+    { version: "## 1.2.3 (2026-11-09)", section: "Added", entries: ["Before the Unicode entry."] },
+    { version: "## 1.2.3 (2026-11-09)", section: "Fixed", entries: ["Run `stack café --name=東京` for 🚀 and cafe\u0301."] },
+    { version: "## 1.2.3 (2026-11-09)", section: "Changed", entries: ["After the Unicode entry."] },
+  ];
+  for (const source of [md, md.replace(/\n/g, "\r\n")]) {
+    expect(sectionEntries(source)).toEqual(sections);
+    expect(parseChangelog(source)).toEqual([
+      { version: "1.2.3", date: "2026-11-09", entries: sections.flatMap((section) => section.entries) },
+    ]);
+  }
+});
+
 test("site CHANGELOG.md retains inline-code text (backticks) in parsed entries", () => {
   const site = parseChangelog(read("../packages/site/src/data/CHANGELOG.md"));
   const v030 = site.find((v) => v.version === "0.3.0");
