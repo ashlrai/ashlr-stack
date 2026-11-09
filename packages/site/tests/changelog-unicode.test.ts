@@ -37,3 +37,24 @@ test("unicode entry text survives rendering to HTML", async () => {
   }
   expect(html).toContain("<code>stack añadir</code>");
 });
+
+test("rendered Unicode entries preserve emoji, accents, and source order", async () => {
+  const markdown = `# Changelog
+
+## 0.5.0 (2026-11-03)
+
+### Added
+
+- First: café launch 🚀
+- Second: résumé support ✨
+- Third: naïve search 🔍
+`;
+  const body = markdown.replace(/^#\s+Changelog\s*\n+/, "");
+  const html = await marked.parse(body, { gfm: true, breaks: false });
+
+  expect(html).toContain(`<ul>
+<li>First: café launch 🚀</li>
+<li>Second: résumé support ✨</li>
+<li>Third: naïve search 🔍</li>
+</ul>`);
+});
