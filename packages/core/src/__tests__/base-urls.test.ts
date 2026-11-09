@@ -40,6 +40,9 @@ describe("overrides are honored", () => {
     expect(openaiBaseUrl({ OPENAI_BASE_URL: "http://127.0.0.1:4000/v1/" })).toBe(
       "http://127.0.0.1:4000/v1",
     );
+    expect(openaiBaseUrl({ OPENAI_BASE_URL: "https://gw.example/openai/v1///" })).toBe(
+      "https://gw.example/openai/v1",
+    );
   });
   test("ollama host forms", () => {
     expect(ollamaBaseUrl({ OLLAMA_HOST: "192.168.1.5:9999" })).toBe("http://192.168.1.5:9999");
