@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { parseRecipeDraft } from "../ai/inference.ts";
@@ -185,5 +185,52 @@ name = "totally-made-up-provider"
     expect(slugifyQuery("")).toBe("recipe");
     expect(slugifyQuery("!!!")).toBe("recipe");
     expect(slugifyQuery("  B2B  SaaS  ")).toBe("b2b-saas");
+  });
+});
+
+describe("ai/recipe empty provider list", () => {
+  it("accepts an empty providers array on write and persists it as an empty list", async () => {
+    const { dir, cleanup } = scratchDir();
+    try {
+      const path = await writeRecipe(
+        { id: "none", query: "q", createdAt: "2026-01-01T00:00:00.000Z", providers: [] },
+        dir,
+      );
+      expect(readFileSync(path, "utf-8")).toContain("providers = []");
+    } finally {
+      cleanup();
+    }
+  });
+
+  it("reads a TOML recipe with no providers key as an empty list, not an error", async () => {
+    const { dir, cleanup } = scratchDir();
+    try {
+      mkdirSync(join(dir, ".stack", "recipes"), { recursive: true });
+      writeFileSync(join(dir, ".stack", "recipes", "bare.toml"), 'id = "bare"\nquery = "q"\n');
+      const recipe = await readRecipe("bare", dir);
+      expect(recipe.providers).toEqual([]);
+      expect(recipe.id).toBe("bare");
+    } finally {
+      cleanup();
+    }
+  });
+
+  it("lists a recipe with an empty provider list instead of skipping it", async () => {
+    const { dir, cleanup } = scratchDir();
+    try {
+      await writeRecipe(
+        { id: "none", query: "q", createdAt: "2026-01-01T00:00:00.000Z", providers: [] },
+        dir,
+      );
+      expect((await listRecipes(dir)).map((r) => r.id)).toEqual(["none"]);
+    } finally {
+      cleanup();
+    }
+  });
+
+  it("recipeFromRetrieval with no hits yields an empty provider list", () => {
+    const recipe = recipeFromRetrieval("anything", []);
+    expect(recipe.providers).toEqual([]);
+    expect(recipe.id).toBe("anything");
   });
 });
