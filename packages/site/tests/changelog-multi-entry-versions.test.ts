@@ -33,3 +33,14 @@ test("every version keeps all of its entries, across subsections, in source orde
 test("the Unreleased section is skipped and its entry does not leak into a version", () => {
   expect(parse(fixture).flatMap((v) => v.entries)).not.toContain("Not released yet.");
 });
+
+test("two versions render their distinct entries under the right headings in source order", async () => {
+  const markdown = readFileSync(join(import.meta.dir, "__fixtures__/changelog-two-distinct-versions.md"), "utf8");
+  expect(parse(markdown)).toEqual([
+    { heading: "2.0.0", entries: ["New dashboard.", "Faster search."] },
+    { heading: "1.0.0", entries: ["Initial release.", "Setup guide."] },
+  ]);
+
+  const html = await marked.parse(markdown);
+  expect(html).toMatch(/<h2>2\.0\.0<\/h2>\s*<ul>\s*<li>New dashboard\.<\/li>\s*<li>Faster search\.<\/li>\s*<\/ul>\s*<h2>1\.0\.0<\/h2>\s*<ul>\s*<li>Initial release\.<\/li>\s*<li>Setup guide\.<\/li>\s*<\/ul>/);
+});
