@@ -123,3 +123,18 @@ test("sectionEntries keeps invisible and separator characters, and Unicode secti
   expect(sectionEntries(markdown)).toEqual(expected);
   expect(sectionEntries(markdown.replace(/\n/g, "\r\n"))).toEqual(expected);
 });
+
+test("sectionEntries keeps several combining-character entries intact and in order", () => {
+  const entries = [
+    "Mark order ạ́ (dot below, acute)",
+    "Mark order ạ́ (acute, dot below)", // canonically equal to the line above, different code points
+    "Devanagari क्ष and Hangul jamo 한 stay decomposed",
+    "Enclosing mark 1⃣ and variation selector ❤️",
+  ];
+  const markdown = `## 0.5.0 (2026-11-09)\n\n### Changed\n\n${entries.map((e) => `- ${e}`).join("\n")}\n`;
+  const expected = [{ version: "## 0.5.0 (2026-11-09)", section: "Changed", entries }];
+
+  expect(entries[0].normalize("NFC")).toBe(entries[1].normalize("NFC").replace("acute, dot below", "dot below, acute"));
+  expect(sectionEntries(markdown)).toEqual(expected);
+  expect(sectionEntries(markdown.replace(/\n/g, "\r\n"))).toEqual(expected);
+});
