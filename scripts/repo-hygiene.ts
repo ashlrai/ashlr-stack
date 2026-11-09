@@ -451,6 +451,17 @@ const REF_SCAN_EXTS = new Set([
 const LOCKFILES = /(?:^|\/)(?:bun\.lock|bun\.lockb|package-lock\.json|yarn\.lock|pnpm-lock\.yaml|Cargo\.lock|Gemfile\.lock|poetry\.lock|composer\.lock)$/;
 const TEST_FILE_RE = /(?:^|\/)(?:__tests__|tests?|spec)\/|\.(?:test|spec)\.[tj]sx?$/i;
 
+/**
+ * Markers counted as TODO/FIXME debt. Spelled without `\b`: POSIX ERE on macOS
+ * does not support it, so `git grep -E '\b...'` matched nothing there.
+ */
+export const TODO_MARKER_PATTERN = String.raw`(^|[^[:alnum:]_])(TODO|FIXME|XXX|HACK)([^[:alnum:]_]|$)`;
+
+/** Only JS/TS code files and Rust are scanned for markers; docs, configs and data are not. */
+export function todoEligibleFiles(files: string[]): string[] {
+  return files.filter((f) => CODE_EXTS.has(extOf(f)) || extOf(f) === "rs");
+}
+
 function extOf(path: string): string {
   const base = basename(path);
   if (base.endsWith(".d.ts")) return "d.ts";
@@ -993,7 +1004,7 @@ async function collectRepo(repoPath: string): Promise<Record<string, unknown>> {
       : "renovate"
     : null;
 
-  const todoCount = await gitGrepCount(repoPath, String.raw`\b(TODO|FIXME|XXX|HACK)\b`, files.filter((f) => CODE_EXTS.has(extOf(f)) || extOf(f) === "rs"));
+  const todoCount = await gitGrepCount(repoPath, TODO_MARKER_PATTERN, todoEligibleFiles(files));
   const allowDeadCode = await gitGrepCount(repoPath, String.raw`#\[allow\(dead_code\)\]`, rustFiles);
   const pullRequestTarget = await gitGrepCount(
     repoPath,

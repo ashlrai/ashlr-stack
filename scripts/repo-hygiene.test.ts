@@ -10,6 +10,8 @@ import {
   parseCargoDryRun,
   parseNpmOutdated,
   parseWorktreesPorcelain,
+  TODO_MARKER_PATTERN,
+  todoEligibleFiles,
   resolveDocLink,
   stripMarkdownCode,
 } from "./repo-hygiene.ts";
@@ -211,4 +213,36 @@ test("gitGrepCount returns 0 for an empty eligible file list (TODO count)", asyn
   // nonexistent repo path succeeds with a zero count.
   const todoPattern = String.raw`\b(TODO|FIXME|XXX|HACK)\b`;
   await expect(gitGrepCount("/nonexistent/repo-hygiene-empty", todoPattern, [])).resolves.toBe(0);
+});
+
+test("TODO marker in a non-code file is not counted; same marker in a code file is", async () => {
+  const { execFileSync } = await import("node:child_process");
+  const { mkdtemp, writeFile, rm } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const dir = await mkdtemp(join(tmpdir(), "repo-hygiene-todo-"));
+  try {
+    const git = (...args: string[]) =>
+      execFileSync("git", args, { cwd: dir, stdio: "pipe", env: { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null" } });
+    git("init", "-q");
+    for (const name of ["notes.md", "config.json", "data.txt", "code.ts", "lib.rs"]) {
+      await writeFile(join(dir, name), "// TODO: fix later\n");
+    }
+    git("add", ".");
+    const tracked = git("ls-files").toString().split("\n").filter(Boolean);
+
+    const eligible = todoEligibleFiles(tracked);
+    expect(eligible.sort()).toEqual(["code.ts", "lib.rs"]);
+    // Counting through the eligibility filter sees only the code files...
+    await expect(gitGrepCount(dir, TODO_MARKER_PATTERN, eligible)).resolves.toBe(2);
+    // Word boundaries still hold: identifiers merely containing a marker do not count.
+    await writeFile(join(dir, "word.ts"), "const TODOS = 1; // MYTODO\n");
+    git("add", "word.ts");
+    await expect(gitGrepCount(dir, TODO_MARKER_PATTERN, ["word.ts"])).resolves.toBe(0);
+    // ...whereas the non-code files alone contain markers that must be ignored.
+    expect(todoEligibleFiles(["notes.md", "config.json", "data.txt"])).toEqual([]);
+    await expect(gitGrepCount(dir, TODO_MARKER_PATTERN, todoEligibleFiles(["notes.md", "config.json"]))).resolves.toBe(0);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
 });
