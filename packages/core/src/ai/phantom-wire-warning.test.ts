@@ -20,7 +20,15 @@ describe("generated webhook examples", () => {
       );
       expect(example).toContain(`req.headers.get("${header}")`);
       expect(example).toContain(`to this endpoint can forge a ${provider} webhook.`);
-      expect(example.split("\n").every((line) => line === "" || line.startsWith("//"))).toBe(true);
+      const lines = example.split("\n");
+      const handler = lines.findIndex((line) => line.startsWith("// export async function handle"));
+      const success = lines.findIndex((line) => line.includes('return new Response("ok"'));
+      const warning = lines.findIndex((line) => line.includes("does not verify signatures"));
+      expect(warning).toBeGreaterThanOrEqual(0);
+      expect(handler).toBeGreaterThan(warning);
+      expect(success).toBeGreaterThan(handler);
+      expect(lines[success]).toMatch(/^\/\/\s+return new Response/);
+      expect(lines.every((line) => line.trim() === "" || line.startsWith("//"))).toBe(true);
     });
   }
 });
