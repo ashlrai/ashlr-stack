@@ -388,3 +388,27 @@ test("an unmarked TAP failure in a job log is included in the reported failures"
     { name: "Tests 3", firstFailingTest: "handles TODO items", logStatus: "parsed" },
   ]);
 });
+
+test("a skipped TAP result followed by a real failure selects the real failure in job reports", async () => {
+  const tap = [
+    "TAP version 13",
+    "ok 1 - passing",
+    "not ok 2 - flaky on windows # SKIP no tty",
+    "    not ok 3 - nested skip # skip",
+    "not ok 4 - real failure",
+    "not ok 5 - later failure",
+  ].join("\n");
+  expect(firstFailingTest(tap)).toBe("real failure");
+  expect(failingTests(tap)).toEqual(["real failure", "later failure"]);
+  const report = await collectFleetReds(async (args, signal) =>
+    args.includes("--job") ? tap : client(args, signal),
+  );
+  for (const repo of report.repos) {
+    for (const run of repo.runs ?? []) {
+      expect(run.jobs).toEqual([
+        { name: "Tests 1", firstFailingTest: "real failure", logStatus: "parsed" },
+        { name: "Tests 3", firstFailingTest: "real failure", logStatus: "parsed" },
+      ]);
+    }
+  }
+});
