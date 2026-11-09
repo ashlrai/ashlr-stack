@@ -2026,11 +2026,11 @@ describe("ai/phantom-wire", () => {
   });
 
   it.each([
-    ["stripe", "handleStripeWebhook"],
-    ["clerk", "handleClerkWebhook"],
-    ["supabase", "handleSupabaseWebhook"],
-    ["github", "handleGithubWebhook"],
-  ])("returns the unsigned %s response without reading the body", async (provider, name) => {
+    ["stripe", "stripe-signature", "handleStripeWebhook"],
+    ["clerk", "svix-signature", "handleClerkWebhook"],
+    ["supabase", "x-supabase-signature", "handleSupabaseWebhook"],
+    ["github", "x-hub-signature-256", "handleGithubWebhook"],
+  ])("rejects unsigned %s without reading the body", async (provider, header, name) => {
     const recipe: Recipe = { ...STRIPE_RECIPE, providers: [{ name: provider }] };
     const result = await wirePhantomForRecipe(recipe, { cwd: harness.dir });
     const stub = readFileSync(result.webhooks[0], "utf-8");
@@ -2041,14 +2041,18 @@ describe("ai/phantom-wire", () => {
     const handler: unknown = (await import(examplePath))[name];
     if (typeof handler !== "function") throw new Error(`Missing ${name}`);
 
-    const request = new Request("https://example.com", {
-      method: "POST",
-      body: "untrusted webhook payload",
-    });
-    const response: Response = await handler(request);
-    expect(response.status).toBe(400);
-    expect(await response.text()).toBe("Missing signature");
-    expect(request.bodyUsed).toBe(false);
+    for (const headers of [{}, { [header]: "" }]) {
+      const request = new Request("https://example.com", {
+        method: "POST",
+        headers,
+        body: "untrusted webhook payload",
+      });
+      expect(request.headers.get(header)).toBe(header in headers ? "" : null);
+      const response: Response = await handler(request);
+      expect(response.status).toBe(400);
+      expect(await response.text()).toBe("Missing signature");
+      expect(request.bodyUsed).toBe(false);
+    }
   });
 
   it.each([
