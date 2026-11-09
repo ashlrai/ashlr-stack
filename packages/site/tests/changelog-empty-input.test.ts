@@ -78,3 +78,9 @@ test("a version heading without list items is recognized with no entries", () =>
   expect(entriesBySection(markdown)).toEqual({ "1.2.3": {} });
   expect(marked.lexer(markdown).flatMap((t) => (t.type === "list" ? t.items : []))).toEqual([]);
 });
+
+test("version headings separated by prose are returned in source order", () => {
+  const markdown = "# Changelog\n\n## [2.0.0] - 2026-01-01\n\nRelease notes follow.\n\n## 1.2.3\n";
+
+  expect(versionHeadings(markdown)).toEqual(["[2.0.0] - 2026-01-01", "1.2.3"]);
+});
