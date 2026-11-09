@@ -18,3 +18,10 @@ test("two-section fixture is one version whose body lists Fixed before Added", (
   expect(body.indexOf("### Fixed")).toBeGreaterThanOrEqual(0);
   expect(body.indexOf("### Fixed")).toBeLessThan(body.indexOf("### Added"));
 });
+
+test("two entries in one section keep source order (not alphabetical)", () => {
+  const md = ["## Unreleased", "", "### Added", "", "- Zebra support.", "- Apple support.", ""].join("\n");
+  expect(sectionEntries(md)).toEqual([
+    { version: "## Unreleased", section: "Added", entries: ["Zebra support.", "Apple support."] },
+  ]);
+});
