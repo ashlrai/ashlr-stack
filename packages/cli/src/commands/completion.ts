@@ -120,9 +120,23 @@ const CMD_META: Record<string, CmdMeta> = {
       "modelsFile",
     ].map((name) => ({ name })),
   },
+  "fleet-sheet-status": {
+    flags: ["runs", "sheet", "execution", "expect", "json"].map((name) => ({ name })),
+  },
   fleet: {
-    subcommands: ["slo", "collisions", "waste"],
-    flags: ["json", "queue", "log", "file", "metrics", "hours"].map((name) => ({ name })),
+    subcommands: ["slo", "collisions", "waste", "sheet-status"],
+    flags: [
+      "json",
+      "queue",
+      "log",
+      "file",
+      "metrics",
+      "hours",
+      "runs",
+      "sheet",
+      "execution",
+      "expect",
+    ].map((name) => ({ name })),
   },
   doctor: {
     flags: [
@@ -210,6 +224,7 @@ const COMMANDS = [
   "fleet-graph",
   "fleet-bets",
   "fleet-match",
+  "fleet-sheet-status",
   "fleet",
   "exec",
   "sync",

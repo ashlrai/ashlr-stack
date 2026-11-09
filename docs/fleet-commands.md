@@ -11,8 +11,9 @@ GitHub through Locus. The report commands accept `--json` for a `schemaVersion 1
 it does not accept `--json`. Sources are the `defineCommand` meta and args in
 `packages/cli/src/commands/fleet-*.ts`, tested by
 `packages/cli/src/commands/fleet-docs.test.ts`. Run
-`stack <command> --help` for current syntax. `fleet-collisions`, `fleet-slo`
-and `fleet-waste` also run nested as `stack fleet collisions|slo|waste`.
+`stack <command> --help` for current syntax. `fleet-collisions`,
+`fleet-sheet-status`, `fleet-slo` and `fleet-waste` also run nested as
+`stack fleet collisions|sheet-status|slo|waste`.
 
 | Command | Purpose |
 | --- | --- |
@@ -27,6 +28,7 @@ and `fleet-waste` also run nested as `stack fleet collisions|slo|waste`.
 | `fleet-latency` | Report per-repo median and p90 open-to-merge seconds for PRs merged in the last six hours. |
 | `fleet-match` | Map a job requirement to eligible fleet resources by role, capability, tier, quota and availability. |
 | `fleet-reds` | List failed jobs and first failing tests in the latest completed schedule/push CI runs. |
+| `fleet-sheet-status` | Report per-sheet last successful sync and staleness, or reconcile one failed execution. |
 | `fleet-silent` | Name silent fleet failures in author, dispatch and job logs (read-only JSON). |
 | `fleet-slo` | Compare per-repo six-hour merges, open-to-merge latency and conflicting PRs with fleet SLO targets. |
 | `fleet-stream` | Translate fleet logs to typed NDJSON or localhost SSE. |
@@ -54,6 +56,8 @@ and `fleet-waste` also run nested as `stack fleet collisions|slo|waste`.
 - **fleet-match** — `--json`, `--queue`, `--role`, `--capability`, `--tier`,
   `--job`, `--capabilitiesFile`, `--modelsFile`.
 - **fleet-reds** — `--json`.
+- **fleet-sheet-status** — `--runs`, `--sheet`, `--execution`, `--expect`,
+  `--json`.
 - **fleet-silent** — `--runs`, `--json`.
 - **fleet-slo** — `--json`.
 - **fleet-stream** — `--dispatch`, `--jobs`, `--follow`, `--sse`, `--port`.

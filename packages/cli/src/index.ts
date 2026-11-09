@@ -100,6 +100,8 @@ const main = defineCommand({
     "fleet-gc": () => import("./commands/fleet-gc.ts").then((m) => m.fleetGcCommand),
     "fleet-bets": () => import("./commands/fleet-bets.ts").then((m) => m.fleetBetsCommand),
     "fleet-match": () => import("./commands/fleet-match.ts").then((m) => m.fleetMatchCommand),
+    "fleet-sheet-status": () =>
+      import("./commands/fleet-sheet-status.ts").then((m) => m.fleetSheetStatusCommand),
     fleet: () => import("./commands/fleet.ts").then((m) => m.fleetCommand),
     exec: () => import("./commands/exec.ts").then((m) => m.execCommand),
     swap: () => import("./commands/swap.ts").then((m) => m.swapCommand),

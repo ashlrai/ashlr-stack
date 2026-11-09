@@ -45,7 +45,8 @@ are separate effects. A child command run through `exec` can do anything.
 | `fleet-gc` | Report stale fleet worktrees as dry-run collect-candidates. | `stack fleet-gc --json` | Read. |
 | `fleet-bets` | Report leader bet outcomes. | `stack fleet-bets --json` | Read. |
 | `fleet-match` | Match a job requirement to eligible fleet resources. | `stack fleet-match --role reviewer --json` | Read. |
-| `fleet` | Summarize fleet status. | `stack fleet --json` | Read via Locus; also offers `slo`, `collisions`, and `waste`. |
+| `fleet-sheet-status` | Report per-sheet sync staleness and reconcile failed executions. | `stack fleet-sheet-status --json` | Read. |
+| `fleet` | Summarize fleet status. | `stack fleet --json` | Read via Locus; also offers `slo`, `collisions`, `waste`, and `sheet-status`. |
 | `exec` | Run a command through Phantom. | `stack exec -- bun test` | The child command can change state. |
 | `swap` | Migrate between providers. | `stack swap clerk auth0 --dryRun` | Can provision and remove wiring; example previews. |
 | `sync` | Sync secrets to a deployment platform. | `stack sync --platform vercel` | Changes remote platform secrets. |
