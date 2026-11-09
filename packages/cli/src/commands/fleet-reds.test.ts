@@ -40,6 +40,33 @@ for (const [format, log, expected] of fixtures) {
 test("empty output has no failing test", () => {
   expect(firstFailingTest("")).toBeNull();
 });
+test("reports the first of two failing TAP tests with diagnostics", () => {
+  const tap = [
+    "TAP version 13",
+    "# Subtest: rejects expired token",
+    "not ok 1 - rejects expired token",
+    "  ---",
+    "  duration_ms: 2.14",
+    "  failureType: 'testCodeFailure'",
+    "  error: 'Expected values to be strictly equal'",
+    "  code: 'ERR_ASSERTION'",
+    "  ...",
+    "# Subtest: rejects invalid signature",
+    "not ok 2 - rejects invalid signature",
+    "  ---",
+    "  duration_ms: 0.83",
+    "  failureType: 'testCodeFailure'",
+    "  error: 'Missing expected exception'",
+    "  code: 'ERR_ASSERTION'",
+    "  ...",
+    "1..2",
+    "# tests 2",
+    "# pass 0",
+    "# fail 2",
+  ].join("\n");
+  expect(failingTests(tap)).toEqual(["rejects expired token", "rejects invalid signature"]);
+  expect(firstFailingTest(tap)).toBe("rejects expired token");
+});
 test("a TAP not ok line marked SKIP is not a failure", () => {
   expect(firstFailingTest("not ok 1 - unavailable feature # SKIP")).toBeNull();
 });
