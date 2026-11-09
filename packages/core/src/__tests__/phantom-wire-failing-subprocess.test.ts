@@ -114,6 +114,19 @@ describe("ai/phantom-wire with a stubbed failing subprocess", () => {
     expect(calls).toEqual([["--version"]]);
   });
 
+  it("reports a failed version probe as skipped even when it prints a version", async () => {
+    script = () => ({ code: 1, stdout: "phantom 0.7.9\n", stderr: "probe failed" });
+
+    expect(await wirePhantomForRecipe(recipe, { cwd: dir })).toEqual({
+      present: [],
+      missing: [],
+      webhooks: [join(dir, ".stack/webhooks/stripe.ts")],
+      skipped: ["stripe", "neon"],
+    });
+    // The complete spawn log rules out both an inventory read and any mutation.
+    expect(calls).toEqual([["--version"]]);
+  });
+
   it("skips providers when `phantom list --json` prints unparseable output", async () => {
     script = (args) => (args[0] === "--version" ? { code: 0 } : { code: 0, stdout: "not json" });
 
