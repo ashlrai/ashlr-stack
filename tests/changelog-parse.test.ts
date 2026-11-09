@@ -35,6 +35,17 @@ export function parseChangelog(markdown: string): ChangelogVersion[] {
 
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), "utf8");
 
+test("a blank line after a version heading keeps the following entry with that version", () => {
+  const markdown = "## 1.0.0 (2026-11-09)\n- Previous entry.\n## 0.9.0 (2026-11-08)\n\n- Following entry.";
+  const expected: ChangelogVersion[] = [
+    { version: "1.0.0", date: "2026-11-09", entries: ["Previous entry."] },
+    { version: "0.9.0", date: "2026-11-08", entries: ["Following entry."] },
+  ];
+
+  expect(parseChangelog(markdown)).toEqual(expected);
+  expect(parseChangelog(markdown.replace(/\n/g, "\r\n"))).toEqual(expected);
+});
+
 test("LF and CRLF changelogs produce the same entries without a final newline", () => {
   const lf = [
     "## Unreleased",
