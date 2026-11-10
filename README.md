@@ -6,7 +6,7 @@
 [![npm version](https://img.shields.io/npm/v/@ashlr/stack.svg)](https://www.npmjs.com/package/@ashlr/stack)
 [![Stars](https://img.shields.io/github/stars/ashlrai/ashlr-stack?style=flat&label=stars)](https://github.com/ashlrai/ashlr-stack/stargazers)
 <!-- fresh:begin version-badge -->
-[![source v0.3.9](https://img.shields.io/badge/source-v0.3.9-blue.svg)](CHANGELOG.md)
+[![source v0.3.10](https://img.shields.io/badge/source-v0.3.10-blue.svg)](CHANGELOG.md)
 <!-- fresh:end -->
 
 **Configure supported services from your terminal or your AI agent.** Stack uses provider-specific OAuth or supplied credentials, provisions where the adapter supports it, and records selected credentials in [Phantom Secrets](https://phm.dev/secrets), Stack configuration and provider MCP entries. Vercel requires an existing personal access token; Stack does not create that token. Export an empty `.env.example` separately with `stack env export --example`.
@@ -128,7 +128,7 @@ bun run packages/cli/src/index.ts --help
 
 Run source commands with `bun run packages/cli/src/index.ts <command>`. For MCP from source, build the CLI (`bun run --cwd packages/cli build`) or set `STACK_BIN`. Agents working on this repo should read [AGENTS.md](AGENTS.md) and [STACK.md](STACK.md).
 
-**Status:** pre-alpha, active development. This source line adds fleet diagnostics and stricter input validation on top of the Node-compatible CLI and headless workflows; this checkout is version <!-- fresh:begin version-pin -->0.3.9<!-- fresh:end -->. See [CHANGELOG.md](./CHANGELOG.md) for compatibility notes and changes since 0.2.2. Source versions do not establish npm publication or provider readiness. Check `npm view @ashlr/stack version`, `npm view ashlr-stack-mcp version`, and your installed `stack --version` before relying on release-specific commands.
+**Status:** pre-alpha, active development. This source line adds fleet diagnostics and stricter input validation on top of the Node-compatible CLI and headless workflows; this checkout is version <!-- fresh:begin version-pin -->0.3.10<!-- fresh:end -->. See [CHANGELOG.md](./CHANGELOG.md) for compatibility notes and changes since 0.2.2. Source versions do not establish npm publication or provider readiness. Check `npm view @ashlr/stack version`, `npm view ashlr-stack-mcp version`, and your installed `stack --version` before relying on release-specific commands.
 
 ## Providers
 
