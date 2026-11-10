@@ -2,7 +2,11 @@ import { describe, expect, it, setDefaultTimeout } from "bun:test";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { setupFakePhantom } from "../packages/core/src/__tests__/_harness.ts";
-import { webhookStubFor, wirePhantomForRecipe } from "../packages/core/src/ai/phantom-wire.ts";
+import {
+  verificationHintFor,
+  webhookStubFor,
+  wirePhantomForRecipe,
+} from "../packages/core/src/ai/phantom-wire.ts";
 
 setDefaultTimeout(30_000);
 
@@ -140,6 +144,42 @@ describe("Phantom wire example source map", () => {
       expect(harness.callsTo("add")).toEqual([]);
     } finally {
       harness.cleanup();
+    }
+  });
+
+  it("documents exactly the reminder block the generator emits, for every provider", () => {
+    const excerpt = doc.match(/```ts\n([\s\S]*?)\n```/)?.[1];
+    if (!excerpt) throw new Error("Missing reminder excerpt");
+    const documented = excerpt.split("\n");
+
+    // The reminder is the contiguous run of comment lines from the TODO to the closing sentence.
+    const reminderOf = (stub: string): string[] => {
+      const lines = stub.split("\n");
+      const start = lines.findIndex((l) => l.includes("TODO(security)"));
+      const end = lines.findIndex((l) => l.includes("parse, trust, or act on the body."));
+      expect(start).toBeGreaterThan(-1);
+      expect(end).toBeGreaterThan(start);
+      return lines.slice(start, end + 1);
+    };
+
+    // Stripe: the generated block is line-for-line the documented block.
+    expect(reminderOf(webhookStubFor("stripe"))).toEqual(documented);
+
+    // Other providers: identical except for the provider name, hint and secret key.
+    const secrets: Record<string, string> = {
+      stripe: "STRIPE_WEBHOOK_SECRET",
+      clerk: "CLERK_WEBHOOK_SECRET",
+      supabase: "SUPABASE_WEBHOOK_SECRET",
+      github: "GITHUB_WEBHOOK_SECRET",
+    };
+    for (const provider of Object.keys(secrets)) {
+      const expected = documented.map((line) =>
+        line
+          .replace(verificationHintFor("stripe"), verificationHintFor(provider))
+          .replace("STRIPE_WEBHOOK_SECRET", secrets[provider])
+          .replace("forge a stripe webhook", `forge a ${provider} webhook`),
+      );
+      expect(reminderOf(webhookStubFor(provider))).toEqual(expected);
     }
   });
 });
