@@ -13,10 +13,12 @@ The manifests name three packages:
 - [`ashlr-stack-mcp`](../packages/mcp/package.json), unscoped
 - [`@ashlr/stack`](../packages/cli/package.json)
 
-Source versions do not establish publication. On November 1, 2026, npm reported
-0.3.0 for all three packages, and the v0.3.0 GitHub release had four native
-binaries and checksum sidecars. Check registry, consumer and artifact evidence
-again before updating guidance for any later version.
+Source versions do not establish publication. The last recorded verification on
+November 6, 2026 found npm version 0.3.6 for all three packages and four native
+binaries with checksum sidecars in the v0.3.6 GitHub release. See the
+[ecosystem getting-started guide](getting-started-ecosystem.md) for the scope
+of that verification. Check registry, consumer and artifact evidence again
+before updating guidance for any later version.
 
 ## Automatic releases
 
