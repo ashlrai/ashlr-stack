@@ -72,6 +72,21 @@ it("substitutes the provider while preserving an unknown placeholder in its valu
   expect(stub).toContain('req.headers.get("x-webhook-signature")');
 });
 
+it("reminds every webhook implementer that the example authenticates neither sender nor payload", () => {
+  for (const provider of ["stripe", "clerk", "supabase", "github", "other"]) {
+    const stub = webhookStubFor(provider);
+
+    expect(stub).toContain("200 without authenticating the request");
+    expect(stub).toContain("header check above proves only that a signature header arrived");
+    expect(stub).toContain("value is never compared to anything");
+    expect(stub).toContain("is unauthenticated, attacker-controlled input");
+    expect(stub).toContain(
+      `anyone who can POST\n//   // to this endpoint can forge a ${provider} webhook`,
+    );
+    expect(stub).toContain("reject missing or invalid signatures");
+  }
+});
+
 describe("ai/phantom-wire empty wiring request", () => {
   const savedPath = process.env.PATH;
   let binDir: string;
