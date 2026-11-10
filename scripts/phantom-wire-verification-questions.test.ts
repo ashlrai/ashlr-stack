@@ -1,7 +1,11 @@
 import { describe, expect, it, setDefaultTimeout } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { setupFakePhantom } from "../packages/core/src/__tests__/_harness.ts";
-import { wirePhantomForRecipe } from "../packages/core/src/ai/phantom-wire.ts";
+import {
+  verificationHintFor,
+  webhookStubFor,
+  wirePhantomForRecipe,
+} from "../packages/core/src/ai/phantom-wire.ts";
 
 setDefaultTimeout(30_000);
 
@@ -67,6 +71,24 @@ describe("Phantom wire verification questions", () => {
       expect(harness.callsTo("add")).toEqual([]);
     } finally {
       harness.cleanup();
+    }
+  });
+
+  it("emits the verification reminder exactly once per generated stub", () => {
+    // The reminder is the TODO(security) block inside the handler body. It
+    // must appear exactly once: zero leaves the stub without the warning that
+    // `body` is unauthenticated, and two would duplicate or contradict it.
+    for (const provider of ["stripe", "clerk", "supabase", "github"]) {
+      const stub = webhookStubFor(provider);
+      const reminders = stub.match(/TODO\(security\): signature verification is NOT implemented here\./g);
+      expect(reminders, `${provider} stub`).toHaveLength(1);
+      // The reminder sits inside the commented handler body, between the body
+      // read and the success response — not in the file-header prose.
+      const todo = stub.indexOf("TODO(security)");
+      expect(todo).toBeGreaterThan(stub.indexOf("await req.text()"));
+      expect(todo).toBeLessThan(stub.indexOf('return new Response("ok"'));
+      // Its provider-specific hint is emitted with it, exactly once.
+      expect(stub.split(verificationHintFor(provider))).toHaveLength(2);
     }
   });
 
