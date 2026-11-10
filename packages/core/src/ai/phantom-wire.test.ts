@@ -72,6 +72,17 @@ it("substitutes the provider while preserving an unknown placeholder in its valu
   expect(stub).toContain('req.headers.get("x-webhook-signature")');
 });
 
+it("generates identical webhook examples and verification warnings for repeated inputs", () => {
+  for (const provider of ["stripe", "clerk", "supabase", "github", "custom"]) {
+    const first = webhookStubFor(provider);
+    const second = webhookStubFor(provider);
+
+    expect(second).toBe(first);
+    expect(first).toContain("signature verification is NOT implemented here");
+    expect(first).toContain("does not verify signatures");
+  }
+});
+
 describe("ai/phantom-wire empty wiring request", () => {
   const savedPath = process.env.PATH;
   let binDir: string;
