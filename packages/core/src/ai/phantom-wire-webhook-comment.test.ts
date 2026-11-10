@@ -5,6 +5,9 @@ describe("generated webhook example stays inert and keeps its warning", () => {
   for (const provider of ["stripe", "clerk", "supabase", "github", "other"]) {
     it(`${provider}: handler is fully commented out`, () => {
       const example = webhookStubFor(provider);
+      for (const line of example.split("\n")) {
+        expect(line.trim() === "" || line.trimStart().startsWith("//")).toBe(true);
+      }
       // Parsed as TypeScript, the example must contain no executable code.
       const emitted = new Bun.Transpiler({ loader: "ts" }).transformSync(example);
       expect(emitted.trim()).toBe("");
