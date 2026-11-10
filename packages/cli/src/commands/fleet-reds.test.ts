@@ -93,6 +93,17 @@ test("the first of multiple TAP failures wins in log order", () => {
   ).toBe("rejects expired token");
   expect(firstFailingTest(`${later}\n${first}`)).toBe("rejects invalid signature");
 });
+test("a passing TAP description containing TODO is not reported as a failure", () => {
+  const passing = "ok 1 - handles TODO items";
+  for (const line of [
+    passing,
+    `Tests\tRun\t2026-11-09T12:00:00.0000000Z \u001b[32m${passing}\u001b[0m`,
+  ]) {
+    expect(failingTests(line)).toEqual([]);
+    expect(firstFailingTest(line)).toBeNull();
+    expect(failingTests(`${line}\nnot ok 2 - real failure`)).toEqual(["real failure"]);
+  }
+});
 test("the first real failure wins across reporter formats", () => {
   const tap = "not ok 2 - rejects expired token";
   const vitest = " FAIL  test/auth.test.ts > auth > rejects invalid signature";
