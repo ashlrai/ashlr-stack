@@ -29,7 +29,13 @@ test.each(["definitely-not-a-stack-command", "命令-🚀", "unknown.command!?@"
         },
       });
 
-      const stderr = result.stderr.toString();
+      // bun itself may prepend `warn:` lines (e.g. its slow-filesystem
+      // heuristic) to stderr; those are runtime noise, not CLI output.
+      const stderr = result.stderr
+        .toString()
+        .split("\n")
+        .filter((line) => !line.startsWith("warn: "))
+        .join("\n");
       expect(result.signalCode).toBeUndefined();
       expect(result.exitCode).toBe(1);
       // One plain line naming the command; no stack frames.
