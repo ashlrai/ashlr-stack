@@ -112,6 +112,28 @@ test("the first real failure wins across reporter formats", () => {
     "test/auth.test.ts > auth > rejects invalid signature",
   );
 });
+test("a passing-only TAP log has no failing test", () => {
+  const tap = [
+    "TAP version 13",
+    "# Subtest: auth",
+    "    ok 1 - accepts a valid token",
+    "    ok 2 - rejects an expired token",
+    "    1..2",
+    "ok 1 - auth",
+    "1..1",
+    "# tests 2",
+    "# pass 2",
+    "# fail 0",
+  ].join("\n");
+  const ghLog = tap
+    .split("\n")
+    .map((line) => `Test job\tRun tests\t2026-11-09T05:00:00.0000000Z \x1b[32m${line}\x1b[0m`)
+    .join("\r\n");
+  for (const log of [tap, ghLog]) {
+    expect(firstFailingTest(log)).toBeNull();
+    expect(failingTests(log)).toEqual([]);
+  }
+});
 test("a TAP not ok line marked SKIP is not a failure", () => {
   expect(firstFailingTest("not ok 1 - unavailable feature # SKIP")).toBeNull();
 });
