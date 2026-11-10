@@ -67,6 +67,18 @@ function versionWhitespaceErrors(manifests: { dir: string; version: unknown }[])
 
 const workspaceManifests = discoverWorkspaceManifests(packagesDir);
 
+test("workspace discovery returns no entries when no packages match", () => {
+  const directory = mkdtempSync(join(tmpdir(), "stack-workspace-"));
+  try {
+    mkdirSync(join(directory, "no-manifest"));
+    writeFileSync(join(directory, "package.json"), JSON.stringify({ name: "root", version: "1.0.0" }));
+    writeFileSync(join(directory, "not-a-directory"), "");
+    expect(discoverWorkspaceManifests(directory)).toEqual([]);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 test("workspace package versions are nonempty and unchanged by trimming", () => {
   expect(workspaceManifests.length).toBeGreaterThan(0);
   expect(versionWhitespaceErrors(workspaceManifests)).toEqual([]);
