@@ -82,7 +82,7 @@ test("two entries are retained in order without a final newline", () => {
   expect(sectionEntries(doc).at(-1)?.entries).toEqual(["First entry.", "Second entry."]);
 });
 
-test("the final unterminated entry is parsed completely under its release", () => {
+test("the final entry parses identically with and without a final newline", () => {
   const md = [
     "## 1.1.0 (2026-11-09)",
     "### Added",
@@ -94,12 +94,14 @@ test("the final unterminated entry is parsed completely under its release", () =
   ].join("\n");
 
   expect(md.endsWith("\n")).toBe(false);
-  expect(parseChangelog(md)).toEqual([
+  const expected = [
     { version: "1.1.0", date: "2026-11-09", entries: ["Earlier release."] },
     {
       version: "1.0.0",
       date: "2026-11-01",
       entries: ["First fix.", "Final fix with [details](docs/fix.md), café, and `code`."],
     },
-  ]);
+  ];
+  expect(parseChangelog(md)).toEqual(expected);
+  expect(parseChangelog(`${md}\n`)).toEqual(expected);
 });
