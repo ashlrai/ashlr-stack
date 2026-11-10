@@ -2,7 +2,7 @@ import { describe, expect, it, setDefaultTimeout } from "bun:test";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { setupFakePhantom } from "../packages/core/src/__tests__/_harness.ts";
-import { wirePhantomForRecipe } from "../packages/core/src/ai/phantom-wire.ts";
+import { wirePhantomForRecipe, webhookStubFor } from "../packages/core/src/ai/phantom-wire.ts";
 
 setDefaultTimeout(30_000);
 
@@ -20,6 +20,17 @@ describe("Phantom wire example trust", () => {
   it("identifies an example missing its signature-verification warning", () => {
     expect(() => assertExampleWarning("stripe", "// export async function handler() {}"))
       .toThrow("stripe example is missing the signature-verification warning");
+  });
+
+  it("places the verification reminder before the success response in each stub", () => {
+    for (const provider of ["stripe", "clerk", "supabase", "github"]) {
+      const stub = webhookStubFor(provider);
+      const reminder = stub.indexOf(signatureWarning);
+      const success = stub.indexOf('return new Response("ok", { status: 200 })');
+      expect(reminder, `${provider} stub is missing the verification reminder`).toBeGreaterThanOrEqual(0);
+      expect(success, `${provider} stub is missing the success response`).toBeGreaterThanOrEqual(0);
+      expect(reminder, `${provider} stub returns success before warning about verification`).toBeLessThan(success);
+    }
   });
 
   it("describes the behavior of each generated example", async () => {
