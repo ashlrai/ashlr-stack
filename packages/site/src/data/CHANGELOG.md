@@ -16,6 +16,23 @@
 
 - Setup, README and package READMEs separate the source version from the recorded npm publication (0.3.1 for `@ashlr/stack-core`, `@ashlr/stack` and `ashlr-stack-mcp`) and state that the published CLI and MCP packages declare Node.js 20 or newer. Source development uses Bun (#356, #361, #363).
 
+## 0.3.10 (2026-11-10)
+
+### Added
+
+- `stack fleet sheet-status` reports each sheet's last successful sync and staleness, and reconciles one failed execution; `stack worktree-disk` ranks registered worktrees by disk usage (read-only).
+- Core exports fleet sheet-status and stage-retry helpers.
+
+### Fixed
+
+- `stack --help` on an unknown subcommand path reports the unknown command instead of printing top-level help.
+- The release workflow dispatches the full CI suite on the tagged commit when no qualifying run exists, so a tag push no longer stalls before npm publish and the GitHub release (#1326).
+- Release and MCP registry dispatch workflows receive zero-human-steps security hardening (#1068, #1069).
+
+### Testing
+
+- Regression coverage expands across changelog parsing fixtures, phantom-wire boundaries, structured-data Unicode handling, webhook examples, MCP argument validation and fleet job reports.
+
 ## 0.3.9 (2026-11-08)
 
 ### Added
