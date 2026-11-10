@@ -1,0 +1,53 @@
+name: MCP Registry dispatch
+
+# Removes the human dispatch of mcp-registry.yml. release.yml creates the
+# GitHub Release with GITHUB_TOKEN, and events made with GITHUB_TOKEN do not
+# start other workflows, so the release:published trigger never fires for
+# automated releases. When the push-triggered Release run for an exact tag
+# completes successfully, this job dispatches mcp-registry.yml on that tag
+# with GITHUB_TOKEN (workflow_dispatch is the documented exception), so the
+# run belongs to github-actions[bot]. mcp-registry.yml keeps its own gate:
+# exact tag, checkout SHA, release assets and npm version are all rechecked.
+# This job never checks out code, never reads secrets and cannot publish.
+on:
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
+
+permissions: {}
+
+concurrency:
+  group: mcp-registry-dispatch-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    if: >-
+      github.repository == 'ashlrai/ashlr-stack' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+      contents: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      RELEASE_TAG: ${{ github.event.workflow_run.head_branch }}
+      SOURCE_SHA: ${{ github.event.workflow_run.head_sha }}
+    steps:
+      - name: Validate the completed release and dispatch the registry publish
+        run: |
+          set -euo pipefail
+          if ! [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::notice::$RELEASE_TAG is not a release tag; no registry dispatch"
+            exit 0
+          fi
+          [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::invalid source sha"; exit 1; }
+          tag_sha=$(gh api "repos/$REPO/commits/$RELEASE_TAG" --jq .sha)
+          test "$tag_sha" = "$SOURCE_SHA" || { echo "::error::tag does not point at the released commit"; exit 1; }
+          gh api "repos/$REPO/releases/tags/$RELEASE_TAG" --jq .draft | grep -qx false \
+            || { echo "::error::release for $RELEASE_TAG is missing or still a draft"; exit 1; }
+          gh workflow run mcp-registry.yml --repo "$REPO" --ref "$RELEASE_TAG"
