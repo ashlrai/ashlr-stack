@@ -75,6 +75,13 @@ test("empty fixture yields no entries or sections, and no list items at all", ()
   expect(marked.lexer(fixture).flatMap((t) => (t.type === "list" ? t.items : []))).toEqual([]);
 });
 
+test("whitespace-only input yields no entries or sections without throwing", () => {
+  const fixture = " \t\n\r\n  \n";
+
+  expect(() => entriesBySection(fixture)).not.toThrow();
+  expect(entriesBySection(fixture)).toEqual({});
+});
+
 test("a version heading without list items is recognized with no entries", () => {
   const markdown = "# Changelog\n\n## 1.2.3\n";
 
