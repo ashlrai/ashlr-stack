@@ -14,7 +14,37 @@ const source = readFileSync(
 );
 const sourceLines = source.split("\n");
 
+/**
+ * Resolve the documented "Verification reminder" source-map link. Throws when the row,
+ * the target file, or the line anchor is missing, so a broken link fails the test.
+ */
+function resolveReminderLink(markdown: string, base: URL): { url: URL; line: number } {
+  const row = markdown.match(/^\|\s*Verification reminder\s*\|\s*\[[^\]]+\]\(([^)#\s]+)#L(\d+)\)/m);
+  if (!row) throw new Error("Missing verification reminder source-map link");
+  const url = new URL(row[1], base);
+  if (!existsSync(url) || !statSync(url).isFile()) {
+    throw new Error(`Verification reminder link target is not an existing file: ${row[1]}`);
+  }
+  return { url, line: Number(row[2]) };
+}
+
 describe("Phantom wire example source map", () => {
+  it("resolves the verification reminder link to an existing file at the TODO line", () => {
+    const { url, line } = resolveReminderLink(doc, docUrl);
+    expect(url.href).toBe(new URL("../packages/core/src/ai/phantom-wire.ts", import.meta.url).href);
+    expect(readFileSync(url, "utf8").split("\n")[line - 1]).toContain("TODO(security)");
+  });
+
+  it("fails when the verification reminder link target is missing", () => {
+    const broken = doc.replace(
+      /(\| Verification reminder \| \[[^\]]+\]\()[^)#]+/,
+      "$1../packages/core/src/ai/does-not-exist.ts",
+    );
+    expect(broken).not.toBe(doc);
+    expect(() => resolveReminderLink(broken, docUrl)).toThrow("not an existing file");
+    expect(() => resolveReminderLink("no table here", docUrl)).toThrow("Missing verification");
+  });
+
   it("links the named generator to its exported implementation", () => {
     const generator = doc.match(/\[`(webhookStubFor)`\]\(([^)#]+)#L(\d+)\)/);
     expect(generator).not.toBeNull();
