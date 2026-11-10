@@ -72,6 +72,15 @@ it("substitutes the provider while preserving an unknown placeholder in its valu
   expect(stub).toContain('req.headers.get("x-webhook-signature")');
 });
 
+it("generates webhook examples without the historical stack apply placeholder", () => {
+  for (const provider of ["stripe", "clerk", "supabase", "github", "other"]) {
+    const example = webhookStubFor(provider);
+
+    expect(example).not.toContain("TODO_STACK_APPLY");
+    expect(example).toContain(`phantom reveal ${provider.toUpperCase()}_WEBHOOK_SECRET`);
+  }
+});
+
 describe("ai/phantom-wire empty wiring request", () => {
   const savedPath = process.env.PATH;
   let binDir: string;
@@ -148,6 +157,7 @@ describe("ai/phantom-wire empty wiring request", () => {
     );
     for (const path of result.webhooks) {
       const example = readFileSync(path, "utf8");
+      expect(example).not.toContain("TODO_STACK_APPLY");
       expect(example).toContain("signature verification is NOT implemented here");
       expect(example).toContain("does not verify signatures");
     }
