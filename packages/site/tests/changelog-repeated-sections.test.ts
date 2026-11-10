@@ -33,6 +33,26 @@ test("entries stay with their version and section when a section heading repeats
   ]);
 });
 
+const repeatedOrderFixture = readFileSync(join(import.meta.dir, "__fixtures__/changelog-repeated-sections-order.md"), "utf8");
+
+test("entries under repeated headings across versions stay in source order", () => {
+  const ordered = entries(repeatedOrderFixture);
+  const added = ordered.filter((e) => e.includes(" / Added / "));
+  expect(added).toEqual([
+    "0.5.0 (2026-07-01) / Added / Widget export in 0.5.0",
+    "0.4.0 (2026-06-01) / Added / Widget export in 0.4.0",
+    "0.3.0 (2026-05-01) / Added / Widget export in 0.3.0",
+  ]);
+  expect(ordered).toEqual([
+    "0.5.0 (2026-07-01) / Added / Widget export in 0.5.0",
+    "0.5.0 (2026-07-01) / Fixed / Widget crash in 0.5.0",
+    "0.4.0 (2026-06-01) / Added / Widget export in 0.4.0",
+    "0.4.0 (2026-06-01) / Fixed / Widget crash in 0.4.0",
+    "0.3.0 (2026-05-01) / Added / Widget export in 0.3.0",
+    "0.3.0 (2026-05-01) / Fixed / Widget crash in 0.3.0",
+  ]);
+});
+
 test("the same section name under different versions never merges across versions", () => {
   const added = entries(fixture).filter((e) => e.includes(" / Added / "));
   expect(added.filter((e) => e.startsWith("0.3.0"))).toHaveLength(2);
