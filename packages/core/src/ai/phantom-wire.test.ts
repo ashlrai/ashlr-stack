@@ -72,6 +72,32 @@ it("substitutes the provider while preserving an unknown placeholder in its valu
   expect(stub).toContain('req.headers.get("x-webhook-signature")');
 });
 
+describe("generated webhook example", () => {
+  it.each(["stripe", "clerk", "supabase", "github"])(
+    "%s keeps the explicit warning that signature verification is not implemented",
+    (provider) => {
+      const example = webhookStubFor(provider);
+
+      // The warning must be explicit and visible to anyone reading the stub:
+      // once at the top, again inside the handler TODO next to the point of
+      // risk, and the trust limitation spelled out (untrusted, forgeable body).
+      expect(example).toContain(
+        "This entire example is commented out and does not verify signatures.",
+      );
+      expect(example).toContain("signature verification is NOT implemented here");
+      expect(example).toContain("Implement verification first");
+      expect(example).toContain("unauthenticated, attacker-controlled input");
+      expect(example).toContain(`to this endpoint can forge a ${provider} webhook.`);
+
+      // The example stays inert: every line is a comment or blank, so the
+      // unverified stub can never run as-is.
+      expect(example.split("\n").every((line) => line.trim() === "" || line.startsWith("//"))).toBe(
+        true,
+      );
+    },
+  );
+});
+
 describe("ai/phantom-wire empty wiring request", () => {
   const savedPath = process.env.PATH;
   let binDir: string;
