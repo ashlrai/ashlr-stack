@@ -150,6 +150,12 @@ describe("ai/phantom-wire empty wiring request", () => {
       const example = readFileSync(path, "utf8");
       expect(example).toContain("signature verification is NOT implemented here");
       expect(example).toContain("does not verify signatures");
+      expect(example).toMatch(/^\/\/ export async function handle\w+Webhook\(req: Request\)/m);
+      // Every nonempty line must remain a comment, including the handler body.
+      // A generated example must never register or export an active handler.
+      for (const line of example.split("\n")) {
+        expect(line.trim() === "" || line.trimStart().startsWith("//")).toBe(true);
+      }
     }
   });
 
