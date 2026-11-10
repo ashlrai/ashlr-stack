@@ -165,6 +165,34 @@ describe("ai/phantom-wire", () => {
     }
   });
 
+  it("shows the verification reminder before any example use of the request body", () => {
+    // Two reminders, both ahead of the body: the header notice (before the
+    // handler, so before the body is even read) and the TODO(security) (before
+    // every use of `body` after its declaration). A reader or an agent copying
+    // the example top-down never meets the body without the warning.
+    for (const provider of ["stripe", "clerk", "supabase", "github", "acme"]) {
+      const stub = webhookStubFor(provider);
+      const read = stub.indexOf("req.text()");
+      const header = stub.indexOf("does not verify signatures.");
+      const todo = stub.indexOf("TODO(security): signature verification is NOT implemented");
+      expect(read).toBeGreaterThan(-1);
+      expect(header).toBeGreaterThan(-1);
+      expect(header).toBeLessThan(stub.indexOf("export async function"));
+      expect(header).toBeLessThan(read);
+      expect(todo).toBeGreaterThan(-1);
+
+      // Every mention of `body` as a value (not the declaration, not `raw body
+      // bytes` guidance prose) comes after the TODO.
+      const declaration = stub.indexOf("const body = await req.text()");
+      expect(declaration).toBeGreaterThan(-1);
+      const uses = [...stub.matchAll(/`body`|\bthe body\b|\bbody\b(?!\s*=)/g)]
+        .map((m) => m.index ?? -1)
+        .filter((at) => at > declaration + "const body".length);
+      expect(uses.length).toBeGreaterThan(0);
+      for (const at of uses) expect(at).toBeGreaterThan(todo);
+    }
+  });
+
   it("keeps the signature-verification reminder in comments, never in executable code", () => {
     // The reminder (TODO, provider hint, raw-body/constant-time guidance) must
     // stay prose. If any line of the stub is live code, the example would
