@@ -60,6 +60,13 @@ test("node:test spec failure keeps the complete Unicode test name", () => {
 test("empty output has no failing test", () => {
   expect(firstFailingTest("")).toBeNull();
 });
+test("empty and blank test output reports no failures in any form", () => {
+  const ts = "Test job\tRun tests\t2026-11-09T12:00:00.0000000Z ";
+  for (const log of ["", "\n", "\r\n\r\n", "   \t \n  ", ts, `${ts}\r\n${ts}\x1b[31m\x1b[0m\r\n`]) {
+    expect(failingTests(log)).toEqual([]);
+    expect(firstFailingTest(log)).toBeNull();
+  }
+});
 test("ordinary text containing not ok is not a TAP failure", () => {
   const text = [
     "The response was not ok 1 - retrying the request",
