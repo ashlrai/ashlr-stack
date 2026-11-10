@@ -66,7 +66,11 @@ describe("Phantom wire comment inventory", () => {
         expect(stub).toContain(`req.headers.get("${header}")`);
         expect(stub).toContain(`phantom reveal ${secret}`);
         for (const match of hints.matchAll(/`([^`]+)`/g)) expect(stub).toContain(match[1]);
-        expect(stub).toContain("TODO(security): signature verification is NOT implemented here.");
+        const warning = stub.indexOf("TODO(security): signature verification is NOT implemented here.");
+        const success = stub.indexOf('return new Response("ok", { status: 200 })');
+        expect(warning, `${providers[index]} example is missing the verification warning`).toBeGreaterThanOrEqual(0);
+        expect(success, `${providers[index]} example is missing the success response`).toBeGreaterThanOrEqual(0);
+        expect(warning, `${providers[index]} example returns success before the warning`).toBeLessThan(success);
       }
       expect(harness.callsTo("reveal")).toEqual([]);
       expect(harness.callsTo("add")).toEqual([]);
