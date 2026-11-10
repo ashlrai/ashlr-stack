@@ -72,6 +72,20 @@ it("substitutes the provider while preserving an unknown placeholder in its valu
   expect(stub).toContain('req.headers.get("x-webhook-signature")');
 });
 
+it("places the verification warning between reading the body and handling the request", () => {
+  for (const provider of ["stripe", "clerk", "supabase", "github", "other"]) {
+    const stub = webhookStubFor(provider);
+    const bodyRead = stub.indexOf("const body = await req.text();");
+    const warning = stub.indexOf("TODO(security): signature verification is NOT implemented here");
+    const processing = stub.indexOf('return new Response("ok", { status: 200 });');
+
+    expect(bodyRead).toBeGreaterThanOrEqual(0);
+    expect(warning).toBeGreaterThan(bodyRead);
+    expect(processing).toBeGreaterThan(warning);
+    expect(stub.slice(warning, processing)).toContain("parse, trust, or act on the body");
+  }
+});
+
 describe("ai/phantom-wire empty wiring request", () => {
   const savedPath = process.env.PATH;
   let binDir: string;
