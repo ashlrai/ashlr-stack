@@ -2,7 +2,7 @@ import { describe, expect, it, setDefaultTimeout } from "bun:test";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { setupFakePhantom } from "../packages/core/src/__tests__/_harness.ts";
-import { wirePhantomForRecipe } from "../packages/core/src/ai/phantom-wire.ts";
+import { webhookStubFor, wirePhantomForRecipe } from "../packages/core/src/ai/phantom-wire.ts";
 
 setDefaultTimeout(30_000);
 
@@ -15,6 +15,20 @@ const source = readFileSync(
 const sourceLines = source.split("\n");
 
 describe("Phantom wire example source map", () => {
+  it("links the named generator to its exported implementation", () => {
+    const generator = doc.match(/\[`(webhookStubFor)`\]\(([^)#]+)#L(\d+)\)/);
+    expect(generator).not.toBeNull();
+    if (!generator) throw new Error("Missing generator source link");
+
+    const [, name, target, line] = generator;
+    const targetUrl = new URL(target, docUrl);
+    expect(targetUrl.href).toBe(new URL("../packages/core/src/ai/phantom-wire.ts", import.meta.url).href);
+    expect(statSync(targetUrl).isFile()).toBe(true);
+    expect(sourceLines[Number(line) - 1]).toContain(`function ${name}(`);
+    expect(typeof webhookStubFor).toBe("function");
+    expect(webhookStubFor("stripe")).toContain("handleStripeWebhook");
+  });
+
   it("identifies the generated example and its verification reminder with source links", () => {
     // The generated example: output path, writer, and template are named.
     expect(doc).toContain(".stack/webhooks/<provider>.ts");
