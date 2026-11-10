@@ -17,6 +17,14 @@ describe("generated webhook examples", () => {
     // Execute the sample as a reader would after removing its outer comments.
     const source = example.replace(/^\/\/ ?/gm, "");
     const handlerSource = source.slice(source.indexOf("export async function"));
+    expect(handlerSource).toContain(
+      "// TODO(security): signature verification is NOT implemented here.",
+    );
+    expect(handlerSource).toContain(
+      "// header check above proves only that a signature header arrived; its",
+    );
+    expect(handlerSource).toContain("// value is never compared to anything.");
+    expect(handlerSource).toContain("// is unauthenticated, attacker-controlled input");
     const javascript = new Bun.Transpiler({ loader: "ts", target: "bun" }).transformSync(
       handlerSource,
     );
