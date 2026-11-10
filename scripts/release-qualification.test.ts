@@ -67,7 +67,7 @@ function evidence(
 async function qualify() {
   writeFileSync(env.GITHUB_OUTPUT, "");
   writeFileSync(join(root, "gh-calls"), "");
-  return run(["/bin/bash", "-c", step("Require manual full CI on the resolved release commit")]);
+  return run(["/bin/bash", "-c", step("Require full CI on the resolved release commit")]);
 }
 
 beforeEach(async () => {
@@ -97,12 +97,24 @@ beforeEach(async () => {
     CI_WORKFLOW: "ci.yml",
     RELEASE_INPUT_OTP: "",
     FIXTURE_ROOT: root,
+    // Production waits for the suite; fixtures decide on the next poll.
+    FULL_SUITE_WAIT_SECONDS: "0",
+    FULL_SUITE_POLL_SECONDS: "0",
+    FIXTURE_DISPATCH_EXIT: "0",
   };
   writeFileSync(
     join(root, "bin/gh"),
     `#!/bin/bash
 printf '%s\\n' "$*" >> "$FIXTURE_ROOT/gh-calls"
-cat "$FIXTURE_ROOT/runs.json"
+if [[ "\$1" == workflow && "\$2" == run ]]; then
+  : > "$FIXTURE_ROOT/dispatched"
+  exit "\${FIXTURE_DISPATCH_EXIT:-0}"
+fi
+if [[ -f "$FIXTURE_ROOT/dispatched" && -f "$FIXTURE_ROOT/runs-after.json" ]]; then
+  cat "$FIXTURE_ROOT/runs-after.json"
+else
+  cat "$FIXTURE_ROOT/runs.json"
+fi
 exit "\${FIXTURE_API_EXIT:-0}"
 `,
     { mode: 0o700 },
@@ -125,6 +137,7 @@ test("main dispatch qualifies the lightweight tag commit, independently of main 
   const calls = readFileSync(join(root, "gh-calls"), "utf8");
   expect(calls).toContain(`head_sha=${sha}&`);
   expect(calls).not.toContain(env.GITHUB_SHA);
+  expect(calls).not.toContain("workflow run");
 });
 
 test("annotated tags qualify their peeled commit, not the tag object", async () => {
@@ -167,13 +180,106 @@ for (const patch of [
   });
 }
 
-for (const runs of [[], null, {}, [null]]) {
-  test(`absent or malformed CI evidence refuses ${JSON.stringify(runs)}`, async () => {
+for (const runs of [null, {}, [null]]) {
+  test(`malformed CI evidence refuses ${JSON.stringify(runs)} without dispatching`, async () => {
     evidence(runs);
     expect((await qualify()).status).not.toBe(0);
     expect(readFileSync(env.GITHUB_OUTPUT, "utf8")).toBe("");
+    expect(readFileSync(join(root, "gh-calls"), "utf8")).not.toContain("workflow run");
   });
 }
+
+test("absent full-suite evidence dispatches ci.yml on the tag and accepts that run", async () => {
+  evidence([]);
+  writeFileSync(
+    join(root, "runs-after.json"),
+    JSON.stringify({
+      workflow_runs: [
+        {
+          event: "workflow_dispatch",
+          head_sha: sha,
+          status: "completed",
+          conclusion: "success",
+        },
+      ],
+    }),
+  );
+  const result = await qualify();
+  expect(result.status).toBe(0);
+  expect(readFileSync(env.GITHUB_OUTPUT, "utf8")).toBe(`sha=${sha}\n`);
+  const calls = readFileSync(join(root, "gh-calls"), "utf8").split("\n").filter(Boolean);
+  expect(calls.filter((line) => line.startsWith("workflow run "))).toEqual([
+    "workflow run ci.yml --repo fixture/stack --ref v0.3.2",
+  ]);
+  expect(calls[0]).toContain(`head_sha=${sha}&`);
+});
+
+test("absent full-suite evidence still refuses when the dispatched run never goes green", async () => {
+  evidence([]);
+  expect((await qualify()).status).not.toBe(0);
+  expect(readFileSync(env.GITHUB_OUTPUT, "utf8")).toBe("");
+  const calls = readFileSync(join(root, "gh-calls"), "utf8").split("\n").filter(Boolean);
+  expect(calls.filter((line) => line.startsWith("workflow run "))).toHaveLength(1);
+});
+
+test("a failed full-suite dispatch refuses before publishing the sha", async () => {
+  evidence([]);
+  env.FIXTURE_DISPATCH_EXIT = "1";
+  expect((await qualify()).status).not.toBe(0);
+  expect(readFileSync(env.GITHUB_OUTPUT, "utf8")).toBe("");
+});
+
+test("a full suite that fails after automatic dispatch does not qualify", async () => {
+  evidence([]);
+  writeFileSync(
+    join(root, "runs-after.json"),
+    JSON.stringify({
+      workflow_runs: [
+        {
+          event: "workflow_dispatch",
+          head_sha: sha,
+          status: "completed",
+          conclusion: "failure",
+        },
+      ],
+    }),
+  );
+  expect((await qualify()).status).not.toBe(0);
+  expect(readFileSync(env.GITHUB_OUTPUT, "utf8")).toBe("");
+  const calls = readFileSync(join(root, "gh-calls"), "utf8");
+  expect(calls.split("workflow run").length - 1).toBe(1);
+});
+
+test("a completed unsuccessful full suite is not re-dispatched", async () => {
+  for (const conclusion of ["failure", "timed_out", "startup_failure", "cancelled", "skipped"]) {
+    evidence([
+      {
+        event: "workflow_dispatch",
+        head_sha: sha,
+        status: "completed",
+        conclusion,
+      },
+    ]);
+    writeFileSync(join(root, "gh-calls"), "");
+    expect((await qualify()).status).not.toBe(0);
+    expect(readFileSync(env.GITHUB_OUTPUT, "utf8")).toBe("");
+    expect(readFileSync(join(root, "gh-calls"), "utf8")).not.toContain("workflow run");
+  }
+});
+
+test("an in-progress full suite is awaited and not started again", async () => {
+  evidence([
+    {
+      event: "workflow_dispatch",
+      head_sha: sha,
+      status: "in_progress",
+      conclusion: "",
+    },
+  ]);
+  expect((await qualify()).status).not.toBe(0);
+  expect(readFileSync(env.GITHUB_OUTPUT, "utf8")).toBe("");
+  expect(readFileSync(join(root, "gh-calls"), "utf8")).not.toContain("workflow run");
+});
 
 test("API failures refuse even when their stdout resembles successful evidence", async () => {
   env.FIXTURE_API_EXIT = "1";
@@ -246,6 +352,20 @@ test("GitHub release refuses a tag that changed after source qualification", asy
   expect(result.status).not.toBe(0);
   expect(result.stdout).toContain("release tag changed after qualification");
   expect(readFileSync(env.GITHUB_OUTPUT, "utf8")).toBe("");
+});
+
+test("full-suite evidence can dispatch ci.yml and cannot publish", () => {
+  const jobs = workflow.split(/^ {2}(?=[a-z][a-z-]+:\n)/m);
+  const job = jobs.find((block) => block.startsWith("full-suite-evidence:\n"));
+  expect(job).toBeDefined();
+  expect(job).toContain("actions: write");
+  expect(job).not.toContain("contents: write");
+  expect(job).not.toContain("id-token:");
+  expect(job).toContain("timeout-minutes: 100");
+  expect(job).toContain('gh workflow run "$CI_WORKFLOW" --repo "$REPO" --ref "$RELEASE_TAG"');
+  expect(job).toContain(
+    '.event == "workflow_dispatch" and .head_sha == $sha and .status == "completed" and .conclusion == "success"',
+  );
 });
 
 test("every release source checkout uses the successful gate's immutable commit", () => {
