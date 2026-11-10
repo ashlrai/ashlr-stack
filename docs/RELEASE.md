@@ -27,8 +27,15 @@ match) gains a new `X.Y.Z` version on `main`,
 check green on that exact commit, creates `refs/tags/v<version>` with the
 ashlr-release GitHub App token so the tag push starts `release.yml`, and
 dispatches `release.yml` once if the tag push did not start it. The release
-workflow then publishes npm packages, binaries and the GitHub Release under
-its existing gates. Required checks are discovered at run time from branch
+workflow resolves that tag to its commit and requires a successful
+`workflow_dispatch` run of `ci.yml` on that exact commit. That event is the
+full suite (tests, site, lint, and the secret scans, as enforced by CI Gate).
+When no `workflow_dispatch` run exists yet, `release.yml` dispatches `ci.yml`
+on the tag and waits until the run is green. A run that is still queued or in
+progress is waited on and is not started again. A completed `workflow_dispatch`
+that is not success blocks the release and is not retried. Pull-request,
+merge-queue, and schedule runs do not qualify. Publishing starts only after
+that evidence is green. Required checks are discovered at run time from branch
 rules and protection; a check that is missing, pending or not successful
 blocks the tag.
 
@@ -107,9 +114,10 @@ packages and archive integrity, CLI/MCP consumer behavior, and public binaries
 with checksums. Site deployment is separate.
 
 Preserve logs and original artifacts after failure or uncertainty, then inspect
-completed effects. Publication can be partial. Never automatically rerun,
-republish, recreate, or move tags; review the exact follow-up target and release
-authorization first.
+completed effects. Publication can be partial. The release workflow may dispatch
+the full CI suite once when no `workflow_dispatch` run exists yet for the tag.
+It does not retry an unsuccessful suite, republish, recreate, or move tags.
+Review the exact follow-up target and release authorization first.
 
 ## Docs freshness
 

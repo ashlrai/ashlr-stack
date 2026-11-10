@@ -37,18 +37,22 @@ concurrency:
 
 jobs:
   full-suite-evidence:
-    # Resolve the selected tag before checking manual full CI. A dispatch's
-    # github.sha is main's workflow revision, not necessarily the release source.
+    # Resolve the selected tag, then require a successful full-suite
+    # workflow_dispatch of ci.yml on that exact commit. When none exists,
+    # dispatch ci.yml on the tag and wait until that run is green. A failed
+    # suite is not retried and does not qualify. A dispatch's github.sha is
+    # main's workflow revision, not necessarily the release source.
     name: Full suite green on release sha
     if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    # Full suite jobs allow 45 minutes; leave room for queueing and the wait below.
+    timeout-minutes: 100
     permissions:
-      actions: read
+      actions: write # dispatch ci.yml on the tag; this job does not publish
     outputs:
       sha: ${{ steps.evidence.outputs.sha }}
     steps:
-      - name: Require manual full CI on the resolved release commit
+      - name: Require full CI on the resolved release commit
         id: evidence
         env:
           GH_TOKEN: ${{ github.token }}
@@ -58,6 +62,9 @@ jobs:
           INPUT_VERSION: ${{ github.event.inputs.version }}
           RELEASE_INPUT_OTP: ${{ github.event.inputs.npm_otp }}
           CI_WORKFLOW: ci.yml
+          # 90 minutes of polling, under the job timeout. Tests override both.
+          FULL_SUITE_WAIT_SECONDS: "5400"
+          FULL_SUITE_POLL_SECONDS: "30"
         run: |
           set -euo pipefail
           # Refuse unsupported OTP before subprocesses; never echo its value.
@@ -83,11 +90,52 @@ jobs:
           if [ "${GITHUB_EVENT_NAME:-}" = push ]; then
             [[ "$GITHUB_REF" == "refs/tags/$RELEASE_TAG" && "$GITHUB_SHA" == "$SHA" ]] || { echo "::error::pushed tag no longer matches release commit"; exit 1; }
           fi
-          runs="$(gh api "repos/${REPO}/actions/workflows/${CI_WORKFLOW}/runs?event=workflow_dispatch&head_sha=${SHA}&status=success&per_page=100")"
-          if ! printf '%s' "$runs" | jq -e --arg sha "$SHA" '(.workflow_runs | type == "array") and (.workflow_runs | any(.event == "workflow_dispatch" and .head_sha == $sha and .status == "completed" and .conclusion == "success"))' >/dev/null; then
-            echo "::error::No successful workflow_dispatch run of ${CI_WORKFLOW} on ${SHA}. Run 'gh workflow run ${CI_WORKFLOW} -R ${REPO} --ref ${RELEASE_TAG}', verify head_sha=${SHA} and wait for green, then release."
-            exit 1
-          fi
+          # Same acceptance as before: a completed successful workflow_dispatch of
+          # ci.yml whose head_sha is the peeled tag commit. Schedule, pull_request
+          # and merge_group runs do not run this gate's full suite, so they never
+          # qualify. status=success is not sent to the API: in-progress runs must
+          # stay visible so a second suite is not dispatched over one already running.
+          wait_seconds="${FULL_SUITE_WAIT_SECONDS:-5400}"
+          poll_seconds="${FULL_SUITE_POLL_SECONDS:-30}"
+          [[ "$wait_seconds" =~ ^[0-9]+$ ]] || { echo "::error::full-suite wait is not a whole number of seconds"; exit 1; }
+          [[ "$poll_seconds" =~ ^[0-9]+$ ]] || { echo "::error::full-suite poll is not a whole number of seconds"; exit 1; }
+          deadline=$((SECONDS + wait_seconds))
+          dispatched=0
+          runs_ok='(.workflow_runs | type == "array") and (([.workflow_runs[] | select(type == "object")] | length) == (.workflow_runs | length))'
+          suite_green='.event == "workflow_dispatch" and .head_sha == $sha and .status == "completed" and .conclusion == "success"'
+          while true; do
+            runs="$(gh api "repos/${REPO}/actions/workflows/${CI_WORKFLOW}/runs?event=workflow_dispatch&head_sha=${SHA}&per_page=100")" || { echo "::error::CI run lookup failed"; exit 1; }
+            if printf '%s' "$runs" | jq -e --arg sha "$SHA" "$runs_ok and (.workflow_runs | any($suite_green))" >/dev/null; then
+              break
+            fi
+            if ! printf '%s' "$runs" | jq -e "$runs_ok" >/dev/null; then
+              echo "::error::CI run evidence is malformed"
+              exit 1
+            fi
+            pending="$(printf '%s' "$runs" | jq -r --arg sha "$SHA" '[.workflow_runs[] | select(.event == "workflow_dispatch" and .head_sha == $sha and (.status == "queued" or .status == "in_progress" or .status == "waiting" or .status == "requested" or .status == "pending" or .status == "action_required"))] | length')"
+            unsuccessful="$(printf '%s' "$runs" | jq -r --arg sha "$SHA" '[.workflow_runs[] | select(.event == "workflow_dispatch" and .head_sha == $sha and .status == "completed" and .conclusion != "success")] | length')"
+            # A suite still running on this commit is the evidence we wait for.
+            # Do not start a second one over it.
+            if [ "$pending" != "0" ]; then
+              :
+            elif [ "$unsuccessful" != "0" ]; then
+              # Any completed non-success blocks the release. Do not dispatch another one.
+              echo "::error::Full suite ${CI_WORKFLOW} on ${SHA} did not succeed. Completed workflow_dispatch runs include ${unsuccessful} unsuccessful; not retrying."
+              exit 1
+            elif [ "$dispatched" = "0" ]; then
+              # No workflow_dispatch run on this commit yet: start the suite on the tag once.
+              echo "dispatching ${CI_WORKFLOW} on ${RELEASE_TAG} for ${SHA}"
+              gh workflow run "$CI_WORKFLOW" --repo "$REPO" --ref "$RELEASE_TAG" || { echo "::error::failed to dispatch ${CI_WORKFLOW} on ${RELEASE_TAG}"; exit 1; }
+              dispatched=1
+              continue
+            fi
+            if [ "$SECONDS" -ge "$deadline" ]; then
+              echo "::error::No successful workflow_dispatch run of ${CI_WORKFLOW} on ${SHA} before the full-suite wait elapsed."
+              exit 1
+            fi
+            echo "full suite not green yet on ${SHA} (pending=${pending} dispatched=${dispatched}); waiting ${poll_seconds}s"
+            sleep "$poll_seconds"
+          done
           printf 'sha=%s\n' "$SHA" >> "$GITHUB_OUTPUT"
           echo "full suite green on ${RELEASE_TAG} at ${SHA}"
 
