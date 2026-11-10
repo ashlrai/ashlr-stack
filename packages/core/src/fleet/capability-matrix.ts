@@ -147,9 +147,6 @@ export type CapabilityDocumentResult =
   | { status: "ok"; document: CapabilityDocument; error: null }
   | { status: "invalid"; document: null; error: string };
 
-const nonNegInt = (value: unknown): number | null =>
-  typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : null;
-
 function parseStringList(value: unknown, valid: (v: unknown) => boolean): string[] | null {
   if (!Array.isArray(value) || value.some((v) => !valid(v))) return null;
   return [...new Set(value as string[])];

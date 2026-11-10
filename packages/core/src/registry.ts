@@ -104,7 +104,3 @@ export async function findProjectByName(name: string): Promise<RegistryEntry | u
   if (exact) return exact;
   return projects.find((p) => p.name.toLowerCase() === name.toLowerCase());
 }
-
-export function configFilename(): string {
-  return CONFIG_FILENAME;
-}

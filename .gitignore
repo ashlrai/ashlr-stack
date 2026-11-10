@@ -31,4 +31,5 @@ bun.lockb.backup
 
 # Claude Code session settings — per-dev, not per-repo
 .claude/settings.local.json
+.claude/scheduled_tasks.lock
 .vercel

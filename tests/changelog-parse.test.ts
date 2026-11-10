@@ -528,6 +528,7 @@ test("unicode fixture keeps every parsed entry's characters and code points inta
   const md = read("./__fixtures__/changelog-unicode.md");
   const entries = {
     pending: "Café ☕ — naïve, “smart quotes”, ‘ticks’",
+    ready: "Café résumé is ready ☕",
     cjkEmoji: "日本語のメモ: プロバイダーを追加 🚀 👩‍💻",
     rtl: "مرحبا بالعالم — שלום עולם",
     greek: "Ελληνικά: αβγδ → ✓ done",
@@ -536,7 +537,7 @@ test("unicode fixture keeps every parsed entry's characters and code points inta
   };
   expect(parseChangelog(md)).toEqual([
     { version: null, date: null, entries: [entries.pending] },
-    { version: "0.3.0", date: "2026-10-31", entries: [entries.cjkEmoji, entries.rtl, entries.greek, entries.accents] },
+    { version: "0.3.0", date: "2026-10-31", entries: [entries.ready, entries.cjkEmoji, entries.rtl, entries.greek, entries.accents] },
     { version: "0.2.0", date: "2026-04-23", entries: [entries.cyrillic] },
   ]);
   // CRLF line endings must not disturb non-ASCII text either.
