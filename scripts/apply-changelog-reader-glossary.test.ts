@@ -17,6 +17,19 @@ function duplicateTerms(source: string): string[] {
   return terms.filter((term, index) => terms.indexOf(term) !== index);
 }
 
+function glossaryEntries(source: string): Map<string, string> {
+  const table = source.split("| Term | Meaning in these notes |\n")[1]?.split("\n\n")[0];
+  if (!table) throw new Error("Glossary table not found");
+  const entries = new Map<string, string>();
+  for (const row of table.split("\n").slice(1)) {
+    const cells = row.split("|").map((cell) => cell.trim());
+    const term = cells[1]?.replaceAll("`", "").trim().replace(/\s+/g, " ").toLowerCase();
+    if (!term || cells[2] === undefined) throw new Error(`Invalid glossary row: ${row}`);
+    entries.set(term, cells[2]);
+  }
+  return entries;
+}
+
 function historicalFix(source: string): string {
   const section = source.split("## 0.2.1 (2026-10-16)\n")[1]?.split("\n## ")[0];
   const fix = section?.split("\n").find((line) =>
@@ -30,6 +43,15 @@ describe("apply changelog reader glossary", () => {
   test("glossary terms are unique", () => {
     expect(duplicateTerms(guide)).toEqual([]);
     expect(duplicateTerms("| Term | Meaning in these notes |\n| --- | --- |\n| `Example` | One |\n| example | Two |")).toEqual(["example"]);
+  });
+
+  test("glossary entries for present and missing are distinct", () => {
+    const entries = glossaryEntries(guide);
+    const present = entries.get("present");
+    const missing = entries.get("missing");
+    expect(present).toBeTruthy();
+    expect(missing).toBeTruthy();
+    expect(present).not.toBe(missing);
   });
 
   test("links both source files and their matching historical fix", () => {
