@@ -1,6 +1,6 @@
 # @ashlr/stack
 
-> The `stack` CLI — configure supported services with Phantom-backed credentials and MCP wiring. Use `stack providers` to inspect your installed catalog.
+> The `stack` CLI - configure supported services with Phantom-backed credentials and MCP wiring. Use `stack providers` to inspect your installed catalog.
 
 Part of [Ashlr Stack](https://stack.ashlr.ai). See the monorepo at [ashlrai/ashlr-stack](https://github.com/ashlrai/ashlr-stack).
 
@@ -39,7 +39,7 @@ bun add -g @ashlr/stack ashlr-stack-mcp
 Prerequisites:
 
 - Node.js >= 20 for this npm package, including with `npx`; check your installed package manifest. Source development uses [Bun](https://bun.sh).
-- [Phantom Secrets](https://phm.dev/secrets) — installed and initialized for the intended project before writing setup flows
+- [Phantom Secrets](https://phm.dev/secrets) - installed and initialized for the intended project before writing setup flows
 
 Verify your installed `stack --version` and command `--help`; available commands depend on the installed version. Package installation does not establish provider acceptance.
 
@@ -110,8 +110,8 @@ Where supported, `stack add` writes a provider entry to the project's `.mcp.json
 
 Stack splits config into two files:
 
-- `.stack.toml` — **committed**. Service names, secret slots, MCP wirings.
-- `.stack.local.toml` — **gitignored**. `project_id`, `resource_id`, timestamps. Unique per clone.
+- `.stack.toml` - **committed**. Service names, secret slots, MCP wirings.
+- `.stack.local.toml` - **gitignored**. `project_id`, `resource_id`, timestamps. Unique per clone.
 
 Teammates can inspect `stack doctor` and use `stack doctor --fix` for supported remediation. Existing vault names can skip repair; name presence is not credential validity or provider acceptance.
 
@@ -119,11 +119,11 @@ Full schema: [stack.ashlr.ai/docs/config](https://stack.ashlr.ai/docs/config).
 
 ## Links
 
-- Docs — [stack.ashlr.ai/docs](https://stack.ashlr.ai/docs)
-- Quickstart — [stack.ashlr.ai/docs/quickstart](https://stack.ashlr.ai/docs/quickstart)
-- Provider catalog — [stack.ashlr.ai/docs/providers](https://stack.ashlr.ai/docs/providers)
-- Repo — [github.com/ashlrai/ashlr-stack](https://github.com/ashlrai/ashlr-stack)
-- Issues — [github.com/ashlrai/ashlr-stack/issues](https://github.com/ashlrai/ashlr-stack/issues)
+- Docs - [stack.ashlr.ai/docs](https://stack.ashlr.ai/docs)
+- Quickstart - [stack.ashlr.ai/docs/quickstart](https://stack.ashlr.ai/docs/quickstart)
+- Provider catalog - [stack.ashlr.ai/docs/providers](https://stack.ashlr.ai/docs/providers)
+- Repo - [github.com/ashlrai/ashlr-stack](https://github.com/ashlrai/ashlr-stack)
+- Issues - [github.com/ashlrai/ashlr-stack/issues](https://github.com/ashlrai/ashlr-stack/issues)
 
 ## License
 

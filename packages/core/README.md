@@ -18,7 +18,7 @@ requirements separately.
 
 ## Public API
 
-Selected exports — see `src/index.ts` for the full surface.
+Selected exports - see `src/index.ts` for the full surface.
 
 | Export | Purpose |
 | --- | --- |
@@ -60,8 +60,8 @@ A package installation does not establish those later steps.
 
 ## Links
 
-- Full CLI-level docs — [stack.ashlr.ai/docs/cli](https://stack.ashlr.ai/docs/cli)
-- Repo — [github.com/ashlrai/ashlr-stack](https://github.com/ashlrai/ashlr-stack)
+- Full CLI-level docs - [stack.ashlr.ai/docs/cli](https://stack.ashlr.ai/docs/cli)
+- Repo - [github.com/ashlrai/ashlr-stack](https://github.com/ashlrai/ashlr-stack)
 
 ## License
 

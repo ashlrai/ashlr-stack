@@ -109,20 +109,20 @@ Each is listed only when the file exists in the server's working directory (reso
 - `stack://current/.stack.local.toml`
 - `stack://current/.mcp.json`
 
-The agent can read these directly — no tool call needed — so it always knows the project state before acting.
+The agent can read these directly - no tool call needed - so it always knows the project state before acting.
 
 Full tool + resource reference: **[stack.ashlr.ai/docs/mcp](https://stack.ashlr.ai/docs/mcp)**.
 
 ## How secrets are handled
 
-Stack never stores secret values. Every tool call routes through [Phantom Secrets](https://phm.dev/secrets) on your machine. The agent only sees slot *names* (like `SUPABASE_URL`, `SUPABASE_ANON_KEY`) — never the values.
+Stack never stores secret values. Every tool call routes through [Phantom Secrets](https://phm.dev/secrets) on your machine. The agent only sees slot *names* (like `SUPABASE_URL`, `SUPABASE_ANON_KEY`) - never the values.
 
 ## Links
 
-- Docs — [stack.ashlr.ai/docs](https://stack.ashlr.ai/docs)
-- MCP reference — [stack.ashlr.ai/docs/mcp](https://stack.ashlr.ai/docs/mcp)
-- Repo — [github.com/ashlrai/ashlr-stack](https://github.com/ashlrai/ashlr-stack)
-- Issues — [github.com/ashlrai/ashlr-stack/issues](https://github.com/ashlrai/ashlr-stack/issues)
+- Docs - [stack.ashlr.ai/docs](https://stack.ashlr.ai/docs)
+- MCP reference - [stack.ashlr.ai/docs/mcp](https://stack.ashlr.ai/docs/mcp)
+- Repo - [github.com/ashlrai/ashlr-stack](https://github.com/ashlrai/ashlr-stack)
+- Issues - [github.com/ashlrai/ashlr-stack/issues](https://github.com/ashlrai/ashlr-stack/issues)
 
 ## License
 

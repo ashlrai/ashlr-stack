@@ -1,4 +1,4 @@
-# Ashlr Stack — Telemetry Worker
+# Ashlr Stack - Telemetry Worker
 
 Cloudflare Worker that accepts opt-in usage events from the Stack CLI
 (`POST /v1/events`). See [`docs/PRIVACY.md`](../../docs/PRIVACY.md) for the
@@ -6,9 +6,9 @@ full data-handling policy.
 
 ## Endpoints
 
-- `POST /v1/events` — accepts a single event. Strict schema validation; extra
+- `POST /v1/events` - accepts a single event. Strict schema validation; extra
   keys are rejected with 400. Returns 202 on success.
-- `GET /healthz` — 200 OK.
+- `GET /healthz` - 200 OK.
 
 ## Deploy
 

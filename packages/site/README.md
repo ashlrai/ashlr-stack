@@ -35,11 +35,11 @@ bun run typecheck  # astro check + tsc --noEmit
 
 ## Stack
 
-- **Astro 5** — static-first, React islands only where interactivity matters
+- **Astro 5** - static-first, React islands only where interactivity matters
   (`Terminal`, `OneCommand`, `ClaudeCodeDemo`)
-- **Tailwind CSS 4** — via `@tailwindcss/vite`, theme tokens in `src/styles/global.css`
-- **Framer Motion** — tasteful, reduced-motion-aware transitions on tabs + chat
-- **simple-icons v13** — brand marks inlined at build time from
+- **Tailwind CSS 4** - via `@tailwindcss/vite`, theme tokens in `src/styles/global.css`
+- **Framer Motion** - tasteful, reduced-motion-aware transitions on tabs + chat
+- **simple-icons v13** - brand marks inlined at build time from
   `node_modules/simple-icons/icons/*.svg` (see `src/lib/icons.ts`)
 
 ## Layout
