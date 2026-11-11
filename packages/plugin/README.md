@@ -4,12 +4,12 @@ Thin Claude Code plugin (`stack`) with six slash-command files, an MCP
 entrypoint, and a SessionStart hook that prints a notice when `.stack.toml`
 is present:
 
-- `/stack:add <service>` — run one provider setup, creating or attaching as its adapter supports
-- `/stack:list` — show configured services
-- `/stack:status` — inspect local Stack and Phantom metadata
-- `/stack:doctor` — report available provider checks and unchecked services
-- `/stack:recommend <query>` — retrieve catalog matches and save a reusable recipe
-- `/stack:apply <recipe-id>` — replay provider setup and attempt optional wiring; inspect failures
+- `/stack:add <service>` - run one provider setup, creating or attaching as its adapter supports
+- `/stack:list` - show configured services
+- `/stack:status` - inspect local Stack and Phantom metadata
+- `/stack:doctor` - report available provider checks and unchecked services
+- `/stack:recommend <query>` - retrieve catalog matches and save a reusable recipe
+- `/stack:apply <recipe-id>` - replay provider setup and attempt optional wiring; inspect failures
 
 The plugin starts the MCP server through `scripts/mcp-entrypoint.sh`. It prefers `ashlr-stack-mcp` on PATH; otherwise it locates the monorepo server source relative to the script and runs it with Bun. The server shells out to the `stack` CLI (override with `STACK_BIN`). The CLI is the canonical implementation. The startup notice does not run a health check or configure a provider.
 
