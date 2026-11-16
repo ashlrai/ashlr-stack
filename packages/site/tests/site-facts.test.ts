@@ -158,9 +158,9 @@ describe("site facts: sources of truth agree", () => {
       );
     }
   });
-  test("a later public pointer does not extend the verified 0.3.6 runtime claim", async () => {
+  test("a later public pointer does not extend the verified 0.3.10 runtime claim", async () => {
     // The public pointer records a version, not that release's engines metadata.
-    const later = { ...facts, publishedVersion: "0.3.7" };
+    const later = { ...facts, publishedVersion: "0.3.11" };
     const mcp = JSON.parse(await renderMcpJson(later));
     const plugin = JSON.parse(renderAiPluginJson(later));
     const openapi = JSON.parse(renderOpenApiJson(later));
@@ -170,13 +170,13 @@ describe("site facts: sources of truth agree", () => {
       openapi.info.description,
     ]) {
       expect(description).toContain(
-        "0.3.6 CLI and MCP packages declare Node.js 20 or newer; inspect other releases’ engines.",
+        "0.3.10 CLI and MCP packages declare Node.js 20 or newer; inspect other releases’ engines.",
       );
-      expect(description).not.toContain("0.3.7 CLI and MCP packages declare Node.js");
-      expect(description).toContain("is 0.3.7.");
+      expect(description).not.toContain("0.3.11 CLI and MCP packages declare Node.js");
+      expect(description).toContain("is 0.3.11.");
     }
     const expectedArgs = [
-      "-y", "-p", "@ashlr/stack@0.3.7", "-p", "ashlr-stack-mcp@0.3.7", "ashlr-stack-mcp",
+      "-y", "-p", "@ashlr/stack@0.3.11", "-p", "ashlr-stack-mcp@0.3.11", "ashlr-stack-mcp",
     ];
     expect(mcp.install.args).toEqual(expectedArgs);
     expect(mcp.install.mcpConfigSnippet.mcpServers.stack.args).toEqual(expectedArgs);
