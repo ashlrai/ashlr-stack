@@ -1,12 +1,20 @@
 name: CodeQL
 
-# Code scanning stays off pull_request and off push.
+# Code scanning stays off pull_request and off the merge queue. Push to main
+# runs the scan after merge, plus the nightly schedule and manual dispatch.
 # Nightly minute 41 avoids the ashlr-md CodeQL run at minute 17.
 on:
-  # Daily only (Mason, Oct 28 2026): CodeQL is not a required check.
+  # Not a required check. One push trigger only.
+  push:
+    branches: [main]
   schedule:
     - cron: "0 10 * * *"
   workflow_dispatch:
+
+# One in-progress run per ref. A burst of merges to main runs once.
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
