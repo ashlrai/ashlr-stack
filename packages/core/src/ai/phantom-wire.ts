@@ -14,7 +14,7 @@
  *      authenticates nothing and the body is untrusted input — and points at
  *      the provider-specific verification to add before deploying a handler.
  *
- * An opt-out (`--no-wire`) skips both steps.
+ * An opt-out (`--noWire`) skips both steps.
  *
  * Recipe manifests are unsigned: signature verification is not implemented.
  * Checking provider names against the catalog does not authenticate a recipe's

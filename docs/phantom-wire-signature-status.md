@@ -39,7 +39,7 @@ is read and before the success response:
 
 The example the TODO lives in is deliberately narrow. Wiring writes it for
 `stripe`, `clerk`, `supabase`, and `github` only; other catalog providers get
-no stub, and `--no-wire` skips stub generation entirely. Each file lands at
+no stub, and `--noWire` skips stub generation entirely. Each file lands at
 `.stack/webhooks/<provider>.ts`, **overwriting** any existing file at that
 path, and every generated line is `//`-prefixed or blank.
 
