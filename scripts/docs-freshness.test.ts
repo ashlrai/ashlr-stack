@@ -1,8 +1,14 @@
 import { describe, expect, test } from "bun:test";
-import { mkdtempSync, readdirSync, readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import ts from "typescript";
+import { normalizeKebabFlags } from "../packages/cli/src/lib/normalize-args.ts";
+import {
+  bindParentOptionValues,
+  findUnknownFlag,
+  unknownHelpCommand,
+} from "../packages/cli/src/lib/unknown-flags.ts";
 import { getProvider, listProviderNames } from "../packages/core/src/providers/index.ts";
 import { TOOLS } from "../packages/mcp/src/tools.ts";
 // @ts-expect-error no declarations; the shared freshness library is plain .mjs
@@ -29,14 +35,14 @@ function tableRows(document: string, file: string, name: string): string[][] {
 
 // Parse the registration rather than counting files or importing index.ts,
 // whose top-level code runs the CLI and its update/telemetry hooks.
-function registeredCommands(): { name: string; file: string }[] {
+function registeredCommands(): { name: string; file: string; exportName: string }[] {
   const source = ts.createSourceFile(
     "index.ts",
     read("packages/cli/src/index.ts"),
     ts.ScriptTarget.Latest,
     true,
   );
-  const commands: { name: string; file: string }[] = [];
+  const commands: { name: string; file: string; exportName: string }[] = [];
   function visit(node: ts.Node) {
     if (
       ts.isPropertyAssignment(node) &&
@@ -49,8 +55,9 @@ function registeredCommands(): { name: string; file: string }[] {
         const file = property.initializer
           .getText(source)
           .match(/import\(\s*["']\.\/commands\/([\w-]+)\.ts["']\s*\)/)?.[1];
-        if (!file) throw new Error(`Unsupported CLI registration for ${name}`);
-        commands.push({ name, file: `${file}.ts` });
+        const exportName = property.initializer.getText(source).match(/=>\s*m\.(\w+)/)?.[1];
+        if (!file || !exportName) throw new Error(`Unsupported CLI registration for ${name}`);
+        commands.push({ name, file: `${file}.ts`, exportName });
       }
     }
     ts.forEachChild(node, visit);
@@ -94,6 +101,33 @@ function metaDescription(command: { name: string; file: string }): string {
 }
 
 const commands = registeredCommands();
+
+// Extract code, not surrounding prose. Keep quoted arguments together and join
+// shell continuations; npx and source-entry examples use the same CLI grammar.
+function examples(document: string): { text: string; runnable: boolean }[] {
+  const code = [...document.matchAll(/`([^`\n]+)`/g)].map((m) => ({
+    text: m[1]!,
+    runnable: false,
+  }));
+  for (const [, block] of document.matchAll(
+    /```(?:bash|sh|shell|console|powershell)\n([\s\S]*?)```/g,
+  )) {
+    code.push(
+      ...block!
+        .replace(/\\\n\s*/g, " ")
+        .split("\n")
+        .map((text) => ({ text, runnable: true })),
+    );
+  }
+  return code.flatMap(({ text, runnable }) => {
+    const match = text
+      .trim()
+      .match(
+        /^(?:\$ )?(?:stack|npx -y -p @ashlr\/stack stack|bun (?:run )?packages\/cli\/src\/index\.ts)(?:\s+(.+))?$/,
+      );
+    return match ? (match[1] ?? "").split(" → stack ").map((text) => ({ text, runnable })) : [];
+  });
+}
 
 function declaredFlags(command: string): Set<string> {
   const source = ts.createSourceFile(
@@ -194,7 +228,8 @@ describe("source documentation freshness", () => {
       // such as --help and metavariables such as <command> are not commands.
       const examples = [...document.matchAll(/(?:`|^)stack ([a-z][a-z-]*)(?=[\s`])/gm)];
       if (path === "README.md") expect(examples.length).toBeGreaterThan(0);
-      for (const [, command] of examples) expect(commands.map(({ name }) => name)).toContain(command);
+      for (const [, command] of examples)
+        expect(commands.map(({ name }) => name)).toContain(command);
       for (const [tool] of document.matchAll(/\bstack_[a-z_]+\b/g)) {
         expect(TOOLS.map((entry) => entry.name)).toContain(tool);
       }
@@ -221,13 +256,10 @@ describe("source documentation freshness", () => {
     expect(checked).toBeGreaterThan(0);
   });
 
-  test("every shipped doc names only real commands, subcommands and flags", () => {
-    const names = commands.map(({ name }) => name);
-    // Ask the real CLI: help is the source of truth, and it covers args that
-    // source parsing cannot see (shared arg objects, nested subcommands).
+  test("every shipped doc names only real commands, subcommands and flags", async () => {
     const helpHome = mkdtempSync(join(tmpdir(), "stack-docs-help-"));
-    const helpOf = (...path: string[]) =>
-      Bun.spawnSync(["bun", resolve(root, "packages/cli/src/index.ts"), ...path, "--help"], {
+    const cli = (args: string[]) =>
+      Bun.spawnSync([process.execPath, resolve(root, "packages/cli/src/index.ts"), ...args], {
         // Minimal env: the test runner's own variables make the CLI skip main.
         env: {
           PATH: process.env.PATH ?? "",
@@ -237,19 +269,62 @@ describe("source documentation freshness", () => {
           STACK_TELEMETRY: "0",
         },
         cwd: helpHome,
-      }).stdout.toString();
-    const cache = new Map<string, Set<string>>();
-    const allowed = (command: string) => {
-      let flags = cache.get(command);
-      if (!flags) {
-        const top = helpOf(command);
-        const nested = top.match(/USAGE stack \S+ \[OPTIONS\] ([a-z|-]+)\n/)?.[1]?.split("|") ?? [];
-        const text = [top, ...nested.map((sub) => helpOf(command, sub))].join("\n");
-        flags = new Set(["help", ...[...text.matchAll(/(?<![\w-])--([a-zA-Z][\w-]*)/g)].map((m) => m[1]!)]);
-        for (const flag of [...flags]) flags.add(flag.replace(/-(\w)/g, (_, c: string) => c.toUpperCase()));
-        cache.set(command, flags);
+        timeout: 20_000,
+      });
+    const help = cli(["--help"]);
+    const start = readme.split("## Get started\n")[1]?.split("\n### ")[0];
+    expect(start).toBeDefined();
+    expect(start!.match(/^\d+\. /gm)?.length).toBeLessThanOrEqual(5);
+    expect(start).toContain("npm i -g @ashlr/stack");
+    const firstCommand = examples(start!)[0]!.text;
+    expect(firstCommand).toBe("providers --json"); // Only execute this local catalog read.
+    const first = cli(firstCommand.split(" "));
+    rmSync(helpHome, { recursive: true, force: true });
+    expect(first.exitCode).toBe(0);
+    const report = JSON.parse(first.stdout.toString());
+    expect(report.schema).toBe("ashlr.stack.providers/v1");
+    expect(report.total).toBe(report.providers.length);
+    expect(report.total).toBeGreaterThan(0);
+    expect(report.unavailable).toEqual([]);
+    expect(help.exitCode).toBe(0);
+    expect(help.stdout.toString()).toContain("USAGE stack");
+    const options = help.stdout.toString().split("\nOPTIONS\n")[1]!.split("\nCOMMANDS\n")[0]!;
+    const rootFlags = new Set([
+      "--help",
+      "-h",
+      ...[...options.matchAll(/(?<![\w-])--?[A-Za-z][\w-]*/g)].map((m) => m[0]),
+    ]);
+    const definitions = new Map<string, Parameters<typeof findUnknownFlag>[0]>();
+    for (const { name, file, exportName } of commands) {
+      const module = await import(resolve(root, "packages/cli/src/commands", file));
+      definitions.set(name, module[exportName]);
+    }
+    const validate = async (example: string, runnable = true) => {
+      const tokens = [...example.matchAll(/"([^"]*)"|'([^']*)'|(\S+)/g)].map(
+        (m) => m[1] ?? m[2] ?? m[3]!,
+      );
+      const comment = tokens.findIndex((t) => ["#", "|", ">", ">>", "&&", "||"].includes(t));
+      const argv = normalizeKebabFlags(
+        (comment < 0 ? tokens : tokens.slice(0, comment)).map((t) => t.replace(/^\[|\]$/g, "")),
+      );
+      const name = argv.shift();
+      // Explicit placeholders describe syntax, not a concrete invocation.
+      if (!name || name.startsWith("<")) return;
+      if (name.startsWith("-")) {
+        for (const flag of [name, ...argv]) {
+          if (!rootFlags.has(flag)) throw new Error(`Unknown root option: ${flag}`);
+        }
+        return;
       }
-      return flags;
+      const command = definitions.get(name);
+      if (!command) throw new Error(`Unknown command: ${name}`);
+      const args = await bindParentOptionValues(command, argv);
+      const unknown = await unknownHelpCommand(command, args, `stack ${name}`);
+      if (unknown) throw new Error(`Unknown subcommand: ${unknown.command} ${unknown.name}`);
+      const flag = await findUnknownFlag(command, args, `stack ${name}`);
+      // Inline prose can name a valued option without supplying its value.
+      if (flag && (runnable || !flag.missingValue || args.at(-1) !== flag.flag))
+        throw new Error(`${flag.command}: invalid argument ${flag.flag}`);
     };
     const walk = (dir: string): string[] =>
       readdirSync(resolve(root, dir), { withFileTypes: true }).flatMap((entry) => {
@@ -266,32 +341,62 @@ describe("source documentation freshness", () => {
       "packages/site/public/llms.txt",
       "packages/site/public/llms-full.txt",
     ];
-    const camel = (flag: string) => flag.replace(/-(\w)/g, (_, c: string) => c.toUpperCase());
     let checked = 0;
+    const errors: string[] = [];
     for (const path of files) {
-      for (const [, command, rest] of read(path).matchAll(/(?:`|^|\$ )stack ([a-z][a-z-]*)([^`\n]*)/gm)) {
-        // Prose such as "stack health" is not an invocation; only registered names are checked.
-        if (!names.includes(command!)) continue;
-        const flags = allowed(command!);
-        const invocation = rest!.split(/\s+#|\s+--(?:\s|$)/)[0]!;
-        for (const [, flag] of invocation.matchAll(/(?<![\w-])--([a-zA-Z][\w-]*)/g)) {
-          // `--no-x` negates a declared `x` (citty); it never reaches a `noX` flag.
-          const negated = flag!.startsWith("no-") && flags.has(camel(flag!.slice(3)));
-          // citty also accepts kebab spellings (`--dry-run`) of camelCase flags.
-          if (flags.has(flag!) || flags.has(camel(flag!)) || negated) {
-            checked++;
-          } else throw new Error(`${path}: \`stack ${command}\` has no --${flag} option`);
+      for (const { text, runnable } of examples(read(path))) {
+        // This reference deliberately demonstrates a refused option order.
+        if (path === "packages/site/public/llms-full.txt" && text === "--json list") {
+          await expect(validate(text)).rejects.toThrow("Unknown root option: list");
+          continue;
         }
+        try {
+          await validate(text, runnable);
+        } catch (error) {
+          errors.push(`${path}: stack ${text}: ${error}`);
+        }
+        checked++;
       }
     }
+    expect(errors).toEqual([]);
     expect(checked).toBeGreaterThan(50);
+    await expect(validate("scan --path --removed", false)).rejects.toThrow();
+    for (const bad of [
+      "removed-command",
+      "env removed-subcommand",
+      "env show --stdout",
+      "templates list --no-continueOnError",
+      "scan --path",
+      "providers --jsn",
+      "providers -z",
+      "--removed",
+    ]) {
+      await expect(validate(bad)).rejects.toThrow();
+    }
+    for (const good of [
+      "env --env prod",
+      "upgrade -n",
+      "add supabase --dry-run",
+      "templates apply starter --no-continue-on-error",
+      "exec -- child --anything",
+      'recommend "app with auth" --json',
+    ]) {
+      await expect(validate(good)).resolves.toBeUndefined();
+    }
+    expect(examples("```bash\nnpx -y -p @ashlr/stack stack providers --jsn\n```")).toEqual([
+      { text: "providers --jsn", runnable: true },
+    ]);
   }, 120_000);
 
   test("table row extraction rejects missing, duplicate and empty sections", () => {
     expect(() => tableRows("", "README.md", "commands-table")).toThrow();
     expect(() => tableRows(`${readme}\n${readme}`, "README.md", "commands-table")).toThrow();
     expect(() =>
-      tableRows("<!-- fresh:begin commands-table -->\n<!-- fresh:end -->\n", "README.md", "commands-table"),
+      tableRows(
+        "<!-- fresh:begin commands-table -->\n<!-- fresh:end -->\n",
+        "README.md",
+        "commands-table",
+      ),
     ).toThrow();
   });
 });

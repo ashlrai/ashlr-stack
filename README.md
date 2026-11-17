@@ -15,7 +15,17 @@ New projects stall on account setup, copied keys, and agent config. Stack turns 
 
 ![An agent runs read-only Stack commands and gets JSON back](docs/assets/readme-hero.svg)
 
-## Start in 60 seconds
+## Get started
+
+Use Node.js 20 or newer. No account or API key is needed for this first command.
+
+1. Install the CLI: `npm i -g @ashlr/stack`.
+2. Run `stack providers --json`.
+3. Look for `schema: "ashlr.stack.providers/v1"`, a `total`, and a `providers` list with names, categories, and authentication methods. An empty `unavailable` list means every provider loaded.
+
+This command reads the bundled catalog without configuring services. If your shell cannot find `stack`, reopen it after installation. For more tasks, use the [command map](docs/cli-command-map.md) or the examples below.
+
+### Try more read-only commands
 
 Agents: read [llms.txt](https://stack.ashlr.ai/llms.txt) (short index) and [llms-full.txt](https://stack.ashlr.ai/llms-full.txt) (full reference). In this repo those files are [packages/site/public/llms.txt](packages/site/public/llms.txt) and [packages/site/public/llms-full.txt](packages/site/public/llms-full.txt).
 
@@ -29,18 +39,6 @@ npx -y -p @ashlr/stack stack templates list --json
 ```
 
 The recommend JSON has `query`, `hits`, `byCategory`, and `guidance`. `stack scan --json` returns `{ "hits": [] }` in an empty directory.
-
-One command installs Stack on macOS or Linux. It also installs Phantom Secrets if that CLI is missing:
-
-```bash
-curl -fsSL stack.ashlr.ai/install.sh | bash
-```
-
-Windows (PowerShell):
-
-```powershell
-irm https://stack.ashlr.ai/install.ps1 | iex
-```
 
 After install, this prints a plan and writes nothing:
 
@@ -101,13 +99,13 @@ That adds `/stack:add`, `/stack:apply`, `/stack:doctor`, `/stack:list`, `/stack:
 - **JSON for agents.** Put `--json` after the subcommand: `stack providers --json`. A flag the command does not declare exits 1 and names the closest real option.
 - **One MCP server.** Claude Code, Cursor, and Codex share the snippet above. The server declares <!-- fresh:begin tool-count -->19<!-- fresh:end --> tools, a subset of the CLI. Tool results are CLI text plus an `isError` flag. They are not a secret-redaction boundary.
 - **Phantom holds selected secrets.** Stack handles credential values in memory during setup. Persistent entries go through Phantom. Talk about slot names, not secret values.
-- **Fleet diagnostics.** `stack fleet` and the `stack fleet-*` commands report fleet state from local data or GitHub. `stack fleet-act --apply` appends an audit request; a separate dispatcher must consume it. See [fleet commands](docs/fleet-commands.md). The core package also exports a staged job runner for structured run records; see [job run records](docs/fleet-job-runs.md).
+- **Fleet diagnostics.** `stack fleet` and the other fleet commands report fleet state from local data or GitHub. `stack fleet-act --apply` appends an audit request; a separate dispatcher must consume it. See [fleet commands](docs/fleet-commands.md). The core package also exports a staged job runner for structured run records; see [job run records](docs/fleet-job-runs.md).
 - **Updates on request.** `stack upgrade` checks npm; `stack upgrade --apply` can upgrade an eligible npm global installation with health checks and rollback. `--dryRun` prevents installation. The MCP upgrade tool only checks.
 - **Catalog in this checkout.** It registers <!-- fresh:begin provider-count -->39<!-- fresh:end --> providers across <!-- fresh:begin category-count -->13<!-- fresh:end --> categories. Registration is not provider acceptance. Run `stack providers --json` for the install you have.
 
 ## Install
 
-The one-liner above is the fastest path. Two more:
+The npm command in [Get started](#get-started) installs the CLI. To also install the MCP server:
 
 npm / bun registry:
 
@@ -316,9 +314,9 @@ Release steps for maintainers are in [docs/RELEASE.md](docs/RELEASE.md).
 
 ## FAQ
 
-**Does the 60 second start need an account?**
+**Does getting started need an account?**
 
-No. The four `npx` commands above only read the local catalog, rank providers, scan the current directory, and list templates.
+No. The first command reads the bundled provider catalog. The four additional `npx` examples rank providers, scan the current directory, or list catalog entries and templates without configuring services.
 
 **Where do secrets go?**
 
