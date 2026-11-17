@@ -2,7 +2,7 @@
 
 For the machinery and its verification limits, see the [fleet architecture map](fleet-architecture.md).
 
-The `stack fleet-*` commands report on the Ashlr build fleet: dispatch lanes,
+The fleet commands report on the Ashlr build fleet: dispatch lanes,
 job outcomes, CI health and release lag. Lanes, pools and roles such as leader
 and dispatcher are resource-agnostic — any connected model, company or runner
 can hold them. Most read from `~/.ashlr-runs`; the GitHub-backed reports reach
@@ -13,7 +13,7 @@ it does not accept `--json`. Sources are the `defineCommand` meta and args in
 `packages/cli/src/commands/fleet-docs.test.ts`. Run
 `stack <command> --help` for current syntax. `fleet-collisions`,
 `fleet-sheet-status`, `fleet-slo` and `fleet-waste` also run nested as
-`stack fleet collisions|sheet-status|slo|waste`.
+`stack fleet collisions`, `stack fleet sheet-status`, `stack fleet slo`, and `stack fleet waste`.
 
 | Command | Purpose |
 | --- | --- |
