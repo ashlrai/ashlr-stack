@@ -204,6 +204,78 @@ This checkout registers <!-- fresh:begin command-count -->47<!-- fresh:end --> t
 | `stack upgrade` | Check for a release or safely upgrade an npm global CLI install. |
 <!-- fresh:end -->
 
+### Options by command
+
+Root options go before a command; other options go after the command shown. Use `stack <command> --help` for descriptions, values, and positional arguments. A dash means that help lists no options.
+
+| Command | Options |
+| --- | --- |
+| `stack` | `-v`, `--version`, `--json`, `--ashlrHandshake` |
+| `stack init` | `--template`, `--force`, `--noInteractive`, `--noProvision`, `--dryRun`, `--noRollback` |
+| `stack import` | `--from`, `--dryRun`, `--json` |
+| `stack scan` | `--path`, `--auto`, `--yes`, `--confidence`, `--json` |
+| `stack clone` | — |
+| `stack add` | `--use`, `--region`, `--dryRun`, `--install` |
+| `stack remove` | `--all`, `--allOrphans`, `--keepRemote`, `--json` |
+| `stack list` | `--json` |
+| `stack info` | `--json` |
+| `stack status` | `--json` |
+| `stack env` | `--env`, `--json` |
+| `stack env show` | `--env`, `--json` |
+| `stack env export` | `--example`, `--stdout`, `--force` |
+| `stack env diff` | `--json` |
+| `stack deps` | `--json` |
+| `stack doctor` | `--fix`, `--all`, `--json`, `--ecosystem`, `--install`, `--apply`, `--repos`, `--reconcile` |
+| `stack fleet-lanes` | `--json`, `--queue` |
+| `stack fleet-supply` | `--json`, `--queue`, `--log` |
+| `stack fleet-latency` | `--json` |
+| `stack fleet-lag` | `--json` |
+| `stack fleet-waste` | `--metrics`, `--hours`, `--json` |
+| `stack fleet-reds` | `--json` |
+| `stack fleet-silent` | `--runs`, `--json` |
+| `stack fleet-collisions` | `--file`, `--json` |
+| `stack fleet-delivery-lag` | `--fixture`, `--json` |
+| `stack fleet-stuck` | `--json` |
+| `stack fleet-slo` | `--json` |
+| `stack fleet-act` | `--lane`, `--job`, `--slots`, `--message`, `--queue`, `--apply`, `--dryRun`, `--json` |
+| `stack fleet-stream` | `--dispatch`, `--jobs`, `--follow`, `--sse`, `--port` |
+| `stack fleet-graph` | `--json`, `--queue`, `--router` |
+| `stack worktree-disk` | `--repo`, `--base`, `--json` |
+| `stack fleet-gc` | `--json`, `--root`, `--runs`, `--queue`, `--reapIdleHours`, `--emptyIdleHours`, `--budgetSeconds`, `--ghBin`, `--lsofBin`, `--ghMax`, `--dryRun` |
+| `stack fleet-bets` | `--json`, `--queue`, `--router`, `--ready`, `--metrics`, `--src` |
+| `stack fleet-match` | `--json`, `--queue`, `--role`, `--capability`, `--tier`, `--job`, `--capabilitiesFile`, `--modelsFile` |
+| `stack fleet-sheet-status` | `--runs`, `--sheet`, `--execution`, `--expect`, `--json` |
+| `stack fleet` | `--json`, `--log`, `--queue` |
+| `stack fleet slo` | `--json` |
+| `stack fleet collisions` | `--file`, `--json` |
+| `stack fleet waste` | `--metrics`, `--hours`, `--json` |
+| `stack fleet sheet-status` | `--runs`, `--sheet`, `--execution`, `--expect`, `--json` |
+| `stack exec` | `--as` |
+| `stack swap` | `--dryRun`, `--noRollback`, `--keepFrom` |
+| `stack sync` | `--platform` |
+| `stack onboard` | `--apply`, `--undo`, `--client`, `--all`, `--home`, `--json` |
+| `stack open` | — |
+| `stack login` | — |
+| `stack telemetry` | — |
+| `stack telemetry status` | — |
+| `stack telemetry enable` | — |
+| `stack telemetry disable` | — |
+| `stack templates` | `--json` |
+| `stack templates list` | `--json` |
+| `stack templates apply` | `--no-continueOnError` |
+| `stack providers` | `--category`, `--json` |
+| `stack recommend` | `--k`, `--category`, `--json`, `--save`, `--synth` |
+| `stack apply` | `--noWire`, `--noRollback`, `--dryRun` |
+| `stack projects` | `--json` |
+| `stack projects list` | `--json` |
+| `stack projects register` | — |
+| `stack projects remove` | — |
+| `stack projects where` | — |
+| `stack ci` | `--json` |
+| `stack ci init` | `--force`, `--json` |
+| `stack completion` | — |
+| `stack upgrade` | `--apply`, `-n`, `--dryRun`, `--json` |
+
 ## MCP tools
 
 Project-scoped tools take an absolute `cwd`. Catalog, registry, template, and upgrade tools reject `cwd`. The server can also list up to three resources when the files exist: `stack://current/.stack.toml`, `stack://current/.stack.local.toml`, and `stack://current/.mcp.json`.
