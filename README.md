@@ -214,7 +214,7 @@ Root options go before a command; other options go after the command shown. Use 
 | `stack init` | `--template`, `--force`, `--noInteractive`, `--noProvision`, `--dryRun`, `--noRollback` |
 | `stack import` | `--from`, `--dryRun`, `--json` |
 | `stack scan` | `--path`, `--auto`, `--yes`, `--confidence`, `--json` |
-| `stack clone` | — |
+| `stack clone` | - |
 | `stack add` | `--use`, `--region`, `--dryRun`, `--install` |
 | `stack remove` | `--all`, `--allOrphans`, `--keepRemote`, `--json` |
 | `stack list` | `--json` |
@@ -254,12 +254,12 @@ Root options go before a command; other options go after the command shown. Use 
 | `stack swap` | `--dryRun`, `--noRollback`, `--keepFrom` |
 | `stack sync` | `--platform` |
 | `stack onboard` | `--apply`, `--undo`, `--client`, `--all`, `--home`, `--json` |
-| `stack open` | — |
-| `stack login` | — |
-| `stack telemetry` | — |
-| `stack telemetry status` | — |
-| `stack telemetry enable` | — |
-| `stack telemetry disable` | — |
+| `stack open` | - |
+| `stack login` | - |
+| `stack telemetry` | - |
+| `stack telemetry status` | - |
+| `stack telemetry enable` | - |
+| `stack telemetry disable` | - |
 | `stack templates` | `--json` |
 | `stack templates list` | `--json` |
 | `stack templates apply` | `--no-continueOnError` |
@@ -268,12 +268,12 @@ Root options go before a command; other options go after the command shown. Use 
 | `stack apply` | `--noWire`, `--noRollback`, `--dryRun` |
 | `stack projects` | `--json` |
 | `stack projects list` | `--json` |
-| `stack projects register` | — |
-| `stack projects remove` | — |
-| `stack projects where` | — |
+| `stack projects register` | - |
+| `stack projects remove` | - |
+| `stack projects where` | - |
 | `stack ci` | `--json` |
 | `stack ci init` | `--force`, `--json` |
-| `stack completion` | — |
+| `stack completion` | - |
 | `stack upgrade` | `--apply`, `-n`, `--dryRun`, `--json` |
 
 ## MCP tools
