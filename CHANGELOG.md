@@ -2,6 +2,28 @@
 
 ## Unreleased
 
+### Next release (since v0.3.10)
+
+This section covers the 10 commits from `v0.3.10` through `81d12551`. These are documentation and maintenance changes; CLI commands and provider behavior are unchanged.
+
+**Added**
+
+- The README now lists the available options for every CLI command and subcommand.
+
+**Changed**
+
+- Installation guides, MCP setup examples and agent references now record published version 0.3.10 and its Node.js 20 minimum, while keeping older verification results clearly dated.
+- Regression checks now cover more command help, unknown commands, fleet reports, wiring documentation, repository checks and Git hooks; coverage and security scans also run after merges to main.
+
+**Fixed**
+
+- Wiring guides now use the supported `stack apply --noWire` option to skip secret checks and webhook stubs.
+- Contributor guidance correctly lists all six workspace packages.
+
+---
+
+The notes below were already included in v0.3.10. They remain here to preserve existing documentation links and are not new changes for the next release.
+
 ### Changed
 
 - `stack apply` does not create placeholder secrets. After at least one provider succeeds, wiring checks secret names for every provider in the recipe, including providers that failed; a missing name does not itself fail apply, while provider failures do. Wiring can also create webhook stubs for those recipe providers, even if the vault is unreadable. Supply required missing secrets as real values through Phantom; `--noWire` skips both checks and stubs.
