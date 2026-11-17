@@ -7,6 +7,24 @@ import { wirePhantomForRecipe } from "../packages/core/src/ai/phantom-wire.ts";
 const doc = readFileSync(new URL("../docs/phantom-wire-data-flow.md", import.meta.url), "utf8");
 
 describe("Phantom wire data flow", () => {
+  it("reads the example body before returning success", async () => {
+    const harness = setupFakePhantom({});
+    try {
+      const result = await wirePhantomForRecipe(
+        { id: "body-order", query: "", createdAt: "", providers: [{ name: "stripe" }] },
+        { cwd: harness.dir },
+      );
+      const stub = readFileSync(result.webhooks[0]!, "utf8");
+      const body = stub.indexOf("const body = await req.text();");
+      const success = stub.indexOf("status: 200");
+      expect(body).toBeGreaterThanOrEqual(0);
+      expect(success).toBeGreaterThan(body);
+      expect(doc).toContain("reads the body, and returns 200");
+    } finally {
+      harness.cleanup();
+    }
+  });
+
   it("does not present reading a webhook body as sender verification", async () => {
     const harness = setupFakePhantom({});
     try {
