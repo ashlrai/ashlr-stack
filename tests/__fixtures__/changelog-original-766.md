@@ -4,8 +4,8 @@
 
 ### Entries
 
-- `stack apply` does not create placeholder secrets. After at least one provider succeeds, wiring checks secret names for every provider in the recipe, including providers that failed; a missing name does not itself fail apply, while provider failures do. Wiring can also create webhook stubs for those recipe providers, even if the vault is unreadable. Supply required missing secrets as real values through Phantom; `--noWire` skips both checks and stubs.
-- Fleet JSONL reads (`stack fleet` diagnostics) now enforce the byte cap while reading: a non-tail read grows one buffer up to the cap, probes a single extra byte to detect an oversized or growing source, and rejects an invalid cap (negative or non-integer) instead of reading the whole file first (#360).
+- The README now lists the available options for every CLI command and subcommand.
+- Installation guides, MCP setup examples and agent references now record published version 0.3.10 and its Node.js 20 minimum, while keeping older verification results clearly dated.
 
 ## 0.3.0 (2026-10-31)
 

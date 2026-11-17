@@ -132,6 +132,7 @@ test("the reference never describes placeholder writes as a current step", () =>
 
 test("the reference accounts for bullets that only mention apply", () => {
   for (const signature of [
+    "Wiring guides now use the supported `stack apply --noWire`",
     "Expanded coverage for `stack apply` when",
     "**The last lines of a failing command reach a pipe on Bun 1.2.**",
     "**`stack recommend [query]`**",
@@ -154,7 +155,7 @@ test("the documented commands locate the apply bullets and compare the copies", 
 
     const search = run(commands[0]);
     expect(search.status).toBe(0);
-    expect(search.stdout.trim().split("\n")).toHaveLength(9);
+    expect(search.stdout.trim().split("\n")).toHaveLength(10);
     expect(run(commands[1]).status).toBe(0);
 
     writeFileSync(
