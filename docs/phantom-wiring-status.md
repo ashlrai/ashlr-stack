@@ -12,7 +12,7 @@ For each known provider, wiring compares the catalog's declared secret names wit
 
 Wiring reads names and metadata, not values, and never writes placeholder or real secrets to the vault. The provider provisioning flow handles real values. If Phantom is unavailable or the inventory cannot be read, providers are reported as `skipped`, not missing; an unknown provider is also skipped. Treat skipped status as unknown, not proof that secrets are absent or present. Webhook stubs can still be created when the inventory is unavailable.
 
-`--no-wire` skips both the inventory check and stub generation; it does not disable provider provisioning. The CLI reports wiring failures as warnings, so a completed apply alone is not evidence that wiring succeeded.
+`--noWire` skips both the inventory check and stub generation; it does not disable provider provisioning. The CLI reports wiring failures as warnings, so a completed apply alone is not evidence that wiring succeeded.
 
 ## Webhook examples
 

@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import { readdirSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { mkdtempSync, readdirSync, readFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import ts from "typescript";
 import { getProvider, listProviderNames } from "../packages/core/src/providers/index.ts";
 import { TOOLS } from "../packages/mcp/src/tools.ts";
@@ -219,6 +220,72 @@ describe("source documentation freshness", () => {
     }
     expect(checked).toBeGreaterThan(0);
   });
+
+  test("every shipped doc names only real commands, subcommands and flags", () => {
+    const names = commands.map(({ name }) => name);
+    // Ask the real CLI: help is the source of truth, and it covers args that
+    // source parsing cannot see (shared arg objects, nested subcommands).
+    const helpHome = mkdtempSync(join(tmpdir(), "stack-docs-help-"));
+    const helpOf = (...path: string[]) =>
+      Bun.spawnSync(["bun", resolve(root, "packages/cli/src/index.ts"), ...path, "--help"], {
+        // Minimal env: the test runner's own variables make the CLI skip main.
+        env: {
+          PATH: process.env.PATH ?? "",
+          HOME: helpHome,
+          NO_COLOR: "1",
+          STACK_NO_UPDATE_CHECK: "1",
+          STACK_TELEMETRY: "0",
+        },
+        cwd: helpHome,
+      }).stdout.toString();
+    const cache = new Map<string, Set<string>>();
+    const allowed = (command: string) => {
+      let flags = cache.get(command);
+      if (!flags) {
+        const top = helpOf(command);
+        const nested = top.match(/USAGE stack \S+ \[OPTIONS\] ([a-z|-]+)\n/)?.[1]?.split("|") ?? [];
+        const text = [top, ...nested.map((sub) => helpOf(command, sub))].join("\n");
+        flags = new Set(["help", ...[...text.matchAll(/(?<![\w-])--([a-zA-Z][\w-]*)/g)].map((m) => m[1]!)]);
+        for (const flag of [...flags]) flags.add(flag.replace(/-(\w)/g, (_, c: string) => c.toUpperCase()));
+        cache.set(command, flags);
+      }
+      return flags;
+    };
+    const walk = (dir: string): string[] =>
+      readdirSync(resolve(root, dir), { withFileTypes: true }).flatMap((entry) => {
+        const path = `${dir}/${entry.name}`;
+        if (entry.isDirectory()) return entry.name === "node_modules" ? [] : walk(path);
+        return /\.(md|txt)$/.test(entry.name) ? [path] : [];
+      });
+    const files = [
+      "README.md",
+      "STACK.md",
+      "llms.txt",
+      ...walk("docs"),
+      ...walk("templates"),
+      "packages/site/public/llms.txt",
+      "packages/site/public/llms-full.txt",
+    ];
+    const camel = (flag: string) => flag.replace(/-(\w)/g, (_, c: string) => c.toUpperCase());
+    let checked = 0;
+    for (const path of files) {
+      for (const [, command, rest] of read(path).matchAll(/(?:`|^|\$ )stack ([a-z][a-z-]*)([^`\n]*)/gm)) {
+        // Prose such as "stack health" is not an invocation; only registered names are checked.
+        if (!names.includes(command!)) continue;
+        const flags = allowed(command!);
+        const invocation = rest!.split(/\s+#|\s+--(?:\s|$)/)[0]!;
+        for (const [, flag] of invocation.matchAll(/(?<![\w-])--([a-zA-Z][\w-]*)/g)) {
+          // `--no-x` negates a declared `x` (citty); it never reaches a `noX` flag.
+          const negated = flag!.startsWith("no-") && flags.has(camel(flag!.slice(3)));
+          // citty also accepts kebab spellings (`--dry-run`) of camelCase flags.
+          if (flags.has(flag!) || flags.has(camel(flag!)) || negated) {
+            checked++;
+          } else throw new Error(`${path}: \`stack ${command}\` has no --${flag} option`);
+        }
+      }
+    }
+    expect(checked).toBeGreaterThan(50);
+  }, 120_000);
 
   test("table row extraction rejects missing, duplicate and empty sections", () => {
     expect(() => tableRows("", "README.md", "commands-table")).toThrow();

@@ -35,7 +35,7 @@ The diagram groups the per-provider loop for readability: each supported stub
 is written even when that provider is skipped, and unknown providers have no
 catalog secrets to compare. `cwd` defaults to the current working directory.
 `noWire` returns before the installation probe, inventory read, or file writes.
-With `stack apply --no-wire`, the CLI still performs its own prerequisite and
+With `stack apply --noWire`, the CLI still performs its own prerequisite and
 provisioning steps before invoking this early return.
 
 ## Inventory and result

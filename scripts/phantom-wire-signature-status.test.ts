@@ -20,7 +20,7 @@ describe("Phantom wire signature status", () => {
     expect(doc).toContain("Status: not implemented");
     expect(doc).toContain("future step");
     expect(doc).toContain(".stack/webhooks/<provider>.ts");
-    expect(doc).toContain("--no-wire");
+    expect(doc).toContain("--noWire");
     expect(excerpt).toContain("TODO(security): signature verification is NOT implemented here.");
     expect(source).toContain(excerpt.split("\n").slice(1).join("\n"));
 

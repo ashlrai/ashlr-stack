@@ -51,7 +51,7 @@ The per-provider headers, secret names and scheme hints are in the table in the
 
 ## What the module does enforce
 
-- `--no-wire` returns four empty arrays and touches neither the vault nor disk.
+- `--noWire` returns four empty arrays and touches neither the vault nor disk.
 - Vault access is read-only; the module never calls `phantom add`.
 - Only the four names in `WEBHOOK_PROVIDERS` reach `writeWebhookStub`, so a
   path-traversal name like `../../evil` never becomes a file path. It lands in

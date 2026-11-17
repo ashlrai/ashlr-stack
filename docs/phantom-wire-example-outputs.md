@@ -31,7 +31,7 @@ and skipped providers:
 The `skipped` segment and both parenthesized lines appear only when
 non-empty. A `phantom-wire failed: <message>` warning means the call rejected —
 a stub write can fail after earlier files were already written, so partial
-output may remain. With `--no-wire` nothing is printed and no file is
+output may remain. With `--noWire` nothing is printed and no file is
 written; the call returns four empty arrays.
 
 ## The generated files

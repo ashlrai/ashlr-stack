@@ -11,7 +11,7 @@
  *
  * Calling the real provider CLIs (`stack add <provider>`) is out of scope:
  * those make live HTTPS/OAuth calls. This test stops at the phantom-wire
- * boundary, which is exactly what `stack apply --no-wire` would skip.
+ * boundary, which is exactly what `stack apply --noWire` would skip.
  *
  * The `setupFakePhantom` harness stubs out the Phantom CLI via a PATH-prefix
  * shell script, so `wirePhantomForRecipe` can shell out for real without
