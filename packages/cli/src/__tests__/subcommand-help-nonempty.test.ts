@@ -165,6 +165,38 @@ describe("subcommand --help discovery", () => {
   });
 });
 
+// Compare the README with the rendered CLI, including aliases and nested commands.
+test("README options match every help page", async () => {
+  const readme = readFileSync(join(SRC_DIR, "../../../README.md"), "utf8");
+  const section = readme.split("### Options by command\n")[1]?.split("\n## ")[0];
+  expect(section).toBeDefined();
+  const rows = new Map<string, string[]>();
+  for (const match of section!.matchAll(/^\| `stack([^`]*)` \| (.*?) \|$/gm)) {
+    const key = match[1].trim();
+    expect(rows.has(key)).toBe(false);
+    rows.set(
+      key,
+      [...match[2].matchAll(/`(-{1,2}[\w-]+)`/g)].map((m) => m[1]),
+    );
+  }
+  const paths = [[], ...(await allCommandPaths())];
+  expect([...rows.keys()].sort()).toEqual(paths.map((p) => p.join(" ")).sort());
+  const results = await mapPool(paths, 8, (path) => stack([...path, "--help"]));
+  for (const [i, result] of results.entries()) {
+    expectNonEmptyHelp(paths[i], result);
+    const options =
+      result.stdout.match(/^OPTIONS\n\n([\s\S]*?)(?=\n\n(?:[A-Z]+\n|Use stack|$))/m)?.[1] ?? "";
+    const flags = options.split("\n").flatMap((line) => {
+      const names = line.trim().split(/\s{2,}/)[0];
+      return [...names.matchAll(/(?<![\w-])--?[A-Za-z][\w-]*/g)].map((m) => m[0]);
+    });
+    expect({ command: paths[i].join(" "), flags: rows.get(paths[i].join(" "))?.sort() }).toEqual({
+      command: paths[i].join(" "),
+      flags: flags.sort(),
+    });
+  }
+}, 240_000);
+
 describe("stack <subcommand> --help is never empty", () => {
   test("every subcommand, top-level and nested, exits 0 with non-empty help", async () => {
     const paths = await allCommandPaths();
