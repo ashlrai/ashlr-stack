@@ -14,6 +14,7 @@ import {
   takeRevealRefusals,
 } from "@ashlr/stack-core";
 import { defineCommand } from "citty";
+import { EXIT_CODES } from "../exit-codes.ts";
 import { runAgentPreflight } from "../lib/agent-preflight.ts";
 import {
   ecosystemEnvelope,
@@ -124,7 +125,7 @@ export const doctorCommand = defineCommand({
     const usage = (message: string) => {
       if (json) process.stdout.write(`${JSON.stringify(errorEnvelope(message))}\n`);
       else process.stderr.write(`${colors.red(`[stack doctor] ${message}`)}\n`);
-      process.exitCode = 1;
+      process.exitCode = EXIT_CODES.ERROR;
     };
 
     if (args.repos) {
@@ -144,7 +145,7 @@ export const doctorCommand = defineCommand({
       else
         for (const repo of report.repos)
           console.log(`${repo.repo}: ${repo.detail}; open PRs: ${repo.open_pr_count ?? "unknown"}`);
-      process.exitCode = report.status === "fail" ? 1 : 0;
+      process.exitCode = report.status === "fail" ? EXIT_CODES.ERROR : EXIT_CODES.OK;
       return;
     }
 
@@ -166,7 +167,7 @@ export const doctorCommand = defineCommand({
           console.log(colors.bold(`Ashlr ecosystem doctor --install (${report.mode})`));
           for (const line of formatInstallReport(report)) console.log(line);
         }
-        if (report.outcome?.stopped_at) process.exitCode = 1;
+        if (report.outcome?.stopped_at) process.exitCode = EXIT_CODES.ERROR;
       } catch (err) {
         if (!(err instanceof InstallUsageError)) throw err;
         usage(err.message);
@@ -184,7 +185,7 @@ export const doctorCommand = defineCommand({
           console.log(colors.bold(`Ashlr ecosystem doctor --fix (${report.mode})`));
           for (const line of formatFixReport(report)) console.log(line);
         }
-        if (report.stopped_at) process.exitCode = 1;
+        if (report.stopped_at) process.exitCode = EXIT_CODES.ERROR;
       } catch (err) {
         if (!(err instanceof FixUsageError)) throw err;
         usage(err.message);
@@ -232,7 +233,7 @@ export const doctorCommand = defineCommand({
       const message = new ConfigNotFoundError(resolveConfigPath(process.cwd())).message;
       if (json) {
         process.stdout.write(`${JSON.stringify(errorEnvelope(message, INIT_STEP))}\n`);
-        process.exitCode = 1;
+        process.exitCode = EXIT_CODES.ERROR;
         return;
       }
       console.log(`  ${formatNextStep(INIT_STEP)}`);
@@ -245,7 +246,7 @@ export const doctorCommand = defineCommand({
         process.stdout.write(
           `${JSON.stringify(errorEnvelope("Phantom is not installed. Stack cannot verify secrets without it.", INSTALL_STEP))}\n`,
         );
-        process.exitCode = 1;
+        process.exitCode = EXIT_CODES.ERROR;
         return;
       }
       console.log(`  ${formatNextStep(INSTALL_STEP)}`);
@@ -294,7 +295,7 @@ export const doctorCommand = defineCommand({
     );
     if (json) {
       process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
-      process.exitCode = anyFailed ? 1 : 0;
+      process.exitCode = anyFailed ? EXIT_CODES.ERROR : EXIT_CODES.OK;
       return;
     }
     if (preflight?.message) {
@@ -373,7 +374,7 @@ export async function runReconcile(cwd: string, json: boolean): Promise<void> {
 
   const hasIssues = orphans.length > 0 || untracked.length > 0;
   if (hasIssues) {
-    process.exitCode = 2;
+    process.exitCode = EXIT_CODES.DOCTOR_ISSUES;
   }
 }
 

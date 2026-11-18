@@ -1,6 +1,7 @@
 import type { LogEvent, PromptRequest } from "@ashlr/stack-core";
 import * as p from "@clack/prompts";
 import pc from "picocolors";
+import { EXIT_CODES } from "./exit-codes.ts";
 
 export const colors = pc;
 
@@ -25,7 +26,7 @@ export function outroError(message: string): void {
   // Use exit(1) (not just exitCode) so the shell gets a real non-zero exit
   // even if something downstream (citty cleanup, a dangling handle) would
   // otherwise finish cleanly and swallow the exitCode. CI depends on this.
-  process.exit(1);
+  process.exit(EXIT_CODES.ERROR);
 }
 
 export function logEvent(event: LogEvent): void {

@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { hasConfig } from "@ashlr/stack-core";
 import { defineCommand } from "citty";
+import { EXIT_CODES } from "../exit-codes.ts";
 import { intro, outroError } from "../ui.ts";
 
 /**
@@ -22,7 +23,7 @@ const jsonArg = {
 function refuse(message: string, json: boolean, title: string): void {
   if (json) {
     process.stdout.write(`${JSON.stringify({ error: message })}\n`);
-    process.exit(1);
+    process.exit(EXIT_CODES.ERROR);
   }
   intro(title);
   outroError(message);

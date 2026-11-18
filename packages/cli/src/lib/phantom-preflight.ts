@@ -1,4 +1,5 @@
 import { isPhantomInstalled, removeSecret } from "@ashlr/stack-core";
+import { EXIT_CODES } from "../exit-codes.ts";
 import { colors } from "../ui.ts";
 
 /**
@@ -20,7 +21,7 @@ export async function requirePhantom(opts: { json?: boolean } = {}): Promise<boo
     process.stdout.write(
       `${JSON.stringify({ error: "Phantom Secrets isn't installed. Install it with `brew install ashlrai/phantom/phantom` (or see phm.dev), then re-run this command." })}\n`,
     );
-    process.exit(1);
+    process.exit(EXIT_CODES.ERROR);
   }
 
   console.log();
@@ -34,7 +35,7 @@ export async function requirePhantom(opts: { json?: boolean } = {}): Promise<boo
   console.log();
   console.log("  Then re-run this command.");
   console.log();
-  process.exit(1);
+  process.exit(EXIT_CODES.ERROR);
 }
 
 /**

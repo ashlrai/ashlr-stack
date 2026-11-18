@@ -1,5 +1,6 @@
 import { type ArgsDef, type CommandDef, runCommand, runMain } from "citty";
 import pc from "picocolors";
+import { EXIT_CODES } from "../exit-codes.ts";
 import {
   bindParentOptionValues,
   commandPath,
@@ -41,13 +42,13 @@ export async function runCli<T extends ArgsDef = ArgsDef>(
       io.stderr(
         `  ${pc.red("✗")} Unknown command "${unknown.name}". Run \`${unknown.command} --help\` for available commands.`,
       );
-      process.exitCode = 1;
-      return 1;
+      process.exitCode = EXIT_CODES.ERROR;
+      return EXIT_CODES.ERROR;
     }
   }
   if (wantsHelp || wantsVersion) {
     await runMain(cmd, { rawArgs });
-    return 0;
+    return EXIT_CODES.OK;
   }
   // citty ignores options a command does not declare, so a typo (`--jsn`)
   // ran the command without it and exited 0. Refuse before anything runs.
@@ -56,12 +57,12 @@ export async function runCli<T extends ArgsDef = ArgsDef>(
     const message = describeUnknownFlag(unknown);
     if (rawArgs.includes("--json")) io.stdout?.(JSON.stringify({ error: message }));
     io.stderr(`  ${pc.red("✗")} ${message}`);
-    process.exitCode = 1;
-    return 1;
+    process.exitCode = EXIT_CODES.ERROR;
+    return EXIT_CODES.ERROR;
   }
   try {
     await runCommand(cmd, { rawArgs });
-    return typeof process.exitCode === "number" ? process.exitCode : 0;
+    return typeof process.exitCode === "number" ? process.exitCode : EXIT_CODES.OK;
   } catch (error) {
     // citty raises CLIError (not exported) while resolving the subcommand and
     // parsing its arguments, before any command body runs. runMain re-parses,
@@ -74,16 +75,16 @@ export async function runCli<T extends ArgsDef = ArgsDef>(
         const message = `${error.message}. Run \`${path} --help\` for usage.`;
         io.stdout?.(JSON.stringify({ error: message }));
         io.stderr(`  ${pc.red("✗")} ${message}`);
-        process.exitCode = 1;
-        return 1;
+        process.exitCode = EXIT_CODES.ERROR;
+        return EXIT_CODES.ERROR;
       }
       await runMain(cmd, { rawArgs });
-      return 1;
+      return EXIT_CODES.ERROR;
     }
     const message = error instanceof Error ? error.message : String(error);
     io.stderr(`  ${pc.red("✗")} ${message}`);
     if (io.env.STACK_DEBUG && error instanceof Error && error.stack) io.stderr(error.stack);
-    process.exitCode = 1;
-    return 1;
+    process.exitCode = EXIT_CODES.ERROR;
+    return EXIT_CODES.ERROR;
   }
 }

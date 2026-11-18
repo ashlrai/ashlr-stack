@@ -1,5 +1,6 @@
 import { defineCommand } from "citty";
 import pkg from "../../package.json" with { type: "json" };
+import { EXIT_CODES } from "../exit-codes.ts";
 import { installUpgrade, isReleaseVersion } from "../lib/upgrade-install.ts";
 import { colors, intro, outro, outroError } from "../ui.ts";
 
@@ -101,7 +102,7 @@ export async function runUpgrade(
     const error = err instanceof Error ? err.message : "Upgrade failed.";
     if (options.json) process.stdout.write(`${JSON.stringify({ error, current })}\n`);
     else outroError(error);
-    process.exitCode = 1;
+    process.exitCode = EXIT_CODES.ERROR;
   }
 }
 

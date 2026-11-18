@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 import { emitTelemetry } from "@ashlr/stack-core";
 import { defineCommand } from "citty";
+import { EXIT_CODES } from "./exit-codes.ts";
 import { buildHandshake } from "./lib/handshake.ts";
 import { normalizeKebabFlags } from "./lib/normalize-args.ts";
 import { runCli } from "./lib/run-cli.ts";
@@ -126,7 +127,7 @@ const main = defineCommand({
 // it must stay local and fast (docs/ashlr-handshake.md).
 if (process.argv.slice(2).includes("--ashlr-handshake")) {
   process.stdout.write(`${JSON.stringify(buildHandshake(VERSION))}\n`);
-  process.exit(0);
+  process.exit(EXIT_CODES.OK);
 }
 
 // Before any output: outroError exits the process, and Bun 1.2 drops queued
@@ -140,7 +141,7 @@ runCli(main, normalizeKebabFlags(process.argv.slice(2))).finally(() => {
   void emitTelemetry({
     type: "command",
     command: process.argv[2] ?? "unknown",
-    exitCode: typeof process.exitCode === "number" ? process.exitCode : 0,
+    exitCode: typeof process.exitCode === "number" ? process.exitCode : EXIT_CODES.OK,
     durationMs: Date.now() - _startMs,
   });
 });

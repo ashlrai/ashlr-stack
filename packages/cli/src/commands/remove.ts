@@ -1,6 +1,7 @@
 import { getService, readConfig, scanSource, writeConfig } from "@ashlr/stack-core";
 import { removeMcpEntry } from "@ashlr/stack-core/mcp-writer";
 import { defineCommand } from "citty";
+import { EXIT_CODES } from "../exit-codes.ts";
 import { notInStackMessage } from "../lib/not-in-stack.ts";
 import { removeVaultSecrets, requirePhantom } from "../lib/phantom-preflight.ts";
 import { colors, intro, outro, outroError, prompts } from "../ui.ts";
@@ -232,7 +233,7 @@ async function runRemoveJson(
 ): Promise<void> {
   const fail = (error: string) => {
     process.stdout.write(`${JSON.stringify({ error })}\n`);
-    process.exit(1);
+    process.exit(EXIT_CODES.ERROR);
   };
   let config: Awaited<ReturnType<typeof readConfig>>;
   try {

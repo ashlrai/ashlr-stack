@@ -1,5 +1,6 @@
 import { type StackConfig, getProvider, readConfig } from "@ashlr/stack-core";
 import { defineCommand } from "citty";
+import { EXIT_CODES } from "../exit-codes.ts";
 import { colors, intro, outro } from "../ui.ts";
 
 /**
@@ -88,7 +89,7 @@ export const depsCommand = defineCommand({
         process.stdout.write(
           `${JSON.stringify({ error: err instanceof Error ? err.message : String(err) })}\n`,
         );
-        process.exit(1);
+        process.exit(EXIT_CODES.ERROR);
       }
       process.stdout.write(`${JSON.stringify(await buildDepsReport(config), null, 2)}\n`);
       return;

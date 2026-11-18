@@ -10,6 +10,7 @@ import {
   writeRecipe,
 } from "@ashlr/stack-core";
 import { defineCommand } from "citty";
+import { EXIT_CODES } from "../exit-codes.ts";
 import { colors, intro, outro, outroError } from "../ui.ts";
 
 /**
@@ -193,7 +194,7 @@ export const recommendCommand = defineCommand({
             2,
           ),
         );
-        process.exitCode = 1;
+        process.exitCode = EXIT_CODES.ERROR;
         return;
       }
       intro("stack recommend");
@@ -215,7 +216,7 @@ export const recommendCommand = defineCommand({
       const message = `Invalid ${given}. Use a whole number of results, 1 or more (default 6).`;
       if (args.json) {
         console.error(message);
-        process.exit(1);
+        process.exit(EXIT_CODES.ERROR);
       }
       outroError(message);
       return;
@@ -228,7 +229,7 @@ export const recommendCommand = defineCommand({
         const message = `Unknown category "${args.category}". Use one of: ${PROVIDER_CATEGORIES.join(", ")}`;
         if (args.json) {
           console.error(message);
-          process.exit(1);
+          process.exit(EXIT_CODES.ERROR);
         }
         outroError(message);
         return;

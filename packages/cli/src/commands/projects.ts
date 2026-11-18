@@ -6,6 +6,7 @@ import {
   unregisterProject,
 } from "@ashlr/stack-core";
 import { defineCommand, runCommand } from "citty";
+import { EXIT_CODES } from "../exit-codes.ts";
 import { colors, intro, outro, outroError } from "../ui.ts";
 
 /**
@@ -137,7 +138,7 @@ export const projectsCommand = defineCommand({
       async run({ args }) {
         const project = await findProjectByName(String(args.name));
         if (!project) {
-          process.exitCode = 1;
+          process.exitCode = EXIT_CODES.ERROR;
           console.error(`No registered project named "${args.name}".`);
           return;
         }

@@ -1,4 +1,5 @@
 import { defineCommand } from "citty";
+import { EXIT_CODES } from "../exit-codes.ts";
 import { isFleetRow, readFleetJson } from "../lib/fleet-jsonl.ts";
 
 const sha = (v: unknown): v is string => typeof v === "string" && /^[a-f0-9]{40}$/.test(v);
@@ -106,7 +107,7 @@ export const fleetDeliveryLagCommand = defineCommand({
     /* File errors and malformed JSON must not expose paths or content. */
     const fixture = await readFleetJson(args.fixture, { maxBytes: 4 * 1024 * 1024 });
     const report = reportFleetDeliveryLag(fixture.status === "ok" ? fixture.data : undefined);
-    if (report.status !== "ok") process.exitCode = 1;
+    if (report.status !== "ok") process.exitCode = EXIT_CODES.ERROR;
     if (args.json) console.log(JSON.stringify(report));
     else {
       console.log(
