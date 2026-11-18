@@ -18,6 +18,24 @@ Stack configures supported third-party services through provider-specific
 authentication, provisioning and selected vault/config/MCP writes. Inspect
 partial outcomes; catalog registration does not establish provider readiness.
 
+### Where it fits
+
+Stack is the service layer of the Ashlr ecosystem: Phantom (`phm`) runs the
+agents, Phantom Secrets (`phantom`) holds the secrets Stack selects, Locus
+(`locus`) pins the account a session acts as (`stack exec --as`), and
+Lexicon, Ashlr Markdown and the ashlr plugin sit alongside. Together they aim
+to be an autonomous, code-first, agent-native software factory, chasing
+open-source RSI (recursive self-improvement), with the human as a passive board
+member. The full table is in
+[README.md](README.md#part-of-the-ashlr-ecosystem).
+`stack doctor --ecosystem --json` reports which of these tools are installed
+and changes nothing.
+
+Agents ship changes to this repo themselves: branch, open a PR, merge once the
+required checks pass. The limits they keep (secrets, billing, force-push, the
+hold list) and the changelog rule for parallel PRs are in
+[AGENTS.md](AGENTS.md).
+
 <!-- fresh:begin version-table -->
 | Package | Manifest | Version |
 | --- | --- | --- |

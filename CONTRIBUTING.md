@@ -2,6 +2,8 @@
 
 Thanks for poking around. Stack is early and the surface is intentionally curated — we want depth per provider, not breadth at any cost.
 
+Stack is one tool in the [Ashlr ecosystem](README.md#part-of-the-ashlr-ecosystem). Most changes here come from coding agents (Phantom and others) that open and merge their own pull requests. Human contributions are just as welcome and go through the same checks. If you are an agent, read [AGENTS.md](AGENTS.md) and [STACK.md](STACK.md) first.
+
 ## Finding something to work on
 
 New here? Start with the [good first issue](https://github.com/ashlrai/ashlr-stack/labels/good%20first%20issue) label. Issues also labeled [help wanted](https://github.com/ashlrai/ashlr-stack/labels/help%20wanted) are ones we would especially like a PR for.
@@ -52,5 +54,6 @@ What Stack v1 is not:
 - A secrets manager (that's Phantom).
 - A deployment platform (that's Railway/Vercel/Fly).
 - A token-efficiency layer (that's ashlr-plugin).
+- An identity plane that picks which account a session acts as (that's Locus; `stack exec --as` defers to it).
 
 Stack is the orchestration layer that stitches those together for the common "spin up a new project" flow.
