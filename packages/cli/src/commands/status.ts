@@ -8,6 +8,13 @@ import {
 } from "@ashlr/stack-core";
 import { defineCommand } from "citty";
 import {
+  INIT_STEP,
+  INSTALL_STEP,
+  type NextStep,
+  PROVIDERS_STEP,
+  formatNextStep,
+} from "../lib/next-step.ts";
+import {
   STATUS_CHECK_CONCURRENCY,
   STATUS_CHECK_TIMEOUT_MS,
   type StatusCheck,
@@ -24,8 +31,9 @@ import { colors } from "../ui.ts";
  * fields may be added but existing ones must not change meaning.
  * Secret *names* only — never values.
  */
-interface StatusReport {
+export interface StatusReport {
   schema: "ashlr.stack.status/v1";
+  next_step: NextStep;
   config: {
     present: boolean;
     project_id: string | null;
@@ -61,6 +69,20 @@ export function buildStatusReport(input: {
   const secretCount = input.phantomInstalled ? input.secretCount : null;
   return {
     schema: "ashlr.stack.status/v1",
+    next_step: !config
+      ? INIT_STEP
+      : input.installedError
+        ? {
+            summary: "Try the status check again; Phantom did not answer.",
+            command: "stack status",
+          }
+        : !input.phantomInstalled
+          ? INSTALL_STEP
+          : secretCount === null
+            ? { summary: "Check access to stored secrets.", command: "phantom list --json" }
+            : Object.keys(config.services).length === 0
+              ? PROVIDERS_STEP
+              : { summary: "Check your services.", command: "stack doctor" },
     config: {
       present: config !== undefined,
       project_id: config?.stack.project_id ?? null,
@@ -234,6 +256,7 @@ export function statusLines(loaded: LoadedStatus): string[] {
     }
     lines.push("");
   }
+  lines.push(`  ${formatNextStep(buildStatusReport(loaded).next_step)}`, "");
   return lines;
 }
 

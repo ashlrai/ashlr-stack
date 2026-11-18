@@ -5,6 +5,7 @@
  * native_status (Stack's own label) and checks. Exit codes do not change.
  */
 import type { EcosystemEntry } from "./ecosystem.ts";
+import { type NextStep, PROVIDERS_STEP } from "./next-step.ts";
 
 type DoctorStatus = "ok" | "warn" | "fail";
 interface DoctorCheck {
@@ -51,10 +52,13 @@ export function envelope<T extends object>(
 }
 
 /** `{ error }` outputs: a refusal or a precondition that stopped the run. */
-export function errorEnvelope(message: string) {
-  return envelope({ error: message }, "fail", "error", [
-    { id: "stack-doctor", status: "fail", summary: message },
-  ]);
+export function errorEnvelope(message: string, nextStep?: NextStep) {
+  return envelope(
+    { error: message, ...(nextStep ? { next_step: nextStep } : {}) },
+    "fail",
+    "error",
+    [{ id: "stack-doctor", status: "fail", summary: message }],
+  );
 }
 
 /** Service reachability reports. error -> fail; warn and unchecked -> warn. */
@@ -65,7 +69,7 @@ export function reportsEnvelope<
       services: Array<{ name: string; status: string; detail?: string }>;
     }>;
   },
->(native: T, preflightRefused: boolean) {
+>(native: T, preflightRefused: boolean, all = false) {
   const checks: DoctorCheck[] = [];
   for (const r of native.reports) {
     for (const s of r.services) {
@@ -83,7 +87,30 @@ export function reportsEnvelope<
   if (checks.length === 0)
     checks.push({ id: "no-services", status: "warn", summary: "no services to check" });
   const status = worst(checks);
-  return envelope(native, status, status === "fail" ? "failed" : "passed", checks);
+  const services = native.reports.flatMap((r) => r.services);
+  const next_step: NextStep = preflightRefused
+    ? { summary: "Review the secret safety checks.", command: "phantom agent doctor" }
+    : status === "fail"
+      ? {
+          summary: "Try repairing the failed services.",
+          command: `stack doctor${all ? " --all" : ""} --fix`,
+        }
+      : services.length === 0
+        ? PROVIDERS_STEP
+        : services.some((s) => s.status === "unchecked" && s.detail?.includes("stored in Phantom"))
+          ? {
+              summary: "Check stored credentials in your terminal.",
+              command: "phantom validate --check-all",
+            }
+          : status === "warn"
+            ? { summary: "Review the reported service details.", command: null }
+            : { summary: "No action needed.", command: null };
+  return envelope(
+    { ...native, next_step },
+    status,
+    status === "fail" ? "failed" : "passed",
+    checks,
+  );
 }
 
 /** `--ecosystem`: informational; contract drift is a warning, never a failure. */

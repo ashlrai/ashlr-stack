@@ -78,6 +78,15 @@ describe("stack doctor with Phantom Secrets 0.7.9", () => {
         .map((c) => c.args[0])
         .sort(),
     ).toEqual(["OPENAI_API_KEY", "VERCEL_TOKEN"]);
+    const human = spawnSync("bun", [CLI_ENTRY, "doctor"], {
+      cwd: dir,
+      encoding: "utf8",
+      env: { ...process.env, NO_COLOR: "1", CI: "1" },
+    });
+    expect(human.status).toBe(0);
+    expect(human.stdout).toContain("Next step: Check stored credentials in your terminal.");
+    expect(human.stdout).toContain("Run `phantom validate --check-all`.");
+    expect(human.stdout).not.toContain("All services healthy");
   });
 
   it("still reports a token absent from the vault as missing and fails", () => {

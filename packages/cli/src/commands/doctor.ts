@@ -33,7 +33,7 @@ import {
 import { InstallUsageError, formatInstallReport, runDoctorInstall } from "../lib/doctor-install.ts";
 import { checkRepos } from "../lib/doctor-repos.ts";
 import { checkEcosystem, ecosystemNextSteps, formatEcosystem } from "../lib/ecosystem.ts";
-import { requirePhantom } from "../lib/phantom-preflight.ts";
+import { INIT_STEP, INSTALL_STEP, formatNextStep } from "../lib/next-step.ts";
 import { colors, intro, logEvent, outro, outroError, prompts, spinnerBridge } from "../ui.ts";
 
 interface ServiceCheck {
@@ -231,10 +231,11 @@ export const doctorCommand = defineCommand({
     if (!args.all && !hasConfig(process.cwd())) {
       const message = new ConfigNotFoundError(resolveConfigPath(process.cwd())).message;
       if (json) {
-        process.stdout.write(`${JSON.stringify(errorEnvelope(message))}\n`);
+        process.stdout.write(`${JSON.stringify(errorEnvelope(message, INIT_STEP))}\n`);
         process.exitCode = 1;
         return;
       }
+      console.log(`  ${formatNextStep(INIT_STEP)}`);
       outroError(message);
       return;
     }
@@ -242,12 +243,14 @@ export const doctorCommand = defineCommand({
     if (!(await isPhantomInstalled())) {
       if (json) {
         process.stdout.write(
-          `${JSON.stringify(errorEnvelope("Phantom is not installed. Stack cannot verify secrets without it."))}\n`,
+          `${JSON.stringify(errorEnvelope("Phantom is not installed. Stack cannot verify secrets without it.", INSTALL_STEP))}\n`,
         );
         process.exitCode = 1;
         return;
       }
-      await requirePhantom();
+      console.log(`  ${formatNextStep(INSTALL_STEP)}`);
+      outroError("Phantom is not installed. Stack cannot verify secrets without it.");
+      return;
     }
 
     const scope: Array<{ path: string; name: string }> = args.all
@@ -259,6 +262,7 @@ export const doctorCommand = defineCommand({
         process.stdout.write(`${JSON.stringify(reportsEnvelope({ reports: [] }, false))}\n`);
         return;
       }
+      console.log(`  ${formatNextStep(reportsEnvelope({ reports: [] }, false).next_step)}`);
       outro(colors.dim("No registered projects yet."));
       return;
     }
@@ -283,10 +287,13 @@ export const doctorCommand = defineCommand({
         ? { verdict: preflight.verdict, blocked_by: preflight.blockedBy, refuse: preflight.refuse }
         : undefined;
 
+    const result = reportsEnvelope(
+      preflightJson ? { reports, phantom_preflight: preflightJson } : { reports },
+      Boolean(preflight?.refuse),
+      Boolean(args.all),
+    );
     if (json) {
-      process.stdout.write(
-        `${JSON.stringify(reportsEnvelope(preflightJson ? { reports, phantom_preflight: preflightJson } : { reports }, Boolean(preflight?.refuse)), null, 2)}\n`,
-      );
+      process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
       process.exitCode = anyFailed ? 1 : 0;
       return;
     }
@@ -298,15 +305,12 @@ export const doctorCommand = defineCommand({
       console.log(`  ${colors.green("✓")} phantom preflight: ready`);
     }
 
-    if (anyFailed)
-      outroError("One or more services failed. Re-run with --fix to attempt remediation.");
+    console.log(`  ${formatNextStep(result.next_step)}`);
+    if (anyFailed) outroError("One or more services failed.");
     else if (reports.every((r) => r.services.length === 0))
       // Nothing was checked, which must not read as "healthy".
-      outro(
-        colors.yellow(
-          "No services to check. Add one with `stack add <provider>` (`stack providers` lists them).",
-        ),
-      );
+      outro(colors.yellow("No services to check."));
+    else if (result.status === "warn") outro(colors.yellow("Some services still need checking."));
     else outro(colors.green("All services healthy."));
   },
 });
