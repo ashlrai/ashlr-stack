@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { type Contract, checkHandshake } from "./handshake-conformance.ts";
 import contractJson from "./handshake-contract.v1.json";
+import { INSTALL_STEP, type NextStep } from "./next-step.ts";
 
 /** The v1 contract, bundled (byte-identical to contract/ashlr-handshake.v1.json; a test enforces it). */
 export const HANDSHAKE_CONTRACT = contractJson as unknown as Contract;
@@ -152,6 +153,29 @@ export async function checkEcosystem(
 /** Handshake capability a locus build advertises when `locus doctor --fix` exists. */
 export const LOCUS_DOCTOR_FIX_CAPABILITY = "doctor-fix";
 
+/** One explicit action per component; install commands only preview a plan. */
+export function ecosystemFix(entry: EcosystemEntry): NextStep | null {
+  if (entry.status === "ok" && entry.contract !== "drift") {
+    return entry.name === "locus" &&
+      entry.health !== undefined &&
+      entry.health !== "ok" &&
+      entry.capabilities?.includes(LOCUS_DOCTOR_FIX_CAPABILITY)
+      ? { summary: "Preview safe repairs for Locus.", command: "locus doctor --fix" }
+      : null;
+  }
+  if (entry.name === "phantom-secrets") return INSTALL_STEP;
+  if (entry.name === "ashlr-plugin")
+    return {
+      summary:
+        "Install or update the plugin for your host: https://github.com/ashlrai/ashlr-plugin#install",
+      command: null,
+    };
+  return {
+    summary: `Show the install or update plan for ${entry.name}.`,
+    command: `stack doctor --ecosystem --install ${entry.name}`,
+  };
+}
+
 /**
  * Suggested next steps for installed tools. Today: `locus doctor --fix` when
  * locus answered the handshake, reports health other than `ok`, and itself
@@ -202,6 +226,10 @@ function formatEcosystemEntries(entries: EcosystemEntry[]): string[] {
       }
       return `  ok   ${e.name} ${e.version ?? "?"}${caps}${health}`;
     }
-    return `  --   ${e.name} (${e.command}): ${e.detail}`;
+    const fix = ecosystemFix(e);
+    const action = fix
+      ? `\n       Fix: ${fix.summary}${fix.command ? ` Run \`${fix.command}\`.` : ""}`
+      : "";
+    return `  --   ${e.name} (${e.command}): ${e.detail}${action}`;
   });
 }

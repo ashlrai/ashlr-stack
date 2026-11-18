@@ -3,7 +3,8 @@ import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { writeShimmedExecutable } from "../../../core/src/__tests__/_harness.ts";
-import { HANDSHAKE_CONTRACT } from "../lib/ecosystem.ts";
+import { version } from "../../package.json";
+import { ECOSYSTEM_TOOLS, HANDSHAKE_CONTRACT } from "../lib/ecosystem.ts";
 import { checkDoctor } from "../lib/handshake-conformance.ts";
 
 const entry = join(import.meta.dir, "..", "index.ts");
@@ -69,7 +70,7 @@ function doctor(args: string[], code: number, json = true) {
   return parsed;
 }
 
-function ecosystem() {
+function ecosystem(healthy = false) {
   const handshake = {
     kind: "ashlr.handshake",
     schema_version: 1,
@@ -85,6 +86,14 @@ function ecosystem() {
   const answer = (value: unknown) =>
     `if (JSON.stringify(process.argv.slice(2)) !== '["--ashlr-handshake","--json"]') process.exit(2);
 console.log(${JSON.stringify(JSON.stringify(value))});`;
+  if (healthy) {
+    for (const tool of ECOSYSTEM_TOOLS)
+      companion(
+        tool.command,
+        answer({ ...handshake, ...tool, health: { status: "ok", checks: [] } }),
+      );
+    return;
+  }
   companion("locus", answer(handshake));
   companion(
     "phm",
@@ -101,6 +110,52 @@ console.log(${JSON.stringify(JSON.stringify(value))});`;
 }
 
 describe("doctor CLI output snapshots", () => {
+  test("healthy components: typed JSON identifies the schema and CLI version, with no fixes", () => {
+    ecosystem(true);
+    expect(doctor(["--ecosystem", "--json"], 0)).toMatchObject({
+      schema: "ashlr.stack.doctor/v1",
+      schema_version: 1,
+      version,
+      status: "ok",
+      ecosystem: ECOSYSTEM_TOOLS.map((tool) => ({
+        ...tool,
+        installed: true,
+        status: "ok",
+        fix: null,
+      })),
+      next_steps: [],
+    });
+    const text = doctor(["--ecosystem"], 0, false);
+    expect(text).not.toContain("Fix:");
+    for (const tool of ECOSYSTEM_TOOLS) expect(text).toContain(`ok   ${tool.name}`);
+  });
+
+  test("missing components: every tool has one actionable fix, without installing anything", () => {
+    const fixes = ECOSYSTEM_TOOLS.map((tool) => ({
+      summary: expect.any(String),
+      command:
+        tool.name === "phantom-secrets"
+          ? "brew install ashlrai/phantom/phantom"
+          : tool.name === "ashlr-plugin"
+            ? null
+            : `stack doctor --ecosystem --install ${tool.name}`,
+    }));
+    expect(doctor(["--ecosystem", "--json"], 0)).toMatchObject({
+      schema: "ashlr.stack.doctor/v1",
+      version,
+      ecosystem: ECOSYSTEM_TOOLS.map((tool, i) => ({
+        ...tool,
+        installed: false,
+        status: "missing",
+        fix: fixes[i],
+      })),
+    });
+    const text = doctor(["--ecosystem"], 0, false);
+    expect(String(text).match(/Fix:/g)).toHaveLength(ECOSYSTEM_TOOLS.length);
+    expect(text).toContain("https://github.com/ashlrai/ashlr-plugin#install");
+    for (const fix of fixes) if (fix.command) expect(text).toContain(fix.command);
+  });
+
   test("--json without a project", () => {
     expect(doctor(["--json"], 1)).toMatchSnapshot();
   });

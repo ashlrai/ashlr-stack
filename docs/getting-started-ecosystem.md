@@ -68,6 +68,11 @@ stack exec --as personal -- bun dev   # needs a .stack.toml (run `stack init` fi
 
 `stack doctor --ecosystem` reports older installed tools as `installed, but too old to answer --ashlr-handshake`. That is expected for locus 0.5.0 and phantom-secrets 0.7.9.
 
+Run `stack doctor --ecosystem --json` for the same report in JSON. The `schema` is
+`ashlr.stack.doctor/v1`; `version` identifies the Stack CLI. Each `ecosystem` entry
+has an `installed` boolean and one `fix` object (`summary`, `command`), or `null`
+when no fix is suggested. Missing tools show the same fix in terminal output.
+
 ## 4. ashlr plugin
 
 Install for your host as described in the [ashlr-plugin README](https://github.com/ashlrai/ashlr-plugin#install) (Claude Code one-liner, or the Codex marketplace steps). From a source checkout you can run the doctor directly:
