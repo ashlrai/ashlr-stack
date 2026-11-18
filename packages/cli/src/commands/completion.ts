@@ -1,5 +1,6 @@
 import { listProviderNames, listTemplates } from "@ashlr/stack-core";
 import { defineCommand } from "citty";
+import { EXIT_CODES } from "../exit-codes.ts";
 
 /**
  * `stack completion <shell>` — emit a shell completion script. Runtime-static
@@ -266,7 +267,7 @@ export const completionCommand = defineCommand({
     else if (shell === "fish") process.stdout.write(emitFish(providers, templates));
     else {
       process.stderr.write(`Unsupported shell: ${shell}. Use bash, zsh, or fish.\n`);
-      process.exit(1);
+      process.exit(EXIT_CODES.ERROR);
     }
   },
 });

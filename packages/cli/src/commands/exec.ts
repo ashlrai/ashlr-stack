@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import { constants } from "node:os";
 import { assertPhantomInstalled, hasConfig } from "@ashlr/stack-core";
 import { defineCommand } from "citty";
+import { EXIT_CODES } from "../exit-codes.ts";
 import { runAgentPreflight } from "../lib/agent-preflight.ts";
 import { expectRefusal, parseExecArgv, readPinnedAlias } from "../lib/locus-identity.ts";
 import { colors } from "../ui.ts";
@@ -12,7 +13,7 @@ import { colors } from "../ui.ts";
  */
 function fail(message: string): void {
   process.stderr.write(`${colors.red(`[stack exec] ${message}`)}\n`);
-  process.exit(1);
+  process.exit(EXIT_CODES.ERROR);
 }
 
 const FORWARDED_SIGNALS: NodeJS.Signals[] = ["SIGINT", "SIGTERM", "SIGHUP"];
@@ -43,7 +44,7 @@ export function shouldRelaySignal(signal: NodeJS.Signals, onTerminal: boolean): 
 function exitCodeFor(code: number | null, signal: NodeJS.Signals | null): number {
   if (code !== null) return code;
   if (signal) return 128 + (constants.signals[signal] ?? 0);
-  return 1;
+  return EXIT_CODES.ERROR;
 }
 
 /**
@@ -108,7 +109,7 @@ export const execCommand = defineCommand({
     if (preflight.message)
       process.stderr.write(`${colors.dim(`[stack exec] ${preflight.message}`)}\n`);
     if (preflight.refuse) {
-      process.exitCode = 1;
+      process.exitCode = EXIT_CODES.ERROR;
       return;
     }
 
@@ -135,7 +136,7 @@ export const execCommand = defineCommand({
     child.on("close", (code, signal) => {
       for (const [sig, handler] of handlers) process.off(sig, handler);
       const exitCode = exitCodeFor(code, signal);
-      if (exitCode !== 0) {
+      if (exitCode !== EXIT_CODES.OK) {
         const how = signal ? `was killed by ${signal}` : `exited ${code}`;
         process.stderr.write(colors.dim(`\n[stack exec] phantom exec ${how}\n`));
       }

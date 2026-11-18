@@ -7,6 +7,7 @@ import {
   undoOnboarding,
 } from "@ashlr/stack-core";
 import { defineCommand } from "citty";
+import { EXIT_CODES } from "../exit-codes.ts";
 import { colors } from "../ui.ts";
 
 function label(p: OnboardEntryPlan): string {
@@ -58,12 +59,12 @@ export const onboardCommand = defineCommand({
           for (const x of r.refused)
             console.log(`  ${colors.yellow("refused")} ${x.entry.client}: ${x.reason}`);
         }
-        if (r.refused.length > 0) process.exitCode = 1;
+        if (r.refused.length > 0) process.exitCode = EXIT_CODES.ERROR;
       } catch (err) {
         const message = (err as Error).message;
         if (args.json) console.log(JSON.stringify({ error: message }));
         console.error(colors.red(message));
-        process.exitCode = 1;
+        process.exitCode = EXIT_CODES.ERROR;
       }
       return;
     }
@@ -81,7 +82,7 @@ export const onboardCommand = defineCommand({
         const message = `Unknown client: ${bad.join(", ") || "(none)"}. Use: ${AGENT_CLIENTS.join(", ")}.`;
         if (args.json) console.log(JSON.stringify({ error: message }));
         console.error(colors.red(message));
-        process.exitCode = 1;
+        process.exitCode = EXIT_CODES.ERROR;
         return;
       }
     }
@@ -106,7 +107,8 @@ export const onboardCommand = defineCommand({
             : "\n  Nothing to change.\n",
         );
       }
-      if (planOnboarding(opts).some((p) => p.state === "error")) process.exitCode = 1;
+      if (planOnboarding(opts).some((p) => p.state === "error"))
+        process.exitCode = EXIT_CODES.ERROR;
       return;
     }
 
@@ -121,6 +123,6 @@ export const onboardCommand = defineCommand({
       for (const p of r.verified) console.log(`  ${p.client.padEnd(7)} ${label(p)}`);
       if (r.written.length === 0) console.log("  Nothing to change.");
     }
-    if (r.verified.some((p) => p.state === "error")) process.exitCode = 1;
+    if (r.verified.some((p) => p.state === "error")) process.exitCode = EXIT_CODES.ERROR;
   },
 });

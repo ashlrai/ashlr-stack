@@ -9,6 +9,7 @@ import {
   readConfig,
 } from "@ashlr/stack-core";
 import { defineCommand } from "citty";
+import { EXIT_CODES } from "../exit-codes.ts";
 import { colors, intro, logEvent, outro, outroError, prompts } from "../ui.ts";
 
 /**
@@ -122,7 +123,7 @@ async function readVaultNames(): Promise<Set<string> | null> {
 async function runInfoJson(service: string): Promise<void> {
   const fail = (error: string) => {
     process.stdout.write(`${JSON.stringify({ error })}\n`);
-    process.exitCode = 1;
+    process.exitCode = EXIT_CODES.ERROR;
   };
   let entry: ServiceEntry | undefined;
   try {

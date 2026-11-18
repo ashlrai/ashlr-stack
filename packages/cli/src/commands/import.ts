@@ -16,6 +16,7 @@ import {
   writeConfig,
 } from "@ashlr/stack-core";
 import { defineCommand } from "citty";
+import { EXIT_CODES } from "../exit-codes.ts";
 import { colors, intro, outro, outroError, prompts } from "../ui.ts";
 
 /** Validate the whole file before importing, without including values in errors. */
@@ -186,7 +187,7 @@ async function runImportJson(from: string, dryRun: boolean): Promise<void> {
   const stored: string[] = [];
   const fail = (error: string) => {
     process.stdout.write(`${JSON.stringify(stored.length > 0 ? { error, stored } : { error })}\n`);
-    process.exitCode = 1;
+    process.exitCode = EXIT_CODES.ERROR;
   };
   try {
     const envPath = join(process.cwd(), from);

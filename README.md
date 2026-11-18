@@ -275,6 +275,20 @@ Root options go before a command; other options go after the command shown. Use 
 | `stack completion` | - |
 | `stack upgrade` | `--apply`, `-n`, `--dryRun`, `--json` |
 
+## Exit codes
+
+| Code | Meaning |
+| --- | --- |
+| 0 | The command succeeded. |
+| 1 | The command failed, including wrong or missing input. |
+| 2 | A doctor check found issues; reserved also for items not found. |
+| 3 | Reserved for an action that is not allowed. |
+| 4 | Reserved for a service that is unavailable. |
+
+Existing commands may report different kinds of failure with code 1. `stack exec`
+returns the wrapped command's exit code, or 128 plus the signal number if it
+was stopped by a signal.
+
 ## MCP tools
 
 Project-scoped tools take an absolute `cwd`. Catalog, registry, template, and upgrade tools reject `cwd`. The server can also list up to three resources when the files exist: `stack://current/.stack.toml`, `stack://current/.stack.local.toml`, and `stack://current/.mcp.json`.

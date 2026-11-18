@@ -3,6 +3,7 @@ import { writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { findProviderRef, isPhantomInstalled, listSecrets, readConfig } from "@ashlr/stack-core";
 import { defineCommand, runCommand } from "citty";
+import { EXIT_CODES } from "../exit-codes.ts";
 import { requirePhantom } from "../lib/phantom-preflight.ts";
 import { colors, intro, outro, outroError } from "../ui.ts";
 
@@ -65,7 +66,7 @@ const envShowCommand = defineCommand({
 async function runEnvShowJson(env: string): Promise<void> {
   const fail = (error: string) => {
     process.stdout.write(`${JSON.stringify({ error })}\n`);
-    process.exitCode = 1;
+    process.exitCode = EXIT_CODES.ERROR;
   };
   try {
     if (!(await isPhantomInstalled())) {
@@ -102,7 +103,7 @@ async function runEnvShowJson(env: string): Promise<void> {
 async function runEnvDiffJson(): Promise<void> {
   const fail = (error: string) => {
     process.stdout.write(`${JSON.stringify({ error })}\n`);
-    process.exitCode = 1;
+    process.exitCode = EXIT_CODES.ERROR;
   };
   try {
     if (!(await isPhantomInstalled())) {
@@ -122,7 +123,7 @@ async function runEnvDiffJson(): Promise<void> {
       totals: { declared: declared.size, missing: missing.length },
     };
     process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
-    if (missing.length > 0) process.exitCode = 1;
+    if (missing.length > 0) process.exitCode = EXIT_CODES.ERROR;
   } catch (err) {
     fail((err as Error).message);
   }

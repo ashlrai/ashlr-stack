@@ -11,6 +11,7 @@ import {
   writeConfig,
 } from "@ashlr/stack-core";
 import { defineCommand } from "citty";
+import { EXIT_CODES } from "../exit-codes.ts";
 import { requirePhantom } from "../lib/phantom-preflight.ts";
 import { colors, intro, outro, outroError, prompts, spinnerBridge } from "../ui.ts";
 
@@ -83,7 +84,7 @@ export const scanCommand = defineCommand({
     if (problem) {
       if (isJson) {
         console.error(problem);
-        process.exit(1);
+        process.exit(EXIT_CODES.ERROR);
       }
       outroError(problem);
       return;
@@ -110,7 +111,7 @@ export const scanCommand = defineCommand({
     if (problem) {
       if (isJson) {
         console.error(problem);
-        process.exit(1);
+        process.exit(EXIT_CODES.ERROR);
       }
       outroError(problem);
       return;
@@ -219,7 +220,7 @@ export const scanCommand = defineCommand({
           spinner.stop(`${colors.green("●")} ${h.provider} → ${result.displayName}`);
         } catch (err) {
           spinner.stop(colors.red(`✗ ${h.provider}: ${(err as Error).message}`));
-          process.exitCode = 1;
+          process.exitCode = EXIT_CODES.ERROR;
         }
         continue;
       }

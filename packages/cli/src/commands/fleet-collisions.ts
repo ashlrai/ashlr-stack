@@ -1,4 +1,5 @@
 import { defineCommand } from "citty";
+import { EXIT_CODES } from "../exit-codes.ts";
 import { readFleetText } from "../lib/fleet-jsonl.ts";
 
 /** One repository per snapshot; duplicate PR/file rows must not inflate heat. */
@@ -60,7 +61,7 @@ export const fleetCollisionsCommand = defineCommand({
       console.log(JSON.stringify(collectFleetCollisions(JSON.parse(text))));
     } catch {
       console.error("fleet-collisions: cannot read PR JSON; require number,state,mergeable,files.");
-      process.exitCode = 1;
+      process.exitCode = EXIT_CODES.ERROR;
     }
   },
 });

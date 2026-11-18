@@ -1,5 +1,6 @@
 import { PROVIDER_CATEGORIES, getProvider, listProviderNames } from "@ashlr/stack-core";
 import { defineCommand } from "citty";
+import { EXIT_CODES } from "../exit-codes.ts";
 import { colors, intro, outroError } from "../ui.ts";
 
 interface ProviderRow {
@@ -88,7 +89,7 @@ export const providersCommand = defineCommand({
         const message = unknownCategoryMessage(String(args.category));
         if (args.json) {
           console.log(JSON.stringify({ error: message }));
-          process.exitCode = 1;
+          process.exitCode = EXIT_CODES.ERROR;
           return;
         }
         outroError(message);
