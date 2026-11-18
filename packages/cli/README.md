@@ -77,8 +77,8 @@ A guide to common commands; check your installed version's help for availability
 | Command | What it does |
 | --- | --- |
 | `stack init [--template]` | Write Stack configuration in the current directory; optionally provision preset services |
-| `stack add [service]` | Add a provider (OAuth + provision + write secrets) |
-| `stack remove <service>` | Remove local vault entries, MCP wiring and configuration (or use `--all`); this CLI does not deprovision upstream resources |
+| `stack add [service]` | Attempt provider-specific authentication, provisioning and selected secret/config/MCP writes; inspect partial results |
+| `stack remove <service> [--json]` | Remove local MCP wiring and configuration and attempt vault removal (or use `--all`); JSON reports retained names in `secrets_kept`, and upstream resources are always retained |
 | `stack list [--json]` | Show services wired into this project; `--json` prints `ashlr.stack.list/v1` |
 | `stack info <service>` | Deep-dive on one service (resource, region, docs, MCP name) |
 | `stack status [--json]` | Phantom, services and config at a glance; `--json` prints a stable report (schema `ashlr.stack.status/v1`, secret names only) |
@@ -92,7 +92,7 @@ A guide to common commands; check your installed version's help for availability
 | `stack env show` / `stack env diff` | Effective env-var surface vs vault vs config |
 | `stack env export --example` | Write a separate `.env.example` with empty values; `--stdout` previews it |
 | `stack exec -- <cmd>` | Forward to the installed `phantom exec` runtime |
-| `stack projects list|register|remove|where` | Cross-project registry; `projects list --json` prints `ashlr.stack.projects/v1` |
+| `stack projects list`, `stack projects register`, `stack projects remove <name>`, `stack projects where <name>` | Cross-project registry; `stack projects list --json` prints `ashlr.stack.projects/v1` |
 | `stack ci init` | Inspect unavailable CI health workflow generation; exits nonzero without writing a workflow |
 | `stack completion <bash\|zsh\|fish>` | Emit a shell-completion script |
 | `stack upgrade` | Check npm for a newer release; `--apply` upgrades an npm global CLI with rollback |

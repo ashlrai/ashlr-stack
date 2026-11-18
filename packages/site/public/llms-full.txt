@@ -135,7 +135,7 @@ Choose a provider, or use the interactive picker when omitted. Authentication us
 
 ### `stack remove <provider> [--keep-remote]`
 
-Remove the service's local vault entries, MCP wiring and Stack configuration. The current CLI does not call provider deprovisioning; `--keep-remote` is parsed but is not proof of remote cleanup. Confirm the local target and inspect partial outcomes. `--all` and `--all-orphans` select broader local removal. `--json` never prompts and prints one object (schema `ashlr.stack.remove/v1`) whose `secrets_kept` names the secrets Phantom left stored; Phantom removes nothing without an attached terminal, so headless callers should show those names to the user for `phantom remove`.
+Remove the service's local MCP wiring and Stack configuration and attempt vault removal. Upstream resources are always retained; `--keep-remote` is a compatibility flag. Confirm the local target and inspect partial outcomes. `--all` selects every configured service; `--all-orphans` selects services absent from scanner evidence, which does not prove a service is unused. `--json` never prompts and prints one object (schema `ashlr.stack.remove/v1`) whose `secrets_kept` names the secrets Phantom left stored; Phantom removes nothing without an attached terminal, so headless callers should show those names to the user for `phantom remove`. Phantom must be installed when the service declares secrets, even for local removal.
 
 ### `stack list`
 
@@ -423,7 +423,7 @@ The source declares these 19 tools. They are a subset of CLI commands; use each 
 - `stack_apply` — `{ recipe_id: string, no_wire?: boolean, cwd?: string }`
 `cwd?: string` is an absolute path to an existing project directory; the tool runs `stack` there instead of in the server's working directory (use it when the client starts the server outside the project). A relative path, a missing path or a file is refused before anything runs. Tools without `cwd` in their signature refuse it.
 
-The MCP wrapper forwards CLI stdout and stderr as text content and sets `isError` from the exit result. Individual commands may emit JSON; there is no universal structured receipt, sandbox or redaction guarantee. The server needs `stack` on PATH or an explicit `STACK_BIN`.
+The MCP wrapper forwards CLI stdout and stderr as text content and sets `isError` from the exit result. Individual commands may emit JSON; there is no universal structured receipt, sandbox or redaction guarantee. CLI resolution tries `STACK_BIN`, the installed `@ashlr/stack` dependency's bin, then `stack` on PATH. For source use, build `packages/cli` first or set `STACK_BIN`.
 
 ---
 
@@ -529,7 +529,7 @@ Claude: [calls stack_add { service: "supabase" } via MCP] → provider authentic
 - **Credential boundaries.** Stack handles credentials in memory during setup and uses Phantom Secrets for selected persistent entries. Providers use credentials in requests, imports read existing plaintext files, and MCP forwards CLI text and configured resources. These interfaces do not establish a general redaction or sandbox boundary. Use `stack env show` or `stack env diff` for name/presence checks, and `stack env export --example` for an empty skeleton.
 - **Per-clone resources.** `.stack.local.toml` is unique per clone. Two developers on the same repo may have different Supabase project IDs; `.stack.toml` is identical across clones.
 - **Doctor reports need inspection.** `--fix` attempts supported repair. Existing vault names can skip remediation; name presence does not prove valid credentials or a healthy provider.
-- **Local removal.** The current `stack remove` CLI clears selected local vault/config/MCP entries; it does not deprovision upstream resources. Verify local removal and remote state separately.
+- **Local removal.** `stack remove` clears local config/MCP entries and attempts vault removal; inspect `secrets_kept` in JSON mode for retained vault names. It always retains upstream resources.
 - **Pre-alpha.** Do not use Stack for production secret management yet. Evaluate Phantom independently. APIs may change.
 - **MCP subset.** Each advertised tool delegates to the CLI with its specific schema; not every CLI command or flag is exposed.
 - **License.** MIT source license; provider accounts have separate terms.

@@ -84,4 +84,24 @@ Cursor (`~/.cursor/mcp.json` or `.mcp.json`):
 
 Do not paste these until the user has named the project and the provider. They can contact a provider or store secrets. Check `phantom status --json` first. The command names are `stack add`, `stack apply`, `stack import`, and `stack onboard --apply`.
 
+## Remove local service wiring
+
+After choosing the project and service to unlink, run from that project's directory:
+
+```bash
+stack remove supabase --json
+```
+
+This changes local Stack configuration and MCP wiring. It never deletes the
+upstream resource. `--keepRemote` is a compatibility flag; upstream resources
+are retained with or without it. The command requires Phantom when the service
+declares secrets.
+
+The `ashlr.stack.remove/v1` report includes `removed`, `secrets_kept` and
+`upstream_kept`. Inspect `secrets_kept` even after exit 0: JSON mode never
+prompts, and Phantom can retain those vault entries. Remove unneeded secrets
+separately with `phantom remove <name>` in your terminal. `--all` selects every
+configured service; `--allOrphans` selects services absent from scanner evidence,
+which is a heuristic rather than proof that a service is unused.
+
 Model host overrides: [model-endpoints.md](model-endpoints.md).

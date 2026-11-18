@@ -15,7 +15,7 @@ New here? Start with the [good first issue](https://github.com/ashlrai/ashlr-sta
 
 ```bash
 bun install
-bun test                                    # full suite (bun's test runner)
+HOME=$(mktemp -d) bun test                   # full suite, isolated home
 bunx tsc --noEmit -p tsconfig.json          # typecheck
 bun run lint                                # biome check .
 bun run packages/cli/src/index.ts providers # smoke CLI

@@ -109,6 +109,19 @@ function examples(document: string): { text: string; runnable: boolean }[] {
     text: m[1]!,
     runnable: false,
   }));
+  // README illustrations ship command examples too. Decode XML entities so
+  // quoted queries and escaped shell characters use the same validation.
+  for (const [, text] of document.matchAll(/<text\b[^>]*>([^<]*)<\/text>/g)) {
+    code.push({
+      text: text!
+        .replace(/&quot;/g, '"')
+        .replace(/&apos;/g, "'")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&amp;/g, "&"),
+      runnable: true,
+    });
+  }
   for (const [, block] of document.matchAll(
     /```(?:bash|sh|shell|console|powershell)\n([\s\S]*?)```/g,
   )) {
@@ -335,9 +348,16 @@ describe("source documentation freshness", () => {
     const files = [
       "README.md",
       "STACK.md",
+      "CONTRIBUTING.md",
       "llms.txt",
       ...walk("docs"),
       ...walk("templates"),
+      "packages/core/README.md",
+      "packages/cli/README.md",
+      "packages/mcp/README.md",
+      ...readdirSync(resolve(root, "docs/assets"))
+        .filter((name) => name.endsWith(".svg"))
+        .map((name) => `docs/assets/${name}`),
       "packages/site/public/llms.txt",
       "packages/site/public/llms-full.txt",
     ];
@@ -386,6 +406,12 @@ describe("source documentation freshness", () => {
     expect(examples("```bash\nnpx -y -p @ashlr/stack stack providers --jsn\n```")).toEqual([
       { text: "providers --jsn", runnable: true },
     ]);
+    expect(examples('<text x="10">stack recommend &quot;app with auth&quot; --json</text>')).toEqual([
+      { text: 'recommend "app with auth" --json', runnable: true },
+    ]);
+    const [illustratedTypo] = examples('<text x="10">stack providers --jsn</text>');
+    expect(illustratedTypo).toBeDefined();
+    await expect(validate(illustratedTypo!.text, illustratedTypo!.runnable)).rejects.toThrow();
   }, 120_000);
 
   test("table row extraction rejects missing, duplicate and empty sections", () => {

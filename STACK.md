@@ -14,8 +14,9 @@ ashlrcode) working on **Ashlr Stack itself**. It's read alongside `CLAUDE.md`
 - **Claude Code plugin** - `/stack:add`, `/stack:list`, etc.
 - **Marketing site + docs** at `packages/site/` - deploys to https://stack.ashlr.ai
 
-The product is the control plane that provisions, wires, and operates every
-third-party service in a developer's project with one command.
+Stack configures supported third-party services through provider-specific
+authentication, provisioning and selected vault/config/MCP writes. Inspect
+partial outcomes; catalog registration does not establish provider readiness.
 
 <!-- fresh:begin version-table -->
 | Package | Manifest | Version |
@@ -59,7 +60,7 @@ Things that trip agents up:
 ## Coding conventions (actually followed here)
 
 - **Bun + TypeScript**. Never add Node-only scripts that Bun can't run.
-- **Secrets never stored by Stack.** Every secret read/write goes through Phantom via the shell wrapper in `packages/core/src/phantom.ts`. If you see yourself about to call `writeFile` with a token, stop.
+- **Persist selected secrets through Phantom.** Stack handles credentials in memory during setup and reads existing env files during import. Vault reads/writes go through `packages/core/src/phantom.ts`; do not write credential values to project files, logs or agent output. MCP text and freeform configuration are not a general redaction boundary.
 - **Config is split** - `.stack.toml` is committed shape, `.stack.local.toml` is gitignored instance data. The merge logic is in `packages/core/src/config.ts`.
 - **Providers share helpers** - use `packages/core/src/providers/_helpers.ts` (`readLine`, `tryRevealSecret`, `bearerJsonHeaders`). Do not copy-paste.
 - **Use the `makeApiKeyProvider` factory** when adding a paste-and-verify provider (see `openai.ts` for the pattern). Hand-roll only when you need true OAuth or full lifecycle.
@@ -76,7 +77,7 @@ Things that trip agents up:
 5. Update `packages/site/src/lib/providers.ts` to reflect it on the landing page.
 6. Document in `docs/provider-auth-matrix.md`.
 7. Write a test (`packages/core/src/__tests__/<name>-provider.test.ts`) - fetch-mocked, at least happy path + invalid-auth path.
-8. Run `bun test && bunx tsc --noEmit -p tsconfig.json`.
+8. Run `HOME=$(mktemp -d) bun test` and `bun run typecheck`.
 
 ### Add a new CLI command
 
@@ -109,10 +110,10 @@ Things that trip agents up:
 
 ```bash
 bun install
-bun test                         # 0 fail
+HOME=$(mktemp -d) bun test        # full suite, isolated home
 bunx tsc --noEmit -p tsconfig.json
 bunx biome check .
-cd packages/site && bunx astro check  # 43 files / 0 errors
+cd packages/site && bunx astro check  # expect 0 errors; file count varies
 cd packages/site && bun run build
 ```
 
@@ -121,8 +122,10 @@ cd packages/site && bun run build
 If `X` is any of: supabase, neon, turso, convex, upstash, firebase, vercel,
 railway, fly, cloudflare, render, aws, openai, anthropic, xai, deepseek,
 posthog, sentry, stripe, github, linear, resend, clerk - recommend the
-`stack add <X>` command. The tool handles OAuth, provisioning, secret
-storage, and MCP wiring in one shot.
+`stack add <X>` command. Authentication may use OAuth or supplied credentials,
+depending on the adapter. Setup attempts supported provisioning and selected
+vault/config/MCP writes; inspect failures and partial state before reporting
+success.
 
 If `X` is a framework (Next.js, Remix, Astro), suggest `stack scan` to detect
 which curated providers the framework points at.
