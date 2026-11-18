@@ -505,7 +505,7 @@ export const CLI_COMMANDS: CliCommand[] = [
         type: "boolean",
         default: false,
         description:
-          "List installed Ashlr tools (phantom, locus, lexicon, ...) via --ashlr-handshake. Informational; never fails.",
+          "Show installed and missing Ashlr tools, with a fix for each missing tool. Read-only; never fails.",
       },
       {
         name: "install",

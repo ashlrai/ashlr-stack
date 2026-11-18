@@ -89,7 +89,7 @@ export const doctorCommand = defineCommand({
       type: "boolean",
       default: false,
       description:
-        "List installed Ashlr tools (phantom, locus, lexicon, ...) via --ashlr-handshake. Informational; never fails.",
+        "Show installed and missing Ashlr tools, with a fix for each missing tool. Read-only; never fails.",
     },
     install: {
       // Citty has no optional string values. Parse tool lists from rawArgs below;

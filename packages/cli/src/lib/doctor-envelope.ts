@@ -1,10 +1,11 @@
 /**
  * `ashlr.doctor` v1 wrapper for `stack doctor --json` (docs/ashlr-handshake.md,
  * "Doctor JSON"). Additive: the object Stack printed before keeps every field;
- * the wrapper adds kind, schema_version, tool, status (ok | warn | fail),
+ * the wrapper adds kind, schema, schema_version, CLI version, tool, status (ok | warn | fail),
  * native_status (Stack's own label) and checks. Exit codes do not change.
  */
-import type { EcosystemEntry } from "./ecosystem.ts";
+import { version } from "../../package.json";
+import { type EcosystemEntry, ecosystemFix } from "./ecosystem.ts";
 import { type NextStep, PROVIDERS_STEP } from "./next-step.ts";
 
 type DoctorStatus = "ok" | "warn" | "fail";
@@ -34,6 +35,8 @@ export function envelope<T extends object>(
   checks: DoctorCheck[],
 ): T & {
   kind: "ashlr.doctor";
+  schema: "ashlr.stack.doctor/v1";
+  version: string;
   schema_version: 1;
   tool: "ashlr-stack";
   status: DoctorStatus;
@@ -43,6 +46,8 @@ export function envelope<T extends object>(
   return {
     ...native,
     kind: "ashlr.doctor",
+    schema: "ashlr.stack.doctor/v1",
+    version,
     schema_version: 1,
     tool: "ashlr-stack",
     status,
@@ -123,7 +128,12 @@ export function ecosystemEnvelope<T extends { ecosystem: EcosystemEntry[] }>(nat
         ? `${e.name} ${e.version ?? "?"}${e.contract === "drift" ? " (contract drift)" : ""}`
         : `${e.name}: ${e.detail ?? e.status}`,
   }));
-  return envelope(native, worst(checks), "informational", checks);
+  const ecosystem = native.ecosystem.map((entry) => ({
+    ...entry,
+    installed: entry.status !== "missing",
+    fix: ecosystemFix(entry),
+  }));
+  return envelope({ ...native, ecosystem }, worst(checks), "informational", checks);
 }
 
 /** `--ecosystem --fix`: a run that stopped at a tool is fail. */

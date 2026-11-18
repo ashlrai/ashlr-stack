@@ -16,9 +16,11 @@ exports[`doctor CLI output snapshots --json without a project 1`] = `
     "command": "stack init",
     "summary": "Set up this project.",
   },
+  "schema": "ashlr.stack.doctor/v1",
   "schema_version": 1,
   "status": "fail",
   "tool": "ashlr-stack",
+  "version": "0.3.10",
 }
 `;
 
@@ -38,9 +40,11 @@ exports[`doctor CLI output snapshots --json without Phantom 1`] = `
     "command": "brew install ashlrai/phantom/phantom",
     "summary": "Install Phantom for secret storage.",
   },
+  "schema": "ashlr.stack.doctor/v1",
   "schema_version": 1,
   "status": "fail",
   "tool": "ashlr-stack",
+  "version": "0.3.10",
 }
 `;
 
@@ -66,9 +70,11 @@ exports[`doctor CLI output snapshots --json with no services 1`] = `
       "services": [],
     },
   ],
+  "schema": "ashlr.stack.doctor/v1",
   "schema_version": 1,
   "status": "warn",
   "tool": "ashlr-stack",
+  "version": "0.3.10",
 }
 `;
 
@@ -100,9 +106,11 @@ exports[`doctor CLI output snapshots --json with a failing service 1`] = `
       ],
     },
   ],
+  "schema": "ashlr.stack.doctor/v1",
   "schema_version": 1,
   "status": "fail",
   "tool": "ashlr-stack",
+  "version": "0.3.10",
 }
 `;
 
@@ -148,7 +156,9 @@ exports[`doctor CLI output snapshots --ecosystem --json with healthy, degraded, 
       ],
       "command": "phm",
       "contract": "ok",
+      "fix": null,
       "health": "ok",
+      "installed": true,
       "name": "phantom",
       "status": "ok",
       "version": "0.5.2",
@@ -156,6 +166,11 @@ exports[`doctor CLI output snapshots --ecosystem --json with healthy, degraded, 
     {
       "command": "phantom",
       "detail": "installed, but too old to answer --ashlr-handshake",
+      "fix": {
+        "command": "brew install ashlrai/phantom/phantom",
+        "summary": "Install Phantom for secret storage.",
+      },
+      "installed": true,
       "name": "phantom-secrets",
       "status": "no-handshake",
     },
@@ -166,7 +181,12 @@ exports[`doctor CLI output snapshots --ecosystem --json with healthy, degraded, 
       ],
       "command": "locus",
       "contract": "ok",
+      "fix": {
+        "command": "locus doctor --fix",
+        "summary": "Preview safe repairs for Locus.",
+      },
       "health": "degraded",
+      "installed": true,
       "name": "locus",
       "status": "ok",
       "version": "0.5.2",
@@ -180,6 +200,11 @@ exports[`doctor CLI output snapshots --ecosystem --json with healthy, degraded, 
         "missing field command",
         "missing field protocols",
       ],
+      "fix": {
+        "command": "stack doctor --ecosystem --install lexicon",
+        "summary": "Show the install or update plan for lexicon.",
+      },
+      "installed": true,
       "name": "lexicon",
       "status": "ok",
       "version": "0.1.0",
@@ -187,12 +212,22 @@ exports[`doctor CLI output snapshots --ecosystem --json with healthy, degraded, 
     {
       "command": "mdopener-mcp",
       "detail": "not installed",
+      "fix": {
+        "command": "stack doctor --ecosystem --install ashlr-md",
+        "summary": "Show the install or update plan for ashlr-md.",
+      },
+      "installed": false,
       "name": "ashlr-md",
       "status": "missing",
     },
     {
       "command": "ashlr-plugin",
       "detail": "not installed",
+      "fix": {
+        "command": null,
+        "summary": "Install or update the plugin for your host: https://github.com/ashlrai/ashlr-plugin#install",
+      },
+      "installed": false,
       "name": "ashlr-plugin",
       "status": "missing",
     },
@@ -203,9 +238,11 @@ exports[`doctor CLI output snapshots --ecosystem --json with healthy, degraded, 
     "upgrade lexicon: its \`lexicon --ashlr-handshake\` does not match the v1 contract (missing field name); see docs/ashlr-handshake.md",
     "locus doctor --fix   # preview safe repairs (writes nothing); add --apply to make them",
   ],
+  "schema": "ashlr.stack.doctor/v1",
   "schema_version": 1,
   "status": "warn",
   "tool": "ashlr-stack",
+  "version": "0.3.10",
 }
 `;
 
@@ -213,10 +250,13 @@ exports[`doctor CLI output snapshots --ecosystem human output with the same fake
 "Ashlr ecosystem
   ok   phantom 0.5.2 [doctor-json, doctor-fix]
   --   phantom-secrets (phantom): installed, but too old to answer --ashlr-handshake
+       Fix: Install Phantom for secret storage. Run \`brew install ashlrai/phantom/phantom\`.
   ok   locus 0.5.2 [doctor-json, doctor-fix] (health: degraded)
   !!   lexicon 0.1.0 (contract drift: 3 problems)
   --   ashlr-md (mdopener-mcp): not installed
+       Fix: Show the install or update plan for ashlr-md. Run \`stack doctor --ecosystem --install ashlr-md\`.
   --   ashlr-plugin (ashlr-plugin): not installed
+       Fix: Install or update the plugin for your host: https://github.com/ashlrai/ashlr-plugin#install
 
   Next steps:
     upgrade lexicon: its \`lexicon --ashlr-handshake\` does not match the v1 contract (missing field name); see docs/ashlr-handshake.md

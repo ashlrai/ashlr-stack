@@ -4,6 +4,7 @@ import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { version as cliVersion } from "../../package.json";
 
 import {
   FIX_TOOLS,
@@ -296,9 +297,21 @@ describe.skipIf(process.platform === "win32")("doctor --fix with fake companions
     expect(prev.status).toBe(0);
     const doc = JSON.parse(prev.stdout);
     // The ashlr.doctor v1 wrapper is additive; the native report is unchanged.
-    const { kind, schema_version, tool: _tool, status, native_status, checks, ...native } = doc;
-    expect({ kind, schema_version, status, native_status }).toEqual({
+    const {
+      kind,
+      schema,
+      version,
+      schema_version,
+      tool: _tool,
+      status,
+      native_status,
+      checks,
+      ...native
+    } = doc;
+    expect({ kind, schema, version, schema_version, status, native_status }).toEqual({
       kind: "ashlr.doctor",
+      schema: "ashlr.stack.doctor/v1",
+      version: cliVersion,
       schema_version: 1,
       status: "ok",
       native_status: "preview",
