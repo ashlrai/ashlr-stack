@@ -58,6 +58,10 @@ describe("stack doctor output on a pipe", () => {
     expect(code).toBe(1);
     for (const name of names) expect(stdout).toContain(`${name}: No provider registered`);
     expect(stdout).toContain("One or more services failed.");
+    expect(stdout).toContain(
+      "Next step: Try repairing the failed services. Run `stack doctor --fix`.",
+    );
+    expect(stdout.match(/Next step:/g)).toHaveLength(1);
   });
 
   it("with no services, says there is nothing to check instead of 'healthy'", () => {
@@ -66,6 +70,6 @@ describe("stack doctor output on a pipe", () => {
     expect(code).toBe(0);
     expect(stdout).not.toContain("All services healthy");
     expect(stdout).toContain("No services to check");
-    expect(stdout).toContain("stack add <provider>");
+    expect(stdout).toContain("Next step: Choose a service to add. Run `stack providers`.");
   });
 });

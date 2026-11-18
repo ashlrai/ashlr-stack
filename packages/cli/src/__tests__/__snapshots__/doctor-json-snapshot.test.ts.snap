@@ -12,6 +12,10 @@ exports[`doctor CLI output snapshots --json without a project 1`] = `
   "error": "No .stack.toml at <project>/.stack.toml. Run \`stack init\` first.",
   "kind": "ashlr.doctor",
   "native_status": "error",
+  "next_step": {
+    "command": "stack init",
+    "summary": "Set up this project.",
+  },
   "schema_version": 1,
   "status": "fail",
   "tool": "ashlr-stack",
@@ -30,6 +34,10 @@ exports[`doctor CLI output snapshots --json without Phantom 1`] = `
   "error": "Phantom is not installed. Stack cannot verify secrets without it.",
   "kind": "ashlr.doctor",
   "native_status": "error",
+  "next_step": {
+    "command": "brew install ashlrai/phantom/phantom",
+    "summary": "Install Phantom for secret storage.",
+  },
   "schema_version": 1,
   "status": "fail",
   "tool": "ashlr-stack",
@@ -47,6 +55,10 @@ exports[`doctor CLI output snapshots --json with no services 1`] = `
   ],
   "kind": "ashlr.doctor",
   "native_status": "passed",
+  "next_step": {
+    "command": "stack providers",
+    "summary": "Choose a service to add.",
+  },
   "reports": [
     {
       "path": "<project>",
@@ -71,6 +83,10 @@ exports[`doctor CLI output snapshots --json with a failing service 1`] = `
   ],
   "kind": "ashlr.doctor",
   "native_status": "failed",
+  "next_step": {
+    "command": "stack doctor --fix",
+    "summary": "Try repairing the failed services.",
+  },
   "reports": [
     {
       "path": "<project>",

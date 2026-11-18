@@ -146,6 +146,7 @@ describe("stack status --json", () => {
     expect(code).toBe(0);
     const report = JSON.parse(stdout);
     expect(report.schema).toBe("ashlr.stack.status/v1");
+    expect(report.next_step).toEqual({ summary: "Check your services.", command: "stack doctor" });
     expect(report.config).toEqual({ present: true, project_id: "stk_test0001", template: null });
     expect(report.phantom).toEqual({ installed: true, secret_count: 2 });
     expect(report.services).toEqual([
@@ -215,7 +216,7 @@ describe("stack status --json", () => {
     expect(typeof JSON.parse(stdout).error).toBe("string");
   });
 
-  test("human output is unchanged without --json", () => {
+  test("human output keeps the existing summary and adds one next step", () => {
     const { stdout, code } = runStatus(project(), [], "two");
     expect(code).toBe(0);
     expect(() => JSON.parse(stdout)).toThrow();
@@ -224,6 +225,8 @@ describe("stack status --json", () => {
     expect(stdout).toContain("phantom           2 secrets in vault");
     expect(stdout).toContain("services          2 configured");
     expect(stdout).toMatch(/· supabase\s+abcd1234/);
+    expect(stdout).toContain("Next step: Check your services. Run `stack doctor`.");
+    expect(stdout.match(/Next step:/g)).toHaveLength(1);
   });
 });
 

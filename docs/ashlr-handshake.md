@@ -92,6 +92,15 @@ the file and pin in each tool.
 
 ## Doctor JSON: the `ashlr.doctor` v1 wrapper
 
+`stack status` and the default service check, `stack doctor`, end with one
+plain-language next step. Their JSON reports expose the same typed `next_step`
+object: `{ "summary": "Check your services.", "command": "stack doctor" }`.
+This is additive to `ashlr.stack.status/v1` and `ashlr.doctor` schema version 1;
+existing fields and exit codes remain unchanged. `command` is null when the
+step needs no command, including a healthy doctor's "No action needed."
+Status checks configuration; run its suggested `stack doctor` to check services.
+Suggestions never execute automatically. Other doctor modes keep their existing output.
+
 Every tool's machine-readable doctor output carries one shared wrapper, so a
 cross-tool doctor reads the same five fields everywhere. The rules are the
 `doctor` section of `contract/ashlr-handshake.v1.json`.
