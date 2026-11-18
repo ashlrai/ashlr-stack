@@ -4,6 +4,22 @@
 
 This is the repo entry point for agents. The published short index is https://stack.ashlr.ai/llms.txt and the full reference is https://stack.ashlr.ai/llms-full.txt. In this checkout those files are `packages/site/public/llms.txt` and `packages/site/public/llms-full.txt`.
 
+## Part of the Ashlr ecosystem
+
+Stack is one tool in the Ashlr ecosystem. Together these tools aim to be an autonomous, code-first, agent-native software factory, chasing open-source RSI (recursive self-improvement). Agents do the work, and the human acts as a passive board member. Stack is the service layer: it turns provider setup into commands an agent can run and parse.
+
+- Phantom (`@ashlr/phantom`, command `phm`): runs the agents that improve these repos, for example `phm improve`.
+- [Phantom Secrets](https://github.com/ashlrai/phantom-secrets) (`phantom`): the vault. Stack stores the secrets you select here.
+- [Locus](https://github.com/ashlrai/locus) (`locus`): identity plane. Pins which account a session acts as; `stack exec --as` uses it.
+- [Lexicon](https://github.com/ashlrai/lexicon) (`lexicon`): voice lexicon. Keeps dictated names spelled right.
+- [Ashlr Markdown](https://github.com/ashlrai/ashlr-md) (`mdopener-mcp`): desktop Markdown app with an MCP server.
+- [Ashlr plugin](https://github.com/ashlrai/ashlr-plugin) (`ashlr-plugin`): plugin for Claude Code and Codex.
+- Ashlr Stack (`stack`): configures services and wires them into agents.
+
+`stack doctor --ecosystem --install` prints install commands for missing tools and runs nothing.
+
+Agents (Phantom and other coding agents) work on this repo through branches and pull requests that merge once required checks pass. Their rules and kept limits are in [AGENTS.md](https://github.com/ashlrai/ashlr-stack/blob/main/AGENTS.md).
+
 ## Read-only commands
 
 No account. These print JSON and write nothing. Node.js 20 or newer matches the engines field of the published 0.3.10 packages.
