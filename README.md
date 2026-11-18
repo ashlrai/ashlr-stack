@@ -92,6 +92,24 @@ That adds `/stack:add`, `/stack:apply`, `/stack:doctor`, `/stack:list`, `/stack:
 2. **Authorize.** A later write uses that provider's OAuth, a personal access token, or an API key you supply. Vercel does not get a new token from Stack.
 3. **Record.** When you ask Stack to add a service, it stores selected secrets in Phantom, writes `.stack.toml` (committed shape) and `.stack.local.toml` (gitignored ids), and can add provider MCP entries. It does not generate your app or a filled `.env`. `stack env export --example` writes an empty `KEY=` file at `.env.example`.
 
+## Part of the Ashlr ecosystem
+
+Stack is one tool in the Ashlr ecosystem. Together these tools aim to be an autonomous, code-first, agent-native software factory, chasing open-source RSI (recursive self-improvement). Agents do the work, and the human acts as a passive board member. Stack's job in that factory is the service layer: it turns provider setup into commands an agent can run and parse.
+
+| Tool | Command | Role |
+|---|---|---|
+| Phantom (`@ashlr/phantom`) | `phm` | Runs the agents that improve these repos, for example `phm improve`. |
+| [Phantom Secrets](https://github.com/ashlrai/phantom-secrets) | `phantom` | Vault. Stack stores the secrets you select here. |
+| [Locus](https://github.com/ashlrai/locus) | `locus` | Identity plane. Pins which account a session acts as; `stack exec --as` uses it. |
+| [Lexicon](https://github.com/ashlrai/lexicon) | `lexicon` | Voice lexicon. Keeps dictated names spelled right. |
+| [Ashlr Markdown](https://github.com/ashlrai/ashlr-md) | `mdopener-mcp` | Desktop Markdown app with an MCP server. |
+| [Ashlr plugin](https://github.com/ashlrai/ashlr-plugin) | `ashlr-plugin` | Plugin for Claude Code and Codex. |
+| Ashlr Stack (this repo) | `stack` | Configures services and wires them into agents. |
+
+`stack doctor --ecosystem` shows which of these are installed, with versions. It is read-only and never fails. `stack doctor --ecosystem --install` prints install commands for missing tools and runs nothing. A full walkthrough is in [docs/getting-started-ecosystem.md](docs/getting-started-ecosystem.md).
+
+**How agents work on this repo.** Phantom and other coding agents open branches and pull requests here and merge them once required checks pass, without a manual approval step. The rules they follow, and the few limits they keep (secrets, billing, force-push), are in [AGENTS.md](AGENTS.md). Build and test steps are in [STACK.md](STACK.md#agent-quickstart-from-a-clone).
+
 ## Features
 
 ![JSON CLI, one MCP server, and the llms.txt indexes](docs/assets/readme-features.svg)
@@ -361,7 +379,7 @@ If this is the control plane you want agents to find, star the repo: [github.com
 
 Issues and PRs are welcome. Look for [`good first issue`](https://github.com/ashlrai/ashlr-stack/labels/good%20first%20issue) to get started, and read [CONTRIBUTING.md](CONTRIBUTING.md). For questions and bug reports, see [SUPPORT.md](SUPPORT.md). Report security problems privately per [SECURITY.md](SECURITY.md).
 
-Ashlr Stack is one of the open-source tools from [Ashlr](https://ashlr.ai). Siblings: [Lexicon](https://github.com/ashlrai/lexicon), [Locus](https://github.com/ashlrai/locus), [Phantom Secrets](https://github.com/ashlrai/phantom-secrets), [Ashlr Markdown](https://github.com/ashlrai/ashlr-md), [Ashlr plugin](https://github.com/ashlrai/ashlr-plugin). The site is [stack.ashlr.ai](https://stack.ashlr.ai).
+Ashlr Stack is one of the open-source tools from [Ashlr](https://ashlr.ai). See [Part of the Ashlr ecosystem](#part-of-the-ashlr-ecosystem) for the sibling tools. The site is [stack.ashlr.ai](https://stack.ashlr.ai).
 
 ## License
 
