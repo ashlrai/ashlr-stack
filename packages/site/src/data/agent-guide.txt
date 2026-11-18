@@ -88,7 +88,7 @@ The following examples are a subset. This source registers {{PROVIDER_COUNT}} pr
 
 - `stack init [--template <slug>]` - write Stack config in the current project; optionally provision preset services. It does not generate an application or `.env`.
 - `stack add <provider>` - provision a single service and wire it.
-- `stack remove <provider>` - remove selected local vault entries, MCP wiring and config; current CLI does not deprovision upstream resources.
+- `stack remove <provider> [--json]` - remove local MCP wiring and config and attempt vault removal; JSON reports retained names in `secrets_kept`. Upstream resources are always retained.
 - `stack list` - services wired in the current project.
 - `stack providers` - full catalog of supported providers.
 - `stack templates list` - list provider presets; `templates apply <name>` applies one.
@@ -166,7 +166,7 @@ Auth matrix (which OAuth flow each provider uses): https://github.com/ashlrai/as
 
 The source exposes these {{MCP_TOOL_COUNT}} tools with their specific input schemas: {{MCP_TOOL_NAMES}}.
 
-They are a subset of CLI commands. The wrapper forwards CLI stdout/stderr as text content and sets `isError` from the exit result; it is not a universal JSON receipt, sandbox or redaction boundary. Ensure `stack` is on PATH or set `STACK_BIN`.
+They are a subset of CLI commands. The wrapper forwards CLI stdout/stderr as text content and sets `isError` from the exit result; it is not a universal JSON receipt, sandbox or redaction boundary. CLI resolution tries `STACK_BIN`, the installed `@ashlr/stack` dependency's bin, then `stack` on PATH. For source use, build `packages/cli` first or set `STACK_BIN`.
 
 ## Claude Code plugin
 

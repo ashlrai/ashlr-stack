@@ -21,7 +21,7 @@ are separate effects. A child command run through `exec` can do anything.
 | `scan` | Detect providers in a repository. | `stack scan --json` | Read normally; `--auto` can add services. |
 | `clone` | Clone and scan a repository. | `stack clone https://github.com/example/example.git` | Creates a local directory. |
 | `add` | Provision and wire a service. | `stack add supabase --dryRun` | Can provision resources and write secrets, config and MCP wiring; example previews. |
-| `remove` | Remove a service's local wiring. | `stack remove supabase` | Changes config and MCP wiring and attempts secret removal; remote resources are retained. |
+| `remove` | Remove a service's local wiring. | `stack remove supabase --json` | Changes config and MCP wiring and attempts secret removal; JSON reports retained vault names in `secrets_kept`. Remote resources are retained. |
 | `list` | List configured services. | `stack list --json` | Read. |
 | `info` | Inspect one configured service. | `stack info supabase` | Read and health-check. |
 | `status` | Check stack health. | `stack status --json` | Read and health-check. |
