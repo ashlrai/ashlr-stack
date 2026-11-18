@@ -13,11 +13,14 @@ interface Node {
   link: string; // label for the hover relationship
 }
 
+// Mirrors the ecosystem registry in packages/cli/src/lib/ecosystem.ts (what
+// `stack doctor --ecosystem` probes) and the README "Part of the Ashlr
+// ecosystem" table. Keep the three in sync.
 const nodes: Node[] = [
   {
     id: "stack",
     title: "Stack",
-    tag: "Control plane",
+    tag: "Service layer",
     body: "CLI workflows and an MCP bridge for supported provider setup.",
     glyph: "▲",
     glyphColor: "var(--color-blade-400)",
@@ -27,14 +30,26 @@ const nodes: Node[] = [
     link: "you are here",
   },
   {
+    id: "phm",
+    title: "Phantom · phm",
+    tag: "Agent factory",
+    body: "Runs the agents that improve these repos, for example phm improve.",
+    glyph: "◆",
+    glyphColor: "var(--color-blade-300)",
+    cx: 50,
+    cy: 12,
+    size: "satellite",
+    link: "agents ship changes to",
+  },
+  {
     id: "phantom",
     title: "Phantom Secrets",
     tag: "Vault",
     body: "Credential workflows use Phantom. Review project configuration and provider output.",
     glyph: "◇",
     glyphColor: "var(--color-steel-100)",
-    cx: 16,
-    cy: 28,
+    cx: 15,
+    cy: 26,
     size: "satellite",
     url: "https://phantom.ashlr.ai",
     link: "used by credential workflows in",
@@ -42,27 +57,53 @@ const nodes: Node[] = [
   {
     id: "plugin",
     title: "ashlr-plugin",
-    tag: "Context tools",
-    body: "Tools for compact code context. Review setup and benchmarks for your version.",
+    tag: "Agent plugin",
+    body: "Plugin for Claude Code and Codex. Review setup and benchmarks for your version.",
     glyph: "◈",
     glyphColor: "var(--color-blade-300)",
-    cx: 84,
-    cy: 28,
+    cx: 85,
+    cy: 26,
     size: "satellite",
     url: "https://github.com/ashlrai/ashlr-plugin",
     link: "related tool alongside",
   },
   {
-    id: "ashlrcode",
-    title: "ashlrcode",
-    tag: "Coding CLI",
-    body: "A terminal coding agent. Review supported backends, credentials and runtime requirements.",
-    glyph: "◎",
+    id: "locus",
+    title: "Locus",
+    tag: "Identity plane",
+    body: "Pins which account a session acts as. stack exec --as checks the pinned binding.",
+    glyph: "◉",
+    glyphColor: "var(--color-steel-100)",
+    cx: 15,
+    cy: 74,
+    size: "satellite",
+    url: "https://github.com/ashlrai/locus",
+    link: "checked by stack exec --as in",
+  },
+  {
+    id: "lexicon",
+    title: "Lexicon",
+    tag: "Voice lexicon",
+    body: "Keeps dictated names spelled right.",
+    glyph: "◌",
     glyphColor: "var(--color-signal-ok,#6fe8a7)",
+    cx: 85,
+    cy: 74,
+    size: "satellite",
+    url: "https://github.com/ashlrai/lexicon",
+    link: "related tool alongside",
+  },
+  {
+    id: "ashlrmd",
+    title: "Ashlr Markdown",
+    tag: "Markdown app",
+    body: "Desktop Markdown app with an MCP server (mdopener-mcp).",
+    glyph: "◍",
+    glyphColor: "var(--color-steel-100)",
     cx: 50,
     cy: 88,
     size: "satellite",
-    url: "https://github.com/ashlrai/ashlrcode",
+    url: "https://github.com/ashlrai/ashlr-md",
     link: "related tool alongside",
   },
 ];
@@ -75,12 +116,13 @@ const nodes: Node[] = [
 
   <header class="max-w-[760px] mb-14" data-reveal>
     <h2 class="display text-[color:var(--color-ink-50)]" style="font-size: clamp(32px, 4.4vw, 56px);">
-      Four tools. <span class="display-accent">Explore each tool.</span>
+      Seven tools. <span class="display-accent">One agent-run factory.</span>
     </h2>
     <p class="mt-5 text-[15px] leading-[1.6] text-[color:var(--color-ink-300)] max-w-[620px]">
-      Stack coordinates provider setup; its credential workflows use Phantom. ashlr-plugin and
-      ashlrcode are separate tools shown for discovery. Verify their capabilities and compatibility
-      separately. Hover a satellite to highlight the relationship.
+      Phantom and its ecosystem aim to be an autonomous, code-first, agent-native software factory,
+      chasing open-source RSI (recursive self-improvement). Agents do the work; the human acts as a
+      passive board member. Stack is the service layer: provider setup as commands an agent can run
+      and parse. Each tool installs separately; verify its capabilities on its own page.
     </p>
   </header>
 
@@ -171,9 +213,9 @@ const nodes: Node[] = [
   </div>
 
   <div class="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-[12px] text-[color:var(--color-ink-500)]">
-    <span>→ Stack credential workflows use Phantom</span>
-    <span>→ Verify ashlr-plugin support for <code class="mono text-[color:var(--color-ink-300)]">.stack.toml</code></span>
-    <span>→ Verify ashlrcode credential handling separately</span>
+    <span>→ <code class="mono text-[color:var(--color-ink-300)]">stack doctor --ecosystem</code> lists which are installed (read-only)</span>
+    <span>→ Stack credential workflows use Phantom Secrets</span>
+    <span>→ <code class="mono text-[color:var(--color-ink-300)]">stack exec --as &lt;alias&gt;</code> refuses to run unless that Locus binding is pinned</span>
   </div>
 </section>
 
@@ -204,7 +246,7 @@ const nodes: Node[] = [
     .constellation-stage {
       display: block;
       aspect-ratio: 16 / 10;
-      min-height: 520px;
+      min-height: 620px;
     }
     .constellation-position {
       position: absolute;
@@ -236,10 +278,19 @@ const nodes: Node[] = [
   .constellation-wrap:has([data-node-id="phantom"] .constellation-node:hover) .constellation-line-phantom {
     stroke-width: 0.45;
   }
+  .constellation-wrap:has([data-node-id="phm"] .constellation-node:hover) .constellation-line-phm {
+    stroke-width: 0.45;
+  }
   .constellation-wrap:has([data-node-id="plugin"] .constellation-node:hover) .constellation-line-plugin {
     stroke-width: 0.45;
   }
-  .constellation-wrap:has([data-node-id="ashlrcode"] .constellation-node:hover) .constellation-line-ashlrcode {
+  .constellation-wrap:has([data-node-id="locus"] .constellation-node:hover) .constellation-line-locus {
+    stroke-width: 0.45;
+  }
+  .constellation-wrap:has([data-node-id="lexicon"] .constellation-node:hover) .constellation-line-lexicon {
+    stroke-width: 0.45;
+  }
+  .constellation-wrap:has([data-node-id="ashlrmd"] .constellation-node:hover) .constellation-line-ashlrmd {
     stroke-width: 0.45;
   }
 </style>
