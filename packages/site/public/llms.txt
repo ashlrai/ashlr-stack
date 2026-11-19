@@ -38,9 +38,24 @@ Stack uses provider-specific OAuth or supplied credentials, provisions where sup
 
 - A CLI: `stack`, distributed via npm/Bun packages or the installer; the published 0.3.10 package declares Node.js 20 or newer; check other versions’ manifests.
 - An MCP server: `ashlr-stack-mcp`, exposing the declared CLI subset through per-tool input schemas.
-- A Claude Code plugin: `ashlrai/stack-plugin`. Ships commands `/stack:add`, `/stack:apply`, `/stack:doctor`, `/stack:list`, `/stack:recommend`, `/stack:status`.
+- A Claude Code plugin: `stack` in the `ashlr` marketplace of `ashlrai/ashlr-stack` (`/plugin install stack@ashlr`). Ships commands `/stack:add`, `/stack:apply`, `/stack:doctor`, `/stack:list`, `/stack:recommend`, `/stack:status`.
 
 Stack is the **control plane**. [Phantom Secrets](https://phm.dev/secrets) is the **vault**. Stack also handles credentials during setup and provider requests.
+
+## Part of the Ashlr ecosystem
+
+Stack is one tool in the Ashlr ecosystem. Together these tools aim to be an autonomous, code-first, agent-native software factory, chasing open-source RSI (recursive self-improvement). Agents do the work, and the human acts as a passive board member. Stack is the service layer: it turns provider setup into commands an agent can run and parse.
+
+- Phantom (`@ashlr/phantom`, command `phm`): runs the agents that improve these repos, for example `phm improve`.
+- [Phantom Secrets](https://github.com/ashlrai/phantom-secrets) (`phantom`): the vault. Stack stores the secrets you select here.
+- [Locus](https://github.com/ashlrai/locus) (`locus`): identity plane. Pins which account a session acts as; `stack exec --as` uses it.
+- [Lexicon](https://github.com/ashlrai/lexicon) (`lexicon`): voice lexicon. Keeps dictated names spelled right.
+- [Ashlr Markdown](https://github.com/ashlrai/ashlr-md) (`mdopener-mcp`): desktop Markdown app with an MCP server.
+- [Ashlr plugin](https://github.com/ashlrai/ashlr-plugin) (`ashlr-plugin`): plugin for Claude Code and Codex.
+
+`stack doctor --ecosystem --json` reports which of these are installed and writes nothing. `stack doctor --ecosystem --install` prints install commands for missing tools and runs nothing.
+
+Agents (Phantom and other coding agents) work on the Stack repo through branches and pull requests that merge once required checks pass. Their rules and kept limits are in [AGENTS.md](https://github.com/ashlrai/ashlr-stack/blob/main/AGENTS.md).
 
 ## Install
 
