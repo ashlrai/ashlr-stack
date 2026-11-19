@@ -173,9 +173,9 @@ new provider - follow the "Add a new provider" flow above.
 
 ## Ownership
 
-- Code: MIT, authored by Mason Wyatt under the `ashlrai` org.
-- Deployment: Vercel team `evero/ashlr-stack`.
-- Domain: `stack.ashlr.ai` via Vercel DNS.
+- Code: MIT, copyright AshlrAI, Inc. (see [LICENSE](LICENSE)), in the `ashlrai` GitHub org.
+- Site deploys: `.github/workflows/deploy-site.yml` ships `packages/site` to Vercel on each merge to `main` that touches the site or its sources.
+- Domain: `stack.ashlr.ai`.
 
 ## Related reading
 
