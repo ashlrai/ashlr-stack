@@ -24,8 +24,9 @@ Humans and agents follow the same path. Point your coding agent (Claude Code, Co
    - `scripts/affected-tests origin/main` prints a JSON array of test targets, `[]`, or `ALL` for the committed changes since `origin/main` (commit first; it ignores uncommitted work). Pass the array elements to `bun test`, run plain `bun test` for `ALL`, and skip tests for `[]`. Details: [scripts/affected-tests.md](scripts/affected-tests.md).
 4. **Run the checks the PR gate runs** (see below), plus `bun run lint`.
 5. **Sync generated docs.** If you touched a version, manifest, `CHANGELOG.md`, command, MCP tool or provider, run `bun run fresh:sync` then `bun run fresh:check`. New CLI commands and MCP tools have extra steps in [STACK.md](STACK.md#typical-tasks).
-6. **Open a PR** from your branch with the template filled in: what changed, why, and how you tested it. One concern per PR.
-7. **Merge.** PRs land through GitHub's merge queue once the required check passes. Turning on auto-merge (`gh pr merge --auto`) needs write access; for a PR from a fork, a maintainer or fleet agent turns it on.
+6. **Add a changelog entry** for a user-visible change, under `## Unreleased` in the root `CHANGELOG.md`. The site copy at `packages/site/src/data/CHANGELOG.md` must stay byte-identical, so re-mirror it with `bun run --cwd packages/site sync-content` and commit both ([docs/changelog-format.md](docs/changelog-format.md)). Parallel agent bridge PRs skip both files and put the entry in `BRIDGE_NOTES.md` at the worktree root instead, per [AGENTS.md](AGENTS.md#hot-files-bridge-prs-carry-changelog-entries-in-the-notes).
+7. **Open a PR** from your branch with the template filled in: what changed, why, and how you tested it. One concern per PR.
+8. **Merge.** PRs land through GitHub's merge queue once the required check passes. Turning on auto-merge (`gh pr merge --auto`) needs write access; for a PR from a fork, a maintainer or fleet agent turns it on.
 
 ### What CI requires
 
