@@ -281,7 +281,7 @@ stack apply <saved-recipe-id> --noWire
 
 ### `stack swap <from> <to> [--dryRun] [--keepFrom] [--noRollback]`
 
-Replace a configured provider with another in the same category (for example `clerk` → `auth0`). Stack sets up `<to>` first, then attempts env-key aliases and local cleanup of `<from>`. `--dryRun` prints the plan without running any step; `--keepFrom` keeps `<from>` configured for a side-by-side migration; `--noRollback` leaves partial state in place on failure. The old upstream resource is never deleted. Aliases need stored values that Phantom does not hand to Stack, so Stack prints the `phantom add` step when it cannot write one. There is no atomic whole-swap guarantee: inspect warnings and remaining config or secrets.
+Replace a configured provider with another in the same category (for example `clerk` → `auth0`); swaps across categories are refused. Stack sets up `<to>` first, then attempts env-key aliases and local cleanup of `<from>`. The source registers 20 provider pairs, both directions, across auth, database, email, analytics, observability and deploy (packages/core/src/swap.ts); a registered pair supplies any env-key aliases, and an unregistered same-category swap warns and proceeds without them. `--dryRun` prints the plan without running any step; `--keepFrom` keeps `<from>` configured for a side-by-side migration; `--noRollback` is accepted but not used by the swap implementation. The old upstream resource is never deleted. Aliases need stored values that Phantom does not hand to Stack, so Stack prints the `phantom add` step when it cannot write one. There is no atomic whole-swap guarantee: inspect warnings and remaining config or secrets.
 
 ```bash
 stack swap clerk auth0 --dryRun
