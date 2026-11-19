@@ -17,12 +17,14 @@ New here? Start with the [good first issue](https://github.com/ashlrai/ashlr-sta
 
 Humans and agents follow the same path. Point your coding agent (Claude Code, Codex, Cursor) at this section, [AGENTS.md](AGENTS.md) and [STACK.md](STACK.md#agent-quickstart-from-a-clone), then let it work.
 
+**You need** git, [Bun](https://bun.sh) and Node.js 20 or newer. The required CI Gate pins Bun 1.4.4; the daily full suite also runs Bun 1.2.0 and the latest release. Node is needed because `bun run check:crypto`, `bun run fresh:sync`, `bun run fresh:check` and the release smoke scripts run under `node`. To run the two secret scans locally you also need Perl and, optionally, [Gitleaks](https://github.com/gitleaks/gitleaks).
+
 1. **Fork and clone.** Without write access to `ashlrai/ashlr-stack`, fork it on GitHub and clone your fork. Work on a branch, never on `main`.
 2. **Install.** `bun install --frozen-lockfile`. A new git worktree starts without `node_modules`, so run it in each worktree too. Optionally run `bun run setup-hooks` once per clone to wire the pre-commit hook in `.githooks/`, which runs `bunx biome check .`.
 3. **Run the checks your change touches.** Both helpers compare against `origin/main`, so `git fetch origin` first (in a fork, sync your fork's `main` with upstream).
    - `bash scripts/fast-check.sh` typechecks and tests each workspace under `packages/` that differs from `origin/main`, including uncommitted and untracked files. It prints one `PASS` or `FAIL` line per step and exits 1 on any failure. It skips changes outside `packages/`, such as `scripts/` or docs.
    - `scripts/affected-tests origin/main` prints a JSON array of test targets, `[]`, or `ALL` for the committed changes since `origin/main` (commit first; it ignores uncommitted work). Pass the array elements to `bun test`, run plain `bun test` for `ALL`, and skip tests for `[]`. Details: [scripts/affected-tests.md](scripts/affected-tests.md).
-4. **Run the checks the PR gate runs** (see below), plus `bun run lint`.
+4. **Run the checks the PR gate runs** ([commands below](#run-the-gate-locally)), plus `bun run lint`.
 5. **Sync generated docs.** If you touched a version, manifest, `CHANGELOG.md`, command, MCP tool or provider, run `bun run fresh:sync` then `bun run fresh:check`. New CLI commands and MCP tools have extra steps in [STACK.md](STACK.md#typical-tasks).
 6. **Add a changelog entry** for a user-visible change, under `## Unreleased` in the root `CHANGELOG.md`. The site copy at `packages/site/src/data/CHANGELOG.md` must stay byte-identical, so re-mirror it with `bun run --cwd packages/site sync-content` and commit both ([docs/changelog-format.md](docs/changelog-format.md)). Agent PRs follow the same rule: `Unreleased` only, never released sections or versions ([AGENTS.md](AGENTS.md#changelog)).
 7. **Open a PR** from your branch with the template filled in: what changed, why, and how you tested it. One concern per PR.
@@ -38,9 +40,24 @@ The one required check is **CI Gate** in `.github/workflows/ci.yml`. On a pull r
 | Secret scan (diff) | Pinned Gitleaks over the commits the PR adds |
 | Secret-shape scan | The pinned `scrub.pl` over the added lines of the diff |
 
-The full suite (the Bun test matrix, the site build with `astro check`, and Biome lint) runs daily on `main` and on manual dispatch, not on each PR. A red daily run opens a FIX-MAIN issue and agents fix `main` forward. Run the full suite locally before you open anything large, so your change does not turn the daily run red.
+The full suite (the Bun test matrix, the site build with `astro check`, and Biome lint) runs daily on `main` and on manual dispatch, not on each PR. A red daily run opens a FIX-MAIN issue and agents fix `main` forward. Run the full suite locally before you open anything large, so your change does not turn the daily run red. Its commands are in [STACK.md](STACK.md#commands-the-ci-expects-to-pass).
 
 Never commit secret values. Use Phantom Secrets placeholders in examples and fixtures; the two secret scans fail closed.
+
+### Run the gate locally
+
+Commit your work first, then run from the repo root. These are the commands the gate jobs run, with the PR's base replaced by `origin/main`:
+
+```bash
+bunx tsc --noEmit -p tsconfig.json
+bun test packages/core/src/__tests__/security.test.ts packages/core/src/__tests__/secret-redaction.test.ts
+bun run check:crypto
+git diff --no-color --no-ext-diff "$(git merge-base origin/main HEAD)" HEAD \
+  | perl .github/tests/secret-shape/scrub.pl --check --allow-fixtures
+gitleaks git . --log-opts="origin/main..HEAD" --redact --no-banner   # CI pins Gitleaks 8.30.0
+```
+
+`scrub.pl --check` prints counts, never the matched values, and exits 1 on any blocked match. `--allow-fixtures` lets a token through only when both hold: the file is a test path (under `test/`, `tests/`, `fixtures/`, `benches/` or `examples/`, or named `*.test.*`, `*.spec.*` or `*_test.*`), and the token contains `FAKE`, `EXAMPLE`, `DUMMY`, `TEST` or `XXXX`. Private key blocks are never allowed. CI deletes any `.gitleaks.toml` or `.gitleaksignore` before Gitleaks runs, so a PR cannot allowlist its own finding.
 
 ## Dev loop
 
