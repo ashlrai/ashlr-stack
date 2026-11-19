@@ -16,8 +16,11 @@ test("site multi-version fixture keeps each entry under its own version heading"
     expect(v.entries).toHaveLength(2);
     const source = site.find((s) => s.version === v.version);
     expect(source).toBeDefined();
-    // Same entries, same order, and none leaked in from a neighbouring version.
-    expect(source!.entries.slice(0, 2)).toEqual(v.entries);
+    // Same entries, same relative order, and none leaked in from a neighbouring version.
+    // Position-independent on purpose: new entries land anywhere in the live Unreleased section.
+    const indexes = v.entries.map((e) => source!.entries.indexOf(e));
+    expect(indexes.every((i) => i >= 0)).toBe(true);
+    expect(indexes).toEqual([...indexes].sort((a, b) => a - b));
     for (const other of fixture.filter((o) => o !== v)) {
       for (const e of v.entries) expect(other.entries).not.toContain(e);
     }
