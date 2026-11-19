@@ -139,17 +139,27 @@ The full checklist is [docs/adding-a-provider.md](docs/adding-a-provider.md).
 Pull requests and the merge queue need only the **CI Gate** check: typecheck,
 the Tier-1 security tests, `bun run check:crypto` and two secret scans (the
 table is in [CONTRIBUTING.md](CONTRIBUTING.md#what-ci-requires)). The full set
-below runs daily on `main`, and a red daily run opens a FIX-MAIN issue, so run
-it locally before a large change:
+below mirrors the daily run on `main` in `.github/workflows/ci.yml`, and a red
+daily run opens a FIX-MAIN issue, so run it locally before a large change. Every
+line runs from the repo root:
 
 ```bash
 bun install --frozen-lockfile
-HOME=$(mktemp -d) bun test        # full suite, isolated home
+HOME=$(mktemp -d) bun test                       # full suite, isolated home
 bunx tsc --noEmit -p tsconfig.json
 bunx biome check .
-cd packages/site && bunx astro check  # expect 0 errors; file count varies
-cd packages/site && bun run build
+bun run packages/cli/src/index.ts --help         # CLI smoke
+bun run --cwd packages/cli build && bun run --cwd packages/mcp build
+node packages/cli/dist/index.js --help > /dev/null
+node scripts/node-smoke.mjs                      # dist bundles under Node 20+
+node scripts/release-preflight.mjs               # pack + install the npm tarballs; never publishes
+bun run --cwd packages/site astro check          # expect 0 errors; file count varies
+bun run --cwd packages/site build
+git diff --exit-code -- packages/site/src/lib/cli-ref.generated.ts  # committed CLI reference is current
 ```
+
+The site build rewrites tracked generated files (see "Things that trip agents
+up" above); review that diff before you commit.
 
 ## When a user says "set up X"
 
