@@ -69,7 +69,7 @@ const templateList = itemListSchema({
     inspect every reported result.
   </div>
 
-  <h2>The five starters</h2>
+  <h2>The {TEMPLATES_REF.length} starters</h2>
 
   {TEMPLATES_REF.map((t) => {
     const totalSecrets = t.services.reduce((n, s) => n + s.secrets.length, 0);
