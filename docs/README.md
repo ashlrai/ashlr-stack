@@ -8,7 +8,7 @@ Many docs below are dated snapshots, research notes or proposals. Each one says 
 
 ## Use Stack
 
-- [Getting started with the Ashlr tools together](getting-started-ecosystem.md): Phantom, Locus, Stack and the ashlr plugin side by side.
+- [Getting started with the Ashlr tools together](getting-started-ecosystem.md): all seven tools (Phantom, Phantom Secrets, Locus, Lexicon, Ashlr Markdown, the ashlr plugin and Stack) with install commands.
 - [Copy-paste examples](examples.md): runnable command blocks, starting with `stack providers --json`.
 - [CLI command map](cli-command-map.md): every top-level command, an example, and what state it can change.
 - [Scan an existing project](scan-guide.md), [scan output examples](scan-output-examples.md) and [troubleshooting `stack scan`](scan-troubleshooting.md).
