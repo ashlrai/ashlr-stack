@@ -17,6 +17,7 @@ import Footer from "~/components/Footer.astro";
 import { PROVIDERS_REF } from "~/lib/providers-ref";
 import { PROVIDERS } from "~/lib/providers";
 import { getIconPath } from "~/lib/icons";
+import { TEMPLATES_REF } from "~/lib/templates-ref";
 
 // Build the marquee payload from the canonical catalog (39 providers). Pull
 // color + icon slug from the display catalog by name, so every logo renders
@@ -39,7 +40,8 @@ const STATS = [
   { n: String(PROVIDERS_REF.length), l: "catalog entries" },
   { n: "19", l: "source MCP tools" },
   { n: "13", l: "categories" },
-  { n: "05", l: "templates" },
+  // Counted from TEMPLATES_REF, which site-facts.test.ts pins to templates/.
+  { n: String(TEMPLATES_REF.length).padStart(2, "0"), l: "templates" },
   { n: "MIT", l: "license" },
 ];
 ---
