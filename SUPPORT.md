@@ -4,11 +4,15 @@ Use the channel that matches what you need. Only security vulnerabilities go to 
 
 ## Ask a question
 
-Open a [new issue](https://github.com/ashlrai/ashlr-stack/issues/new/choose) and label your question as one. Questions asked in issues are read by maintainers. Before asking, check the [README](./README.md), [STACK.md](./STACK.md), and [CHANGELOG.md](./CHANGELOG.md) for compatibility notes.
+Open a [new issue](https://github.com/ashlrai/ashlr-stack/issues/new/choose), choose a blank issue, and start the title with "Question:". Only maintainers can add labels, so you do not need to. Questions asked in issues are read by maintainers. Before asking, check the [README](./README.md), [STACK.md](./STACK.md), and [CHANGELOG.md](./CHANGELOG.md) for compatibility notes.
 
 ## Report a bug
 
 Open a [bug report](https://github.com/ashlrai/ashlr-stack/issues/new?template=bug_report.yml) using the template in [.github/ISSUE_TEMPLATE/bug_report.yml](./.github/ISSUE_TEMPLATE/bug_report.yml). Include the Stack version (`stack --version`), the command you ran, and the output. Remove secrets, tokens, and credentials from logs before posting.
+
+## Request a provider
+
+Check `stack providers` first; it lists every provider the installed version supports. To ask for a new one, open a [provider request](https://github.com/ashlrai/ashlr-stack/issues/new?template=provider_request.yml) using the template in [.github/ISSUE_TEMPLATE/provider_request.yml](./.github/ISSUE_TEMPLATE/provider_request.yml).
 
 ## Report a security issue
 
@@ -16,7 +20,7 @@ Open a [bug report](https://github.com/ashlrai/ashlr-stack/issues/new?template=b
 
 ## Contribute a change
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for the dev loop, how to pick an issue, and the PR expectations. Adding a provider is covered in [docs/adding-a-provider.md](./docs/adding-a-provider.md).
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for the dev loop, how to pick an issue, and the PR expectations. Humans and coding agents follow the same [contributor path](./CONTRIBUTING.md#contribute-with-an-agent): fork, install, run the checks, open a PR, and merge through the merge queue once the required CI Gate check passes. Agents should also read [AGENTS.md](./AGENTS.md). Adding a provider is covered in [docs/adding-a-provider.md](./docs/adding-a-provider.md).
 
 ## Community conduct
 
