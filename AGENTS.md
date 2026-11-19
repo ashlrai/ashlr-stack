@@ -97,3 +97,4 @@ Agent PRs may add lines to the `## Unreleased` section of `CHANGELOG.md` and mus
 - Keep diffs small and reviewable, with one concern per PR.
 - Never commit secrets. Use Phantom Secrets placeholders.
 - Never force-push to the default branch.
+- `scripts/publish.sh` in this repo is the npm release script that `.github/workflows/release.yml` runs. It is not the fleet's fork-push `publish.sh` named in the hard floor. Never run it by hand; push branches with `git push` as in [CONTRIBUTING.md](./CONTRIBUTING.md#contribute-with-an-agent).
