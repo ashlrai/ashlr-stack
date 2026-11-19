@@ -108,7 +108,7 @@ Stack is one tool in the Ashlr ecosystem. Together these tools aim to be an auto
 
 `stack doctor --ecosystem` shows which of these are installed, with versions. It is read-only and never fails. `stack doctor --ecosystem --install` prints install commands for missing tools and runs nothing. A full walkthrough is in [docs/getting-started-ecosystem.md](docs/getting-started-ecosystem.md).
 
-**How agents work on this repo.** Phantom and other coding agents open branches and pull requests here and merge them once required checks pass, without a manual approval step. The rules they follow, and the few limits they keep (secrets, billing, force-push), are in [AGENTS.md](AGENTS.md). Build and test steps are in [STACK.md](STACK.md#agent-quickstart-from-a-clone).
+**How agents work on this repo.** Phantom and other coding agents open branches and pull requests here and merge them once required checks pass, without a manual approval step. The rules they follow, and the few limits they keep (secrets, billing, force-push), are in [AGENTS.md](AGENTS.md). Build and test steps are in [STACK.md](STACK.md#agent-quickstart-from-a-clone). Every doc in `docs/` is listed by topic in [docs/README.md](docs/README.md).
 
 ## Features
 

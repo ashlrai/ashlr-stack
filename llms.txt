@@ -75,5 +75,6 @@ Do not run `stack add`, `stack apply`, `stack import`, or `stack onboard --apply
 - [README](https://github.com/ashlrai/ashlr-stack/blob/main/README.md)
 - [AGENTS.md](https://github.com/ashlrai/ashlr-stack/blob/main/AGENTS.md)
 - [STACK.md](https://github.com/ashlrai/ashlr-stack/blob/main/STACK.md)
+- [Repository docs index](https://github.com/ashlrai/ashlr-stack/blob/main/docs/README.md)
 - [Published index](https://stack.ashlr.ai/llms.txt)
 - [Full reference](https://stack.ashlr.ai/llms-full.txt)
