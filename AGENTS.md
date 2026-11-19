@@ -80,7 +80,7 @@ Repo build and test steps stay in [STACK.md](./STACK.md#agent-quickstart-from-a-
 - Releases and publishes run through each repo's sanctioned release workflow, which any agent may dispatch.
 
 ## Getting started
-Build, test and run instructions for agents are in [STACK.md](./STACK.md#agent-quickstart-from-a-clone).
+Build, test and run instructions for agents are in [STACK.md](./STACK.md#agent-quickstart-from-a-clone). The first-time contributor path for humans and agents (fork, the checks to run, what the required CI Gate check needs, and how a PR merges) is in [CONTRIBUTING.md](./CONTRIBUTING.md#contribute-with-an-agent).
 
 ## Docs freshness
 

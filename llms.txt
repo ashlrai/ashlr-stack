@@ -18,7 +18,7 @@ Stack is one tool in the Ashlr ecosystem. Together these tools aim to be an auto
 
 `stack doctor --ecosystem --install` prints install commands for missing tools and runs nothing.
 
-Agents (Phantom and other coding agents) work on this repo through branches and pull requests that merge once required checks pass. Their rules and kept limits are in [AGENTS.md](https://github.com/ashlrai/ashlr-stack/blob/main/AGENTS.md).
+Agents (Phantom and other coding agents) work on this repo through branches and pull requests that merge once required checks pass. Their rules and kept limits are in [AGENTS.md](https://github.com/ashlrai/ashlr-stack/blob/main/AGENTS.md). Outside contributors, human or agent, follow the same path in [CONTRIBUTING.md](https://github.com/ashlrai/ashlr-stack/blob/main/CONTRIBUTING.md#contribute-with-an-agent): fork, run the checks, open a PR. The one required check is CI Gate.
 
 ## Read-only commands
 
@@ -75,6 +75,7 @@ Do not run `stack add`, `stack apply`, `stack import`, or `stack onboard --apply
 - [README](https://github.com/ashlrai/ashlr-stack/blob/main/README.md)
 - [AGENTS.md](https://github.com/ashlrai/ashlr-stack/blob/main/AGENTS.md)
 - [STACK.md](https://github.com/ashlrai/ashlr-stack/blob/main/STACK.md)
+- [CONTRIBUTING.md](https://github.com/ashlrai/ashlr-stack/blob/main/CONTRIBUTING.md)
 - [Repository docs index](https://github.com/ashlrai/ashlr-stack/blob/main/docs/README.md)
 - [Published index](https://stack.ashlr.ai/llms.txt)
 - [Full reference](https://stack.ashlr.ai/llms-full.txt)
