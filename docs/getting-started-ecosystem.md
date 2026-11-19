@@ -1,6 +1,24 @@
 # Getting started with the Ashlr tools together
 
-This guide sets up four tools side by side: Phantom (`phm`), Locus (`locus`), Stack (`stack`) and the ashlr plugin. Each step was run on a Linux box (except `stack exec --as`, checked from `--help` only, since it needs a `.stack.toml`) on Oct 25 2026 with a throwaway `HOME`, or checked against `--help`. Where the published package lags the source, it says so.
+The Ashlr ecosystem has seven tools. Together they aim to be an autonomous, code-first, agent-native software factory, chasing open-source RSI (recursive self-improvement): agents do the work, and the human acts as a passive board member. Stack is the service layer. Coding agents maintain each repo through pull requests; the rules for this one are in [AGENTS.md](../AGENTS.md).
+
+This guide sets up the tools side by side. Phantom (`phm`), Locus (`locus`), Stack (`stack`) and the ashlr plugin each have a walkthrough. Each step was run on a Linux box (except `stack exec --as`, checked from `--help` only, since it needs a `.stack.toml`) on Oct 25 2026 with a throwaway `HOME`, or checked against `--help`. Where the published package lags the source, it says so. Phantom Secrets, Lexicon and Ashlr Markdown have short install sections taken from Stack's own install plan and fix hints in the source.
+
+## The seven tools
+
+`stack doctor --ecosystem` probes each command in the second column with `--ashlr-handshake --json` (source: `packages/cli/src/lib/ecosystem.ts`). The install column is what Stack's install plan (`packages/cli/src/lib/doctor-install.ts`) or its fix hint suggests.
+
+| Tool | Command | Install | Role |
+|---|---|---|---|
+| Phantom `@ashlr/phantom` | `phm` | `npm install -g @ashlr/phantom` (Node.js 22.15+) | Runs the agents that improve these repos, for example `phm improve`. |
+| [Phantom Secrets](https://github.com/ashlrai/phantom-secrets) | `phantom` | `brew install ashlrai/phantom/phantom` | Vault. Stack stores the secrets you select here. |
+| [Locus](https://github.com/ashlrai/locus) | `locus` | From source with cargo while npm 0.5.0 is broken | Identity plane. Pins which account a session acts as. |
+| [Lexicon](https://github.com/ashlrai/lexicon) | `lexicon` | `npm install -g @ashlr/lexicon` (Node.js 20+) | Voice lexicon. Keeps dictated names spelled right. |
+| [Ashlr Markdown](https://github.com/ashlrai/ashlr-md) | `mdopener-mcp` | Desktop app from the [ashlr-md releases](https://github.com/ashlrai/ashlr-md/releases) (manual) | Desktop Markdown app with an MCP server. |
+| [ashlr plugin](https://github.com/ashlrai/ashlr-plugin) | `ashlr-plugin` | Per host, from the [plugin README](https://github.com/ashlrai/ashlr-plugin#install) | Plugin for Claude Code and Codex. |
+| Ashlr Stack (this repo) | `stack` | `npm i -g @ashlr/stack` (Node.js 20+) | Configures services and wires them into agents. |
+
+`stack doctor --ecosystem --install` prints the install commands for missing tools in a safe order and runs nothing; see [Install what is missing](#install-what-is-missing).
 
 ## Recorded versions (check before you start)
 
@@ -32,6 +50,8 @@ From source (0.5.1):
 git clone https://github.com/ashlrai/locus && cd locus
 cargo install --path crates/locus-cli
 ```
+
+`stack doctor --ecosystem --install locus` prints the equivalent `cargo install --git` command, pinned to a reviewed locus commit.
 
 First run, in this order:
 
@@ -86,6 +106,27 @@ bun run scripts/cli.ts --help    # codex-doctor, codex-install --dry-run, tools,
 
 The `companions` section says `not installed` or `too old for --ashlr-handshake` with a fix line for each tool. On a box without a host configured, the doctor also reports warnings and failures for the missing host setup.
 
+## 5. Phantom Secrets (vault)
+
+Every `stack add` records the secrets you select through the `phantom` CLI. When `phantom` is missing, `stack doctor --ecosystem` suggests:
+
+```bash
+brew install ashlrai/phantom/phantom
+```
+
+The [install script](https://stack.ashlr.ai/install.sh) (`curl -fsSL stack.ashlr.ai/install.sh | bash`) tries the same Homebrew tap when `phantom` is missing and falls back to the one-liner from [phm.dev](https://phm.dev). How Stack calls the vault is in [phantom-locus.md](./phantom-locus.md) and [phantom-process.md](./phantom-process.md).
+
+## 6. Lexicon (voice lexicon)
+
+```bash
+npm install -g @ashlr/lexicon    # Node.js 20+; the step Stack's install plan runs for lexicon
+lexicon doctor --fix             # preview repairs, writes nothing; see Repair everything below
+```
+
+## 7. Ashlr Markdown
+
+Ashlr Markdown is a desktop app with the `mdopener-mcp` sidecar. Stack does not install it; its install plan prints a manual step that points to the [ashlr-md releases](https://github.com/ashlrai/ashlr-md/releases) and the repo's `docs/INSTALL.md`. Once installed, `mdopener-mcp doctor --fix` previews repairs.
+
 ## Install what is missing
 
 ```bash
@@ -93,7 +134,7 @@ stack doctor --ecosystem --install                 # prints the commands, in ord
 stack doctor --ecosystem --install --apply phantom,lexicon   # runs them for the named tools only
 ```
 
-The order follows the first-run measurements: Node 22.15+ is checked first, then phantom, locus (from source with cargo while npm 0.5.0 is broken), lexicon and the ashlr-md desktop app (a manual step), with `phm doctor` last. That `phm doctor` exits 1 while optional companions such as locus or a local model are missing, and Stack counts that as expected. The historical npm 0.1.1 build did not provide `stack onboard`.
+The order follows the first-run measurements: Node 22.15+ is checked first, then phantom, locus (from source with cargo while npm 0.5.0 is broken), lexicon and the ashlr-md desktop app (a manual step), with `phm doctor` last. That `phm doctor` exits 1 while optional companions such as locus or a local model are missing, and Stack counts that as expected. Phantom Secrets and the ashlr plugin are not in this plan; they install through their own hosts (sections 4 and 5). The historical npm 0.1.1 build did not provide `stack onboard`.
 
 ## Repair everything
 
@@ -119,3 +160,4 @@ Checked on Oct 25 2026 from source (locus 0.5.1, lexicon 0.5.6, mdopener-mcp 0.4
 
 - Phantom and Locus with Stack: [phantom-locus.md](./phantom-locus.md)
 - The handshake format: [ashlr-handshake.md](./ashlr-handshake.md)
+- Every repository doc, by topic: [docs/README.md](./README.md)
