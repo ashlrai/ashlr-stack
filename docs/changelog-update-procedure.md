@@ -6,6 +6,12 @@ rendered at `/docs/changelog`. The site `sync-content` script copies the entire
 root file over the site copy; `dev`, `start`, and `build` run it automatically.
 Review both files before running those commands so a site-only edit is not lost.
 
+Parallel agent bridge PRs do not edit either copy or
+`packages/site/tests/changelog.test.ts`. They put the entry in `BRIDGE_NOTES.md`
+at the worktree root, and a later dedicated PR lands it in the changelog. See the
+[hot-file rule](../AGENTS.md#hot-files-bridge-prs-carry-changelog-entries-in-the-notes)
+in AGENTS.md.
+
 From the repository root:
 
 1. Compare the complete files before editing or syncing:

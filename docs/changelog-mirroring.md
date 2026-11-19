@@ -11,6 +11,12 @@ The site's `sync-content` script (run by `dev`, `start` and `build`) copies the
 root file over the site copy. Nothing merges the other direction, so an edit
 made only to the site copy is lost on the next build.
 
+Parallel agent bridge PRs do not edit either copy or
+`packages/site/tests/changelog.test.ts`. They put the entry in `BRIDGE_NOTES.md`
+at the worktree root, and a later dedicated PR lands it in the changelog. See the
+[hot-file rule](../AGENTS.md#hot-files-bridge-prs-carry-changelog-entries-in-the-notes)
+in AGENTS.md.
+
 ## The `stack apply` entry
 
 The current `stack apply` entry sits in **both** copies under
