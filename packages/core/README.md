@@ -58,6 +58,14 @@ atomic transaction. Examples describe reviewed source and require the selected
 artifact, runtime, project directory, user authorization and provider access.
 A package installation does not establish those later steps.
 
+## Part of the Ashlr ecosystem
+
+This library is the shared core of Stack, one tool in the [Ashlr ecosystem](https://github.com/ashlrai/ashlr-stack#part-of-the-ashlr-ecosystem). Together these tools aim to be an autonomous, code-first, agent-native software factory, chasing open-source RSI (recursive self-improvement). Agents do the work, and the human acts as a passive board member. Stack is the service layer, alongside Phantom (runs the agents), [Phantom Secrets](https://github.com/ashlrai/phantom-secrets) (vault), [Locus](https://github.com/ashlrai/locus) (identity plane), [Lexicon](https://github.com/ashlrai/lexicon) (voice lexicon), [Ashlr Markdown](https://github.com/ashlrai/ashlr-md) and the [Ashlr plugin](https://github.com/ashlrai/ashlr-plugin).
+
+## Contributing
+
+Coding agents maintain this package through pull requests in [ashlrai/ashlr-stack](https://github.com/ashlrai/ashlr-stack). Humans and agents follow the same [contributor path](https://github.com/ashlrai/ashlr-stack/blob/main/CONTRIBUTING.md#contribute-with-an-agent): fork, install, run the checks, open a PR, and merge through the merge queue once the required CI Gate check passes.
+
 ## Links
 
 - Full CLI-level docs - [stack.ashlr.ai/docs/cli](https://stack.ashlr.ai/docs/cli)

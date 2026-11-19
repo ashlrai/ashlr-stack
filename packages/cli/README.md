@@ -117,19 +117,7 @@ Teammates can inspect `stack doctor` and use `stack doctor --fix` for supported 
 
 Full schema: [stack.ashlr.ai/docs/config](https://stack.ashlr.ai/docs/config).
 
-## Links
-
-- Docs - [stack.ashlr.ai/docs](https://stack.ashlr.ai/docs)
-- Quickstart - [stack.ashlr.ai/docs/quickstart](https://stack.ashlr.ai/docs/quickstart)
-- Provider catalog - [stack.ashlr.ai/docs/providers](https://stack.ashlr.ai/docs/providers)
-- Repo - [github.com/ashlrai/ashlr-stack](https://github.com/ashlrai/ashlr-stack)
-- Issues - [github.com/ashlrai/ashlr-stack/issues](https://github.com/ashlrai/ashlr-stack/issues)
-
-## License
-
-MIT. See the repository [LICENSE](../../LICENSE).
-
-### Safe CLI upgrades
+## Safe CLI upgrades
 
 `stack upgrade` checks for a newer stable release without installing it. For an
 existing npm global installation on macOS or Linux, run `stack upgrade --apply`.
@@ -158,3 +146,23 @@ the original package in `previous`. Keep those files until the installation is
 verified. If automatic recovery fails, the error identifies the retained directory.
 Only remove a stale `.stack-upgrade-lock` after confirming no upgrade is running
 and restoring/verifying the installation.
+
+## Part of the Ashlr ecosystem
+
+The `stack` CLI is one tool in the [Ashlr ecosystem](https://github.com/ashlrai/ashlr-stack#part-of-the-ashlr-ecosystem). Together these tools aim to be an autonomous, code-first, agent-native software factory, chasing open-source RSI (recursive self-improvement). Agents do the work, and the human acts as a passive board member. Stack is the service layer, alongside Phantom (runs the agents), [Phantom Secrets](https://github.com/ashlrai/phantom-secrets) (vault), [Locus](https://github.com/ashlrai/locus) (identity plane), [Lexicon](https://github.com/ashlrai/lexicon) (voice lexicon), [Ashlr Markdown](https://github.com/ashlrai/ashlr-md) and the [Ashlr plugin](https://github.com/ashlrai/ashlr-plugin). `stack doctor --ecosystem` shows which of these are installed; it is read-only.
+
+## Contributing
+
+Coding agents maintain this package through pull requests in [ashlrai/ashlr-stack](https://github.com/ashlrai/ashlr-stack). Humans and agents follow the same [contributor path](https://github.com/ashlrai/ashlr-stack/blob/main/CONTRIBUTING.md#contribute-with-an-agent): fork, install, run the checks, open a PR, and merge through the merge queue once the required CI Gate check passes.
+
+## Links
+
+- Docs - [stack.ashlr.ai/docs](https://stack.ashlr.ai/docs)
+- Quickstart - [stack.ashlr.ai/docs/quickstart](https://stack.ashlr.ai/docs/quickstart)
+- Provider catalog - [stack.ashlr.ai/docs/providers](https://stack.ashlr.ai/docs/providers)
+- Repo - [github.com/ashlrai/ashlr-stack](https://github.com/ashlrai/ashlr-stack)
+- Issues - [github.com/ashlrai/ashlr-stack/issues](https://github.com/ashlrai/ashlr-stack/issues)
+
+## License
+
+MIT. See the repository [LICENSE](../../LICENSE).
