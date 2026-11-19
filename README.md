@@ -293,6 +293,22 @@ Root options go before a command; other options go after the command shown. Use 
 | `stack completion` | - |
 | `stack upgrade` | `--apply`, `-n`, `--dryRun`, `--json` |
 
+## JSON output for agents
+
+`stack list --json` and `stack status --json` print one JSON document on stdout, with no banners or colour. Every document has a `schema` field. Fields may be added within a version; existing ones never change meaning. Secret names appear, never values.
+
+| Command | `schema` | Fields |
+| --- | --- | --- |
+| `stack list --json` | `ashlr.stack.list/v1` | `project_id`, `template`, `services[]` (`name`, `provider`, `resource_id`, `region`, `secrets[]`, `mcp`) |
+| `stack status --json` | `ashlr.stack.status/v1` | `next_step` (`summary`, `command`), `config` (`present`, `project_id`, `template`), `phantom` (`installed`, `secret_count`, optional `secret_count_error`, `installed_error`), `services[]` (same as list) |
+| either, on failure | `ashlr.stack.error/v1` | `error` (message), exit code 1 |
+
+Missing values are `null`. Check `schema` first: if it is `ashlr.stack.error/v1`, the command failed.
+
+```bash
+stack status --json | jq -r '.next_step.command'
+```
+
 ## Exit codes
 
 | Code | Meaning |

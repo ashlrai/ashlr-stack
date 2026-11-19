@@ -1,6 +1,6 @@
 import { type StackConfig, readConfig } from "@ashlr/stack-core";
 import { defineCommand } from "citty";
-import { EXIT_CODES } from "../exit-codes.ts";
+import { exitWithJsonError } from "../lib/json-error.ts";
 import { colors } from "../ui.ts";
 
 /**
@@ -51,10 +51,7 @@ export const listCommand = defineCommand({
       try {
         config = await readConfig();
       } catch (err) {
-        process.stdout.write(
-          `${JSON.stringify({ error: err instanceof Error ? err.message : String(err) })}\n`,
-        );
-        process.exit(EXIT_CODES.ERROR);
+        exitWithJsonError(err);
       }
       process.stdout.write(`${JSON.stringify(buildListReport(config), null, 2)}\n`);
       return;
