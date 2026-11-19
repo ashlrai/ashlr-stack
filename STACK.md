@@ -33,7 +33,7 @@ and changes nothing.
 
 Agents ship changes to this repo themselves: branch, open a PR, merge once the
 required checks pass. The limits they keep (secrets, billing, force-push, the
-hold list) and the changelog rule for parallel PRs are in
+hold list) and the changelog rule are in
 [AGENTS.md](AGENTS.md).
 
 <!-- fresh:begin version-table -->
