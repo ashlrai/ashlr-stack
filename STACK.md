@@ -101,7 +101,7 @@ Things that trip agents up:
 4. Add an entry to `packages/core/src/detect-source.ts` (package.json / config file → provider).
 5. Update `packages/site/src/lib/providers.ts` to reflect it on the landing page.
 6. Document in `docs/provider-auth-matrix.md`: a table row and the provider count in its header.
-7. Write a test (`packages/core/src/__tests__/<name>-provider.test.ts`) - fetch-mocked, at least happy path + invalid-auth path.
+7. Write a test. For an API-key provider, add a spec to `SPECS` in `packages/core/src/__tests__/api-key-providers.test.ts`; for any other kind, add a fetch-mocked `packages/core/src/__tests__/<name>-provider.test.ts` (see `neon-provider.test.ts`).
 8. Regenerate the counts: `bun run fresh:sync` (README and this file), `bun run --cwd packages/site gen:cli-ref` (site facts and `public/llms-full.txt`) and the site build (`public/llms.txt`). Commit the results.
 9. Run `HOME=$(mktemp -d) bun test` and `bun run typecheck`.
 
