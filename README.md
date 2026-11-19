@@ -377,7 +377,7 @@ If this is the control plane you want agents to find, star the repo: [github.com
 
 ## Contributing
 
-Issues and PRs are welcome. Look for [`good first issue`](https://github.com/ashlrai/ashlr-stack/labels/good%20first%20issue) to get started, and read [CONTRIBUTING.md](CONTRIBUTING.md). For questions and bug reports, see [SUPPORT.md](SUPPORT.md). Report security problems privately per [SECURITY.md](SECURITY.md).
+Issues and PRs are welcome. Look for [`good first issue`](https://github.com/ashlrai/ashlr-stack/labels/good%20first%20issue) to get started, and read [CONTRIBUTING.md](CONTRIBUTING.md). Its [agent path](CONTRIBUTING.md#contribute-with-an-agent) covers forking, the checks to run and what the required CI Gate check needs before a PR merges. For questions and bug reports, see [SUPPORT.md](SUPPORT.md). Report security problems privately per [SECURITY.md](SECURITY.md).
 
 Ashlr Stack is one of the open-source tools from [Ashlr](https://ashlr.ai). See [Part of the Ashlr ecosystem](#part-of-the-ashlr-ecosystem) for the sibling tools. The site is [stack.ashlr.ai](https://stack.ashlr.ai).
 

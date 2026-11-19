@@ -126,8 +126,14 @@ Things that trip agents up:
 
 ## Commands the CI expects to pass
 
+Pull requests and the merge queue need only the **CI Gate** check: typecheck,
+the Tier-1 security tests, `bun run check:crypto` and two secret scans (the
+table is in [CONTRIBUTING.md](CONTRIBUTING.md#what-ci-requires)). The full set
+below runs daily on `main`, and a red daily run opens a FIX-MAIN issue, so run
+it locally before a large change:
+
 ```bash
-bun install
+bun install --frozen-lockfile
 HOME=$(mktemp -d) bun test        # full suite, isolated home
 bunx tsc --noEmit -p tsconfig.json
 bunx biome check .
@@ -161,7 +167,7 @@ new provider - follow the "Add a new provider" flow above.
 
 - `README.md` - product pitch + install
 - `CHANGELOG.md` - wave-by-wave what shipped
-- `CONTRIBUTING.md` - human-oriented contribution guide
+- `CONTRIBUTING.md` - first-time contributor path for humans and agents: fork, checks, what CI Gate requires, merge
 - `docs/provider-auth-matrix.md` - OAuth app status per provider
 - `docs/stack-toml-schema.md` - canonical config schema
 - `packages/site/public/llms.txt` - public agent-facing summary
