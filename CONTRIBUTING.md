@@ -67,7 +67,7 @@ Every curated provider implements `Provider` (`packages/core/src/providers/_base
 - `dashboardUrl?(entry)` — optional; wired into `stack open`.
 - `deprovision?(ctx, auth, resourceId)` — optional; lets `stack add` attempt cleanup of a resource it created when a later step fails (implemented for Supabase, Neon, Turso, and Vercel). Attached resources do not acquire deletion authority; failed or unconfirmed cleanup must stay explicit.
 
-Then register in `packages/core/src/providers/index.ts` and add a row to `docs/provider-auth-matrix.md`.
+Then register it in `packages/core/src/providers/index.ts` and `packages/core/src/catalog.ts`, add detection rules to `detect.ts` and `detect-source.ts`, add a row to `docs/provider-auth-matrix.md` and bump its header count. Other provider counts are generated: run `bun run fresh:sync`, `bun run --cwd packages/site gen:cli-ref` and the site build rather than editing them by hand. The [guide](./docs/adding-a-provider.md) has each step.
 
 ## Coding principles
 

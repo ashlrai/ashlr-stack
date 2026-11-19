@@ -56,6 +56,13 @@ bun test && bunx tsc --noEmit -p tsconfig.json && bun run lint
 - [`packages/site/src/lib/providers.ts`](../packages/site/src/lib/providers.ts):
   the landing-page entry (simple-icons slug, brand color, blurb), and an icon
   in [`icons.ts`](../packages/site/src/lib/icons.ts) if simple-icons has none.
-- The provider count appears in `README.md` and `packages/site/public/llms*.txt`;
-  update it there too.
-- Add a line to `CHANGELOG.md` under Unreleased.
+- Provider and category counts are generated, so do not edit them by hand
+  outside the auth matrix header (step 2). `bun run fresh:sync` rewrites the
+  counts in `README.md` and `STACK.md`.
+  `bun run --cwd packages/site gen:cli-ref` regenerates the site facts and
+  `packages/site/public/llms-full.txt`, and the site build
+  (`bun run --cwd packages/site build`) regenerates
+  `packages/site/public/llms.txt`. Commit the regenerated files.
+  `bun test packages/site/tests/doc-facts.test.ts` fails if any count drifts.
+- Add a line to `CHANGELOG.md` under Unreleased (a parallel bridge PR puts it
+  in `BRIDGE_NOTES.md` instead, per [AGENTS.md](../AGENTS.md)).
