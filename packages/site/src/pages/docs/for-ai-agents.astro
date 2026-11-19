@@ -503,6 +503,15 @@ stack recommend "Next.js SaaS with analytics" --synth --save`}
     Stack repo and merge them once required checks pass; their rules are in{" "}
     <a href="https://github.com/ashlrai/ashlr-stack/blob/main/AGENTS.md">AGENTS.md</a>.
   </p>
+  <p>
+    To change Stack itself, human or agent, follow the{" "}
+    <a href="https://github.com/ashlrai/ashlr-stack/blob/main/CONTRIBUTING.md#contribute-with-an-agent">contributor path</a>:
+    fork and clone, <code>bun install --frozen-lockfile</code>, run the
+    checks your change touches, then open a PR. The one required check is
+    CI Gate (typecheck, Tier-1 security tests and two secret scans), and PRs
+    land through GitHub's merge queue. Build and test steps are in{" "}
+    <a href="https://github.com/ashlrai/ashlr-stack/blob/main/STACK.md#agent-quickstart-from-a-clone">STACK.md</a>.
+  </p>
 
   <h2>MCP tool reference</h2>
   <p>
