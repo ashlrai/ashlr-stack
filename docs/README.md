@@ -2,7 +2,7 @@
 
 This folder holds the repository docs for Ashlr Stack. The published site docs are at [stack.ashlr.ai/docs](https://stack.ashlr.ai/docs), and agents should start with [llms.txt](https://stack.ashlr.ai/llms.txt) and [llms-full.txt](https://stack.ashlr.ai/llms-full.txt). The [README](../README.md) covers install, commands and MCP tools.
 
-Stack is the service layer of the [Ashlr ecosystem](../README.md#part-of-the-ashlr-ecosystem): an autonomous, code-first, agent-native software factory chasing open-source RSI (recursive self-improvement), with agents doing the work and the human as a passive board member. Coding agents maintain these docs through pull requests. The rules they follow are in [AGENTS.md](../AGENTS.md); build and test steps are in [STACK.md](../STACK.md#agent-quickstart-from-a-clone).
+Stack is the service layer of the [Ashlr ecosystem](../README.md#part-of-the-ashlr-ecosystem): an autonomous, code-first, agent-native software factory chasing open-source RSI (recursive self-improvement), with agents doing the work and the human as a passive board member. Coding agents maintain these docs through pull requests. The rules they follow are in [AGENTS.md](../AGENTS.md); build and test steps are in [STACK.md](../STACK.md#agent-quickstart-from-a-clone). New contributors, human or agent, start with the [contributor path](../CONTRIBUTING.md#contribute-with-an-agent).
 
 Many docs below are dated snapshots, research notes or proposals. Each one says so at the top. Check the source and `stack <command> --help` before relying on a snapshot.
 
@@ -26,7 +26,8 @@ Many docs below are dated snapshots, research notes or proposals. Each one says 
 
 ## Contribute and release
 
-- [Adding a provider](adding-a-provider.md): every file to touch. See also [CONTRIBUTING.md](../CONTRIBUTING.md).
+- [Contribute with an agent](../CONTRIBUTING.md#contribute-with-an-agent): fork, install, the checks to run, what the required CI Gate check needs, and how PRs merge.
+- [Adding a provider](adding-a-provider.md): every file to touch.
 - [Releasing Ashlr Stack](RELEASE.md) and the [release train status](RELEASE-TRAIN-STATUS.md) snapshot.
 - Changelog upkeep: [format](changelog-format.md), [update procedure](changelog-update-procedure.md), [update checklist](changelog-update-checklist.md), [mirroring](changelog-mirroring.md), [mirror checklist](changelog-mirror-checklist.md), [mirror review](changelog-mirror-review.md), [site sync](changelog-site-sync.md), [source locations](changelog-source-locations.md), [entry source reference](changelog-entry-source-reference.md) and [reader note](changelog-reader-note.md).
 - Site changelog: [entry location](site-changelog-entry-location.md), [review](site-changelog-review.md), [review checklist](site-changelog-review-checklist.md), [source map](site-changelog-source-map.md), [source reference](site-changelog-source-reference.md) and [placeholder timeline](site-changelog-placeholder-timeline.md).
