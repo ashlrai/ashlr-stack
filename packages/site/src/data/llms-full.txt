@@ -183,9 +183,13 @@ Read the selected existing file (default `.env`) and import recognized entries t
 
 Clone a supported remote URL into the optional positional directory and inspect the checkout. Printed next steps are guidance, not proof of authentication or complete reprovisioning. Use an explicit HTTPS or supported SSH URL, not bare `github.com/org/repo`.
 
-### `stack doctor [--fix] [--all]`
+### `stack doctor [--fix] [--all] [--json] [--ecosystem] [--reconcile] [--repos]`
 
-Inspect the configured-service health report. `--fix` attempts supported remediation; existing vault names can skip repair and do not establish credential validity. `--all` selects registered projects. Inspect failures and partial outcomes rather than assuming every service is repaired.
+Inspect the configured-service health report. `--fix` attempts supported remediation; existing vault names can skip repair and do not establish credential validity. `--all` selects registered projects. `--json` prints the report and exits 0 on pass, 1 on failure. Inspect failures and partial outcomes rather than assuming every service is repaired.
+
+- `--ecosystem` reports which Ashlr tools are installed, with versions. It is read-only and never fails. With `--ecosystem`, `--install` prints install commands for missing or outdated tools (optionally a comma list such as `--install lexicon`) and `--fix` previews each tool's own repair step; nothing runs unless `--apply <tools>` names each tool to run. See docs/ashlr-handshake.md for the contract behind this check.
+- `--reconcile` checks whether the services in `.stack.toml` are still referenced in source code.
+- `--repos` checks default-branch CI and open PR counts across the Ashlr repos through `gh`. It combines only with `--json`.
 
 ### `stack status [--json]`
 
@@ -274,6 +278,29 @@ Select a saved recipe; when Stack configuration is absent, the command first ini
 stack recommend "B2B SaaS with auth, AI, and payments" --save
 stack apply <saved-recipe-id> --noWire
 ```
+
+### `stack swap <from> <to> [--dryRun] [--keepFrom] [--noRollback]`
+
+Replace a configured provider with another in the same category (for example `clerk` → `auth0`). Stack sets up `<to>` first, then attempts env-key aliases and local cleanup of `<from>`. `--dryRun` prints the plan without running any step; `--keepFrom` keeps `<from>` configured for a side-by-side migration; `--noRollback` leaves partial state in place on failure. The old upstream resource is never deleted. Aliases need stored values that Phantom does not hand to Stack, so Stack prints the `phantom add` step when it cannot write one. There is no atomic whole-swap guarantee: inspect warnings and remaining config or secrets.
+
+```bash
+stack swap clerk auth0 --dryRun
+```
+
+### `stack telemetry status` / `stack telemetry enable` / `stack telemetry disable`
+
+Show or change the stored telemetry choice; bare `stack telemetry` means `status`. Telemetry is opt-in: the first-run prompt defaults to no, a first run without a terminal records it as disabled, and `STACK_TELEMETRY=0` suppresses events regardless of the stored choice. The source has no default endpoint, so nothing is sent unless an operator configures one. Details are in docs/PRIVACY.md.
+
+### Fleet operations: `stack fleet [--json]`, the `fleet-` reports and `stack worktree-disk`
+
+These commands report on the Ashlr build fleet, the agents that maintain the ecosystem repos. Most read local run state under `~/.ashlr-runs`; GitHub-backed reports reach GitHub through Locus. They are read-only unless a command documents otherwise (`fleet-act --apply` appends an audit request for a dispatcher to consume). Report commands accept `--json` for a `schemaVersion 1` report; `fleet-stream` emits NDJSON, or localhost SSE with `--sse`, instead.
+
+- `stack fleet` summarizes repository CI, open PR counts and dispatcher lane status. `--log` and `--queue` override the dispatcher log and queue paths. `collisions`, `sheet-status`, `slo` and `waste` also run nested, as in `stack fleet slo`.
+- Reports: `fleet-lanes`, `fleet-supply`, `fleet-latency`, `fleet-lag`, `fleet-waste`, `fleet-reds`, `fleet-silent`, `fleet-collisions`, `fleet-delivery-lag`, `fleet-stuck`, `fleet-slo`, `fleet-graph`, `fleet-bets`, `fleet-match`, `fleet-sheet-status` and `fleet-stream`.
+- `fleet-gc` is always a dry run that classifies fleet worktrees as preserved or collect-candidates.
+- `stack worktree-disk` ranks a repository's registered Git worktrees by allocated disk bytes, with merged and dirty state. It deletes nothing.
+
+Each command's purpose and flags are in docs/fleet-commands.md; run `stack <command> --help` for current syntax.
 
 ---
 
