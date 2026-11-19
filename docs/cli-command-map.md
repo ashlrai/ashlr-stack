@@ -75,3 +75,17 @@ The command-map test checks the table against root help and checks each example'
 options against its command help. It also executes representative local examples
 in an isolated project; examples needing credentials, external data, network, or
 interactive input have their syntax checked without carrying out those operations.
+
+## Bundled templates
+
+`stack templates list --json` prints the catalog. The directories under `templates/` hold the starter definitions, with these service slots:
+
+| Template | Services |
+| --- | --- |
+| `claude-agent-openai-anthropic` | openai, anthropic, xai, deepseek, github |
+| `cloudflare-turso-clerk` | cloudflare, turso, clerk, sentry |
+| `litellm-gateway` | openai, anthropic, xai, deepseek (experimental placeholder flow) |
+| `nextjs-neon-vercel-sentry` | neon, vercel, sentry |
+| `nextjs-supabase-posthog` | supabase, posthog |
+| `supabase-posthog-sentry-resend` | supabase, posthog, sentry, resend, stripe |
+| `temporal-worker-phantom` | no provider services; experimental Temporal worker notes using Phantom Secrets |
