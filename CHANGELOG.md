@@ -4,16 +4,23 @@
 
 ### Next release (since v0.3.10)
 
-This section covers the 10 commits from `v0.3.10` through `81d12551`. These are documentation and maintenance changes; CLI commands and provider behavior are unchanged.
+This section covers the changes from `v0.3.10` through `985ea4c6`.
 
 **Added**
 
 - The README now lists the available options for every CLI command and subcommand.
+- `stack status` and `stack doctor` end with one plain next step, also in JSON as `next_step` (`summary`, `command`).
+- `stack doctor --ecosystem --json` gives each missing tool a `fix` with a summary and a command, or `null`.
+- The README documents exit codes (0 ok, 1 failed, 2 doctor issues) and the JSON output of `list` and `status`.
 
 **Changed**
 
 - Installation guides, MCP setup examples and agent references now record published version 0.3.10 and its Node.js 20 minimum, while keeping older verification results clearly dated.
 - Regression checks now cover more command help, unknown commands, fleet reports, wiring documentation, repository checks and Git hooks; coverage and security scans also run after merges to main.
+- `stack list --json` and `stack status --json` report failures as `ashlr.stack.error/v1` with exit code 1.
+- The README starts with one read-only command, `stack providers --json`, that needs no account or key.
+- The swap guide explains that same-category providers can be swapped; a pair without a preset warns and skips aliases.
+- Contributor guidance now lets agent PRs add lines to Unreleased in `CHANGELOG.md`.
 - `SUPPORT.md` now says where to ask a question, report a bug, request a provider or report a security issue.
 
 **Fixed**
