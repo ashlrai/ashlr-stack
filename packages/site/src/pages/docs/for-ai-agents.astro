@@ -479,6 +479,31 @@ stack recommend "Next.js SaaS with analytics" --synth --save`}
     </li>
   </ul>
 
+  <h2>Where Stack fits in the Ashlr ecosystem</h2>
+  <p>
+    Stack is one tool in the Ashlr ecosystem. Together these tools aim to be
+    an autonomous, code-first, agent-native software factory, chasing
+    open-source RSI (recursive self-improvement). Agents do the work, and the
+    human acts as a passive board member. Stack is the service layer: it turns
+    provider setup into commands an agent can run and parse.
+  </p>
+  <ul>
+    <li><strong>Phantom</strong> (<code>phm</code>): runs the agents that improve these repos, for example <code>phm improve</code>.</li>
+    <li><strong><a href="https://github.com/ashlrai/phantom-secrets">Phantom Secrets</a></strong> (<code>phantom</code>): vault. Stack stores the secrets you select here.</li>
+    <li><strong><a href="https://github.com/ashlrai/locus">Locus</a></strong> (<code>locus</code>): identity plane. Pins which account a session acts as; <code>stack exec --as</code> uses it.</li>
+    <li><strong><a href="https://github.com/ashlrai/lexicon">Lexicon</a></strong> (<code>lexicon</code>): voice lexicon. Keeps dictated names spelled right.</li>
+    <li><strong><a href="https://github.com/ashlrai/ashlr-md">Ashlr Markdown</a></strong> (<code>mdopener-mcp</code>): desktop Markdown app with an MCP server.</li>
+    <li><strong><a href="https://github.com/ashlrai/ashlr-plugin">Ashlr plugin</a></strong> (<code>ashlr-plugin</code>): plugin for Claude Code and Codex.</li>
+  </ul>
+  <p>
+    <code>stack doctor --ecosystem --json</code> reports which of these are
+    installed, with versions. It is read-only.{" "}
+    <code>stack doctor --ecosystem --install</code> prints install commands
+    for missing tools and runs nothing. Agents open pull requests on the
+    Stack repo and merge them once required checks pass; their rules are in{" "}
+    <a href="https://github.com/ashlrai/ashlr-stack/blob/main/AGENTS.md">AGENTS.md</a>.
+  </p>
+
   <h2>MCP tool reference</h2>
   <p>
     The reviewed source declares {MCP_TOOLS.length} MCP tools, a subset of
