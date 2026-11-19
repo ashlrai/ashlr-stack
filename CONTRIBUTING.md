@@ -18,8 +18,10 @@ New here? Start with the [good first issue](https://github.com/ashlrai/ashlr-sta
 Humans and agents follow the same path. Point your coding agent (Claude Code, Codex, Cursor) at this section, [AGENTS.md](AGENTS.md) and [STACK.md](STACK.md#agent-quickstart-from-a-clone), then let it work.
 
 1. **Fork and clone.** Without write access to `ashlrai/ashlr-stack`, fork it on GitHub and clone your fork. Work on a branch, never on `main`.
-2. **Install.** `bun install --frozen-lockfile`. Optionally run `bun run setup-hooks` once per clone to wire the pre-commit hook in `.githooks/`, which runs `bunx biome check .`.
-3. **Run the tests your change touches.** `scripts/affected-tests origin/main` prints a JSON array of test targets, `[]`, or `ALL` for the committed changes since `origin/main` (commit first; it ignores uncommitted work). Pass the array elements to `bun test`, run plain `bun test` for `ALL`, and skip tests for `[]`. Details: [scripts/affected-tests.md](scripts/affected-tests.md).
+2. **Install.** `bun install --frozen-lockfile`. A new git worktree starts without `node_modules`, so run it in each worktree too. Optionally run `bun run setup-hooks` once per clone to wire the pre-commit hook in `.githooks/`, which runs `bunx biome check .`.
+3. **Run the checks your change touches.** Both helpers compare against `origin/main`, so `git fetch origin` first (in a fork, sync your fork's `main` with upstream).
+   - `bash scripts/fast-check.sh` typechecks and tests each workspace under `packages/` that differs from `origin/main`, including uncommitted and untracked files. It prints one `PASS` or `FAIL` line per step and exits 1 on any failure. It skips changes outside `packages/`, such as `scripts/` or docs.
+   - `scripts/affected-tests origin/main` prints a JSON array of test targets, `[]`, or `ALL` for the committed changes since `origin/main` (commit first; it ignores uncommitted work). Pass the array elements to `bun test`, run plain `bun test` for `ALL`, and skip tests for `[]`. Details: [scripts/affected-tests.md](scripts/affected-tests.md).
 4. **Run the checks the PR gate runs** (see below), plus `bun run lint`.
 5. **Sync generated docs.** If you touched a version, manifest, `CHANGELOG.md`, command, MCP tool or provider, run `bun run fresh:sync` then `bun run fresh:check`. New CLI commands and MCP tools have extra steps in [STACK.md](STACK.md#typical-tasks).
 6. **Open a PR** from your branch with the template filled in: what changed, why, and how you tested it. One concern per PR.

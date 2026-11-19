@@ -62,7 +62,14 @@ HOME=$(mktemp -d) bun test                  # full suite, isolated home
 bunx tsc --noEmit -p tsconfig.json
 bunx biome check .
 bun run packages/cli/src/index.ts --help   # the CLI from source
+bash scripts/fast-check.sh                 # typecheck + test packages changed vs origin/main
 ```
+
+`scripts/fast-check.sh` includes uncommitted work but only looks under
+`packages/`. For committed changes anywhere in the repo,
+`scripts/affected-tests origin/main` lists the tests to run
+([details](scripts/affected-tests.md)). The full contributor path is in
+[CONTRIBUTING.md](CONTRIBUTING.md#contribute-with-an-agent).
 
 Things that trip agents up:
 

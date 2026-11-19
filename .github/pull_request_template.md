@@ -19,7 +19,7 @@ CI Gate (the one required check) runs these; run them locally first:
 
 The full suite runs daily on `main`, not per PR, so check it yourself:
 
-- [ ] Tests for this change pass (`scripts/affected-tests origin/main`, or `HOME=$(mktemp -d) bun test` for the full suite)
+- [ ] Tests for this change pass (`bash scripts/fast-check.sh` for changed packages, `scripts/affected-tests origin/main`, or `HOME=$(mktemp -d) bun test` for the full suite)
 - [ ] `bun run lint` clean
 - [ ] If a version, manifest, command, MCP tool or provider changed: `bun run fresh:sync`, then `bun run fresh:check` passes
 - [ ] If a new provider was added: every step in `docs/adding-a-provider.md` (registered in `providers/index.ts` and `catalog.ts`, added to `detect.ts` + `detect-source.ts`, test written, `docs/provider-auth-matrix.md` and `packages/site/src/lib/providers.ts` updated)
