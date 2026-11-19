@@ -4,32 +4,20 @@ import { join } from "node:path";
 
 const root = join(import.meta.dir, "..");
 const agents = readFileSync(join(root, "AGENTS.md"), "utf8");
+const rule = agents.split(/^## /m).find((s) => s.startsWith("Changelog\n"));
 
-// Each of these files appears in 10 or 11 of the 30 newest open PRs, so
-// bridge jobs must not edit them. Matched as backticked spans so the bare
-// `CHANGELOG.md` reference cannot be satisfied by the site-data path tail.
-const hotFiles = [
-  "CHANGELOG.md",
-  "packages/site/src/data/CHANGELOG.md",
-  "packages/site/tests/changelog.test.ts",
-];
-
-const sections = agents.split(/^## /m).slice(1);
-const rule = sections.find((section) => hotFiles.every((path) => section.includes(`\`${path}\``)));
-
-test("AGENTS.md carries a section naming all three hot files", () => {
-  expect(rule, "no AGENTS.md section names all three hot files").toBeDefined();
-  expect(rule?.split("\n", 1)[0]).toMatch(/hot file|bridge/i);
+test("AGENTS.md states the Unreleased-only changelog rule", () => {
+  expect(rule, "no '## Changelog' section in AGENTS.md").toBeDefined();
+  expect(rule).toMatch(/may add lines to the `## Unreleased` section/);
+  expect(rule).toMatch(/never edit released sections, bump versions or tag/i);
 });
 
-test("the rule bars bridge PRs from editing the hot files and routes entries to the notes", () => {
-  expect(rule).toMatch(/bridge PR does not edit|bridge PRs do not edit/i);
-  expect(rule).toMatch(/notes carry the entry/i);
-  expect(rule).toContain("`BRIDGE_NOTES.md`");
+test("AGENTS.md no longer bans agent PRs from the changelog", () => {
+  expect(agents).not.toMatch(/bridge PRs? (does|do) not edit/i);
 });
 
-test("every file the rule protects exists in the repo", () => {
-  for (const path of hotFiles) {
+test("the changelog files the rule names exist", () => {
+  for (const path of ["CHANGELOG.md", "packages/site/src/data/CHANGELOG.md"]) {
     expect(existsSync(join(root, path)), path).toBe(true);
   }
 });

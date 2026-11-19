@@ -64,5 +64,5 @@ bun test && bunx tsc --noEmit -p tsconfig.json && bun run lint
   (`bun run --cwd packages/site build`) regenerates
   `packages/site/public/llms.txt`. Commit the regenerated files.
   `bun test packages/site/tests/doc-facts.test.ts` fails if any count drifts.
-- Add a line to `CHANGELOG.md` under Unreleased (a parallel bridge PR puts it
-  in `BRIDGE_NOTES.md` instead, per [AGENTS.md](../AGENTS.md)).
+- Add a line to `CHANGELOG.md` under Unreleased (agent PRs too; see
+  [AGENTS.md](../AGENTS.md#changelog)).

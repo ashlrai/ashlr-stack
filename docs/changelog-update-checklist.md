@@ -4,11 +4,8 @@ Use this when adding or correcting release notes. The root [CHANGELOG.md](../CHA
 is the source; [packages/site/src/data/CHANGELOG.md](../packages/site/src/data/CHANGELOG.md)
 is the checked-in copy rendered by the site.
 
-Parallel agent bridge PRs do not edit either copy or
-`packages/site/tests/changelog.test.ts`. They put the entry in `BRIDGE_NOTES.md`
-at the worktree root, and a later dedicated PR lands it in the changelog. See the
-[hot-file rule](../AGENTS.md#hot-files-bridge-prs-carry-changelog-entries-in-the-notes)
-in AGENTS.md.
+Agent PRs follow the same flow: add lines under `## Unreleased` only and mirror
+the site copy. See the [changelog rule](../AGENTS.md#changelog) in AGENTS.md.
 
 - [ ] Before editing or syncing, compare both files from the repository root:
 

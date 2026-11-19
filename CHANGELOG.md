@@ -14,6 +14,7 @@ This section covers the 10 commits from `v0.3.10` through `81d12551`. These are 
 
 - Installation guides, MCP setup examples and agent references now record published version 0.3.10 and its Node.js 20 minimum, while keeping older verification results clearly dated.
 - Regression checks now cover more command help, unknown commands, fleet reports, wiring documentation, repository checks and Git hooks; coverage and security scans also run after merges to main.
+- `SUPPORT.md` now says where to ask a question, report a bug, request a provider or report a security issue.
 
 **Fixed**
 
