@@ -13,10 +13,36 @@ New here? Start with the [good first issue](https://github.com/ashlrai/ashlr-sta
 - If you are unsure whether something belongs here, open an issue first and ask.
 - Questions are welcome in issues. We read all of them.
 
+## Contribute with an agent
+
+Humans and agents follow the same path. Point your coding agent (Claude Code, Codex, Cursor) at this section, [AGENTS.md](AGENTS.md) and [STACK.md](STACK.md#agent-quickstart-from-a-clone), then let it work.
+
+1. **Fork and clone.** Without write access to `ashlrai/ashlr-stack`, fork it on GitHub and clone your fork. Work on a branch, never on `main`.
+2. **Install.** `bun install --frozen-lockfile`. Optionally run `bun run setup-hooks` once per clone to wire the pre-commit hook in `.githooks/`, which runs `bunx biome check .`.
+3. **Run the tests your change touches.** `scripts/affected-tests origin/main` prints a JSON array of test targets, `[]`, or `ALL` for the committed changes since `origin/main` (commit first; it ignores uncommitted work). Pass the array elements to `bun test`, run plain `bun test` for `ALL`, and skip tests for `[]`. Details: [scripts/affected-tests.md](scripts/affected-tests.md).
+4. **Run the checks the PR gate runs** (see below), plus `bun run lint`.
+5. **Sync generated docs.** If you touched a version, manifest, `CHANGELOG.md`, command, MCP tool or provider, run `bun run fresh:sync` then `bun run fresh:check`. New CLI commands and MCP tools have extra steps in [STACK.md](STACK.md#typical-tasks).
+6. **Open a PR** from your branch with the template filled in: what changed, why, and how you tested it. One concern per PR.
+7. **Merge.** PRs land through GitHub's merge queue once the required check passes. Turning on auto-merge (`gh pr merge --auto`) needs write access; for a PR from a fork, a maintainer or fleet agent turns it on.
+
+### What CI requires
+
+The one required check is **CI Gate** in `.github/workflows/ci.yml`. On a pull request and in the merge queue it needs these jobs to pass:
+
+| Job | What it runs |
+| --- | --- |
+| Typecheck + Tier-1 security tests | `bunx tsc --noEmit -p tsconfig.json`, `bun test packages/core/src/__tests__/security.test.ts packages/core/src/__tests__/secret-redaction.test.ts`, `bun run check:crypto` |
+| Secret scan (diff) | Pinned Gitleaks over the commits the PR adds |
+| Secret-shape scan | The pinned `scrub.pl` over the added lines of the diff |
+
+The full suite (the Bun test matrix, the site build with `astro check`, and Biome lint) runs daily on `main` and on manual dispatch, not on each PR. A red daily run opens a FIX-MAIN issue and agents fix `main` forward. Run the full suite locally before you open anything large, so your change does not turn the daily run red.
+
+Never commit secret values. Use Phantom Secrets placeholders in examples and fixtures; the two secret scans fail closed.
+
 ## Dev loop
 
 ```bash
-bun install
+bun install --frozen-lockfile
 HOME=$(mktemp -d) bun test                   # full suite, isolated home
 bunx tsc --noEmit -p tsconfig.json          # typecheck
 bun run lint                                # biome check .
