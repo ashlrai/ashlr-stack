@@ -7,12 +7,16 @@ body:
       value: |
         Thanks for filing a bug. Stack is pre-alpha so specifics help a lot.
 
+        - **Security vulnerability?** Do not file it here. Report it privately through [GitHub Security Advisories](https://github.com/ashlrai/ashlr-stack/security/advisories/new), as described in [SECURITY.md](https://github.com/ashlrai/ashlr-stack/blob/main/SECURITY.md).
+        - **Remove secrets** (API keys, tokens, connection strings) from every log you paste.
+        - **Want to fix it yourself, or with your coding agent?** The [contributor path](https://github.com/ashlrai/ashlr-stack/blob/main/CONTRIBUTING.md#contribute-with-an-agent) covers forking, the checks to run and how PRs merge.
+
   - type: input
     id: version
     attributes:
       label: Stack version
       description: Output of `stack --version`.
-      placeholder: "0.1.0"
+      placeholder: "0.3.10"
     validations:
       required: true
 
