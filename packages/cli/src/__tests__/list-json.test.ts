@@ -175,7 +175,9 @@ region = "eu-west"
   test("without a .stack.toml: JSON error on stdout, exit 1", () => {
     const r = stack(["list", "--json"], tmp());
     expect(r.code).toBe(1);
-    expect(JSON.parse(r.stdout).error).toContain("Run `stack init` first.");
+    const body = JSON.parse(r.stdout);
+    expect(body.schema).toBe("ashlr.stack.error/v1");
+    expect(body.error).toContain("Run `stack init` first.");
   });
 
   test("human output is unchanged without --json", () => {

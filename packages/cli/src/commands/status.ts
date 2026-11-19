@@ -7,7 +7,7 @@ import {
   readConfig,
 } from "@ashlr/stack-core";
 import { defineCommand } from "citty";
-import { EXIT_CODES } from "../exit-codes.ts";
+import { exitWithJsonError } from "../lib/json-error.ts";
 import {
   INIT_STEP,
   INSTALL_STEP,
@@ -266,7 +266,7 @@ export const statusCommand = defineCommand({
   args: {
     json: {
       type: "boolean",
-      description: "Emit machine-readable JSON (services, config, phantom).",
+      description: "Emit machine-readable JSON (schema ashlr.stack.status/v1).",
     },
   },
   async run({ args }) {
@@ -275,10 +275,7 @@ export const statusCommand = defineCommand({
       loaded = await loadStatus();
     } catch (err) {
       if (args.json) {
-        process.stdout.write(
-          `${JSON.stringify({ error: err instanceof Error ? err.message : String(err) })}\n`,
-        );
-        process.exit(EXIT_CODES.ERROR);
+        exitWithJsonError(err);
       }
       throw err;
     }

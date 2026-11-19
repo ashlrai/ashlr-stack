@@ -213,7 +213,9 @@ describe("stack status --json", () => {
     writeFileSync(join(dir, ".stack.toml"), "[stack\nnot toml");
     const { stdout, code } = runStatus(dir, ["--json"], false);
     expect(code).toBe(1);
-    expect(typeof JSON.parse(stdout).error).toBe("string");
+    const body = JSON.parse(stdout);
+    expect(body.schema).toBe("ashlr.stack.error/v1");
+    expect(typeof body.error).toBe("string");
   });
 
   test("human output keeps the existing summary and adds one next step", () => {
