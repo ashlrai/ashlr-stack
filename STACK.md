@@ -52,7 +52,8 @@ Latest dated CHANGELOG section: `0.3.10 (2026-11-10)`.
 - <!-- fresh:begin command-count -->47<!-- fresh:end --> CLI commands live under `packages/cli/src/commands/*.ts` (registered in `packages/cli/src/index.ts`)
 - <!-- fresh:begin provider-count -->39<!-- fresh:end --> providers in <!-- fresh:begin category-count -->13<!-- fresh:end --> categories under `packages/core/src/providers/*.ts` (factory: `_api-key.ts`; pilot: `supabase.ts`)
 - <!-- fresh:begin tool-count -->19<!-- fresh:end --> MCP tools in the `TOOLS` array of `packages/mcp/src/tools.ts` (served by `server.ts`). Each runs the CLI: `STACK_BIN` if set, else the `stack` bin of the `@ashlr/stack` dependency (`packages/cli/dist/index.js`, present after a build), else `stack` on PATH (`packages/mcp/src/stack-bin.ts`)
-- Tests live in `packages/*/src/__tests__/`, `packages/mcp/__tests__/`, `packages/site/tests/` and `scripts/`. Run with `HOME=$(mktemp -d) bun test` from the repo root
+- Tests live in `packages/*/src/__tests__/`, `packages/mcp/__tests__/`, `packages/site/tests/`, `scripts/`, `test/` (package manifests, CLI exit codes, git hooks) and `tests/` (mostly changelog parsing and parity). Run with `HOME=$(mktemp -d) bun test` from the repo root
+- `scripts/*.node-tests.mjs` use `node:test`, so `bun test` skips them. Run them with Node: `bun run check:crypto` and `bun run fresh:test` cover two, `scripts/mcp-registry-gate.test.ts` drives a third, and `node --test scripts/pkg-module-type.node-tests.mjs` runs the last
 
 ## Agent quickstart (from a clone)
 
