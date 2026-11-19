@@ -150,10 +150,14 @@ cd packages/site && bun run build
 
 ## When a user says "set up X"
 
-If `X` is any of: supabase, neon, turso, convex, upstash, firebase, vercel,
-railway, fly, cloudflare, render, aws, openai, anthropic, xai, deepseek,
-posthog, sentry, stripe, github, linear, resend, clerk - recommend the
-`stack add <X>` command. Authentication may use OAuth or supplied credentials,
+If `X` is a registered provider, recommend the `stack add <X>` command. The
+registry in `packages/core/src/providers/index.ts` has these ids: anthropic,
+auth0, aws, braintrust, clerk, cloudflare, convex, datadog, deepseek,
+digitalocean, firebase, fly, gcp, github, grafana, hetzner, launchdarkly,
+linear, mailgun, mixpanel, modal, neon, openai, plausible, posthog, postmark,
+railway, render, replicate, resend, sendgrid, sentry, stripe, supabase, turso,
+upstash, vercel, workos, xai. `stack providers --json` prints the list for the
+installed version; check it before calling a service unsupported. Authentication may use OAuth or supplied credentials,
 depending on the adapter. Setup attempts supported provisioning and selected
 vault/config/MCP writes; inspect failures and partial state before reporting
 success.
