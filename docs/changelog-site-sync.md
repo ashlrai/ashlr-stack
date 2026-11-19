@@ -7,6 +7,12 @@ over the site copy during `dev`, `start`, and `build`; it is not a two-way
 merge. Review both files before running those commands, since copying first can
 erase evidence of a site-only change.
 
+Parallel agent bridge PRs do not edit either copy or
+`packages/site/tests/changelog.test.ts`. They put the entry in `BRIDGE_NOTES.md`
+at the worktree root, and a later dedicated PR lands it in the changelog. See the
+[hot-file rule](../AGENTS.md#hot-files-bridge-prs-carry-changelog-entries-in-the-notes)
+in AGENTS.md.
+
 From the repository root:
 
 1. Find the change in **both** files by its distinctive text, then read the
