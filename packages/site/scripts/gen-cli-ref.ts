@@ -92,6 +92,9 @@ function synopsisPlaceholder(name: string, arg: ArgDef): string {
     target: "name|path",
     k: "n",
   };
+  // `from` is a file for `stack import --from <path>`, but the positional in
+  // `stack swap <from> <to>` is a provider name, so positionals keep their name.
+  if (name === "from" && arg.type === "positional") return name;
   return overrides[name] ?? name;
 }
 

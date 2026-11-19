@@ -1321,11 +1321,11 @@ export const CLI_COMMANDS: CliCommand[] = [
   {
     name: "stack swap",
     description: "Migrate a project from one provider to an equivalent in the same category.",
-    synopsis: "stack swap <path> <to> [--dryRun] [--noRollback] [--keepFrom]",
+    synopsis: "stack swap <from> <to> [--dryRun] [--noRollback] [--keepFrom]",
     flags: [
       {
         name: "from",
-        synopsis: "<path>",
+        synopsis: "<from>",
         type: "positional",
         required: true,
         description: "Provider to remove (e.g. clerk).",

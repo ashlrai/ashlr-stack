@@ -17,13 +17,21 @@ import { Code } from "astro:components";
     partial failures and remaining configuration or secrets.
   </p>
 
-  <p>38 preset pairs are built in across six categories:</p>
+  <p>
+    Any two registered providers in the same category can be swapped; Stack
+    refuses a swap across categories. Separately, the source registers 20
+    provider pairs (40 one-way entries, both directions) across six categories
+    in <code>packages/core/src/swap.ts</code>. A registered pair supplies any
+    env-key aliases for that direction. If you pick a destination with no
+    registered pair, Stack warns, lists the registered destinations for
+    <code>from</code>, and continues without aliases.
+  </p>
 
   <table>
     <thead>
       <tr>
         <th>Category</th>
-        <th>Supported pairs (bidirectional)</th>
+        <th>Registered pairs (both directions)</th>
       </tr>
     </thead>
     <tbody>
@@ -33,7 +41,7 @@ import { Code } from "astro:components";
       </tr>
       <tr>
         <td>Database</td>
-        <td>supabase ↔ neon, supabase ↔ turso, neon ↔ turso</td>
+        <td>supabase ↔ neon</td>
       </tr>
       <tr>
         <td>Email</td>
@@ -49,7 +57,7 @@ import { Code } from "astro:components";
       </tr>
       <tr>
         <td>Deploy</td>
-        <td>vercel ↔ netlify, vercel ↔ cloudflare, netlify ↔ cloudflare</td>
+        <td>vercel ↔ railway, vercel ↔ fly, vercel ↔ render, railway ↔ fly, railway ↔ render, fly ↔ render</td>
       </tr>
     </tbody>
   </table>
@@ -69,8 +77,10 @@ stack swap clerk auth0 --dry-run`}
   <p>What happens under the hood:</p>
 
   <ol>
-    <li>Stack checks that <code>from</code> is configured in <code>.stack.toml</code>.</li>
+    <li>Stack checks that both names are known providers in the same category and that <code>from</code> is configured in <code>.stack.toml</code>.</li>
+    <li>Stack prints the plan. With <code>--dry-run</code> it stops here.</li>
     <li>Stack runs provider setup for <code>to</code>; authentication and resource operations depend on that adapter and its configured credentials.</li>
+    <li>Stack attempts any env-key aliases registered for the pair.</li>
     <li>Unless <code>--keep-from</code> is set, Stack attempts Phantom secret cleanup and removes the local <code>from</code> service/MCP entry. The old upstream resource is kept; secrets can remain when terminal confirmation is unavailable or refused.</li>
     <li>Local configuration updates can be partial. A source-cleanup failure does not revert the destination setup; review warnings and finish cleanup manually.</li>
   </ol>
@@ -81,9 +91,12 @@ stack swap clerk auth0 --dry-run`}
     example, Supabase writes <code>SUPABASE_URL</code> while Neon writes
     <code>DATABASE_URL</code>. After a <code>supabase → neon</code> swap, Stack
     attempts to mirror <code>DATABASE_URL</code> into
-    <code>SUPABASE_URL</code> in Phantom. Stored-value access or a write can
-    be refused, so an alias is not guaranteed; inspect warnings and configure
-    the required value yourself through Phantom's trusted-terminal flow.
+    <code>SUPABASE_URL</code> in Phantom. In this source only the
+    supabase ↔ neon pairs register aliases. Phantom does not hand stored
+    values to Stack, so a mirror can be refused; Stack then prints the
+    <code>phantom add</code> step for the alias. Inspect warnings and
+    configure the required value yourself through Phantom's trusted-terminal
+    flow.
   </p>
 
   <div class="callout callout-warn">
