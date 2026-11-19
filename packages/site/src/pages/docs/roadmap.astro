@@ -1,6 +1,15 @@
 ---
 import Docs from "~/layouts/Docs.astro";
-import { PUBLISHED_VERSION, SOURCE_VERSION } from "~/lib/site-facts.generated";
+import {
+  CLI_COMMAND_COUNT,
+  MCP_TOOL_COUNT,
+  PLUGIN_SLASH_COMMANDS,
+  PROVIDER_CATEGORY_COUNT,
+  PROVIDER_COUNT,
+  PUBLISHED_VERSION,
+  SOURCE_VERSION,
+  TEMPLATE_COUNT,
+} from "~/lib/site-facts.generated";
 ---
 
 <Docs
@@ -35,33 +44,49 @@ import { PUBLISHED_VERSION, SOURCE_VERSION } from "~/lib/site-facts.generated";
 
   <ul>
     <li>
-      <strong>CLI commands</strong> — <code>init</code>,{" "}
-      <code>add</code>, <code>remove</code>, <code>doctor</code>,{" "}
-      <code>exec</code>, <code>env</code>, <code>import</code>,{" "}
-      <code>scan</code>, <code>clone</code>, <code>info</code>,{" "}
-      <code>deps</code>, <code>projects</code>, <code>sync</code>,{" "}
-      <code>upgrade</code>, <code>login</code>, <code>status</code>,{" "}
-      <code>open</code>, <code>ci</code>, <code>completion</code>, plus the
-      interactive picker and command-specific <code>--dryRun</code> and
-      <code>--json</code> options; not every command supports every option.
+      <strong>{CLI_COMMAND_COUNT} top-level CLI commands</strong>, listed in the{" "}
+      <a href="/docs/cli/">CLI reference</a>. Project commands:{" "}
+      <code>init</code>, <code>import</code>, <code>scan</code>,{" "}
+      <code>clone</code>, <code>add</code>, <code>remove</code>,{" "}
+      <code>list</code>, <code>info</code>, <code>status</code>,{" "}
+      <code>env</code>, <code>deps</code>, <code>doctor</code>,{" "}
+      <code>exec</code>, <code>swap</code>, <code>sync</code>,{" "}
+      <code>onboard</code>, <code>open</code>, <code>login</code>,{" "}
+      <code>telemetry</code>, <code>templates</code>,{" "}
+      <code>providers</code>, <code>recommend</code>, <code>apply</code>,{" "}
+      <code>projects</code>, <code>ci</code>, <code>completion</code> and{" "}
+      <code>upgrade</code>. The rest are fleet-operations commands
+      (<code>fleet</code>, the <code>fleet-</code> prefixed commands and{" "}
+      <code>worktree-disk</code>). <code>stack add</code> with no service
+      opens an interactive provider picker. Options such as{" "}
+      <code>--dry-run</code> and <code>--json</code> are command-specific;
+      not every command supports every option.
     </li>
     <li>
-      <strong>39 curated providers</strong> across database, deploy, cloud,
-      analytics, observability, feature flags, errors, AI, payments, code, tickets, email, and auth
-      categories. Authentication, validation, creation and attachment differ by
-      adapter; catalog inclusion is not completed provider setup.
+      <strong>{PROVIDER_COUNT} curated providers</strong> across {PROVIDER_CATEGORY_COUNT} categories:
+      database, deploy, cloud, analytics, observability, feature flags, errors,
+      AI, payments, code, tickets, email, and auth. Authentication, validation,
+      creation and attachment differ by adapter; catalog inclusion is not
+      completed provider setup.
     </li>
     <li>
-      <strong>5 starter templates</strong> —{" "}
-      <code>nextjs-supabase-posthog</code>, <code>nextjs-neon-vercel-sentry</code>,{" "}
-      <code>cloudflare-turso-clerk</code>,{" "}
-      <code>claude-agent-openai-anthropic</code>, <code>supabase-posthog-sentry-resend</code>.
+      <strong>{TEMPLATE_COUNT} starter templates</strong>, listed on the{" "}
+      <a href="/docs/templates/">templates page</a> and by{" "}
+      <code>stack templates list</code>. Some are marked experimental in their
+      own README.
     </li>
     <li>
-      <strong>19 MCP tools + 3 resources</strong> exposed via{" "}
-      <code>ashlr-stack-mcp</code> — Claude Code, Cursor, Windsurf, and any
-      MCP-capable clients require their own configuration, project cwd, runtime
-      and actual tool discovery; resources depend on file presence.
+      <strong>{MCP_TOOL_COUNT} MCP tools + 3 resources</strong> exposed via{" "}
+      <code>ashlr-stack-mcp</code> (see <a href="/docs/mcp/">MCP server</a>).
+      Claude Code, Cursor, Windsurf, and any MCP-capable clients require their
+      own configuration, project cwd, runtime and actual tool discovery;
+      resources depend on file presence.
+    </li>
+    <li>
+      <strong>Provider swap</strong>: <code>stack swap</code> sets up an
+      equivalent provider in the same category and cleans up the local source
+      entry. It does not copy data or delete the old upstream resource. See{" "}
+      <a href="/docs/swap/">Provider swap</a>.
     </li>
     <li>
       <strong>Phantom integration</strong> — credential persistence uses the installed
@@ -70,11 +95,14 @@ import { PUBLISHED_VERSION, SOURCE_VERSION } from "~/lib/site-facts.generated";
       need separate qualification.
     </li>
     <li>
-      <strong>Claude Code plugin</strong> —{" "}
-      <code>/stack:recommend</code>, <code>/stack:doctor</code>,{" "}
-      <code>/stack:apply</code> are three of six source command files. The other
-      commands are <code>/stack:add</code>, <code>/stack:list</code> and
-      <code>/stack:status</code>. Check the installed plugin interface separately.
+      <strong>Claude Code plugin</strong>: {PLUGIN_SLASH_COMMANDS.length} source
+      command files,{" "}
+      {PLUGIN_SLASH_COMMANDS.map((cmd, i) => (
+        <>
+          <code>{cmd}</code>
+          {i < PLUGIN_SLASH_COMMANDS.length - 1 ? ", " : ""}
+        </>
+      ))}. Check the installed plugin interface separately.
     </li>
     <li>
       <strong>CI availability</strong> — <code>stack ci init</code> preserves its config and existing-file guards, then refuses generation with exit 1 before creating a workflow directory or writing a file. <code>stack ci init --force</code> still refuses and does not overwrite. Unattended Cloud pull is unsupported by Phantom Secrets 0.7.9; this source does not provide a CI health workflow.
@@ -150,13 +178,14 @@ import { PUBLISHED_VERSION, SOURCE_VERSION } from "~/lib/site-facts.generated";
     <li>
       <strong>Provider plugins</strong> — a third-party publishing surface so
       providers we don't curate can ship as standalone packages. Today the
-      39-provider list is hand-curated; a plugin API would let us stop being
+      {PROVIDER_COUNT}-provider list is hand-curated; a plugin API would let us stop being
       the bottleneck.
     </li>
     <li>
-      <strong>Upstream resource migration</strong> — today Stack can
-      provision new resources but not migrate existing ones between
-      providers (e.g. Neon → Supabase). Scoped, not started.
+      <strong>Upstream data migration</strong>: <code>stack swap</code>{" "}
+      replaces a provider in local config, but nothing copies data or
+      resources between providers (e.g. Neon → Supabase). Scoped, not
+      started.
     </li>
     <li>
       <strong>TUI dashboard</strong> — <code>stack dash</code> as a Bubble
