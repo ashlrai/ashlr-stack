@@ -14,9 +14,12 @@ it does not accept `--json`. Sources are the `defineCommand` meta and args in
 `stack <command> --help` for current syntax. `fleet-collisions`,
 `fleet-sheet-status`, `fleet-slo` and `fleet-waste` also run nested as
 `stack fleet collisions`, `stack fleet sheet-status`, `stack fleet slo`, and `stack fleet waste`.
+The `fleet` summary (`fleet.ts`) and `worktree-disk` (`worktree-disk.ts`) are
+listed here too, but that test only checks the `fleet-*.ts` files.
 
 | Command | Purpose |
 | --- | --- |
+| `fleet` | Summarize repository CI, open PR counts (via Locus) and dispatcher lane status; hosts the nested `collisions`, `sheet-status`, `slo` and `waste` subcommands. |
 | `fleet-act` | Preview fleet requests; `--apply` appends a v1 audit request for a dispatcher consumer. |
 | `fleet-bets` | Score leader bets by joining queue ledger ids with dispatch state and job outcomes. |
 | `fleet-collisions` | Rank touched files by open conflicting PR count from one repository's gh JSON. |
@@ -35,9 +38,13 @@ it does not accept `--json`. Sources are the `defineCommand` meta and args in
 | `fleet-stuck` | List open PRs by merge state, age and auto-merge status with server/ and lockfile path hints. |
 | `fleet-supply` | Report hourly launches, observed lane idle minutes, restock errors and UTF-8 queue splits. |
 | `fleet-waste` | Report per-lane launches, empty finishes, precheck skips by code and unfinished jobs. |
+| `worktree-disk` | Rank a repository's registered Git worktrees by allocated disk bytes, with merged and dirty state. See [Worktree disk report](worktree-disk.md). |
 
 ## Flags
 
+- **fleet**: `--json`, `--log` (dispatcher log, default
+  `~/.ashlr-runs/dispatchd.log`), `--queue` (queue directory, default
+  `~/.ashlr-runs/queue`). With a subcommand, the subcommand's own flags apply.
 - **fleet-act**: positional `verb` (required: `pause`, `resume`, `kill`,
   `reassign`, `slots` or `steer`); `--lane`, `--job`, `--slots`, `--message`
   (verb inputs), `--queue`, `--apply`, `--dryRun`, `--json`.
@@ -64,6 +71,9 @@ it does not accept `--json`. Sources are the `defineCommand` meta and args in
 - **fleet-stuck** — `--json`.
 - **fleet-supply** — `--json`, `--queue`, `--log`.
 - **fleet-waste** — `--metrics`, `--hours`, `--json`.
+- **worktree-disk** — `--repo` (default: current directory), `--base` (merge
+  target, default `origin/HEAD` or `main`), `--json`. It reads local files and
+  Git state only; it never deletes worktrees or fetches.
 
 `fleet-act` is the only command here that writes, and only with `--apply`:
 it appends a request to `fleet-act.audit.jsonl` for a dispatcher consumer and
