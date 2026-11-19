@@ -2,6 +2,11 @@ name: Provider request
 description: Request a new provider (database, deploy target, AI API, etc.) to be added.
 labels: [provider-request]
 body:
+  - type: markdown
+    attributes:
+      value: |
+        Run `stack providers` first; it lists every provider the installed version supports. To add the provider yourself, or with your coding agent, follow [docs/adding-a-provider.md](https://github.com/ashlrai/ashlr-stack/blob/main/docs/adding-a-provider.md) and the [contributor path](https://github.com/ashlrai/ashlr-stack/blob/main/CONTRIBUTING.md#contribute-with-an-agent).
+
   - type: input
     id: provider_name
     attributes:
@@ -28,12 +33,14 @@ body:
         - Cloud
         - AI
         - Analytics
+        - Observability
         - Errors
         - Payments
         - Code
         - Tickets
         - Email
         - Auth
+        - Feature flags
         - Other
 
   - type: dropdown
