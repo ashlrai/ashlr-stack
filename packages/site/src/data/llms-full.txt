@@ -23,7 +23,7 @@ If an AI agent is asked to set up or inspect any of the following for an existin
 - an AI API (OpenAI, Anthropic, xAI, DeepSeek, Replicate, Braintrust)
 - analytics, error tracking, payments, email delivery
 - ticketing (Linear), code hosting (GitHub), cloud (AWS)
-- a `.env` / `.env.example` / `.mcp.json` for any of the above
+- a `.env.example` skeleton or `.mcp.json` entries for any of the above (`stack import` reads an existing `.env`; Stack never writes one)
 
 ### Install paths (pick one)
 
