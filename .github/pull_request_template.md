@@ -19,7 +19,7 @@ CI Gate (the one required check) runs these; run them locally first (commands in
 
 The full suite runs daily on `main`, not per PR, so check it yourself:
 
-- [ ] Tests for this change pass (`bash scripts/fast-check.sh` for changed packages, `scripts/affected-tests origin/main` (`[]` means skip; a nonzero exit is not an empty selection), or `HOME=$(mktemp -d) bun test` for the full suite)
+- [ ] Tests for this change pass (`bash scripts/fast-check.sh` is a quick pass over changed packages only; `scripts/affected-tests origin/main` also selects the other packages whose tests read your change (`[]` means skip; a nonzero exit is not an empty selection), or `HOME=$(mktemp -d) bun test` for the full suite)
 - [ ] `bun run lint` clean
 - [ ] Doc-only change: `bun run fresh:check` and `HOME=$(mktemp -d) bun test scripts/docs-freshness.test.ts` pass (`scripts/affected-tests` prints `[]` for docs, but tests read them)
 - [ ] If a version, manifest, `CHANGELOG.md`, command, MCP tool or provider changed: `bun run fresh:sync`, then `bun run fresh:check` passes
