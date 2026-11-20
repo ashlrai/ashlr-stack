@@ -53,7 +53,7 @@ Stack is one tool in the Ashlr ecosystem. Together these tools aim to be an auto
 - [Ashlr Markdown](https://github.com/ashlrai/ashlr-md) (`mdopener-mcp`): desktop Markdown app with an MCP server.
 - [Ashlr plugin](https://github.com/ashlrai/ashlr-plugin) (`ashlr-plugin`): plugin for Claude Code and Codex.
 
-`stack doctor --ecosystem --json` reports which of these are installed and writes nothing. `stack doctor --ecosystem --install` prints install commands for missing tools and runs nothing.
+`stack doctor --ecosystem --json` reports which of these are installed, with versions, and writes nothing. `stack doctor --ecosystem --install` prints install commands for missing tools and runs nothing.
 
 Agents (Phantom and other coding agents) work on the Stack repo through branches and pull requests that merge once required checks pass. Their rules and kept limits are in [AGENTS.md](https://github.com/ashlrai/ashlr-stack/blob/main/AGENTS.md). Outside contributors, human or agent, follow the same path in [CONTRIBUTING.md](https://github.com/ashlrai/ashlr-stack/blob/main/CONTRIBUTING.md#contribute-with-an-agent): fork, install, run the checks, open a PR. The one required check is CI Gate (typecheck, Tier-1 security tests and two secret scans); the full suite runs daily on `main`.
 
@@ -199,22 +199,6 @@ Stack uses provider-specific OAuth or supplied credentials, provisions where sup
 Stack handles credentials in memory during setup and uses Phantom Secrets for selected persistent entries. Providers use credentials in requests, imports read existing plaintext files, and MCP forwards CLI text and configured resources. These interfaces do not establish a general redaction or sandbox boundary.
 
 `stack exec -- <cmd>` forwards to the installed Phantom runtime; verify its configuration and supported behavior for your project.
-
-## Part of the Ashlr ecosystem
-
-Stack is one tool in the Ashlr ecosystem. Together these tools aim to be an autonomous, code-first, agent-native software factory, chasing open-source RSI (recursive self-improvement). Agents do the work, and the human acts as a passive board member. Stack is the service layer: it turns provider setup into commands an agent can run and parse.
-
-- Phantom (`@ashlr/phantom`, command `phm`): runs the agents that improve these repos, for example `phm improve`.
-- Phantom Secrets (`phantom`): the vault. Stack stores the secrets you select here. https://github.com/ashlrai/phantom-secrets
-- Locus (`locus`): identity plane. Pins which account a session acts as; `stack exec --as` uses it. https://github.com/ashlrai/locus
-- Lexicon (`lexicon`): voice lexicon. Keeps dictated names spelled right. https://github.com/ashlrai/lexicon
-- Ashlr Markdown (`mdopener-mcp`): desktop Markdown app with an MCP server. https://github.com/ashlrai/ashlr-md
-- Ashlr plugin (`ashlr-plugin`): plugin for Claude Code and Codex. https://github.com/ashlrai/ashlr-plugin
-- Ashlr Stack (`stack`): configures services and wires them into agents. https://github.com/ashlrai/ashlr-stack
-
-`stack doctor --ecosystem --json` reports which of these are installed, with versions. It is read-only. `stack doctor --ecosystem --install` prints install commands for missing tools and runs nothing.
-
-Agents also work on the Stack repo itself: Phantom and other coding agents open branches and pull requests and merge them once required checks pass. Their rules and kept limits (secrets, billing, force-push) are in https://github.com/ashlrai/ashlr-stack/blob/main/AGENTS.md.
 
 ## Links
 
