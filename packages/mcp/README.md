@@ -113,9 +113,23 @@ The agent can read these directly - no tool call needed - so it always knows the
 
 Full tool + resource reference: **[stack.ashlr.ai/docs/mcp](https://stack.ashlr.ai/docs/mcp)**.
 
+## Local lane bridge (source only)
+
+`src/local-lane.ts` serves the Locus, Lexicon and Stack MCP servers behind one loopback HTTP endpoint for local agent lanes. It is not in the npm package (the build bundles only `src/server.ts`), so run it from a clone with Bun:
+
+```bash
+bun packages/mcp/src/local-lane.ts serve [--port <n>]   # prints the endpoint on stderr
+bun packages/mcp/src/local-lane.ts smoke --json         # one-shot health check
+```
+
+- It starts `locus-mcp` and `lexicon mcp` from PATH and this package's `src/server.ts` as stdio children, and republishes their tools as `<server>__<tool>`, for example `lexicon__list_terms` or `stack__stack_list`.
+- `serve` listens on `http://127.0.0.1:<port>/mcp`. Without `--port` it picks a free port; a port outside 0-65535 exits 2. An upstream that fails to start is reported on stderr and left out; the others are still served.
+- `smoke` starts the bridge on a free port, lists tools over HTTP and calls the read-only `lexicon__list_terms`. It exits 0 only when all three upstreams list tools and that call succeeds. Run it directly, not through `bun run`, which echoes the command into the JSON.
+- It binds to 127.0.0.1 only, accepts only `127.0.0.1:<port>` and `localhost:<port>` as the Host, and refuses any request with an `Origin` header (a browser). It has no authentication: any local process can call it, and it exposes mutating tools such as `locus__locus_request_pin` and `stack__stack_add`.
+
 ## How secrets are handled
 
-Stack never stores secret values. Every tool call routes through [Phantom Secrets](https://phm.dev/secrets) on your machine. The agent only sees slot *names* (like `SUPABASE_URL`, `SUPABASE_ANON_KEY`) - never the values.
+Stack handles credential values in memory during setup and records the secrets you select through [Phantom Secrets](https://phm.dev/secrets) on your machine. Refer to secrets by slot *name* (like `SUPABASE_URL` or `SUPABASE_ANON_KEY`), not by value. Tool results are the CLI's text output plus an `isError` flag; they are not a secret-redaction boundary.
 
 ## Part of the Ashlr ecosystem
 
