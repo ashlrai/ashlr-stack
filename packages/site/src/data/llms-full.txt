@@ -154,9 +154,9 @@ Choose a provider, or use the interactive picker when omitted. Authentication us
 
 Remove the service's local MCP wiring and Stack configuration and attempt vault removal. Upstream resources are always retained; `--keep-remote` is a compatibility flag. Confirm the local target and inspect partial outcomes. `--all` selects every configured service; `--all-orphans` selects services absent from scanner evidence, which does not prove a service is unused. `--json` never prompts and prints one object (schema `ashlr.stack.remove/v1`) whose `secrets_kept` names the secrets Phantom left stored; Phantom removes nothing without an attached terminal, so headless callers should show those names to the user for `phantom remove`. Phantom must be installed when the service declares secrets, even for local removal.
 
-### `stack list`
+### `stack list [--json]`
 
-Services wired in the current project. Equivalent to reading `.stack.toml`, formatted.
+Services wired in the current project, read from `.stack.toml` and formatted. `--json` prints `ashlr.stack.list/v1`: the project id, template and each service's name, provider, resource id, region, secret names and MCP entry. On failure it prints `ashlr.stack.error/v1` and exits 1.
 
 ### `stack providers [--category <category>] [--json]`
 
@@ -199,22 +199,26 @@ One-screen summary of Phantom, configured services and config. `--json` prints a
 
 Detect Codex, Claude Code, Cursor and Gemini CLI and register the Phantom gateway (`ashlr mcp`, server name `ashlr-hub`) in each one's config. Without `--apply` it only prints a plan. `--apply` backs up an existing config file before writing it and leaves an existing entry that differs untouched; `--undo` restores the backups (or removes files it created) and refuses a file that changed since. `--client claude,codex,cursor,gemini` limits the clients, `--all` also wires clients that are not detected, and `--json` prints the result.
 
-### `stack info <service>`
+### `stack info <service> [--json]`
 
-Deep metadata: template, providers, Phantom vault, file paths, resource IDs.
+Everything Stack records about one configured service: provider, resource id, region, secret names with vault presence, MCP entry and dashboard URL. It also runs the provider's healthcheck when the adapter has one, which can contact the provider. `--json` prints `ashlr.stack.info/v1` with secret names only, never values.
 
 ### `stack open <provider>`
 
 Opens the provider's web dashboard for this project's resource. E.g., `stack open supabase` opens the Supabase project page directly.
 
-### `stack exec -- <cmd> [args…]`
+### `stack exec [--as <alias>] -- <cmd> [args…]`
 
-Forward `<cmd>` to `phantom exec -- <cmd>` in the current project. Runtime behavior depends on the installed Phantom version and project configuration. Examples:
+Forward `<cmd>` to `phantom exec -- <cmd>` in the current project. It needs a `.stack.toml` and an installed Phantom. Runtime behavior depends on the installed Phantom version and project configuration. Messages from Stack go to stderr, so stdout belongs to the command. The exit code is the command's, or 128 plus the signal number when a signal stopped it.
+
+`--as <alias>` asks Locus first: unless that Locus binding alias is pinned for the session, Stack exits 1 and the command never starts. Pin it with `locus enter <alias>`.
+
+Examples:
 
 ```bash
 stack exec -- bun dev
 stack exec -- npm run build
-stack exec -- pytest
+stack exec --as personal -- pytest
 ```
 
 ### `stack env show` / `stack env diff` / `stack env export --example`
@@ -231,9 +235,9 @@ Push through Phantom to the selected configured deployment target. This requires
 
 Registered project metadata is stored in `~/.stack/projects.json`, or under the `STACK_REGISTRY_DIR` override. `--json` prints `ashlr.stack.projects/v1`: each project's name, path, project id, template, services and last-seen time.
 
-### `stack deps`
+### `stack deps [--json]`
 
-Shows the provider dependency graph — e.g., if Stripe Connect depends on a prior Clerk auth setup.
+Draws the configured services as a tree grouped by provider category, with each service's secret names and MCP entry. It does not model ordering or dependencies between providers. `--json` prints `ashlr.stack.deps/v1`: `categories`, `unresolved` (services whose provider is not registered) and `totals`.
 
 ### `stack ci init`
 
@@ -270,9 +274,9 @@ stack recommend "edge-first dashboard with analytics" --save --synth
 stack recommend "postgres database" --category Database --json
 ```
 
-### `stack apply [recipe-id] [--noWire] [--noRollback]`
+### `stack apply [recipe-id] [--noWire] [--noRollback] [--dryRun]`
 
-Select a saved recipe; when Stack configuration is absent, the command first initializes a blank config in the current directory. Provider setup follows the recipe. Provision recipe providers, then report which declared secrets are already in the Phantom vault and which are missing (names only; apply never writes to the vault), and write webhook stub files. Inspect failures and skipped entries. Use `--noWire` to skip the vault check and stubs.
+Select a saved recipe; when Stack configuration is absent, the command first initializes a blank config in the current directory. Provider setup follows the recipe. Provision recipe providers, then report which declared secrets are already in the Phantom vault and which are missing (names only; apply never writes to the vault), and write webhook stub files. Inspect failures and skipped entries. Use `--noWire` to skip the vault check and stubs. `--dryRun` resolves the recipe, then previews provisioning and, without `--noWire`, lists the secrets it would check; it changes nothing.
 
 ```bash
 stack recommend "B2B SaaS with auth, AI, and payments" --save
