@@ -51,7 +51,7 @@ git clone https://github.com/ashlrai/locus && cd locus
 cargo install --path crates/locus-cli
 ```
 
-`stack doctor --ecosystem --install locus` prints the equivalent `cargo install --git` command, pinned to a reviewed locus commit.
+That builds only the `locus` CLI. `stack doctor --ecosystem --install locus` prints a `cargo install --git` command pinned to a reviewed locus commit that installs both `locus-cli` and `locus-mcp` (source: `LOCUS_CARGO_ARGV` in `packages/cli/src/lib/doctor-install.ts`). Install `locus-mcp` too if an agent will reach Locus over MCP; the [local lane bridge](../packages/mcp/README.md) starts it from PATH.
 
 First run, in this order:
 
