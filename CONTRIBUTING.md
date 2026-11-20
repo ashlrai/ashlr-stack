@@ -105,3 +105,5 @@ What Stack v1 is not:
 - An identity plane that picks which account a session acts as (that's Locus; `stack exec --as` defers to it).
 
 Stack is the orchestration layer that stitches those together for the common "spin up a new project" flow.
+
+This test ensures that every command listed in the README's "Try it in 30 seconds" section and in the commands-table block works correctly with the built CLI. If a README command no longer exists, this test will fail when running `bun test packages/cli/src/__tests__/first-run-readme.test.ts`.
