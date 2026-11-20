@@ -4,7 +4,7 @@
 
 ### Next release (since v0.3.10)
 
-This section covers the changes from `v0.3.10` through `985ea4c6`.
+This section covers the changes from `v0.3.10` through `916b73ad`.
 
 **Added**
 
@@ -12,6 +12,7 @@ This section covers the changes from `v0.3.10` through `985ea4c6`.
 - `stack status` and `stack doctor` end with one plain next step, also in JSON as `next_step` (`summary`, `command`).
 - `stack doctor --ecosystem --json` gives each missing tool a `fix` with a summary and a command, or `null`.
 - The README documents exit codes (0 ok, 1 failed, 2 doctor issues) and the JSON output of `list` and `status`.
+- Contributing now has a "Run the gate locally" section with the exact commands the required check runs, and lists what you need installed (git, Bun, Node.js 20+).
 
 **Changed**
 
@@ -21,12 +22,15 @@ This section covers the changes from `v0.3.10` through `985ea4c6`.
 - The README starts with one read-only command, `stack providers --json`, that needs no account or key.
 - The swap guide explains that same-category providers can be swapped; a pair without a preset warns and skips aliases.
 - Contributor guidance now lets agent PRs add lines to Unreleased in `CHANGELOG.md`.
+- The strategy page and docs roadmap now show the current command, provider, template and tool counts instead of the old v0.1 numbers, and give the install script as the install route instead of a Homebrew tap that does not exist yet.
+- The pull request template points to the local gate commands and says to mirror changelog edits to the site copy.
 - `SUPPORT.md` now says where to ask a question, report a bug, request a provider or report a security issue.
 
 **Fixed**
 
 - Wiring guides now use the supported `stack apply --noWire` option to skip secret checks and webhook stubs.
 - Contributor guidance correctly lists all six workspace packages.
+- Contributing now warns not to run `scripts/publish.sh` by hand (it publishes packages and pushes a tag); contributors push branches with plain `git push`.
 
 ---
 
