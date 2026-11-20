@@ -13,6 +13,8 @@ This section covers the changes from `v0.3.10` through `916b73ad`.
 - `stack doctor --ecosystem --json` gives each missing tool a `fix` with a summary and a command, or `null`.
 - The README documents exit codes (0 ok, 1 failed, 2 doctor issues) and the JSON output of `list` and `status`.
 - Contributing now has a "Run the gate locally" section with the exact commands the required check runs, and lists what you need installed (git, Bun, Node.js 20+).
+- The README JSON table now lists all 13 `ashlr.stack.*/v1` outputs, not just `list` and `status`.
+- The plugin, site and telemetry-worker READMEs now say how they fit in the Ashlr ecosystem and point to the contributor path.
 
 **Changed**
 
@@ -25,6 +27,9 @@ This section covers the changes from `v0.3.10` through `916b73ad`.
 - The strategy page and docs roadmap now show the current command, provider, template and tool counts instead of the old v0.1 numbers, and give the install script as the install route instead of a Homebrew tap that does not exist yet.
 - The pull request template points to the local gate commands and says to mirror changelog edits to the site copy.
 - `SUPPORT.md` now says where to ask a question, report a bug, request a provider or report a security issue.
+- The install, quickstart and compare pages now take their MCP tool and provider counts from the generated site facts instead of hard-coded numbers.
+- `STACK.md` now treats the landing hero as a scope rule (change it only in a PR about the hero and check the built page) instead of a human sign-off.
+- The Ashlr ecosystem section is no longer duplicated in the agent guide and `llms.txt`.
 
 **Fixed**
 
