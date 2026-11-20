@@ -12,6 +12,7 @@ New here? Start with the [good first issue](https://github.com/ashlrai/ashlr-sta
 - Keep the PR small and tied to one issue. Say in the description how you tested it.
 - If you are unsure whether something belongs here, open an issue first and ask.
 - Questions are welcome in issues. We read all of them.
+- Everyone, human or agent, follows the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Contribute with an agent
 
@@ -23,7 +24,7 @@ Humans and agents follow the same path. Point your coding agent (Claude Code, Co
 2. **Install.** `bun install --frozen-lockfile`. A new git worktree starts without `node_modules`, so run it in each worktree too. Optionally run `bun run setup-hooks` once per clone to wire the pre-commit hook in `.githooks/`, which runs `bunx biome check .`.
 3. **Run the checks your change touches.** Both helpers compare against `origin/main`, so `git fetch origin` first (in a fork, sync your fork's `main` with upstream).
    - `bash scripts/fast-check.sh` typechecks and tests each workspace under `packages/` that differs from `origin/main`, including uncommitted and untracked files. It prints one `PASS` or `FAIL` line per step and exits 1 on any failure. It skips changes outside `packages/`, such as `scripts/` or docs.
-   - `scripts/affected-tests origin/main` prints a JSON array of test targets, `[]`, or `ALL` for the committed changes since `origin/main` (commit first; it ignores uncommitted work). Pass the array elements to `bun test` and run plain `bun test` for `ALL`. Details: [scripts/affected-tests.md](scripts/affected-tests.md).
+   - `scripts/affected-tests origin/main` prints a JSON array of test targets, `[]`, or `ALL` for the committed changes since `origin/main` (commit first; it ignores uncommitted work). Pass the array elements to `bun test` and run plain `bun test` for `ALL`. For `[]`, skip `bun test`: with no arguments it runs the whole suite. If the script exits nonzero (an unknown base or missing merge history), it prints nothing; fetch and retry, or run the full suite, but never read that as "no tests". Details: [scripts/affected-tests.md](scripts/affected-tests.md).
    - Doc-only changes (root `*.md` and `*.txt` files, Markdown and text under `docs/`, package READMEs) print `[]`, yet many tests read those files and CI Gate runs none of them. Run `bun run fresh:check` and `HOME=$(mktemp -d) bun test scripts/docs-freshness.test.ts`, which checks the commands, flags, counts and generated tables in the docs against the source. Before opening a larger docs PR, run the full suite (`HOME=$(mktemp -d) bun test`) so the daily run stays green.
 4. **Run the checks the PR gate runs** ([commands below](#run-the-gate-locally)), plus `bun run lint`.
 5. **Sync generated docs.** If you touched a version, manifest, `CHANGELOG.md`, command, MCP tool or provider, run `bun run fresh:sync` then `bun run fresh:check`. New CLI commands and MCP tools have extra steps in [STACK.md](STACK.md#typical-tasks).
