@@ -5,29 +5,40 @@ import { Code } from "astro:components";
 
 <Docs
   title="Telemetry"
-  description="Stack's opt-in anonymous usage telemetry — what's collected, what isn't, and how to opt out permanently."
+  description="Stack's opt-in anonymous usage telemetry: off by default, no default endpoint, what an event contains and how to turn it off."
   eyebrow="Reference"
 >
-  <h2>Default: off</h2>
   <p>
-    Stack never sends telemetry without explicit consent. On first run in an
-    interactive terminal you are asked once:
+    This page describes the client source in{" "}
+    <code>packages/core/src/telemetry.ts</code> and the CLI entry point. It is
+    not a statement about any hosted endpoint.
   </p>
 
-  <Code
-    code={`Share anonymous usage telemetry (command + duration, no paths/secrets)? [y/N]`}
-    lang="text"
-    theme="github-dark-dimmed"
-  />
-
+  <h2>Default: off</h2>
   <p>
-    The default answer is <strong>N</strong>. Pressing Enter without typing
-    anything leaves telemetry disabled. Nothing is transmitted until you
-    answer <code>y</code>.
+    Telemetry stays off until you opt in with{" "}
+    <code>stack telemetry enable</code>, which saves the choice to{" "}
+    <code>~/.ashlr/stack/config.json</code>. The CLI does not prompt for it.
+    Core also exports a first-run prompt that defaults to <strong>N</strong>{" "}
+    and records "disabled" when there is no terminal, but the CLI does not call
+    it in this source.
+  </p>
+  <p>
+    Opting in is not enough to send anything. The source has no default
+    endpoint: an event is posted only when <code>STACK_TELEMETRY_ENDPOINT</code>{" "}
+    or a saved <code>endpoint</code> in the config file names one. Without
+    either, the emit call returns without sending.
+  </p>
+  <p>
+    <code>STACK_TELEMETRY=0</code> turns it off for that process whatever the
+    saved choice is. <code>STACK_TELEMETRY=1</code> does not opt you in.
   </p>
 
   <h2>What's collected</h2>
-  <p>When you opt in, each CLI invocation may send one event with these fields only:</p>
+  <p>
+    When you have opted in and an endpoint is set, each CLI run posts one event
+    with these fields, with a one-second timeout and errors ignored:
+  </p>
 
   <table>
     <thead>
@@ -38,89 +49,100 @@ import { Code } from "astro:components";
     </thead>
     <tbody>
       <tr>
+        <td><code>type</code></td>
+        <td>Always <code>"command"</code> from the CLI. The core API also accepts <code>"error"</code>.</td>
+      </tr>
+      <tr>
         <td><code>command</code></td>
-        <td>Top-level subcommand name (e.g. <code>"add"</code>, <code>"scan"</code>). Never includes arguments or flag values.</td>
+        <td>The first command-line argument, usually the subcommand (<code>"add"</code>, <code>"scan"</code>). If the first argument is a flag such as <code>--version</code>, that string is sent. Later arguments are not sent.</td>
       </tr>
       <tr>
         <td><code>exitCode</code></td>
-        <td>Process exit code. <code>0</code> = success.</td>
+        <td>The process exit code. <code>0</code> = success.</td>
       </tr>
       <tr>
         <td><code>durationMs</code></td>
-        <td>Wall-clock milliseconds from CLI start to exit.</td>
+        <td>Milliseconds from CLI start until the command finished.</td>
       </tr>
       <tr>
         <td><code>installId</code></td>
-        <td>A random UUID stored in <code>~/.ashlr/stack/config.json</code>. Used only to count distinct installations. Not you — just a machine count.</td>
+        <td>A random UUID stored in <code>~/.ashlr/stack/config.json</code>. It links events from the same installation.</td>
       </tr>
       <tr>
         <td><code>runId</code></td>
-        <td>A fresh UUID per invocation. Not stored anywhere and not linkable across runs.</td>
+        <td>A fresh random UUID per process. Not stored.</td>
       </tr>
       <tr>
-        <td><code>stackVersion</code>, <code>platform</code></td>
-        <td>Installed version string and OS platform (<code>darwin</code> / <code>linux</code> / <code>win32</code>).</td>
+        <td><code>stackVersion</code></td>
+        <td>A constant in the telemetry module. It is not read from the installed package, so it may not match <code>stack --version</code>.</td>
+      </tr>
+      <tr>
+        <td><code>platform</code></td>
+        <td>The Node/Bun <code>process.platform</code> value, such as <code>darwin</code>, <code>linux</code> or <code>win32</code>.</td>
       </tr>
     </tbody>
   </table>
 
   <h2>What's never collected</h2>
+  <p>The fixed payload has no field for:</p>
   <ul>
     <li>Working directory, filesystem paths, or project names.</li>
-    <li>Provider names or which services you use.</li>
+    <li>Providers configured for a project or <code>.stack.toml</code> / <code>.stack.local.toml</code> contents.</li>
     <li>Secret values, API keys, or anything stored in Phantom.</li>
-    <li>Command arguments or flag values.</li>
+    <li>Environment variable values.</li>
     <li>Email address or any account identifier.</li>
-    <li>Contents of <code>.stack.toml</code> or <code>.stack.local.toml</code>.</li>
   </ul>
 
   <p>
-    Your IP address is visible to the telemetry endpoint at the HTTP layer.
-    It is purged within 48 hours and never written to the analytics database.
+    Any endpoint you configure also sees network metadata such as your IP
+    address. Stack's source does not control what that server logs or keeps;
+    check its policy before you set an endpoint.
   </p>
 
   <h2>How to opt out</h2>
 
   <Code
-    code={`# Disable via CLI (persisted to ~/.ashlr/stack/config.json)
+    code={`# Save the disabled choice to ~/.ashlr/stack/config.json
 stack telemetry disable
 
-# Or set an env var — overrides any stored opt-in for this process only
+# Or force it off for one process, whatever the saved choice
 STACK_TELEMETRY=0 stack add supabase
 
-# Or add it permanently to your shell profile
+# Or force it off in every shell
 echo 'export STACK_TELEMETRY=0' >> ~/.zshrc`}
     lang="bash"
     theme="github-dark-dimmed"
   />
 
   <p>
-    You can also check the current status or re-enable from the CLI:
+    Check or change the saved choice from the CLI. Bare{" "}
+    <code>stack telemetry</code> runs <code>status</code>:
   </p>
 
   <Code
-    code={`stack telemetry status   # shows enabled/disabled + installId
-stack telemetry enable   # opt back in
+    code={`stack telemetry status   # prints enabled or disabled
+stack telemetry enable   # opt in
 stack telemetry disable  # opt out`}
     lang="bash"
     theme="github-dark-dimmed"
   />
 
   <p>
-    Once opted out, no data is sent — not even a "user opted out" ping.
+    Opting out sends nothing, not even an opt-out event.
   </p>
 
   <h2>CI environments</h2>
   <p>
-    Stack automatically detects <code>CI=true</code> and skips the first-run
-    prompt. Telemetry defaults to <strong>disabled</strong> in CI unless you
-    explicitly set <code>STACK_TELEMETRY=1</code>. The update-check banner is
-    also suppressed in CI and when <code>STACK_NO_UPDATE_CHECK=1</code> is set.
+    CI behaves like any other environment: telemetry is off unless that
+    machine's config file records an opt-in, and nothing is sent without an
+    endpoint. Set <code>STACK_TELEMETRY=0</code> to rule it out regardless of
+    the config. The update check, a separate request to the npm registry, is
+    skipped when <code>CI</code> is <code>1</code> or <code>true</code>, or
+    when <code>STACK_NO_UPDATE_CHECK=1</code> is set.
   </p>
 
   <div class="callout">
-    For the full legal document — data retention schedules, the complete field
-    list, and the changelog — see the{" "}
-    <a href="/docs/privacy/">Privacy Policy</a>.
+    For the field list, opt-out options and recorded retention targets, see
+    the <a href="/docs/privacy/">Privacy Policy</a>.
   </div>
 </Docs>

@@ -113,6 +113,14 @@ import {
       <code>stack doctor --all</code> covers those entries and available checks.
     </li>
     <li>
+      <strong>Opt-in anonymous telemetry</strong>: off until{" "}
+      <code>stack telemetry enable</code>, and even then nothing is sent
+      unless an endpoint is configured, since the source has no default.{" "}
+      <code>stack telemetry status</code> and <code>disable</code> manage the
+      saved choice. See <a href="/docs/telemetry/">Telemetry</a> for the
+      fields an event carries.
+    </li>
+    <li>
       <strong>Source test suites</strong> cover core, CLI and MCP behavior.
       Results must be tied to the exact tested commit; they are not live-provider acceptance.
     </li>
@@ -171,9 +179,10 @@ import {
       trust and installation would require separate design.
     </li>
     <li>
-      <strong>Opt-in anonymous telemetry</strong> — <em>only</em> if we can
-      publish a live dashboard of every event we emit, and every event is
-      defensible. Current telemetry is opt-in; future policy is a separate decision.
+      <strong>Telemetry endpoint and public dashboard</strong>: a hosted
+      endpoint for opted-in events, with a live view of every event it
+      receives. Neither exists today; the field list is on the{" "}
+      <a href="/docs/telemetry/">Telemetry</a> page.
     </li>
     <li>
       <strong>Provider plugins</strong> — a third-party publishing surface so

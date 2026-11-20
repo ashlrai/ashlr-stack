@@ -7,11 +7,12 @@
 ## Telemetry is opt-in
 
 `packages/core/src/telemetry.ts` requires a stored opt-in before emitting a
-telemetry event. The interactive first-run prompt defaults to **N**;
-`stack telemetry enable` explicitly enables the stored choice. A first run
-without a TTY records telemetry as disabled. `STACK_TELEMETRY=0` suppresses
-emission regardless of that stored choice; `STACK_TELEMETRY=1` alone does not
-opt in.
+telemetry event. `stack telemetry enable` stores that choice in
+`~/.ashlr/stack/config.json`. The CLI does not prompt for it: core exports a
+first-run prompt that defaults to **N** and records telemetry as disabled
+without a TTY, but the CLI does not call it in the reviewed source.
+`STACK_TELEMETRY=0` suppresses emission regardless of that stored choice;
+`STACK_TELEMETRY=1` alone does not opt in.
 
 The reviewed source has no default telemetry endpoint. After opt-in, an
 operator-supplied `STACK_TELEMETRY_ENDPOINT` or saved `endpoint` can enable
@@ -25,7 +26,7 @@ The client constructs these fields before attempting an HTTP POST:
 
 | Field | Type | Source meaning |
 |---|---|---|
-| `type` | `"command"` or `"error"` | Event type supplied by the caller. |
+| `type` | `"command"` or `"error"` | Event type supplied by the caller. The CLI always sends `"command"`. |
 | `command` | string | The CLI supplies its first command-line argument; the core API accepts a caller-supplied string. |
 | `exitCode` | number | Exit code supplied by the caller, defaulting to 0. |
 | `durationMs` | number | Duration supplied by the caller, defaulting to 0. |
@@ -50,7 +51,7 @@ and operation separately.
 
 ## How to opt out
 
-- Decline the first-run prompt.
+- Do nothing: telemetry stays off until `stack telemetry enable` runs.
 - Run `stack telemetry disable` to persist the disabled choice; use
   `stack telemetry status` to inspect it.
 - Set `STACK_TELEMETRY=0` to suppress emission for that process environment.

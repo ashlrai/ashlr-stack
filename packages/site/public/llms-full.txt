@@ -289,7 +289,7 @@ stack swap clerk auth0 --dryRun
 
 ### `stack telemetry status` / `stack telemetry enable` / `stack telemetry disable`
 
-Show or change the stored telemetry choice; bare `stack telemetry` means `status`. Telemetry is opt-in: the first-run prompt defaults to no, a first run without a terminal records it as disabled, and `STACK_TELEMETRY=0` suppresses events regardless of the stored choice. The source has no default endpoint, so nothing is sent unless an operator configures one. Details are in docs/PRIVACY.md.
+Show or change the stored telemetry choice; bare `stack telemetry` means `status`. Telemetry is opt-in: it stays off until `stack telemetry enable` (the CLI does not prompt), `STACK_TELEMETRY=1` alone does not opt in, and `STACK_TELEMETRY=0` suppresses events regardless of the stored choice. The source has no default endpoint, so nothing is sent unless an operator configures one. Details are in docs/PRIVACY.md.
 
 ### Fleet operations: `stack fleet [--json]`, the `fleet-` reports and `stack worktree-disk`
 
