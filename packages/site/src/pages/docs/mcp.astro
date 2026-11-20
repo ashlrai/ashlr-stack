@@ -89,6 +89,44 @@ import {
     or select the project directory.
   </div>
 
+  <h3>Local lane bridge (source only)</h3>
+  <p>
+    <code>packages/mcp/src/local-lane.ts</code> serves the Locus, Lexicon and Stack MCP
+    servers behind one loopback HTTP endpoint for local agent lanes. It is not in the npm
+    package, which bundles only <code>src/server.ts</code>, so run it from a clone with Bun:
+  </p>
+
+  <Code
+    code={`bun packages/mcp/src/local-lane.ts serve [--port <n>]   # prints the endpoint on stderr
+bun packages/mcp/src/local-lane.ts smoke --json         # one-shot health check`}
+    lang="bash"
+    theme="github-dark-dimmed"
+  />
+
+  <ul>
+    <li>
+      It starts <code>locus-mcp</code> and <code>lexicon mcp</code> from PATH and this
+      package's <code>src/server.ts</code> as stdio children, and republishes their tools as
+      <code>&lt;server&gt;__&lt;tool&gt;</code>, for example <code>lexicon__list_terms</code>.
+    </li>
+    <li>
+      <code>serve</code> listens on <code>http://127.0.0.1:&lt;port&gt;/mcp</code>. Without
+      <code>--port</code> it picks a free port. An upstream that fails to start is reported
+      on stderr and left out.
+    </li>
+    <li>
+      <code>smoke</code> exits 0 only when all three upstreams list tools and a read-only
+      <code>lexicon__list_terms</code> call succeeds. Run it directly, not through
+      <code>bun run</code>, which echoes the command into the JSON.
+    </li>
+    <li>
+      It binds to 127.0.0.1, accepts only <code>127.0.0.1</code> and <code>localhost</code>
+      Host headers, and refuses requests that carry an <code>Origin</code> header. It has no
+      authentication: any local process can call it, including mutating tools such as
+      <code>locus__locus_request_pin</code> and <code>stack__stack_add</code>.
+    </li>
+  </ul>
+
   <h2>Tools — <code>{MCP_TOOLS.length}</code> total</h2>
   <p>
     The table describes the reviewed source contract; installed versions may differ.

@@ -449,6 +449,20 @@ The source declares these {{MCP_TOOL_COUNT}} tools. They are a subset of CLI com
 
 The MCP wrapper forwards CLI stdout and stderr as text content and sets `isError` from the exit result. Individual commands may emit JSON; there is no universal structured receipt, sandbox or redaction guarantee. CLI resolution tries `STACK_BIN`, the installed `@ashlr/stack` dependency's bin, then `stack` on PATH. For source use, build `packages/cli` first or set `STACK_BIN`.
 
+### Local lane bridge (source only)
+
+`packages/mcp/src/local-lane.ts` serves the Locus, Lexicon and Stack MCP servers behind one loopback HTTP endpoint for local agent lanes. It is not in the npm package (the build bundles only `src/server.ts`), so run it from a clone with Bun:
+
+```bash
+bun packages/mcp/src/local-lane.ts serve [--port <n>]   # prints the endpoint on stderr
+bun packages/mcp/src/local-lane.ts smoke --json         # one-shot health check
+```
+
+- It starts `locus-mcp` and `lexicon mcp` from PATH and this package's `src/server.ts` as stdio children, and republishes their tools as `<server>__<tool>`, for example `lexicon__list_terms`.
+- `serve` listens on `http://127.0.0.1:<port>/mcp`. Without `--port` it picks a free port; a port outside 0-65535 exits 2. An upstream that fails to start is reported on stderr and left out; the others are still served.
+- `smoke` exits 0 only when all three upstreams list tools and a read-only `lexicon__list_terms` call succeeds. Run it directly, not through `bun run`, which echoes the command into the JSON.
+- It binds to 127.0.0.1 only, accepts only `127.0.0.1:<port>` and `localhost:<port>` as the Host, and refuses any request with an `Origin` header (a browser). It has no authentication: any local process can call it, including mutating tools such as `locus__locus_request_pin` and `stack__stack_add`.
+
 ---
 
 ## 8. Claude Code plugin
