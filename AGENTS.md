@@ -65,7 +65,7 @@ Repo build and test steps stay in [STACK.md](./STACK.md#agent-quickstart-from-a-
 
 ## Local lane MCP bridge (RQ-LOCAL-1)
 
-`packages/mcp/src/local-lane.ts` runs the locus, lexicon and stack MCP servers as stdio children and republishes their tools as `<server>__<tool>` on loopback only, `http://127.0.0.1:<port>/mcp`. Serve with `bun packages/mcp/src/local-lane.ts serve [--port <n>]`. Smoke test with `bun packages/mcp/src/local-lane.ts smoke --json`, which exits 0 only when all three upstreams list tools and one routed call succeeds. Run it directly, not through `bun run`, which echoes into the JSON. Exposed tools include mutating ones such as `locus_request_pin`, and any local process can call the endpoint.
+`packages/mcp/src/local-lane.ts` runs the locus, lexicon and stack MCP servers as stdio children and republishes their tools as `<server>__<tool>` on loopback only, `http://127.0.0.1:<port>/mcp`. Serve with `bun packages/mcp/src/local-lane.ts serve [--port <n>]`. Smoke test with `bun packages/mcp/src/local-lane.ts smoke --json`, which exits 0 only when all three upstreams list tools and one routed call succeeds. Run it directly, not through `bun run`, which echoes into the JSON. Exposed tools include mutating ones such as `locus__locus_request_pin`, and any local process can call the endpoint.
 
 ## Agents may
 - Create branches, commit, and open pull requests.
