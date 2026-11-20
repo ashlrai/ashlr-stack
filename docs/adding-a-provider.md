@@ -47,9 +47,19 @@ Secrets go through Phantom; never write them anywhere else.
   to make sure the new catalog entry doesn't push other providers out of their
   `stack recommend` rankings.
 
+Run the suite with an isolated home, as the
+[contributor path](../CONTRIBUTING.md#contribute-with-an-agent) does, so tests
+never touch your real `~/.stack`:
+
 ```sh
-bun test && bunx tsc --noEmit -p tsconfig.json && bun run lint
+HOME=$(mktemp -d) bun test && bunx tsc --noEmit -p tsconfig.json && bun run lint
+bun run packages/cli/src/index.ts providers   # the new provider is listed
 ```
+
+A fake key shaped like a real token must sit in a test file (such as
+`*.test.ts`) and contain `FAKE`, `EXAMPLE`, `DUMMY`, `TEST` or `XXXX`, or the
+secret-shape scan in CI Gate blocks the PR
+(see [Run the gate locally](../CONTRIBUTING.md#run-the-gate-locally)).
 
 ## 4. Site and counts
 
@@ -65,4 +75,14 @@ bun test && bunx tsc --noEmit -p tsconfig.json && bun run lint
   `packages/site/public/llms.txt`. Commit the regenerated files.
   `bun test packages/site/tests/doc-facts.test.ts` fails if any count drifts.
 - Add a line to `CHANGELOG.md` under Unreleased (agent PRs too; see
-  [AGENTS.md](../AGENTS.md#changelog)).
+  [AGENTS.md](../AGENTS.md#changelog)). The site copy at
+  `packages/site/src/data/CHANGELOG.md` must stay byte-identical: re-mirror it
+  with `bun run --cwd packages/site sync-content` and commit both files.
+
+## 5. Open the pull request
+
+Follow steps 3 to 8 of the
+[contributor path](../CONTRIBUTING.md#contribute-with-an-agent): run the
+[CI Gate checks locally](../CONTRIBUTING.md#run-the-gate-locally), push the
+branch to your fork with plain `git push`, and open a PR against `main`. The
+pull request template has a new-provider checklist that mirrors this guide.
