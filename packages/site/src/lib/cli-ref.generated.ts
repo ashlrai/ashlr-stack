@@ -354,7 +354,7 @@ export const CLI_COMMANDS: CliCommand[] = [
         name: "json",
         synopsis: "--json",
         type: "boolean",
-        description: "Emit machine-readable JSON (services, config, phantom).",
+        description: "Emit machine-readable JSON (schema ashlr.stack.status/v1).",
       },
     ],
     examples: [{ command: "stack status" }],
