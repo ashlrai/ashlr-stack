@@ -132,7 +132,7 @@ The full checklist is [docs/adding-a-provider.md](docs/adding-a-provider.md).
 
 - Do not create new packages without a reason - the six in `packages/*` (core, cli, mcp, plugin, site, telemetry-worker) cover the architecture.
 - Do not add a runtime dependency to `@ashlr/stack-core` that isn't already there (Bun + smol-toml is the whole surface; we want to keep `npm install @ashlr/stack` fast).
-- Do not modify `packages/site/src/pages/index.astro` layout without checking in with a human - it's the load-bearing hero.
+- Do not change the layout of `packages/site/src/pages/index.astro` as a side effect of other work. It is the landing hero: change it only in a PR whose stated purpose is the hero, and check the built page (`bun run --cwd packages/site build`) before it merges. This is a scope rule, not a human sign-off; [AGENTS.md](AGENTS.md) has no approval steps.
 - Do not bypass Phantom by writing secrets to disk "temporarily."
 - Do not add `any` or unchecked casts - the codebase is strict TypeScript.
 - Do not add dependencies just because. A CLI that wants to stay under 1MB cold-install needs to resist bloat.
