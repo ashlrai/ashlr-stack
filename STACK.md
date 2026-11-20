@@ -67,8 +67,10 @@ bash scripts/fast-check.sh                 # typecheck + test packages changed v
 ```
 
 `scripts/fast-check.sh` includes uncommitted work but only looks under
-`packages/`. For committed changes anywhere in the repo,
-`scripts/affected-tests origin/main` lists the tests to run
+`packages/`, and it tests only the packages that changed. The core, CLI, MCP
+and site tests read each other's sources, so for committed changes anywhere in
+the repo, `scripts/affected-tests origin/main` lists the tests to run; a change
+to any of those four selects all four
 ([details](scripts/affected-tests.md)). The full contributor path is in
 [CONTRIBUTING.md](CONTRIBUTING.md#contribute-with-an-agent).
 
