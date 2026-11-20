@@ -4,7 +4,12 @@
  * Keep displayed commands and clipboard payloads on the same supported path.
  * CLI/server runtime, project cwd and client loading must be checked separately.
  */
-import { PUBLISHED_VERSION, SOURCE_VERSION } from "~/lib/site-facts.generated";
+import {
+  MCP_TOOL_COUNT,
+  PROVIDER_COUNT,
+  PUBLISHED_VERSION,
+  SOURCE_VERSION,
+} from "~/lib/site-facts.generated";
 ---
 
 <section
@@ -177,7 +182,7 @@ import { PUBLISHED_VERSION, SOURCE_VERSION } from "~/lib/site-facts.generated";
 
   <!-- Sub-caption: what happens after any of the three paths -->
   <div class="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-[12px] text-[color:var(--color-ink-500)]">
-    <span>→ Reviewed source declares <strong class="text-[color:var(--color-ink-300)]">19 MCP tools</strong>; <strong class="text-[color:var(--color-ink-300)]">39 curated provider entries</strong></span>
+    <span>→ Reviewed source declares <strong class="text-[color:var(--color-ink-300)]">{MCP_TOOL_COUNT} MCP tools</strong>; <strong class="text-[color:var(--color-ink-300)]">{PROVIDER_COUNT} curated provider entries</strong></span>
     <span>→ Secret operations require compatible <a href="https://phm.dev" target="_blank" rel="noopener" class="underline decoration-white/20 underline-offset-2 hover:text-[color:var(--color-ink-200)]">Phantom</a>; inspect raw tool and file output before sharing</span>
     <span>→ MIT · <a href="https://github.com/ashlrai/ashlr-stack" target="_blank" rel="noopener" class="underline decoration-white/20 underline-offset-2 hover:text-[color:var(--color-ink-200)]">source</a></span>
   </div>
