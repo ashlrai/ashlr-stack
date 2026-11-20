@@ -122,7 +122,7 @@ bun add -g @ashlr/stack ashlr-stack-mcp                              # or: npm i
 ```bash
 git clone https://github.com/ashlrai/ashlr-stack
 cd ashlr-stack
-bun install
+bun install --frozen-lockfile
 bun run packages/cli/src/index.ts --help
 
 # Optional PATH alias:
