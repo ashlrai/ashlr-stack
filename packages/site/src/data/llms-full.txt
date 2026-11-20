@@ -122,7 +122,7 @@ Agents (Phantom and other coding agents) work on the Stack repo through branches
 ```bash
 git clone https://github.com/ashlrai/ashlr-stack
 cd ashlr-stack
-bun install
+bun install --frozen-lockfile
 bun run packages/cli/src/index.ts --help
 
 # Optional PATH alias:

@@ -9,7 +9,7 @@ This package shares source between the [`@ashlr/stack`](https://www.npmjs.com/pa
 From the repository root, prepare the workspace dependencies with Bun 1.2+:
 
 ```bash
-bun install
+bun install --frozen-lockfile
 ```
 
 Use the selected CLI/MCP artifact and its documented runtime when installing

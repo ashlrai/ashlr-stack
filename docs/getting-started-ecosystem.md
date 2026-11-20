@@ -79,7 +79,7 @@ To run the source checkout (which uses Bun):
 
 ```bash
 git clone https://github.com/ashlrai/ashlr-stack && cd ashlr-stack
-bun install
+bun install --frozen-lockfile
 alias stack="bun run $(pwd)/packages/cli/src/index.ts"
 stack --version                  # check the source checkout version
 stack doctor --ecosystem         # which Ashlr tools are installed, via --ashlr-handshake; informational, never fails

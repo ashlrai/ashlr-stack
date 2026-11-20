@@ -26,7 +26,7 @@ package/runtime instructions before using any installation example.
 
 ```bash
 cd packages/site
-bun install
+bun install --frozen-lockfile
 bun run dev        # http://localhost:4321 (regenerates src/lib/cli-ref.generated.ts first)
 bun run build      # static site → ./dist (same pre-steps as dev)
 bun run preview    # serve the built site

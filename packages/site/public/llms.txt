@@ -69,7 +69,7 @@ bun add -g @ashlr/stack ashlr-stack-mcp            # or: npm i -g
 
 # Dev install (from source):
 git clone https://github.com/ashlrai/ashlr-stack
-cd ashlr-stack && bun install
+cd ashlr-stack && bun install --frozen-lockfile
 bun run packages/cli/src/index.ts --help
 ```
 
