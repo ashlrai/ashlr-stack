@@ -162,18 +162,18 @@ Services wired in the current project, read from `.stack.toml` and formatted. `-
 
 List providers registered in your installed release, grouped by category. This source registers 39 across 13 categories. `--category` (any case) lists one category; an unknown one exits 1 and names the valid categories. `--json` prints `ashlr.stack.providers/v1` with the filter in `category`.
 
-### `stack templates list [--json]` / `stack templates apply <name>`
+### `stack templates list [--json]` / `stack templates apply <name> [--no-continueOnError]`
 
-List provider presets, or apply a preset through the service setup flow. These presets configure services; they do not generate a complete application. `--json` prints `ashlr.stack.templates/v1`: each template's name and the services it adds.
+List provider presets, or apply a preset through the service setup flow. These presets configure services; they do not generate a complete application. `--json` prints `ashlr.stack.templates/v1`: each template's name and the services it adds. `apply` keeps going when one service fails; `--no-continueOnError` stops at the first failure.
 
-### `stack scan [--auto] [--json] [--path <path>]`
+### `stack scan [--path <path>] [--auto] [--yes] [--confidence <tier>] [--json]`
 
 In an existing repo, detect services Stack could manage. Scans:
 - `package.json` dependencies (e.g., `@supabase/supabase-js` → Supabase).
 - `.env.example` / `.env` keys (e.g., `SENTRY_DSN` → Sentry).
 - Config files (`next.config.js`, `wrangler.toml`, etc.).
 
-With `--auto`, offer setup for detections. `--json` emits detections without provisioning; `--yes` implies automatic setup at the selected confidence threshold. Without a terminal, plain `stack scan` prints the same read-only report and `--auto` without `--yes` exits 1. There is no `scan --dry-run` flag.
+`--path` picks the directory (default `.`); a missing or non-directory path exits 1. `--confidence low|medium|high` sets the minimum tier to report and act on; the default is `medium`, or `high` with `--yes`, and an unknown tier exits 1. With `--auto`, offer setup for detections. `--json` emits detections without provisioning; `--yes` implies automatic setup at the selected confidence threshold. Without a terminal, plain `stack scan` prints the same read-only report and `--auto` without `--yes` exits 1. There is no `scan --dry-run` flag.
 
 ### `stack import [--from <path>] [--dry-run]`
 
@@ -197,7 +197,7 @@ One-screen summary of Phantom, configured services and config. `--json` prints a
 
 ### `stack onboard [--apply] [--undo]`
 
-Detect Codex, Claude Code, Cursor and Gemini CLI and register the Phantom gateway (`ashlr mcp`, server name `ashlr-hub`) in each one's config. Without `--apply` it only prints a plan. `--apply` backs up an existing config file before writing it and leaves an existing entry that differs untouched; `--undo` restores the backups (or removes files it created) and refuses a file that changed since. `--client claude,codex,cursor,gemini` limits the clients, `--all` also wires clients that are not detected, and `--json` prints the result.
+Detect Codex, Claude Code, Cursor and Gemini CLI and register the Phantom gateway (`ashlr mcp`, server name `ashlr-hub`) in each one's config. Without `--apply` it only prints a plan. `--apply` backs up an existing config file before writing it and leaves an existing entry that differs untouched; `--undo` restores the backups (or removes files it created) and refuses a file that changed since. `--client claude,codex,cursor,gemini` limits the clients, `--all` also wires clients that are not detected, `--home <dir>` uses another home directory, and `--json` prints the result.
 
 ### `stack info <service> [--json]`
 
@@ -231,9 +231,9 @@ stack exec --as personal -- pytest
 
 Push through Phantom to the selected configured deployment target. This requires that platform's resource ID and project initialization; it does not pull upstream IDs into local configuration.
 
-### `stack projects list [--json]`
+### `stack projects list [--json]` / `register` / `remove <name|path>` / `where <name>`
 
-Registered project metadata is stored in `~/.stack/projects.json`, or under the `STACK_REGISTRY_DIR` override. `--json` prints `ashlr.stack.projects/v1`: each project's name, path, project id, template, services and last-seen time.
+Registered project metadata is stored in `~/.stack/projects.json`, or under the `STACK_REGISTRY_DIR` override. Bare `stack projects` means `list`. `--json` prints `ashlr.stack.projects/v1`: each project's name, path, project id, template, services and last-seen time. `register` adds the current directory (it needs a `.stack.toml`). `remove` drops an entry by registered name, then by path, deletes no files, and exits 1 when nothing matched. `where` prints a registered project's path, or exits 1.
 
 ### `stack deps [--json]`
 
