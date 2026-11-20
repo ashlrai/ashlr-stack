@@ -295,15 +295,26 @@ Root options go before a command; other options go after the command shown. Use 
 
 ## JSON output for agents
 
-`stack list --json` and `stack status --json` print one JSON document on stdout, with no banners or colour. Every document has a `schema` field. Fields may be added within a version; existing ones never change meaning. Secret names appear, never values.
+With `--json`, these commands print one JSON document on stdout, with no banners or colour. Each success document has a versioned `schema` field. Fields may be added within a version; existing ones never change meaning. Secret names appear, never values.
 
 | Command | `schema` | Fields |
 | --- | --- | --- |
 | `stack list --json` | `ashlr.stack.list/v1` | `project_id`, `template`, `services[]` (`name`, `provider`, `resource_id`, `region`, `secrets[]`, `mcp`) |
 | `stack status --json` | `ashlr.stack.status/v1` | `next_step` (`summary`, `command`), `config` (`present`, `project_id`, `template`), `phantom` (`installed`, `secret_count`, optional `secret_count_error`, `installed_error`), `services[]` (same as list) |
-| either, on failure | `ashlr.stack.error/v1` | `error` (message), exit code 1 |
+| `stack providers --json` | `ashlr.stack.providers/v1` | `category`, `total`, `providers[]` (`name`, `displayName`, `category`, `authKind`, `docs`), `unavailable[]` |
+| `stack templates list --json` | `ashlr.stack.templates/v1` | `total`, `templates[]` (`name`, `services[]` with `name`, `provider`, `secrets[]`, `mcp`) |
+| `stack projects list --json` | `ashlr.stack.projects/v1` | `total`, `projects[]` (`name`, `path`, `project_id`, `template`, `services[]`, `last_seen`) |
+| `stack deps --json` | `ashlr.stack.deps/v1` | `project_id`, `template`, `categories[]` (`category`, `services[]`), `unresolved[]`, `totals` (`services`, `secrets`, `mcp`) |
+| `stack info <service> --json` | `ashlr.stack.info/v1` | `service`, `provider`, `display_name`, `category`, `auth_kind`, `resource_id`, `region`, `created_at`, `created_by`, `docs`, `dashboard`, `mcp`, `meta`, `secrets[]` (`name`, `in_vault`), `health` |
+| `stack env show --json` | `ashlr.stack.env/v1` | `env`, `services[]` (`name`, `secrets[]` with `name`, `in_vault`), `missing[]`, `orphans[]`, `totals` (`declared`, `in_vault`) |
+| `stack env diff --json` | `ashlr.stack.env-diff/v1` | `ok`, `missing[]`, `totals` (`declared`, `missing`); exits 1 when any are missing |
+| `stack import --json` | `ashlr.stack.import/v1` | `from`, `dry_run`, `phantom_installed`, `providers`, `unattributed`, `stored`, `skipped_existing`, `skipped_empty`, `services_added`, `services_kept` |
+| `stack remove --json` | `ashlr.stack.remove/v1` | `mode`, `removed[]` (`service`, `secrets_removed[]`, `secrets_kept[]`, `mcp_removed`), `secrets_kept[]`, `upstream_kept`, `keep_remote` |
+| `stack upgrade --json` | `ashlr.stack.upgrade/v1` | `package`, `current`, `latest`, `status` (`up_to_date`, `update_available` or `ahead`), `install` |
+| `stack doctor --json` | `ashlr.stack.doctor/v1` | The shared `ashlr.doctor` wrapper (`kind`, `schema_version`, `version`, `tool`, `status`, `native_status`, `checks[]`) around the doctor report; see [docs/ashlr-handshake.md](docs/ashlr-handshake.md) |
+| `stack list` or `stack status`, on failure | `ashlr.stack.error/v1` | `error` (message), exit code 1 |
 
-Missing values are `null`. Check `schema` first: if it is `ashlr.stack.error/v1`, the command failed.
+Missing values are `null`. On failure, `stack list` and `stack status` print `ashlr.stack.error/v1`, and `stack doctor` prints its wrapper with `status: "fail"`. The other commands above print `{"error": "..."}` with no `schema` field and exit 1. So check for an `error` field first, then read `schema`. Other `--json` commands, such as `stack scan`, `stack recommend` and `stack onboard`, print JSON without a `schema` field.
 
 ```bash
 stack status --json | jq -r '.next_step.command'
