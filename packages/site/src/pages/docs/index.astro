@@ -139,10 +139,11 @@ stack add supabase`}
       we just give them the keys they need.
     </li>
     <li>
-      <strong>Not a lock-in.</strong> Everything writes to standard files:
-      <code>.env</code>, <code>.mcp.json</code>, <code>.stack.toml</code>
-      (TOML). Removing Stack does not migrate credentials or guarantee the app
-      still boots; inspect its runtime dependencies.
+      <strong>Not a lock-in.</strong> Stack's own state is plain files:
+      <code>.stack.toml</code> and <code>.stack.local.toml</code> (TOML) and
+      <code>.mcp.json</code>. It does not write <code>.env</code>; secrets stay
+      in Phantom. Removing Stack does not migrate credentials or guarantee the
+      app still boots; inspect its runtime dependencies.
     </li>
   </ul>
 
