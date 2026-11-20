@@ -5,23 +5,50 @@ import { Code } from "astro:components";
 
 <Docs
   title="Maintenance"
-  description="Keep .stack.toml in sync with the actual codebase using stack doctor --reconcile and stack remove --all-orphans."
+  description="Keep .stack.toml in sync with the project's manifests and config files using stack doctor --reconcile and stack remove --all-orphans."
   eyebrow="Reference"
 >
   <h2>The drift problem</h2>
   <p>
-    Over time, <code>.stack.toml</code> and your source code can fall out of
-    sync. Someone removes a Supabase import but forgets to run{" "}
-    <code>stack remove</code>. Or a service gets added to the config but the SDK
-    was never used. <code>stack doctor --reconcile</code> and{" "}
-    <code>stack remove --all-orphans</code> catch and fix this drift.
+    Over time, <code>.stack.toml</code> and the project can fall out of sync.
+    Someone drops the Supabase SDK from <code>package.json</code> but forgets to
+    run <code>stack remove</code>. Or a service is in the config but nothing in
+    the project points to it. <code>stack doctor --reconcile</code> reports this
+    drift and <code>stack remove --all-orphans</code> cleans up the local side.
+  </p>
+
+  <h2 id="what-is-scanned">What counts as "used"</h2>
+  <p>
+    Both commands run the same source scan from the current directory. It reads
+    files at the project root, not import statements under <code>src/</code>:
+  </p>
+  <ul>
+    <li>
+      Dependencies in <code>package.json</code>, <code>requirements.txt</code>,
+      <code>pyproject.toml</code>, <code>go.mod</code> and <code>Cargo.toml</code>.
+    </li>
+    <li>
+      Provider config files such as <code>vercel.json</code>,{" "}
+      <code>fly.toml</code>, <code>supabase/config.toml</code>,{" "}
+      <code>wrangler.toml</code>, <code>firebase.json</code>,{" "}
+      <code>render.yaml</code> and <code>.github/workflows/*.yml</code>.
+    </li>
+    <li>
+      Variable names in <code>.env.example</code>, <code>.env.sample</code> or{" "}
+      <code>.env.template</code>.
+    </li>
+  </ul>
+  <p>
+    A service is an <strong>orphan</strong> when it is in{" "}
+    <code>.stack.toml</code> and the scan does not find it. It is{" "}
+    <strong>untracked</strong> when the scan finds it and{" "}
+    <code>.stack.toml</code> does not list it.
   </p>
 
   <h2 id="reconcile"><code>stack doctor --reconcile</code></h2>
   <p>
-    Scans your source files for imports that match known provider patterns, then
-    compares the findings against <code>.stack.toml</code>. Reports three
-    categories:
+    Compares the scan with <code>.stack.toml</code>. It is read-only and needs
+    no credentials or Phantom.
   </p>
 
   <Code
@@ -31,30 +58,38 @@ import { Code } from "astro:components";
   />
 
   <Code
-    code={`┌  stack doctor --reconcile
-│
-◇  Scan complete
-│
-│  ✓ In sync:    supabase, resend
-│  ⚠ Orphaned:  posthog     (in .stack.toml but no import found in src/)
-│  ⚠ Untracked: clerk       (imported in src/ but not in .stack.toml)
-│
-└  Run \`stack remove --all-orphans\` to clean up, or \`stack add clerk\` to track.`}
+    code={`  ● 2 services configured · 2 detected in source
+
+  ⚠ 1 orphan: posthog (no longer imported — run \`stack remove posthog\`)
+  ○ 1 untracked: clerk (found in package.json — run \`stack add clerk\`)`}
     lang="text"
     theme="github-dark-dimmed"
   />
 
   <p>
-    The command is read-only — it reports but does not modify anything. Pair it
-    with <code>stack scan --json</code> in CI to gate on drift.
+    With no drift it prints <code>No drift — configured services match
+    source.</code> and exits 0. With drift it exits 2. Adding{" "}
+    <code>--fix</code> or <code>--all</code> runs the normal health checks
+    after the drift report.
+  </p>
+  <p>
+    <code>stack doctor --reconcile --json</code> prints the{" "}
+    <code>configured</code>, <code>detected</code>, <code>orphans</code> and{" "}
+    <code>untracked</code> lists inside the shared doctor envelope, with{" "}
+    <code>native_status</code> set to <code>in-sync</code> or{" "}
+    <code>drift</code> and one <code>warn</code> check per difference. It skips
+    the health checks and exits 0 even on drift, so tooling must read{" "}
+    <code>status</code> or the lists.
   </p>
 
   <h2 id="remove-orphans"><code>stack remove --all-orphans</code></h2>
   <p>
-    Rescans the source and removes orphaned services from local
-    <code>.stack.toml</code> and MCP configuration, while attempting Phantom
-    secret cleanup. It keeps upstream resources; it does not reuse a saved
-    <code>doctor --reconcile</code> result.
+    Runs the scan again (it does not reuse a saved{" "}
+    <code>doctor --reconcile</code> result), lists the orphans with their
+    secret counts, then removes them from <code>.stack.toml</code>, removes
+    their MCP entries and attempts to remove their Phantom secrets. It keeps
+    upstream resources. In a terminal it asks for confirmation first. Without a
+    TTY (CI, agent shells) it does not ask and removes the orphans at once.
   </p>
 
   <Code
@@ -69,7 +104,8 @@ stack remove --all-orphans`}
 
   <div class="callout callout-warn">
     <code>stack remove --all-orphans</code> does not delete upstream projects.
-    Inspect the orphan list before removing local configuration. Phantom secret
+    Inspect the orphan list before removing local configuration, especially
+    from an agent shell, where there is no confirmation prompt. Phantom secret
     removal requires its terminal confirmation; headless cleanup or refused
     confirmation can leave secrets stored. Inspect any reported leftovers.
     <code>--keepRemote</code> is a compatibility flag, not a switch for remote deletion.
@@ -77,9 +113,11 @@ stack remove --all-orphans`}
 
   <h2>Using both in CI</h2>
   <p>
-    Combine <code>doctor --reconcile</code> with <code>scan --json</code> for a
-    full drift check on every push. See{" "}
-    <a href="/docs/ci/#scan-in-ci">CI integration → scan in CI</a> for an
-    example workflow.
+    To fail a job on drift, run <code>stack doctor --reconcile</code> without{" "}
+    <code>--json</code> and let exit code 2 fail the step. To collect a report
+    instead, save <code>stack doctor --reconcile --json</code> and inspect its
+    fields. See{" "}
+    <a href="/docs/ci/#json-report-shape">CI integration → source-drift report</a>{" "}
+    and <a href="/docs/ci/#scan-in-ci"><code>stack scan</code> in CI</a>.
   </p>
 </Docs>
