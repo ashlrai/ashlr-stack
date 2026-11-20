@@ -2,7 +2,11 @@
 import Docs from "~/layouts/Docs.astro";
 import { faqPageSchema } from "~/lib/structured-data";
 import { SITE_URL } from "~/lib/og";
-import { PUBLISHED_VERSION } from "~/lib/site-facts.generated";
+import {
+  MCP_TOOL_COUNT,
+  PROVIDER_COUNT,
+  PUBLISHED_VERSION,
+} from "~/lib/site-facts.generated";
 
 const pageUrl = `${SITE_URL}/compare/stack-vs-terraform/`;
 
@@ -119,7 +123,7 @@ const faq = faqPageSchema(
       <tr>
         <td>AI surface</td>
         <td>
-          <a href="/docs/recommend/">Native <code>stack recommend</code></a> + 19 MCP tools + Claude Code plugin
+          <a href="/docs/recommend/">Native <code>stack recommend</code></a> + {MCP_TOOL_COUNT} MCP tools + Claude Code plugin
         </td>
         <td>HashiCorp AI in Terraform Cloud (preview); no native MCP</td>
       </tr>
@@ -178,7 +182,7 @@ const faq = faqPageSchema(
       what other tools write to disk or logs.
     </li>
     <li>
-      <strong>MCP-native.</strong> Stack's 19 MCP tools let an agent drive the
+      <strong>MCP-native.</strong> Stack's {MCP_TOOL_COUNT} MCP tools let an agent drive the
       supported lifecycle — recommend, apply, doctor, remove — from a
       Claude Code session. Terraform has no first-class MCP surface; you'd
       have to wrap the CLI yourself.
@@ -209,7 +213,7 @@ const faq = faqPageSchema(
     <li>
       <strong>Provider ecosystem.</strong> Terraform has 3,000+ providers on
       the registry, covering every major cloud, database, monitoring tool,
-      DNS provider, VPN, and identity system. Stack ships 39 curated
+      DNS provider, VPN, and identity system. Stack ships {PROVIDER_COUNT} curated
       providers.
     </li>
     <li>

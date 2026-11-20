@@ -2,7 +2,11 @@
 import Docs from "~/layouts/Docs.astro";
 import { faqPageSchema } from "~/lib/structured-data";
 import { SITE_URL } from "~/lib/og";
-import { PUBLISHED_VERSION } from "~/lib/site-facts.generated";
+import {
+  MCP_TOOL_COUNT,
+  PROVIDER_COUNT,
+  PUBLISHED_VERSION,
+} from "~/lib/site-facts.generated";
 
 const pageUrl = `${SITE_URL}/compare/stack-vs-railway/`;
 
@@ -41,7 +45,7 @@ const faq = faqPageSchema(
     Postgres and Redis next to your app. It's a genuinely pleasant Heroku
     successor with a polished UI, a template marketplace, and strong
     defaults. Stack is a control plane that connects supported SaaS
-    services across 39 provider adapters, including Railway. Where Railway's
+    services across {PROVIDER_COUNT} provider adapters, including Railway. Where Railway's
     answer to "I need a SaaS stack" is "deploy everything inside Railway,"
     Stack's answer is "compose the best-of-breed SaaS for each capability and
     wire them together." These tools are not substitutes; they're complements.
@@ -121,7 +125,7 @@ const faq = faqPageSchema(
       <tr>
         <td>AI surface</td>
         <td>
-          <a href="/docs/recommend/"><code>stack recommend</code></a>, 19 MCP tools, Claude Code plugin
+          <a href="/docs/recommend/"><code>stack recommend</code></a>, {MCP_TOOL_COUNT} MCP tools, Claude Code plugin
         </td>
         <td>Railway AI generates Dockerfiles + deployment configs from code</td>
       </tr>
@@ -263,7 +267,7 @@ const faq = faqPageSchema(
   <p>
     No. Railway is a managed deploy platform where you run your apps; Stack
     connects supported SaaS services (databases,
-    auth, billing, observability). Railway is one of its 39 provider adapters, so you can run <code>stack add railway</code> to
+    auth, billing, observability). Railway is one of its {PROVIDER_COUNT} provider adapters, so you can run <code>stack add railway</code> to
     verify and store an existing Railway token.
   </p>
 
