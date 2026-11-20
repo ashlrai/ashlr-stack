@@ -1,6 +1,7 @@
 ---
 import Docs from "~/layouts/Docs.astro";
 import { Code } from "astro:components";
+import { SOURCE_VERSION } from "~/lib/site-facts.generated";
 ---
 
 <Docs
@@ -109,7 +110,21 @@ $ echo $?
   "configured": ["supabase"],
   "detected": [],
   "orphans": ["supabase"],
-  "untracked": []
+  "untracked": [],
+  "kind": "ashlr.doctor",
+  "schema": "ashlr.stack.doctor/v1",
+  "version": "${SOURCE_VERSION}",
+  "schema_version": 1,
+  "tool": "ashlr-stack",
+  "status": "warn",
+  "native_status": "drift",
+  "checks": [
+    {
+      "id": "orphan-supabase",
+      "status": "warn",
+      "summary": "supabase is configured but not found in source"
+    }
+  ]
 }`}
     lang="json"
     theme="github-dark-dimmed"
@@ -117,7 +132,14 @@ $ echo $?
 
   <p>
     The JSON above illustrates <code>stack doctor --reconcile --json</code>: <code>configured</code> and{" "}
-    <code>detected</code> record config services and source detections; orphans and untracked record their differences. This branch returns before Phantom and health checks and returns 0 on detected drift. Tooling must inspect the fields; scanner or I/O errors can still fail. It is not credential or provider-health acceptance.
+    <code>detected</code> record config services and source detections; <code>orphans</code> and{" "}
+    <code>untracked</code> record their differences. The lists sit inside the shared doctor envelope
+    (<code>ashlr.stack.doctor/v1</code>; <code>version</code> is the Stack CLI version):{" "}
+    <code>native_status</code> is <code>in-sync</code> or <code>drift</code>, <code>status</code> is{" "}
+    <code>ok</code> or <code>warn</code>, and <code>checks</code> holds one <code>warn</code> entry per
+    orphan or untracked service. This branch returns before Phantom and health checks and returns 0 on
+    detected drift, so tooling must read <code>status</code> or the lists; scanner or I/O errors can
+    still fail. It is not credential or provider-health acceptance.
   </p>
 
   <h2>Other CI systems</h2>
