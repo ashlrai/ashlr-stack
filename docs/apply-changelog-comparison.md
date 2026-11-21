@@ -22,12 +22,47 @@ The entries within each file describe different releases and aspects of apply;
 differences in their emphasis are not differences between the two copies.
 Other commands' `--apply` flags are outside this comparison.
 
-To repeat the comparison from the repository root before any site content sync:
+## Placeholder-wiring language
+
+**There are no wording or substantive differences between the two copies** of
+the `stack apply` placeholder-wiring change. The sections that describe it
+differ only in scope:
+
+| Location in each file | Wording and scope |
+| --- | --- |
+| Unreleased → Changed | Says apply creates no placeholder secrets; after at least one provider succeeds, wiring checks all recipe providers, including failed ones. Missing names alone do not fail apply; provider failures do. Webhook stubs can be created even with an unreadable vault, and `--noWire` skips checks and stubs. |
+| 0.3.0 → Changed and fixed | Summarizes the name check, skipped unreadable vaults, and the separate possibility of provider setup storing real credentials. |
+| 0.3.0 → Changed | Explains missing-name reporting, the trusted-terminal `phantom add <NAME>` action, unreadable vault and unknown-provider skips, example output, and why zero checked counts do not prove the vault is empty. |
+| 0.2.1 → Bug fixes | Describes the fix: wiring no longer writes to the vault or fills missing values. The former placeholder-add attempts failed, and `WireResult.envelopes` was replaced by `present` and `missing`. |
+| 0.1.0 → AI recommendation layer | Describes apply and webhook wiring, with the later placeholder fix incorporated and missing names distinguished from provider failures. |
+
+Wiring's name checks do not prevent provider setup from separately storing real
+credentials. Missing required values still need user action through Phantom.
+
+## The 0.2.1 fix entry
+
+In each file, the fix is the first bullet under **Bug fixes** in 0.2.1
+(2026-10-16), beginning “`stack apply` stops attempting to write placeholder
+secrets.” The 0.2.1 links in the first table point to that release heading.
+
+**Substantive wording differences: none.** The complete entry is identical in
+both checked-in sources, including its commands, result fields and historical
+explanation. Both distinguish wiring's name checks from provider setup, which may
+store real values; describe supplying required missing values through Phantom;
+and say an unreadable vault results in providers being reported as skipped.
+Both also describe the failed placeholder-add attempts and the replacement of
+`WireResult.envelopes` with `present` and `missing`.
+
+## Repeat the comparison
+
+Run from the repository root **before** any site content sync:
 
 ```sh
 diff -u CHANGELOG.md packages/site/src/data/CHANGELOG.md
 ```
 
 No output and exit status 0 mean the files match; status 1 shows differences,
-and a higher status indicates an error. Site content synchronization copies the
-root changelog over the site data, so syncing first can hide a discrepancy.
+and a higher status indicates an error. The site's `sync-content` script copies
+the root changelog over the site data during development and builds, so syncing
+first can hide a checked-in discrepancy. Inspect any diff in its release context
+before updating this document.
