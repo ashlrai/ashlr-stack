@@ -1,5 +1,5 @@
 import { describe, expect, it, setDefaultTimeout } from "bun:test";
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { setupFakePhantom } from "../packages/core/src/__tests__/_harness.ts";
 import {
@@ -270,6 +270,124 @@ describe("Phantom wire example source map", () => {
           .replace("forge a stripe webhook", `forge a ${provider} webhook`),
       );
       expect(reminderOf(webhookStubFor(provider))).toEqual(expected);
+    }
+  });
+});
+
+// Folded in from the former phantom-wire-example-caveats doc and test (which
+// had itself absorbed phantom-wire-example-trust). The checks target the
+// guide's "Caveats and trust" section.
+const caveats = doc.slice(doc.indexOf("\n## Caveats and trust\n"), doc.indexOf("\n## Source map\n"));
+const signatureWarning = "TODO(security): signature verification is NOT implemented here.";
+
+function assertExampleWarning(provider: string, example: string): void {
+  if (!example.includes(signatureWarning)) {
+    throw new Error(`${provider} example is missing the signature-verification warning`);
+  }
+}
+
+describe("Phantom wire example caveats", () => {
+  it("has a Caveats and trust section before the source map", () => {
+    expect(doc.indexOf("\n## Caveats and trust\n")).toBeGreaterThan(0);
+    expect(doc.indexOf("\n## Caveats and trust\n")).toBeLessThan(doc.indexOf("\n## Source map\n"));
+    expect(caveats).toContain("Recipe manifests have a separate limitation: they are unsigned");
+    for (const link of ["phantom-wire-followup.md", "phantom-wire-boundary.md", "phantom-wire-data-flow.md"]) {
+      expect(caveats).toContain(`](${link})`);
+    }
+  });
+
+  it("quotes the security reminder exactly as the generated stub words it", () => {
+    const flat = (text: string) =>
+      text
+        .split("\n")
+        .map((line) => line.replace(/^\s*\/\/ ?/, ""))
+        .join(" ")
+        .replace(/\s+/g, " ");
+    const docText = doc.replace(/\s+/g, " ");
+    const caveatsText = caveats.replace(/\s+/g, " ");
+    for (const provider of ["stripe", "clerk", "supabase", "github"]) {
+      const stub = flat(webhookStubFor(provider));
+      // The reminder sentence the doc quotes is taken from the generated stub, not hardcoded.
+      const todo = stub.match(/TODO\(security\): [^.]+\./)?.[0];
+      expect(todo).toBeDefined();
+      expect(docText).toContain(todo as string);
+      // The stub's behavior claims: any non-empty header reaches 200, nothing authenticated.
+      expect(stub).toContain("accepts any non-empty signature header and returns 200 without authenticating");
+      expect(stub).toContain("does not verify signatures");
+      expect(stub).toContain("attacker-controlled");
+    }
+    expect(caveatsText).toContain("any non-empty value for the expected header reaches the 200 response");
+    expect(caveatsText).toContain("neither sender nor payload is authenticated");
+    expect(caveatsText).toContain("attacker-controlled");
+    expect(caveatsText).toContain("Do not deploy or act on this example as-is.");
+    expect(caveatsText).toContain("illustrative guidance, not implemented verification");
+    expect(caveatsText).toContain("No secret is retrieved and no signature is checked.");
+    expect(caveatsText).toContain("the secret named in the stub may differ from the catalog names");
+  });
+
+  it("identifies an example missing its signature-verification warning", () => {
+    expect(() => assertExampleWarning("stripe", "// export async function handler() {}"))
+      .toThrow("stripe example is missing the signature-verification warning");
+  });
+
+  it("places the verification reminder before the success response in each stub", () => {
+    for (const provider of ["stripe", "clerk", "supabase", "github"]) {
+      const stub = webhookStubFor(provider);
+      const reminder = stub.indexOf(signatureWarning);
+      const success = stub.indexOf('return new Response("ok", { status: 200 })');
+      expect(reminder, `${provider} stub is missing the verification reminder`).toBeGreaterThanOrEqual(0);
+      expect(success, `${provider} stub is missing the success response`).toBeGreaterThanOrEqual(0);
+      expect(reminder, `${provider} stub returns success before warning about verification`).toBeLessThan(success);
+    }
+  });
+
+  it("describes the trust behavior of each generated example", async () => {
+    const providers = ["stripe", "clerk", "supabase", "github"];
+    const harness = setupFakePhantom();
+    try {
+      const result = await wirePhantomForRecipe(
+        { id: "trust", query: "", createdAt: "", providers: providers.map((name) => ({ name })) },
+        { cwd: harness.dir },
+      );
+      expect(result.webhooks).toHaveLength(providers.length);
+
+      const examples = providers.map((provider, index) => {
+        const stub = readFileSync(result.webhooks[index], "utf8");
+        expect(stub.split("\n").every((line) => !line || line.startsWith("//"))).toBe(true);
+        expect(stub).toContain(signatureWarning);
+        const header = stub.match(/req\.headers\.get\("([^"]+)"\)/)?.[1];
+        const secret = stub.match(/phantom reveal ([A-Z_]+)/)?.[1];
+        const example = stub.match(/^\/\/ export async function [\s\S]*?^\/\/ }$/m)?.[0];
+        if (!header || !secret || !example) throw new Error(`Incomplete ${provider} example`);
+        const row = doc.split("\n").find((line) => line.toLowerCase().startsWith(`| ${provider} |`));
+        expect(row).toContain(`\`${header}\` | \`${secret}\``);
+        assertExampleWarning(provider, example);
+        const path = join(harness.dir, `${provider}-trust-example.ts`);
+        writeFileSync(path, example.replace(/^\/\/ ?/gm, ""));
+        return { provider, header, path };
+      });
+      // Uncommented as generated, each handler rejects a missing header but
+      // accepts a forged one with any body: the behavior the caveats describe.
+      for (const { provider, header, path } of examples) {
+        const exports = await import(path);
+        const handler = exports[`handle${provider[0].toUpperCase()}${provider.slice(1)}Webhook`];
+        expect(typeof handler).toBe("function");
+        const missing = new Request("https://example.com", { method: "POST", body: "payload" });
+        expect((await handler(missing)).status).toBe(400);
+        expect(missing.bodyUsed).toBe(false);
+        for (const body of ["payload", "altered"]) {
+          const request = new Request("https://example.com", {
+            method: "POST",
+            headers: { [header]: "forged" },
+            body,
+          });
+          expect((await handler(request)).status).toBe(200);
+        }
+      }
+      expect(harness.callsTo("reveal")).toEqual([]);
+      expect(harness.callsTo("add")).toEqual([]);
+    } finally {
+      harness.cleanup();
     }
   });
 });
