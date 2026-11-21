@@ -95,6 +95,24 @@ Confirm every row against the provider's current documentation.
 | supabase | `x-supabase-signature` | `SUPABASE_WEBHOOK_SECRET` | `x-supabase-signature` per Supabase's documented webhook scheme | Does the Supabase webhook feature in use emit this header and scheme, and where is its verification documented? |
 | github | `x-hub-signature-256` | `GITHUB_WEBHOOK_SECRET` | `x-hub-signature-256` is `sha256=` + HMAC-SHA256 of the raw body | Which webhook secret and which raw bytes feed the HMAC, and how is the digest compared safely? |
 
+## Worked example: Stripe with an empty vault
+
+Consider a recipe with `providers: [{ name: "stripe" }]`, wiring enabled, and a
+readable, empty Phantom vault. The result has `present: []`,
+`missing: ["stripe:STRIPE_SECRET_KEY"]`, `skipped: []`, and one absolute
+`webhooks` path ending in `.stack/webhooks/stripe.ts`. The inventory checks the
+catalog name; it does not store, reveal, or validate a secret value. The
+`STRIPE_WEBHOOK_SECRET` named in the generated comment is not the catalog
+secret in this result.
+
+If the generated file is uncommented as written, a missing or empty
+`stripe-signature` header gets a 400, and any non-empty header reaches an
+`ok`/200 response if reading the body succeeds. A body-read failure rejects the
+handler. Reading text alone does not establish that the exact raw bytes needed
+for verification were preserved. The example is not ready to deploy:
+generating it neither registers a route nor deploys a handler, and a later
+wiring run overwrites an existing file at that path.
+
 Recipe manifests are a separate unsigned input: catalog name checks
 authenticate neither origin nor integrity, so a recipe — like a webhook body —
 must come from a trusted source before it is relied on.
@@ -103,5 +121,5 @@ For resolution criteria see the
 [verification follow-up](phantom-wire-followup.md); for how this TODO is
 classified against active code see the
 [signature review](phantom-wire-signature-review.md); for adjacent question
-sets see the [example questions](phantom-wire-example-questions.md) and the
+sets see the [reading guide](phantom-wire-example-reading-guide.md) and the
 [review questions](phantom-wire-review-questions.md).

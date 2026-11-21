@@ -1,5 +1,6 @@
 import { describe, expect, it, setDefaultTimeout } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { setupFakePhantom } from "../packages/core/src/__tests__/_harness.ts";
 import {
   verificationHintFor,
@@ -71,6 +72,46 @@ describe("Phantom wire verification questions", () => {
       expect(harness.callsTo("add")).toEqual([]);
     } finally {
       harness.cleanup();
+    }
+  });
+
+  it("matches the worked empty-vault Stripe example", async () => {
+    // Folded in from the former phantom-wire-example-questions doc and test.
+    const harness = setupFakePhantom();
+    try {
+      const result = await wirePhantomForRecipe(
+        { id: "example", query: "", createdAt: "", providers: [{ name: "stripe" }] },
+        { cwd: harness.dir },
+      );
+      expect(result).toEqual({
+        present: [],
+        missing: ["stripe:STRIPE_SECRET_KEY"],
+        skipped: [],
+        webhooks: [join(harness.dir, ".stack/webhooks/stripe.ts")],
+      });
+      const stub = readFileSync(result.webhooks[0], "utf8");
+      expect(stub).toContain('req.headers.get("stripe-signature")');
+      expect(stub).toContain("phantom reveal STRIPE_WEBHOOK_SECRET");
+      expect(stub.split("\n").every((line) => !line || line.startsWith("//"))).toBe(true);
+      expect(harness.callsTo("reveal")).toEqual([]);
+      expect(harness.callsTo("add")).toEqual([]);
+    } finally {
+      harness.cleanup();
+    }
+
+    const section = doc
+      .split("## Worked example: Stripe with an empty vault\n")[1]
+      ?.split(/\n## /)[0];
+    expect(section).toBeDefined();
+    for (const statement of [
+      'missing: ["stripe:STRIPE_SECRET_KEY"]',
+      ".stack/webhooks/stripe.ts",
+      "`stripe-signature`",
+      "`STRIPE_WEBHOOK_SECRET`",
+      "not ready to deploy",
+      "overwrites an existing file",
+    ]) {
+      expect(section).toContain(statement);
     }
   });
 
