@@ -12,9 +12,12 @@ Create `packages/core/src/providers/<name>.ts` and default-export a `Provider`
 ([`_base.ts`](../packages/core/src/providers/_base.ts)):
 
 - **API key or token:** use `makeApiKeyProvider` from
-  [`_api-key.ts`](../packages/core/src/providers/_api-key.ts). Give it the
-  secret name, a `howTo` line, and a `verify(key)` that makes one cheap
-  authenticated read through `verifyFetch` and returns `undefined` on failure.
+  [`_api-key.ts`](../packages/core/src/providers/_api-key.ts). Give it
+  `name`, `displayName`, `category`, `docs`, `secretName` (the env name, also
+  the Phantom key), a `howTo` line, and a `verify(key)` that makes one cheap
+  authenticated read through `verifyFetch` from
+  [`_helpers.ts`](../packages/core/src/providers/_helpers.ts) and returns
+  `undefined` on failure. `dashboard`, `mcp` and `healthcheck` are optional.
 - **OAuth:** use `runPkceFlow` from [`oauth.ts`](../packages/core/src/oauth.ts)
   (see [`supabase.ts`](../packages/core/src/providers/supabase.ts)), and follow
   "To register a new provider" in [provider-auth-matrix.md](./provider-auth-matrix.md)
@@ -30,17 +33,18 @@ Secrets go through Phantom; never write them anywhere else.
 | File | Add |
 |------|-----|
 | [`providers/index.ts`](../packages/core/src/providers/index.ts) | a lazy loader: `<name>: async () => (await import("./<name>.ts")).default` |
-| [`catalog.ts`](../packages/core/src/catalog.ts) | a `PROVIDERS_REF` entry: category, `authKind`, `secrets`, blurb, `keyOnly` if it only stores a key, `dashboard`, `docs`, `howTo`, `sdkPackages`. Drives `stack providers`, `stack recommend` and `stack open`. |
+| [`catalog.ts`](../packages/core/src/catalog.ts) | a `PROVIDERS_REF` entry: `name`, `displayName`, category, `authKind`, `secrets`, blurb, `keyOnly` if it only stores a key, `dashboard`, `docs`, `howTo`, `sdkPackages`. Drives `stack providers`, `stack recommend` and `stack open`. |
 | [`detect.ts`](../packages/core/src/detect.ts) | an env-var rule (`^NAME_` and the primary key) so `stack import` recognizes an existing `.env` |
-| [`detect-source.ts`](../packages/core/src/detect-source.ts) | dependency rules (npm, PyPI, Go, Cargo) so `stack scan` finds projects already using it |
+| [`detect-source.ts`](../packages/core/src/detect-source.ts) | dependency rules (npm, PyPI, Go, Cargo) so `stack scan` finds projects already using it. Skip this when the provider has no SDK or config file of its own: DeepSeek and xAI have no rule, and their catalog `sdkPackages` is `openai`, which already maps to OpenAI. |
 | [`provider-auth-matrix.md`](./provider-auth-matrix.md) | a table row (name, category, `authKind`, deprovision, API docs) and the provider count in the header |
 
 ## 3. Test it
 
 - API-key providers: add a spec to `SPECS` in
   [`api-key-providers.test.ts`](../packages/core/src/__tests__/api-key-providers.test.ts)
-  (secret name, a fake key, a mocked success body). It checks that a verified
-  key comes back from `materialize` and lands in the vault.
+  (module path, provider name, secret name, a fake key, a mocked success body).
+  It checks that a verified key comes back from `materialize` and lands in the
+  vault.
 - Others: add `packages/core/src/__tests__/<name>-provider.test.ts`, mocking
   `fetch` the way [`neon-provider.test.ts`](../packages/core/src/__tests__/neon-provider.test.ts) does.
 - Run [`catalog-index.test.ts`](../packages/core/src/__tests__/catalog-index.test.ts)
