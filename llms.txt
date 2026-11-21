@@ -18,7 +18,7 @@ Stack is one tool in the Ashlr ecosystem. Together these tools aim to be an auto
 
 `stack doctor --ecosystem --install` prints install commands for missing tools and runs nothing.
 
-Agents (Phantom and other coding agents) work on this repo through branches and pull requests that merge once required checks pass. Their rules and kept limits are in [AGENTS.md](https://github.com/ashlrai/ashlr-stack/blob/main/AGENTS.md). Outside contributors, human or agent, follow the same path in [CONTRIBUTING.md](https://github.com/ashlrai/ashlr-stack/blob/main/CONTRIBUTING.md#contribute-with-an-agent): fork, run the checks, open a PR. The one required check is CI Gate (typecheck, Tier-1 security tests, `bun run check:crypto` and two secret scans), and PRs land through the merge queue. A maintainer or fleet agent turns on auto-merge for a PR from a fork. A first PR from a fork waits until a maintainer approves its workflow runs. No approving review is required, and the branch need not be up to date with `main`: the merge queue reruns CI Gate on the latest `main` and squash-merges the PR.
+Agents (Phantom and other coding agents) work on this repo through branches and pull requests that merge once required checks pass. Their rules and kept limits are in [AGENTS.md](https://github.com/ashlrai/ashlr-stack/blob/main/AGENTS.md). Outside contributors, human or agent, follow the same path in [CONTRIBUTING.md](https://github.com/ashlrai/ashlr-stack/blob/main/CONTRIBUTING.md#contribute-with-an-agent): fork, install, run the checks, open a PR. The one required check is CI Gate (typecheck, Tier-1 security tests, `bun run check:crypto` and two secret scans), and PRs land through the merge queue. A maintainer or fleet agent turns on auto-merge for a PR from a fork, since that needs write access. A first PR from a fork waits until a maintainer approves its workflow runs. No approving review is required, and the branch need not be up to date with `main`: the merge queue reruns CI Gate on the latest `main` and squash-merges the PR. The full suite runs daily on `main`. The commands are in [Work on this repo](#work-on-this-repo).
 
 ## Read-only commands
 
@@ -69,6 +69,20 @@ Cursor (`~/.cursor/mcp.json` or `.mcp.json`):
 ```
 
 Do not run `stack add`, `stack apply`, `stack import`, or `stack onboard --apply` until the user names the project and the provider.
+
+## Work on this repo
+
+From a clone of the repo or your fork, on a branch, with git, Bun and Node.js 20 or newer:
+
+```bash
+bun install --frozen-lockfile   # again in each new git worktree
+bunx tsc --noEmit -p tsconfig.json
+bun test packages/core/src/__tests__/security.test.ts packages/core/src/__tests__/secret-redaction.test.ts
+bun run check:crypto
+bun run lint
+```
+
+After the install, the next three lines are what CI Gate runs, apart from its two secret scans over the diff; their local commands are in [Run the gate locally](https://github.com/ashlrai/ashlr-stack/blob/main/CONTRIBUTING.md#run-the-gate-locally). `scripts/affected-tests origin/main` lists the tests your committed changes select. For a docs change, run `bun run fresh:check`, `HOME=$(mktemp -d) bun test scripts/docs-freshness.test.ts` and the tests that name each doc you changed. After touching a version, command, MCP tool or provider, run `bun run fresh:sync` first. A user-visible change adds a line under `## Unreleased` in `CHANGELOG.md`, mirrored byte for byte to `packages/site/src/data/CHANGELOG.md`. Push your branch with plain `git push`; never run `scripts/publish.sh`, which is the npm release script.
 
 ## Where to read next
 
