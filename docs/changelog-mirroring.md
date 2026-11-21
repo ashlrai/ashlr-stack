@@ -22,17 +22,20 @@ Keep both copies consistent. Edit `CHANGELOG.md` first, then update the site
 copy to match. Do not change the wording, conditions or examples of an entry in
 only one file.
 
-1. [Review both copies](#review-before-syncing) if you suspect they differ.
-2. Edit the root `CHANGELOG.md`.
-3. Sync: `bun run --cwd packages/site sync-content`. The script hides copy
-   errors (`|| true`), so its exit status alone does not prove the copy
-   worked. Repeat the `diff` below and inspect
+1. [Review both copies](#review-before-syncing) before editing or syncing.
+2. Edit the root `CHANGELOG.md`, normally under `Unreleased` in the
+   appropriate subsection. Check the wording against the change it describes,
+   and preserve unrelated entries and release history.
+3. Sync: `bun run --cwd packages/site sync-content`. This overwrites the whole
+   site copy, and the script suppresses copy errors (`|| true`), so its exit
+   status alone does not prove the copy worked. Repeat the `diff` below and
+   require status 0, then inspect
    `git diff -- CHANGELOG.md packages/site/src/data/CHANGELOG.md` for
    unintended changes.
 4. Run the checks:
    `HOME=$(mktemp -d) bun test packages/site/tests/changelog.test.ts scripts/changelog-mirroring.test.ts`.
-   They cover the checked-in files, not whether a site build has been
-   deployed.
+   They cover the checked-in files and specific historical claims, not whether
+   a site build has been deployed.
 
 ## Review before syncing
 
@@ -57,10 +60,22 @@ diff -u CHANGELOG.md packages/site/src/data/CHANGELOG.md
 ```
 
 No output and exit status 0 mean byte-for-byte equality. Status 1 reports
-differences (`-` lines are root, `+` lines are site); read each hunk in context
-before deciding what belongs in the root source. A status greater than 1 is an
-error, such as a missing file, not a successful comparison. Matching copies do
-not prove a claim is correct; check the implementation when needed.
+differences (`-` lines are root, `+` lines are site); read each hunk in context,
+including site-only changes, before deciding what belongs in the root source.
+A status greater than 1 is an error, such as a missing file, not a successful
+comparison. Matching copies do not prove a claim is correct; check the
+implementation when needed.
+
+### Compare related historical entries
+
+Find the affected release and subsection in both files and compare the
+corresponding historical entries in full. Also review related entries in other
+releases for consistency, without erasing the difference between historical and
+current behavior. For example, **0.1.0 → AI recommendation layer**
+(`stack apply [recipe-id]`) describes the original attempt to write placeholder
+secrets, and **0.2.1 → Bug fixes** (`stack apply` stops attempting to write
+placeholder secrets) describes its removal. Both entries should read the same in
+each copy.
 
 ## The `stack apply` entries
 

@@ -29,7 +29,7 @@ verify a deployed site or an installed release.
   implementation or tests; matching text alone does not prove it is correct.
   The root changelog is the source for the site copy. Review differences before
   running site build, dev, or `sync-content`, which overwrite the site copy.
-  Follow the [update procedure](changelog-update-procedure.md) to reconcile,
+  Follow the [mirroring guide](changelog-mirroring.md#maintainer-rule) to reconcile,
   sync and test any changes, and inspect the resulting diff.
 
 For a whole-file comparison before syncing, run from the repository root:
