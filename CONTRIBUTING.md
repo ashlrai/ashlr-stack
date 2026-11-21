@@ -71,7 +71,7 @@ bun run lint                                # biome check .
 bun run packages/cli/src/index.ts providers # smoke CLI
 ```
 
-No build step for the CLI — Bun runs `.ts` directly.
+Running the CLI from source needs no build step, since Bun runs `.ts` directly. Some tests do run the built bundles, which are gitignored. `packages/mcp/__tests__/server.test.ts` drives `packages/mcp/dist/server.js` and `packages/cli/dist/index.js` and builds them only when they are missing, so a bundle left over from older source can fail it. After you change CLI or MCP source, rebuild both with `bun run --cwd packages/cli build && bun run --cwd packages/mcp build` before you trust an MCP test failure. `packages/cli/src/__tests__/first-run-readme.test.ts` rebuilds `packages/cli/dist` itself. Root `bun run build` also builds the site, which rewrites tracked generated files.
 
 ## Adding a provider
 
