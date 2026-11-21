@@ -1,4 +1,4 @@
-# Phantom wire example caveats
+# Phantom wire example caveats and trust
 
 [`phantom-wire.ts`](../packages/core/src/ai/phantom-wire.ts) generates webhook
 examples, not verified production handlers. `wirePhantomForRecipe` writes fully
@@ -11,7 +11,10 @@ and GitHub; it does not register or deploy an endpoint. Re-running wiring
 The generated handler reads the provider's signature header and returns 400 if
 it is absent or empty. It then reads the body and reaches
 `TODO(security): signature verification is NOT implemented here.` before
-returning 200. The TODO is an instruction, not a verification step. If the
+returning 200. The `TODO(security)` is **illustrative guidance, not implemented
+verification**: the secret retrieval command, the provider-specific hint, and
+the instructions to verify the raw body and compare signatures are all
+comments. No secret is retrieved and no signature is checked. If the
 handler is uncommented as generated, any non-empty value for the expected
 header reaches the 200 response if the body read succeeds: neither sender nor
 payload is authenticated, and the body is attacker-controlled. Do not deploy or act on this example as-is.
@@ -25,7 +28,8 @@ payload is authenticated, and the body is attacker-controlled. Do not deploy or 
 
 The secret name and provider-specific hint are comments only. Wiring checks
 catalog secret **names** against the Phantom vault; a present name does not
-validate its value, retrieve the webhook secret, or authenticate a request.
+validate its value, retrieve the webhook secret, or authenticate a request,
+and the secret named in the stub may differ from the catalog names.
 The example's `req.text()` alone does not establish that the exact raw bytes
 needed for verification are preserved.
 
