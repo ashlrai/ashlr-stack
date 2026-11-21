@@ -70,8 +70,9 @@ bash scripts/fast-check.sh                 # typecheck + test packages changed v
 `packages/`, and it tests only the packages that changed. The core, CLI, MCP
 and site tests read each other's sources, so for committed changes anywhere in
 the repo, `scripts/affected-tests origin/main` lists the tests to run; a change
-to any of those four selects all four
-([details](scripts/affected-tests.md)). The full contributor path is in
+to any of those four, or to `packages/plugin`, selects all four
+([details](scripts/affected-tests.md)). It prints `[]` for doc-only changes,
+but many tests read docs by name; CONTRIBUTING.md shows how to find them. The full contributor path is in
 [CONTRIBUTING.md](CONTRIBUTING.md#contribute-with-an-agent).
 
 Things that trip agents up:
