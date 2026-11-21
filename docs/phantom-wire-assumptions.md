@@ -13,7 +13,7 @@ webhooks.
   secret values. A `present` entry is only evidence that a name appeared in the
   inventory, not that its value is valid or usable. See
   [`wirePhantomForRecipe`](../packages/core/src/ai/phantom-wire.ts#L48) and
-  [`listSecrets`](../packages/core/src/phantom.ts#L270).
+  [`listSecrets`](../packages/core/src/phantom.ts#L271).
 - `present` and `missing` contain `provider:SECRET_NAME` entries when inventory
   is available. `skipped` means the provider was unknown or the inventory
   could not be checked; it does not mean the secret is missing. A missing
@@ -34,7 +34,7 @@ webhooks.
 | github | `x-hub-signature-256` | `GITHUB_WEBHOOK_SECRET` |
 
 The named webhook secret is a hint, not necessarily one of the catalog secrets
-checked. [`stack apply`](../packages/cli/src/commands/apply.ts#L102) invokes
+checked. [`stack apply`](../packages/cli/src/commands/apply.ts#L131) invokes
 wiring for the whole recipe after at least one provider succeeds, and reports
 wiring errors as warnings. A stub or an apply result does not prove that a
 provider was provisioned or an endpoint registered.
