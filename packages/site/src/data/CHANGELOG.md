@@ -16,6 +16,7 @@ This section covers the changes from `v0.3.10` through `916b73ad`.
 - The README JSON table now lists all 13 `ashlr.stack.*/v1` outputs, not just `list` and `status`.
 - The plugin, site and telemetry-worker READMEs now say how they fit in the Ashlr ecosystem and point to the contributor path.
 - Contributing now says what to expect at merge time: a first PR from a fork waits for a maintainer to approve its workflow runs, no approving review is required, and the merge queue retests and squash-merges without a rebase.
+- The agent references (`llms.txt`, `llms-full.txt`) and the site's "For AI agents" page now give the same merge-time expectations for fork PRs.
 
 **Changed**
 
