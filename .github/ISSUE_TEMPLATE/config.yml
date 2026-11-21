@@ -1,0 +1,14 @@
+# Links shown on the "New issue" chooser, below the bug report and provider
+# request templates. Blank issues stay enabled: SUPPORT.md asks for questions
+# as a blank issue titled "Question: ...".
+blank_issues_enabled: true
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/ashlrai/ashlr-stack/security/advisories/new
+    about: Report it privately through GitHub Security Advisories, never in a public issue. See SECURITY.md.
+  - name: Contribute a fix with your coding agent
+    url: https://github.com/ashlrai/ashlr-stack/blob/main/CONTRIBUTING.md#contribute-with-an-agent
+    about: The path humans and agents share. Fork, install, run the checks, open a PR, and merge through the merge queue once CI Gate passes.
+  - name: Get support
+    url: https://github.com/ashlrai/ashlr-stack/blob/main/SUPPORT.md
+    about: Which channel to use for questions, bugs, provider requests and security reports.
