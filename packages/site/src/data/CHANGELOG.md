@@ -17,6 +17,7 @@ This section covers the changes from `v0.3.10` through `916b73ad`.
 - The plugin, site and telemetry-worker READMEs now say how they fit in the Ashlr ecosystem and point to the contributor path.
 - Contributing now says what to expect at merge time: a first PR from a fork waits for a maintainer to approve its workflow runs, no approving review is required, and the merge queue retests and squash-merges without a rebase.
 - The agent references (`llms.txt`, `llms-full.txt`) and the site's "For AI agents" page now give the same merge-time expectations for fork PRs.
+- The site FAQ now answers how to contribute a fix, alone or with a coding agent: the shared contributor path, the CI Gate commands and what to expect at merge time.
 
 **Changed**
 
