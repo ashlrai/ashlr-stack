@@ -67,20 +67,38 @@ The interpolated names differ by provider:
 | Supabase | `x-supabase-signature` | `SUPABASE_WEBHOOK_SECRET` |
 | GitHub | `x-hub-signature-256` | `GITHUB_WEBHOOK_SECRET` |
 
-Before deploying, implement the current verification scheme for the provider's
-specific webhook product: preserve the required raw body, securely retrieve the
-correct secret, include all required headers and timestamp or replay checks,
-and reject invalid requests before parsing, trusting, or acting on their bodies.
-Use the provider's supported verifier where available, or a constant-time MAC
-comparison when implementing it directly. Test valid and invalid signatures,
-changed bodies, missing headers, and applicable timestamp and replay cases. The
-generated hints are starting points, not verification code.
+## Caveats and trust
 
-Recipe manifests have a separate trust boundary: they are unsigned, and checking
-provider names against the catalog does not authenticate their origin or
-integrity. Use recipes from a trusted source. For wiring and failure details, see
-the [data flow](phantom-wire-data-flow.md); for more on verification, see the
-[example caveats](phantom-wire-example-caveats.md).
+The `TODO(security)` is **illustrative guidance, not implemented
+verification**: the secret retrieval command, the provider-specific hint, and
+the instructions to verify the raw body and compare signatures are all
+comments. No secret is retrieved and no signature is checked. If the handler is
+uncommented as generated, any non-empty value for the expected header reaches
+the 200 response if the body read succeeds: neither sender nor payload is
+authenticated, and the body is attacker-controlled. Do not deploy or act on this
+example as-is.
+
+Wiring checks catalog secret **names** against the Phantom vault. A present name
+does not validate its value, retrieve the webhook secret, or authenticate a
+request, and the secret named in the stub may differ from the catalog names.
+
+Before deploying a handler, implement the current verification scheme for the
+provider's specific webhook product, including required headers and timestamp
+or replay checks. Preserve the exact body required by that scheme, retrieve the
+correct secret securely, and reject missing, malformed, invalid, or stale
+signatures before parsing, trusting, or acting on the payload. Use the
+provider's supported verification library where available, or a constant-time
+MAC comparison when implementing it directly. Test valid and invalid
+signatures, changed bodies, missing headers, and applicable timestamp and
+replay cases. The generated hints are starting points, not proof that a scheme
+applies to every product.
+
+Recipe manifests have a separate limitation: they are unsigned, and catalog
+provider checks do not authenticate their origin or integrity. Use trusted
+recipes. For wiring and failure details, see the
+[data flow](phantom-wire-data-flow.md), the
+[verification follow-up](phantom-wire-followup.md) and the
+[wiring boundary](phantom-wire-boundary.md).
 
 ## Source map
 

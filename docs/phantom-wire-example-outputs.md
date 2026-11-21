@@ -91,5 +91,5 @@ stale signatures before parsing or acting on the payload, and include required
 timestamp and replay checks. The generated hints are starting points, not
 verification code. See the [data flow](phantom-wire-data-flow.md) for the full
 decision path, the [signature status](phantom-wire-signature-status.md) for the
-TODO's scope, and the [example caveats](phantom-wire-example-caveats.md) for
+TODO's scope, and the [reading guide's caveats](phantom-wire-example-reading-guide.md#caveats-and-trust) for
 what to implement first.
