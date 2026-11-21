@@ -119,3 +119,35 @@ test("documented searches and comparison distinguish matching, changed and missi
     expect(lines(run(fixSearch).stdout)).toHaveLength(1);
   });
 });
+
+// Absorbed from the former changelog-update-procedure and
+// changelog-update-checklist guides.
+test("guide requires review before sync and names the historical comparison", () => {
+  expect(guide.indexOf("(#review-before-syncing) before editing or syncing")).toBeGreaterThan(-1);
+  expect(guide.indexOf("(#review-before-syncing) before editing or syncing")).toBeLessThan(
+    guide.indexOf("bun run --cwd packages/site sync-content`"),
+  );
+  expect(guide).toContain("site-only changes");
+  expect(guide).toContain("suppresses copy errors");
+  expect(guide).toContain("corresponding historical entries in full");
+  expect(guide).toContain("0.1.0 → AI recommendation layer");
+  expect(guide).toContain("0.2.1 → Bug fixes");
+});
+
+test("historical example entries match in both copies", () => {
+  const entries = [rootLog, siteLog].map((changelog, i) => {
+    const entry = (release: string, subsection: string, prefix: string) => {
+      const section = changelog.split(release)[1]?.split("\n## ")[0]?.split(subsection)[1]?.split("\n### ")[0];
+      const matches = section?.split("\n").filter((line) => line.startsWith(prefix)) ?? [];
+      expect(matches, i === 0 ? "root" : "site").toHaveLength(1);
+      return matches[0];
+    };
+    return [
+      entry("## 0.1.0 — 2026-04-19 (superseded by 0.1.1)\n", "### AI recommendation layer", "- **`stack apply [recipe-id]`**"),
+      entry("## 0.2.1 (2026-10-16)\n", "### Bug fixes\n", "- **`stack apply` stops attempting to write placeholder secrets."),
+    ];
+  });
+  expect(entries[0]).toEqual(entries[1]);
+  expect(entries[0][0]).toContain("Historically, wiring attempted to write");
+  expect(entries[0][1]).toContain("The wiring step never writes to the vault");
+});
