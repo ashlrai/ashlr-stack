@@ -31,6 +31,7 @@ byte for byte, each pair of links lands on the same section.
 These bullets spell `stack apply`, or something close to it, but record a
 change to another surface:
 
+- **Unreleased → Next release (since v0.3.10) → Fixed:** "The Phantom wire assumptions doc links `" records source line links in documentation and a test that checks them; command behavior is unchanged.
 - **Unreleased → Next release (since v0.3.10) → Fixed:** "Wiring guides now use the supported `stack apply --noWire`" records a documentation correction; command behavior is unchanged.
 - **0.3.8 → Testing:** "Expanded coverage for `stack apply` when" describes
   test coverage for missing secrets, Phantom, wiring and changelog parsing.
@@ -61,8 +62,8 @@ grep -n -E '^- .*`stack apply' CHANGELOG.md packages/site/src/data/CHANGELOG.md
 ```
 
 Expect the same line numbers for each file: one hit per mapped entry that
-spells `stack apply` verbatim, plus the four mention bullets that also spell it
-verbatim (the next release's wiring guide correction, the 0.3.8 tests, Bun 1.2 pipe fix and "`stack recommend [query]`" follow-up).
+spells `stack apply` verbatim, plus the five mention bullets that also spell it
+verbatim (the next release's wire assumptions doc links, its wiring guide correction, the 0.3.8 tests, Bun 1.2 pipe fix and "`stack recommend [query]`" follow-up).
 Then compare the two complete files:
 
 ```sh
