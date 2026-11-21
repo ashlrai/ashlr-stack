@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -71,4 +71,74 @@ test("original apply consistency rejects drift and matching regressions", () => 
     expect(originalApplyEntriesAgree(original, changed)).toBe(false);
     expect(originalApplyEntriesAgree(changed, changed)).toBe(false);
   }
+});
+
+// Folded in from the former language-comparison doc and test. The report
+// describes the checked-in copies; a site build can overwrite a discrepancy,
+// so compare them directly instead of invoking sync-content.
+describe("placeholder-wiring language", () => {
+  const section = (heading: string) => comparison.split(`## ${heading}\n`)[1]?.split("\n## ")[0] ?? "";
+
+  test("language comparison is grounded in both checked-in changelogs", () => {
+    const [source, site] = sources;
+    const report = section("Placeholder-wiring language");
+    expect(site).toBe(source);
+    expect(report).toContain("no wording or substantive differences between the two copies");
+    expect(comparison).toContain("diff -u CHANGELOG.md packages/site/src/data/CHANGELOG.md");
+
+    for (const [heading, markers] of [
+      ["Unreleased", ["including providers that failed", "`--noWire` skips both checks and stubs"]],
+      ["0.3.0 (2026-10-31)", ["Provider setup may still persist real credentials", "they do not establish that the vault is empty"]],
+      ["0.2.1 (2026-10-16)", ["every call failed", "`WireResult.envelopes` is replaced by `present` and `missing`"]],
+      ["0.1.0 — 2026-04-19 (superseded by 0.1.1)", ["Missing names alone do not make apply fail", "creates webhook stubs"]],
+    ] as const) {
+      const release = source.split(`## ${heading}\n`)[1]?.split("\n## ")[0];
+      expect(release).toBeDefined();
+      for (const marker of markers) expect(release).toContain(marker);
+      expect(report).toContain(heading.split(" ")[0]);
+    }
+  });
+});
+
+// Folded in from the former source-comparison doc and test.
+describe("the 0.2.1 fix entry", () => {
+  const title = "- **`stack apply` stops attempting to write placeholder secrets.**";
+
+  function applyFix(source: string): string {
+    const release = source.split("## 0.2.1 (2026-10-16)\n")[1]?.split("\n## ")[0];
+    const fixes = release?.split("### Bug fixes\n")[1]?.split("\n### ")[0];
+    const fixEntries = fixes?.split("\n").filter((line) => line.startsWith(title));
+    expect(fixEntries).toHaveLength(1);
+    expect(fixes?.trimStart().startsWith(title)).toBe(true);
+    return fixEntries?.[0] ?? "";
+  }
+
+  test("source comparison locates and describes matching apply fix entries", () => {
+    const report = comparison.split("## The 0.2.1 fix entry\n")[1]?.split("\n## ")[0] ?? "";
+    const fixEntries = paths.map((path, index) => {
+      expect(comparison).toContain(`](../${path}#021-2026-10-16)`);
+      return applyFix(sources[index]);
+    });
+    expect(fixEntries[0]).toBe(fixEntries[1]);
+    expect(report).toContain("**Substantive wording differences: none.**");
+    for (const sourceWording of [
+      "Provider setup may already store real values",
+      "users must supply each required missing value themselves",
+      "reports providers as skipped instead of identifying missing names",
+      "every call failed and the printed `envelopes` count was always 0",
+      "`WireResult.envelopes` is replaced by `present` and `missing`",
+    ]) {
+      expect(fixEntries[0]).toContain(sourceWording);
+    }
+  });
+
+  test("entry comparison detects wording changes in either source", () => {
+    const wording = "Provider setup may already store real values";
+    for (const index of [0, 1]) {
+      const changed = [...sources];
+      expect(changed[index]).toContain(wording);
+      changed[index] = changed[index].replace(wording, "Provider setup can already store real values");
+      expect(applyFix(changed[0])).not.toBe(applyFix(changed[1]));
+    }
+  });
 });
