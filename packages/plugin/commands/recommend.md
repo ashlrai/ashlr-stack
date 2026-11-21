@@ -22,6 +22,6 @@ Suggest the next step verbatim:
 
 > Review the saved recipe, then run `/stack:apply <recipe-id>` for the provider setup you authorize; inspect its partial results.
 
-If the tool is unavailable, explain the required setup: inside Claude Code use `/plugin marketplace add ashlrai/ashlr-stack`, then `/plugin install stack@ashlr`. The plugin entrypoint prefers `ashlr-stack-mcp` on PATH and otherwise needs the monorepo source plus Bun. The server also needs the Stack CLI on PATH and the intended project as its working directory. Installing the CLI alone does not install or commission the server. Recorded public CLI/MCP 0.1.1 needs Bun 1.2+; reviewed source 0.2.1 is a separate candidate, not proof of publication. Check the actual client tools after setup.
+If the tool is unavailable, explain the required setup: inside Claude Code use `/plugin marketplace add ashlrai/ashlr-stack`, then `/plugin install stack@ashlr`. The plugin entrypoint prefers `ashlr-stack-mcp` on PATH and otherwise needs the monorepo source plus Bun. The server also needs the Stack CLI on PATH and the intended project as its working directory. Installing the CLI alone does not install or commission the server. The published 0.3.10 CLI and MCP packages declare Node.js 20 or newer (`npm i -g @ashlr/stack ashlr-stack-mcp`); check `stack --version` and the actual client tools after setup.
 
 If the user gave no query, ask them one clarifying question about the goal (e.g. "what are you building?") before calling the tool.
