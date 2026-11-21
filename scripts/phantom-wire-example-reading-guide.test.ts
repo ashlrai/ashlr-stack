@@ -1,12 +1,25 @@
 import { describe, expect, it, setDefaultTimeout } from "bun:test";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
+import { join } from "node:path";
 import { setupFakePhantom } from "../packages/core/src/__tests__/_harness.ts";
-import { wirePhantomForRecipe } from "../packages/core/src/ai/phantom-wire.ts";
+import {
+  verificationHintFor,
+  webhookStubFor,
+  wirePhantomForRecipe,
+} from "../packages/core/src/ai/phantom-wire.ts";
 
 setDefaultTimeout(30_000);
 
 const docUrl = new URL("../docs/phantom-wire-example-reading-guide.md", import.meta.url);
 const doc = readFileSync(docUrl, "utf8");
+const sourceUrl = new URL("../packages/core/src/ai/phantom-wire.ts", import.meta.url);
+const source = readFileSync(sourceUrl, "utf8");
+const sourceLines = source.split("\n");
+
+// The guide has two ```ts excerpts: the commented Stripe handler (first) and,
+// in the Source map section, the full verification reminder (second).
+const tsBlocks = [...doc.matchAll(/```ts\n([\s\S]*?)\n```/g)].map((m) => m[1]);
+const sourceMap = doc.slice(doc.indexOf("\n## Source map\n"));
 
 describe("Phantom wire example reading guide", () => {
   it("follows generated examples in order and identifies their trust boundary", async () => {
@@ -36,10 +49,6 @@ describe("Phantom wire example reading guide", () => {
       expect(doc).toContain("not an active handler or a verified request");
 
       // The guide names the source functions that emit the example and hints.
-      const source = readFileSync(
-        new URL("../packages/core/src/ai/phantom-wire.ts", import.meta.url),
-        "utf8",
-      );
       for (const fn of ["webhookStubFor", "verificationHintFor"]) {
         expect(doc).toContain(`\`${fn}\``);
         expect(source).toContain(`function ${fn}(`);
@@ -80,6 +89,187 @@ describe("Phantom wire example reading guide", () => {
       }
     } finally {
       harness.cleanup();
+    }
+  });
+});
+
+/**
+ * Resolve the documented "Verification reminder" source-map link. Throws when the row,
+ * the target file, or the line anchor is missing, so a broken link fails the test.
+ */
+function resolveReminderLink(markdown: string, base: URL): { url: URL; line: number } {
+  const row = markdown.match(/^\|\s*Verification reminder\s*\|\s*\[[^\]]+\]\(([^)#\s]+)#L(\d+)\)/m);
+  if (!row) throw new Error("Missing verification reminder source-map link");
+  const url = new URL(row[1], base);
+  if (!existsSync(url) || !statSync(url).isFile()) {
+    throw new Error(`Verification reminder link target is not an existing file: ${row[1]}`);
+  }
+  return { url, line: Number(row[2]) };
+}
+
+/** The full reminder excerpt in the Source map section. */
+function reminderExcerpt(): string {
+  expect(tsBlocks).toHaveLength(2);
+  const excerpt = tsBlocks[1];
+  if (!excerpt) throw new Error("Missing reminder excerpt");
+  expect(sourceMap).toContain(excerpt);
+  return excerpt;
+}
+
+describe("Phantom wire example source map", () => {
+  it("has a Source map section with the generated-example and reminder subsections", () => {
+    expect(doc).toContain("\n## Source map\n");
+    const subsections = ["### The generated example", "### The verification reminder", "### Verify the map"];
+    const offsets = subsections.map((heading) => sourceMap.indexOf(heading));
+    expect(offsets.every((offset) => offset > 0)).toBe(true);
+    expect(offsets).toEqual([...offsets].sort((a, b) => a - b));
+  });
+
+  it("resolves the verification reminder link to an existing file at the TODO line", () => {
+    const { url, line } = resolveReminderLink(doc, docUrl);
+    expect(url.href).toBe(sourceUrl.href);
+    expect(readFileSync(url, "utf8").split("\n")[line - 1]).toContain("TODO(security)");
+  });
+
+  it("fails when the verification reminder link target is missing", () => {
+    const broken = doc.replace(
+      /(\| Verification reminder \| \[[^\]]+\]\()[^)#]+/,
+      "$1../packages/core/src/ai/does-not-exist.ts",
+    );
+    expect(broken).not.toBe(doc);
+    expect(() => resolveReminderLink(broken, docUrl)).toThrow("not an existing file");
+    expect(() => resolveReminderLink("no table here", docUrl)).toThrow("Missing verification");
+  });
+
+  it("links the named generator to its exported implementation", () => {
+    const generator = doc.match(/\[`(webhookStubFor)`\]\(([^)#]+)#L(\d+)\)/);
+    expect(generator).not.toBeNull();
+    if (!generator) throw new Error("Missing generator source link");
+
+    const [, name, target, line] = generator;
+    const targetUrl = new URL(target, docUrl);
+    expect(targetUrl.href).toBe(sourceUrl.href);
+    expect(statSync(targetUrl).isFile()).toBe(true);
+    expect(sourceLines[Number(line) - 1]).toContain(`function ${name}(`);
+    expect(typeof webhookStubFor).toBe("function");
+    expect(webhookStubFor("stripe")).toContain("handleStripeWebhook");
+  });
+
+  it("identifies the generated example and its verification reminder with source links", () => {
+    // The generated example: output path, writer, and template are named.
+    expect(sourceMap).toContain(".stack/webhooks/<provider>.ts");
+    expect(sourceMap).toContain("writeWebhookStub");
+    expect(sourceMap).toContain("webhookStubFor");
+    // The verification reminder is identified verbatim.
+    const todo = "TODO(security): signature verification is NOT implemented here.";
+    expect(sourceMap).toContain(todo);
+    expect(source).toContain(`//   // ${todo}`);
+
+    // Every anchored source link lands on the construct the map claims.
+    const links = [...doc.matchAll(/phantom-wire\.ts#L(\d+)/g)];
+    const anchors = [
+      "const WEBHOOK_PROVIDERS",
+      "async function writeWebhookStub",
+      "function webhookStubFor",
+      "Auto-generated by",
+      "The secret lives in Phantom",
+      "function webhookSecretKeyFor",
+      "export async function handle",
+      "function capitalize",
+      "function signatureHeaderFor",
+      "TODO(security): signature verification is NOT implemented here.",
+      'return new Response("ok"',
+      "TODO(security): signature verification is NOT implemented here.",
+      "verificationHintFor(provider)",
+      "function verificationHintFor",
+      "Verify over the exact raw body bytes",
+    ];
+    expect(links).toHaveLength(anchors.length);
+    links.forEach((link, index) =>
+      expect(sourceLines[Number(link[1]) - 1]).toContain(anchors[index]),
+    );
+
+    // Every relative link resolves to a real file.
+    for (const [, link] of doc.matchAll(/\]\(([^)#]+)(?:#[^)]+)?\)/g)) {
+      expect(existsSync(new URL(link, docUrl))).toBe(true);
+    }
+  });
+
+  it("links only to existing files, never directories, and covers the source and sibling docs", () => {
+    const targets = [...doc.matchAll(/\]\(([^)#\s]+)(?:#[^)\s]+)?\)/g)].map((m) => m[1]);
+    expect(targets.length).toBeGreaterThan(0);
+    // External links are out of scope; everything else is a relative source-file link.
+    const relative = targets.filter((t) => !/^[a-z][a-z0-9+.-]*:/i.test(t));
+    expect(relative).toEqual(targets);
+    for (const target of relative) {
+      const url = new URL(target, docUrl);
+      expect(existsSync(url)).toBe(true);
+      expect(statSync(url).isFile()).toBe(true);
+    }
+    expect(relative).toContain("../packages/core/src/ai/phantom-wire.ts");
+    expect(relative).toContain("phantom-wire-code-map.md");
+    expect(relative).toContain("phantom-wire-comment-inventory.md");
+    expect(relative).toContain("phantom-wire-signature-note.md");
+    // The verify command names this guide's own pinned test.
+    expect(sourceMap).toContain("bun test scripts/phantom-wire-example-reading-guide.test.ts");
+  });
+
+  it("matches the live generated stub, reminder between body read and success", async () => {
+    const excerpt = reminderExcerpt();
+
+    const harness = setupFakePhantom();
+    try {
+      const result = await wirePhantomForRecipe(
+        { id: "example-source-map", query: "", createdAt: "", providers: [{ name: "stripe" }] },
+        { cwd: harness.dir },
+      );
+      expect(result.webhooks).toHaveLength(1);
+      expect(result.webhooks[0]).toBe(join(harness.dir, ".stack", "webhooks", "stripe.ts"));
+
+      const stub = readFileSync(result.webhooks[0], "utf8");
+      expect(stub).toContain(excerpt);
+      expect(stub.split("\n").every((line) => !line || line.startsWith("//"))).toBe(true);
+      const reminder = stub.indexOf("TODO(security)");
+      expect(reminder).toBeGreaterThan(stub.indexOf("req.text()"));
+      expect(reminder).toBeLessThan(stub.indexOf('return new Response("ok"'));
+      expect(harness.callsTo("reveal")).toEqual([]);
+      expect(harness.callsTo("add")).toEqual([]);
+    } finally {
+      harness.cleanup();
+    }
+  });
+
+  it("documents exactly the reminder block the generator emits, for every provider", () => {
+    const documented = reminderExcerpt().split("\n");
+
+    // The reminder is the contiguous run of comment lines from the TODO to the closing sentence.
+    const reminderOf = (stub: string): string[] => {
+      const lines = stub.split("\n");
+      const start = lines.findIndex((l) => l.includes("TODO(security)"));
+      const end = lines.findIndex((l) => l.includes("parse, trust, or act on the body."));
+      expect(start).toBeGreaterThan(-1);
+      expect(end).toBeGreaterThan(start);
+      return lines.slice(start, end + 1);
+    };
+
+    // Stripe: the generated block is line-for-line the documented block.
+    expect(reminderOf(webhookStubFor("stripe"))).toEqual(documented);
+
+    // Other providers: identical except for the provider name, hint and secret key.
+    const secrets: Record<string, string> = {
+      stripe: "STRIPE_WEBHOOK_SECRET",
+      clerk: "CLERK_WEBHOOK_SECRET",
+      supabase: "SUPABASE_WEBHOOK_SECRET",
+      github: "GITHUB_WEBHOOK_SECRET",
+    };
+    for (const provider of Object.keys(secrets)) {
+      const expected = documented.map((line) =>
+        line
+          .replace(verificationHintFor("stripe"), verificationHintFor(provider))
+          .replace("STRIPE_WEBHOOK_SECRET", secrets[provider])
+          .replace("forge a stripe webhook", `forge a ${provider} webhook`),
+      );
+      expect(reminderOf(webhookStubFor(provider))).toEqual(expected);
     }
   });
 });
