@@ -16,7 +16,7 @@ const sourceUrl = new URL("../packages/core/src/ai/phantom-wire.ts", import.meta
 const source = readFileSync(sourceUrl, "utf8");
 const sourceLines = source.split("\n");
 
-// The guide has two ```ts excerpts: the commented Stripe handler (first) and,
+// The guide has two ```ts excerpts: the whole commented Stripe handler (first) and,
 // in the Source map section, the full verification reminder (second).
 const tsBlocks = [...doc.matchAll(/```ts\n([\s\S]*?)\n```/g)].map((m) => m[1]);
 const sourceMap = doc.slice(doc.indexOf("\n## Source map\n"));
@@ -531,6 +531,69 @@ describe("Phantom wire wiring outputs", () => {
       // Wiring observed names only: no secret was stored or retrieved.
       expect(harness.callsTo("list")).toEqual([{ cmd: "list", args: ["--json"] }]);
       expect(harness.callsTo("add")).toEqual([]);
+      expect(harness.callsTo("reveal")).toEqual([]);
+    } finally {
+      harness.cleanup();
+    }
+  });
+});
+
+// Folded in from the former phantom-wire-example-annotations doc and test. The
+// guide's first ```ts excerpt is the whole commented Stripe handler, and the
+// Source map anchors each annotated construct to its source line.
+const annotatedConstructs = [
+  "function webhookStubFor",
+  "async function writeWebhookStub",
+  "export async function handle",
+  "TODO(security): signature verification is NOT implemented here.",
+  "function verificationHintFor",
+];
+
+describe("Phantom wire example annotations", () => {
+  it("links each annotated construct to its source line", () => {
+    const anchored = [...doc.matchAll(/phantom-wire\.ts#L(\d+)/g)].map(
+      (link) => sourceLines[Number(link[1]) - 1],
+    );
+    for (const construct of annotatedConstructs) {
+      expect(anchored.some((line) => line.includes(construct)), construct).toBe(true);
+    }
+    const docText = doc.replace(/\s+/g, " ");
+    expect(docText).toContain("any non-empty signature header");
+    expect(docText).toContain("signature verification is not implemented");
+    expect(docText).toContain("attacker-controlled");
+    expect(docText).toContain("illustrative");
+    expect(docText).toContain("not executable verification");
+    expect(docText).toContain("Any non-empty header passes");
+  });
+
+  it("quotes the whole Stripe handler and the reminder sits in every generated stub", async () => {
+    const excerpt = tsBlocks[0];
+    if (!excerpt) throw new Error("Missing generated example");
+    const lines = excerpt.split("\n");
+    expect(lines.every((line) => line.startsWith("//"))).toBe(true);
+    expect(lines[0]).toBe("// export async function handleStripeWebhook(req: Request): Promise<Response> {");
+    expect(lines.at(-1)).toBe("// }");
+    expect(excerpt).toContain("signature verification is NOT implemented here.");
+    expect(excerpt).toContain('return new Response("ok", { status: 200 });');
+    const providers = ["stripe", "clerk", "supabase", "github"];
+    const harness = setupFakePhantom();
+    try {
+      const result = await wirePhantomForRecipe(
+        { id: "annotations", query: "", createdAt: "", providers: providers.map((name) => ({ name })) },
+        { cwd: harness.dir },
+      );
+      expect(result.webhooks).toEqual(
+        providers.map((provider) => join(harness.dir, ".stack", "webhooks", `${provider}.ts`)),
+      );
+      for (const [index, path] of result.webhooks.entries()) {
+        const stub = readFileSync(path, "utf8");
+        if (index === 0) expect(stub).toContain(excerpt);
+        expect(stub.split("\n").every((line) => !line || line.startsWith("//"))).toBe(true);
+        const reminder = stub.indexOf("TODO(security): signature verification is NOT implemented here.");
+        expect(reminder).toBeGreaterThan(stub.indexOf("req.text()"));
+        expect(reminder).toBeLessThan(stub.indexOf('return new Response("ok"'));
+        expect(stub).toContain(`to this endpoint can forge a ${providers[index]} webhook.`);
+      }
       expect(harness.callsTo("reveal")).toEqual([]);
     } finally {
       harness.cleanup();

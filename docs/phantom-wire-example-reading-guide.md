@@ -10,9 +10,11 @@ unless someone first turns it into code. In the source, `webhookStubFor` emits
 the example text and `verificationHintFor` supplies each provider's one-line
 verification reminder.
 
-For example, this excerpt is copied from the **commented-out Stripe stub**:
+For example, this is the whole handler as generated in the **commented-out
+Stripe stub**:
 
 ```ts
+// export async function handleStripeWebhook(req: Request): Promise<Response> {
 //   const signature = req.headers.get("stripe-signature");
 //   if (!signature) return new Response("Missing signature", { status: 400 });
 //   const body = await req.text();
@@ -21,6 +23,13 @@ For example, this excerpt is copied from the **commented-out Stripe stub**:
 //   // value is never compared to anything. Until this TODO is done, `body`
 //   // is unauthenticated, attacker-controlled input — anyone who can POST
 //   // to this endpoint can forge a stripe webhook.
+//   // Stripe: `stripe.webhooks.constructEvent` — HMAC-SHA256 with timestamp tolerance.
+//   // Verify over the exact raw body bytes with the webhook secret
+//   // (`phantom reveal STRIPE_WEBHOOK_SECRET`) and compare in
+//   // constant time; reject missing or invalid signatures, and only then
+//   // parse, trust, or act on the body.
+//   return new Response("ok", { status: 200 });
+// }
 ```
 
 This is a reading example, not an active handler or a verified request. The
@@ -40,8 +49,8 @@ Read the generated example from top to bottom:
 3. **Handler and header.** The example declares a provider-named handler taking
    a `Request`, then reads the provider's signature header with
    `req.headers.get(...)`. If the header is missing or empty, it returns
-   `Missing signature` with status 400 before reading the body. A non-empty
-   header only shows that a value was supplied; it does not authenticate it.
+   `Missing signature` with status 400 before reading the body.
+   Any non-empty header passes this check; its value is never authenticated.
 4. **Body.** `await req.text()` reads the request body. A read failure rejects
    the handler instead of returning the success response. Reading text alone
    does not establish that the exact raw bytes required by a provider's
@@ -50,9 +59,9 @@ Read the generated example from top to bottom:
    implemented here.` marks the missing step, between reading the body and
    returning success. No secret is retrieved and no signature is compared. The
    provider-specific hint and instructions to verify the raw body, compare in
-   constant time, and reject invalid signatures are comments, not an
-   implementation. Until verification succeeds, the body is unauthenticated,
-   attacker-controlled input.
+   constant time, and reject invalid signatures are instructions to the
+   handler author, not executable verification. Until verification succeeds,
+   the body is unauthenticated, attacker-controlled input.
 6. **Success response.** The example returns `ok` with status 200. If the
    handler is uncommented as written and the body read succeeds, *any non-empty
    value* in the expected header reaches this response, even a forged signature.
