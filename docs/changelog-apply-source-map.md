@@ -14,4 +14,4 @@ including twice within 0.2.1. The entries match in the checked-in files. The
 site build copies the repository changelog into the site data file; this map
 does not establish what is deployed or installed. Version 0.2.1 was tagged but
 never published; the fix first shipped in 0.2.2. For other apply entries, see the
-[site changelog source map](site-changelog-source-map.md).
+[site changelog source map](site-changelog-review.md#apply-entry-source-map).

@@ -80,7 +80,7 @@ a missing recipe writes nothing, and a failed provider no longer stops the
 remaining providers. Nearby mentions that are not `stack apply` changes —
 `stack upgrade --apply`, `stack doctor --ecosystem --apply`, the `stack_apply`
 MCP `cwd` parameter and `stack templates apply` — are mapped in the
-[site changelog source map](site-changelog-source-map.md).
+[site changelog source map](site-changelog-review.md#apply-entry-source-map).
 
 ## Which release shipped the change?
 

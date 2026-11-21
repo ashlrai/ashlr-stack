@@ -17,6 +17,6 @@ number that can move as the changelog grows.
 
 The root changelog is copied to the site data file by the site's `sync-content`
 script. The checked-in files currently match; compare them before syncing,
-since syncing overwrites the site copy. The [source map](site-changelog-source-map.md)
+since syncing overwrites the site copy. The [source map](site-changelog-review.md#apply-entry-source-map)
 locates the other `stack apply` entries, including the later 0.3.0 and
 Unreleased notes. These files do not establish what is deployed.

@@ -28,7 +28,7 @@ these starting points in either copy:
 | [0.2.1](../CHANGELOG.md#021-2026-10-16) / [site](../packages/site/src/data/CHANGELOG.md#021-2026-10-16) → first Bug fixes | The first bullet describes stopping placeholder-secret attempts. There is another Bug fixes subsection later in this release. |
 | [0.1.0](../CHANGELOG.md#010--2026-04-19-superseded-by-011) / [site](../packages/site/src/data/CHANGELOG.md#010--2026-04-19-superseded-by-011) → AI recommendation layer | The `stack apply [recipe-id]` bullet describes the original command and annotated wiring history. |
 
-The [detailed source map](site-changelog-source-map.md) distinguishes nearby
+The [detailed source map](site-changelog-review.md#apply-entry-source-map) distinguishes nearby
 mentions and lists each known entry. The
 [apply changelog terminology](apply-changelog-terminology.md) defines the terms
 the entries use and cites each term's entries. These checked-in files describe

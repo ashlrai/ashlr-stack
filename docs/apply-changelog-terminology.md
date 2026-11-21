@@ -73,7 +73,7 @@ section; the entry text identifies the bullet inside it, because `Changed`,
   a run outcome, not proof that required secrets exist.
 
 For the entry-by-entry file mapping behind these labels, see the
-[site changelog source map](site-changelog-source-map.md). For the wiring
+[site changelog source map](site-changelog-review.md#apply-entry-source-map). For the wiring
 senses with output examples, see
 [apply terminology with examples](apply-terminology-examples.md) and
 [apply wiring terminology](apply-wiring-terminology.md).
