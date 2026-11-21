@@ -74,6 +74,11 @@ const faq = faqPageSchema(
       answer:
         "File issues at github.com/ashlrai/ashlr-stack/issues. Provider requests are most useful when they include the secret slots you'd expect, whether the provider has an API for creating resources or only reading them, and whether there's an existing MCP server worth wiring.",
     },
+    {
+      question: "How do I contribute a fix, or have my coding agent do it?",
+      answer:
+        "Humans and agents follow the same path in CONTRIBUTING.md: fork and clone, run bun install --frozen-lockfile, make one change per PR, run the checks it touches, then push to your fork and open a PR against main. Most PRs here come from coding agents; AGENTS.md has their rules. The one required check is CI Gate: typecheck, the Tier-1 security tests, bun run check:crypto and two secret scans over the diff. PRs land through the merge queue, which reruns CI Gate on the latest main and squash-merges, so no rebase is needed. No approving review is required. A maintainer or fleet agent turns on auto-merge for a PR from a fork, and a first PR from a fork waits until a maintainer approves its workflow runs. Report security problems privately per SECURITY.md, not in a PR.",
+    },
   ],
   pageUrl,
 );
@@ -273,4 +278,61 @@ bun remove -g @ashlr/stack   # or: npm uninstall -g @ashlr/stack
     only an API for reading them, and whether there's an existing MCP server
     worth wiring.
   </p>
+
+  <h2>How do I contribute a fix, or have my coding agent do it?</h2>
+  <p>
+    Humans and agents follow the same
+    <a
+      href="https://github.com/ashlrai/ashlr-stack/blob/main/CONTRIBUTING.md#contribute-with-an-agent"
+      rel="noopener noreferrer"
+      target="_blank"
+    >contributor path</a>. Point your coding agent (Claude Code, Codex, Cursor)
+    at it. Most PRs here come from coding agents; their rules are in
+    <a
+      href="https://github.com/ashlrai/ashlr-stack/blob/main/AGENTS.md"
+      rel="noopener noreferrer"
+      target="_blank"
+    >AGENTS.md</a>.
+  </p>
+
+  <Code
+    code={`# Fork ashlrai/ashlr-stack on GitHub, clone your fork, work on a branch
+bun install --frozen-lockfile
+
+# The test commands the required CI Gate check runs
+bunx tsc --noEmit -p tsconfig.json
+bun test packages/core/src/__tests__/security.test.ts packages/core/src/__tests__/secret-redaction.test.ts
+bun run check:crypto`}
+    lang="bash"
+    theme="github-dark-dimmed"
+  />
+
+  <p>
+    CI Gate also runs two secret scans (pinned Gitleaks and
+    <code>scrub.pl</code>) over the changes your PR adds, so use Phantom
+    Secrets placeholders, never real values. The full suite runs daily on
+    <code>main</code>, not per PR; CONTRIBUTING.md lists which tests to run
+    for your change. Push to your fork and open one PR per concern against
+    <code>main</code>.
+  </p>
+  <ul>
+    <li>
+      PRs land through the merge queue, which reruns CI Gate on the latest
+      <code>main</code> and squash-merges. No rebase is needed.
+    </li>
+    <li>No approving review is required, only a passing CI Gate.</li>
+    <li>
+      A maintainer or fleet agent turns on auto-merge for a PR from a fork.
+      A first PR from a fork waits until a maintainer approves its workflow
+      runs.
+    </li>
+    <li>
+      Report security problems privately per
+      <a
+        href="https://github.com/ashlrai/ashlr-stack/blob/main/SECURITY.md"
+        rel="noopener noreferrer"
+        target="_blank"
+      >SECURITY.md</a>, not in a PR or issue.
+    </li>
+  </ul>
 </Docs>
