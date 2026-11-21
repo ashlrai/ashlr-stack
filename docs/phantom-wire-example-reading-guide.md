@@ -76,6 +76,47 @@ The interpolated names differ by provider:
 | Supabase | `x-supabase-signature` | `SUPABASE_WEBHOOK_SECRET` |
 | GitHub | `x-hub-signature-256` | `GITHUB_WEBHOOK_SECRET` |
 
+## Shown operations and the verification TODO
+
+The excerpt above is a **TODO in an example**, not a verifier. It has two sides
+of a trust boundary: the operations written out in the file, and the single
+verification step left as a TODO between the body read and the 200 response.
+
+| Example side (shown) | TODO side (not implemented) |
+| --- | --- |
+| A signature header arrived (otherwise `Missing signature`, status 400) | The signature is checked against the webhook secret |
+| The body was read with `await req.text()` | The exact raw body is authenticated before it is used |
+| The request got `ok`, status 200 | Forged or stale requests are rejected before processing |
+
+The TODO side has several required parts, and the example performs none of
+them:
+
+- Retrieve the webhook secret at call time. The `phantom reveal` line is a
+  comment; generating the file never runs it.
+- Verify the signature over the exact raw body bytes using that secret and the
+  provider's current documented scheme. The one-line provider hint points at
+  the right API; it is not an implementation.
+- Compare in constant time, and reject missing, malformed, invalid, or stale
+  signatures, including the timestamp and replay checks the scheme requires.
+- Only then parse, trust, or act on the body.
+
+If the handler is uncommented and run, these are the only things a request
+reaching it shows:
+
+| Observation | What it establishes | What it does not establish |
+| --- | --- | --- |
+| A non-empty signature header is present | A caller supplied a value for that header. | The sender or body is authentic; the value is never compared to anything. |
+| The body was read and the example returned 200 | The body read completed and the placeholder returned success. | The body was signed, unchanged, safe to process, or preserved as the exact raw bytes needed for verification. |
+| A catalog secret name is reported present | That name appeared in the Phantom inventory. | Its value is valid or usable, or that the webhook secret was retrieved. |
+
+Both sides come from [`phantom-wire.ts`](../packages/core/src/ai/phantom-wire.ts).
+The example side is text from `webhookStubFor`, which interpolates
+`signatureHeaderFor`, `webhookSecretKeyFor` and `verificationHintFor`;
+`writeWebhookStub` writes it to disk and runs none of it. The verification side
+exists only as the `TODO(security)` comment block. The vault check in
+`wirePhantomForRecipe` compares `listVaultNames` against `findProviderRef`
+catalog names, so a present name neither retrieves nor validates a value.
+
 ## What wiring reports
 
 Besides the stub files, [`wirePhantomForRecipe`](../packages/core/src/ai/phantom-wire.ts)
