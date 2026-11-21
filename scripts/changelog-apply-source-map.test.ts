@@ -3,7 +3,10 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const root = join(import.meta.dir, "..");
-const maps = ["docs/changelog-apply-source-map.md", "docs/apply-changelog-source-map.md"];
+// The former docs/apply-changelog-source-map.md now lives in the
+// apply-changelog-source-index.md "The 0.2.1 placeholder fix" section; its
+// row checks moved to scripts/apply-changelog-source-index.test.ts.
+const maps = ["docs/changelog-apply-source-map.md"];
 const paths = ["CHANGELOG.md", "packages/site/src/data/CHANGELOG.md"];
 const release = "0.2.1 (2026-10-16)";
 const entry = "- **`stack apply` stops attempting to write placeholder secrets.**";
