@@ -35,6 +35,16 @@ describe("Phantom wire example reading guide", () => {
       expect(doc).toContain("attacker-controlled input");
       expect(doc).toContain("not an active handler or a verified request");
 
+      // The guide names the source functions that emit the example and hints.
+      const source = readFileSync(
+        new URL("../packages/core/src/ai/phantom-wire.ts", import.meta.url),
+        "utf8",
+      );
+      for (const fn of ["webhookStubFor", "verificationHintFor"]) {
+        expect(doc).toContain(`\`${fn}\``);
+        expect(source).toContain(`function ${fn}(`);
+      }
+
       const excerpt = doc.match(/```ts\n([\s\S]*?)\n```/)?.[1];
       expect(excerpt).toBeDefined();
       if (!excerpt) throw new Error("Missing commented Stripe excerpt");

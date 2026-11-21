@@ -2045,9 +2045,9 @@ describe("ai/phantom-wire", () => {
     }
   });
 
-  it("keeps the example boundary note's excerpt identical to the generated Stripe example", async () => {
+  it("keeps the example boundaries note's excerpt identical to the generated Stripe example", async () => {
     const note = readFileSync(
-      new URL("../../../../docs/phantom-wire-example-boundary.md", import.meta.url),
+      new URL("../../../../docs/phantom-wire-example-boundaries.md", import.meta.url),
       "utf-8",
     );
     const result = await wirePhantomForRecipe(STRIPE_RECIPE, { cwd: harness.dir });

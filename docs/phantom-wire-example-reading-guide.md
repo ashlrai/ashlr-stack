@@ -6,7 +6,9 @@ Stripe entry, the file is `.stack/webhooks/stripe.ts` under the selected working
 directory. Wiring creates the directory if needed and **overwrites** an existing
 file at that path. It does not register a route or deploy a handler. The whole
 generated example is commented out, so none of the handler steps below runs
-unless someone first turns it into code.
+unless someone first turns it into code. In the source, `webhookStubFor` emits
+the example text and `verificationHintFor` supplies each provider's one-line
+verification reminder.
 
 For example, this excerpt is copied from the **commented-out Stripe stub**:
 
