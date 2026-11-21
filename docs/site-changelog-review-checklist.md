@@ -45,5 +45,5 @@ and unreadable vault cases, the failed historical attempts, and the replacement
 of `WireResult.envelopes` by `present` and `missing`. The Unreleased and 0.3.0
 apply notes are related context, not this same entry.
 
-For a whole-file comparison, use [the mirror review guide](changelog-mirror-review.md).
+For a whole-file comparison, use [the mirroring guide](changelog-mirroring.md#review-before-syncing).
 That broader check is separate from deciding whether these two entries agree.

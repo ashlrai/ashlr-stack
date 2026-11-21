@@ -45,6 +45,6 @@ From the repository root:
 
    These tests check the repository copies and specific historical claims; they
    do not verify a deployed site. For more context see the
-   [site sync guide](changelog-site-sync.md).
+   [mirroring guide](changelog-mirroring.md#review-before-syncing).
 
 For a compact review aid, use the [changelog update checklist](changelog-update-checklist.md).

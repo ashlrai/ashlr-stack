@@ -3,7 +3,7 @@
 The repository's release notes are in [CHANGELOG.md](../CHANGELOG.md). The
 site renders the checked-in [site changelog](../packages/site/src/data/CHANGELOG.md)
 at `/docs/changelog`; its content sync copies the root file to that location.
-See the [sync procedure](changelog-site-sync.md) before updating either copy.
+See the [sync procedure](changelog-mirroring.md#review-before-syncing) before updating either copy.
 
 Entries describe behavior at their recorded point in time. Read the release
 heading and the complete entry, including any later annotations, then check

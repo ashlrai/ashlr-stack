@@ -5,7 +5,7 @@ site renders [packages/site/src/data/CHANGELOG.md](../packages/site/src/data/CHA
 at `/docs/changelog`. The site's `sync-content` script copies the root file
 over the site copy for development and builds. Compare the files before
 syncing: a site-only edit would be overwritten. See the
-[sync procedure](changelog-site-sync.md) for review and verification steps.
+[sync procedure](changelog-mirroring.md#review-before-syncing) for review and verification steps.
 
 ## Finding `stack apply` entries
 

@@ -22,7 +22,7 @@ reference. The entire checked-in changelog files also match byte for byte.
 
 The site data is a copy of the root changelog, synchronized before site builds
 and development. Check both committed files before synchronizing: a sync can
-overwrite a difference. The [mirror review](changelog-mirror-review.md)
+overwrite a difference. The [mirroring guide](changelog-mirroring.md#the-021-apply-fix)
 describes how to locate the entry and compare the files. Other apply notes,
 including the Unreleased and 0.3.0 sections, provide additional context and
 are not the 0.2.1 fix entry.
