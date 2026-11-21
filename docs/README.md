@@ -29,7 +29,7 @@ Many docs below are dated snapshots, research notes or proposals. Each one says 
 - [Contribute with an agent](../CONTRIBUTING.md#contribute-with-an-agent): fork, install, the checks to run, what the required CI Gate check needs, and how PRs merge.
 - [Adding a provider](adding-a-provider.md): every file to touch.
 - [Releasing Ashlr Stack](RELEASE.md): the automatic release path, package identities and the last verified npm publication.
-- Changelog upkeep: [format](changelog-format.md), [update procedure](changelog-update-procedure.md), [update checklist](changelog-update-checklist.md), [mirroring](changelog-mirroring.md), [mirror checklist](changelog-mirror-checklist.md), [mirror review](changelog-mirror-review.md), [site sync](changelog-site-sync.md), [source locations](changelog-source-locations.md), [entry source reference](changelog-entry-source-reference.md) and [reader note](changelog-reader-note.md).
+- Changelog upkeep: [format](changelog-format.md), [update procedure](changelog-update-procedure.md), [update checklist](changelog-update-checklist.md), [mirroring](changelog-mirroring.md), [source locations](changelog-source-locations.md), [entry source reference](changelog-entry-source-reference.md) and [reader note](changelog-reader-note.md).
 - Site changelog: [entry location](site-changelog-entry-location.md), [review](site-changelog-review.md), [review checklist](site-changelog-review-checklist.md), [source map](site-changelog-source-map.md), [source reference](site-changelog-source-reference.md) and [placeholder timeline](site-changelog-placeholder-timeline.md).
 - [Post-quantum readiness](PQ-READINESS.md): what cryptography Stack uses today.
 

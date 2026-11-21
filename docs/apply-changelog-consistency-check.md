@@ -18,4 +18,4 @@ To repeat the comparison from the repository root before synchronizing site cont
 diff -u CHANGELOG.md packages/site/src/data/CHANGELOG.md
 ```
 
-No output with exit status 0 means the files match; status 1 shows differences and a higher status indicates an error. Inspect differences in context before changing either file. Site build and development scripts copy the root changelog over the site data, so running them first can hide an existing difference. The [mirror review](changelog-mirror-review.md) provides a focused check of the 0.2.1 fix.
+No output with exit status 0 means the files match; status 1 shows differences and a higher status indicates an error. Inspect differences in context before changing either file. Site build and development scripts copy the root changelog over the site data, so running them first can hide an existing difference. The [mirroring guide](changelog-mirroring.md#the-021-apply-fix) provides a focused check of the 0.2.1 fix.
