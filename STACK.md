@@ -153,6 +153,8 @@ HOME=$(mktemp -d) bun test                       # full suite, isolated home
 bunx tsc --noEmit -p tsconfig.json
 bunx biome check .
 bun run packages/cli/src/index.ts --help         # CLI smoke
+bun run packages/cli/src/index.ts providers      # catalog smoke
+bun run packages/cli/src/index.ts recommend "B2B SaaS with auth and payments" --json  # CI expects stripe in .hits
 bun run --cwd packages/cli build && bun run --cwd packages/mcp build
 node packages/cli/dist/index.js --help > /dev/null
 node scripts/node-smoke.mjs                      # dist bundles under Node 20+
@@ -161,6 +163,11 @@ bun run --cwd packages/site astro check          # expect 0 errors; file count v
 bun run --cwd packages/site build
 git diff --exit-code -- packages/site/src/lib/cli-ref.generated.ts  # committed CLI reference is current
 ```
+
+CI runs the test and smoke lines on Bun 1.2.0 and the latest release, and
+release preflight on the latest release only. If the CLI reference check
+fails, regenerate it with `bun packages/site/scripts/gen-cli-ref.ts` and
+commit `packages/site/src/lib/cli-ref.generated.ts`.
 
 The site build rewrites tracked generated files (see "Things that trip agents
 up" above); review that diff before you commit.
