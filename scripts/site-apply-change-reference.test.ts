@@ -155,7 +155,7 @@ test("the documented commands locate the apply bullets and compare the copies", 
 
     const search = run(commands[0]);
     expect(search.status).toBe(0);
-    expect(search.stdout.trim().split("\n")).toHaveLength(10);
+    expect(search.stdout.trim().split("\n")).toHaveLength(11);
     expect(run(commands[1]).status).toBe(0);
 
     writeFileSync(
