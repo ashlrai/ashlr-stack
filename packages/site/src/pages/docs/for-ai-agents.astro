@@ -511,7 +511,11 @@ stack recommend "Next.js SaaS with analytics" --synth --save`}
     CI Gate (typecheck, Tier-1 security tests, <code>bun run check:crypto</code>
     and two secret scans), and PRs land through GitHub's merge queue. A
     maintainer or fleet agent turns on auto-merge for a PR from a fork, since
-    that needs write access. Build and test steps are in{" "}
+    that needs write access. A first PR from a fork waits until a maintainer
+    approves its workflow runs. No approving review is required, and the
+    branch need not be up to date with <code>main</code>: the merge queue
+    reruns CI Gate on the latest <code>main</code> and squash-merges the PR.
+    Build and test steps are in{" "}
     <a href="https://github.com/ashlrai/ashlr-stack/blob/main/STACK.md#agent-quickstart-from-a-clone">STACK.md</a>.
   </p>
 
