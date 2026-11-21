@@ -43,6 +43,7 @@ This section covers the changes from `v0.3.10` through `c6148307`.
 - Wiring guides now use the supported `stack apply --noWire` option to skip secret checks and webhook stubs.
 - Contributor guidance correctly lists all six workspace packages.
 - Contributing now warns not to run `scripts/publish.sh` by hand (it publishes packages and pushes a tag); contributors push branches with plain `git push`.
+- The Phantom wire assumptions doc links `listSecrets` and the `stack apply` wiring call at their current source lines, and a new test checks that every symbol line link in `docs/` still lands on that symbol's declaration.
 
 ---
 
