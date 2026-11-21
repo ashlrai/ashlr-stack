@@ -64,8 +64,8 @@ notes describe source history — compare the installed version and
   their removal, and current wiring behavior.
 - [Apply changelog comparison](changelog-apply-comparison.md) — wording of the
   0.2.1 fix entry in both files.
-- [Apply source map](changelog-apply-source-map.md) — the fix entry's exact
-  position in each changelog.
+- [Exact locations](apply-changelog-reader-guide.md#exact-locations) — the
+  fix entry's exact position in each changelog.
 - [Reader questions](changelog-apply-reader-questions.md) — answers across
   both checked-in changelogs.
 - [Placeholder timeline](changelog-placeholder-timeline.md) — the record

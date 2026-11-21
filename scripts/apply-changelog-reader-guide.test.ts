@@ -187,3 +187,75 @@ describe("glossary", () => {
     }
   });
 });
+
+// Folded in from the former apply-changelog-location, apply-changelog-source-index
+// and changelog-apply-source-map docs and tests.
+describe("exact locations", () => {
+  const locations = docSection("Exact locations");
+  // [release heading, subheading, bullet opening]
+  const rows: [string, string, string][] = [
+    ["Unreleased", "Changed", "- `stack apply` does not create placeholder secrets."],
+    ["0.3.0 (2026-10-31)", "Changed and fixed", "- Apply wiring checks existing secret names without storing placeholders;"],
+    ["0.3.0 (2026-10-31)", "Changed", "- After at least one provider succeeds, `stack apply` wiring checks"],
+    ["0.2.1 (2026-10-16)", "Bug fixes", "- **`stack apply` stops attempting to write placeholder secrets.**"],
+    ["0.1.0 — 2026-04-19 (superseded by 0.1.1)", "AI recommendation layer", "- **`stack apply [recipe-id]`**"],
+  ];
+  const releaseOf = (text: string, heading: string) => {
+    const found = text.split(/^## /m).find((s) => s.startsWith(`${heading}\n`));
+    expect(found, `missing release ${heading}`).toBeDefined();
+    return found as string;
+  };
+
+  test("lists every row with its release heading, subheading and bullet", () => {
+    expect(locations).not.toBe("");
+    for (const [heading, sub, bullet] of rows) {
+      const row = locations.split("\n").find((line) => line.startsWith(`| \`${heading}\` | \`${sub}\``));
+      expect(row, `${heading} / ${sub}`).toBeDefined();
+      expect(row).toContain(bullet.replace(/^- /, "").slice(0, 40));
+    }
+  });
+
+  test("each row names an entry under that subheading in both changelogs", () => {
+    for (const source of sources) {
+      const text = read(source);
+      for (const [heading, sub, bullet] of rows) {
+        const release = releaseOf(text, heading);
+        expect(release, `${source} ${heading}`).toContain(bullet);
+        const before = release.slice(0, release.indexOf(bullet));
+        const lastSub = [...before.matchAll(/^### (.*)$/gm)].pop()?.[1] ?? "";
+        expect(lastSub.startsWith(sub), `${source}: ${bullet} is under "${lastSub}"`).toBe(true);
+      }
+    }
+  });
+
+  test("the entries sit at the same line in both files", () => {
+    const [a, b] = sources.map((s) => read(s).split("\n"));
+    for (const [, , bullet] of rows) {
+      const at = (lines: string[]) => lines.findIndex((l) => l.startsWith(bullet));
+      expect(at(a)).toBeGreaterThan(-1);
+      expect(at(a)).toBe(at(b));
+    }
+    expect(locations).toContain("same line number in both");
+  });
+
+  test("the 0.2.1 fix is the first bullet of the first of two Bug fixes headings", () => {
+    const entry = rows[3][2];
+    for (const source of sources) {
+      const text = read(source);
+      expect(text.split("\n").filter((line) => line.startsWith(entry))).toHaveLength(1);
+      const fixes = section(text, "0.2.1 (2026-10-16)").split("### Bug fixes\n");
+      expect(fixes).toHaveLength(3);
+      expect(fixes[1].trimStart().startsWith(entry)).toBe(true);
+    }
+    expect(locations).toContain("`Bug fixes` (the first of two)");
+  });
+
+  test("distinguishes the recorded version from npm publication", () => {
+    const release = section(read("CHANGELOG.md"), "0.2.2 (2026-10-25)");
+    expect(release).toContain("0.2.1 was tagged but its npm publish failed");
+    expect(release).toContain("ships everything listed here and under 0.2.1 below");
+    expect(locations).toContain("](../CHANGELOG.md#022-2026-10-25)");
+    expect(locations).toContain("0.2.1 was tagged but its npm publish failed");
+    expect(locations).toContain("0.2.2 includes its changes");
+  });
+});
