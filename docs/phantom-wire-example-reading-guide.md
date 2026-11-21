@@ -67,6 +67,60 @@ The interpolated names differ by provider:
 | Supabase | `x-supabase-signature` | `SUPABASE_WEBHOOK_SECRET` |
 | GitHub | `x-hub-signature-256` | `GITHUB_WEBHOOK_SECRET` |
 
+## What wiring reports
+
+Besides the stub files, [`wirePhantomForRecipe`](../packages/core/src/ai/phantom-wire.ts)
+returns a `WireResult`, which `stack apply` summarizes. Every output is an
+observation about names, files, or placeholder responses. None of them
+indicates that a signature was verified, a secret value was checked, or a
+handler was deployed.
+
+`WireResult` carries four arrays, in recipe and catalog order, without
+deduplication:
+
+| Field | What each entry is | What an entry does not establish |
+| --- | --- | --- |
+| `present` | A `provider:SECRET_NAME` catalog name that appears in the `phantom list --json` inventory. | That the stored value is valid, current, or usable; only the name was read. |
+| `missing` | A `provider:SECRET_NAME` catalog name absent from the inventory. | A failure — apply proceeds. Store the real value with `phantom add <NAME>`; wiring never writes it. |
+| `webhooks` | An absolute path to each generated `.stack/webhooks/<provider>.ts`. | That a route is registered or a handler deployed; the file is comment text only. |
+| `skipped` | A provider whose vault check did not run: Phantom not installed, inventory unreadable, or name not in the catalog. | That its secrets are present or absent; treat skipped as unknown. |
+
+`stack apply` prints these counts on one line, then names the missing secrets
+and skipped providers:
+
+```text
+  secrets in vault 1 · missing 1 · webhooks 2 · skipped 1
+  (not in Phantom: GITHUB_TOKEN — store with `phantom add <NAME>`)
+  (phantom-wire skipped: unknown)
+```
+
+The `skipped` segment and both parenthesized lines appear only when
+non-empty. `secrets in vault` counts only the catalog names checked, not the
+vault's total, and `skipped` providers contribute no present or missing
+entries. A `phantom-wire failed: <message>` warning means the call rejected —
+a stub write can fail after earlier files were already written, so partial
+output may remain. With `--noWire` nothing is printed and no file is
+written; the call returns four empty arrays.
+
+Only the four providers in the table above get a stub. Other providers (for
+example `neon`) contribute `present`/`missing` entries but no stub, and an
+unknown catalog name contributes only a `skipped` entry. Re-running wiring
+overwrites existing stubs, so preserve custom work before re-applying. Recipe
+manifests are unsigned; see [Caveats and trust](#caveats-and-trust).
+
+Because every stub line is commented, the example handler produces no output
+until someone uncomments it. Uncommented exactly as generated, it responds:
+
+| Input | Observable response |
+| --- | --- |
+| Missing or empty signature header | `Missing signature`, status 400 — returned before `req.text()` runs, so the body is never read. |
+| Any non-empty signature header, body read succeeds | `ok`, status 200 — reached by any value, including a forged one. The header is never compared to anything. |
+| Any non-empty signature header, body read fails | The handler rejects; no `Response` is produced. |
+
+The 200 does not authenticate the sender or the payload: signature
+verification is not implemented, as the
+[signature status](phantom-wire-signature-status.md) records.
+
 ## Caveats and trust
 
 The `TODO(security)` is **illustrative guidance, not implemented
