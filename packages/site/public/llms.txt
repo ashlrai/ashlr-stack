@@ -54,7 +54,7 @@ Stack is one tool in the Ashlr ecosystem. Together these tools aim to be an auto
 - [Ashlr plugin](https://github.com/ashlrai/ashlr-plugin) (`ashlr-plugin`): plugin for Claude Code and Codex.
 
 `stack doctor --ecosystem --json` reports which of these are installed, with versions, and writes nothing. `stack doctor --ecosystem --install` prints install commands for missing tools and runs nothing.
-
+Agents (Phantom and other coding agents) work on the Stack repo through branches and pull requests that merge once required checks pass. Their rules and kept limits are in [AGENTS.md](https://github.com/ashlrai/ashlr-stack/blob/main/AGENTS.md). Outside contributors, human or agent, follow the same path in [CONTRIBUTING.md](https://github.com/ashlrai/ashlr-stack/blob/main/CONTRIBUTING.md#contribute-with-an-agent): fork, install, run the checks, open a PR. The one required check is CI Gate (typecheck, Tier-1 security tests, `bun run check:crypto` and two secret scans), and PRs land through the merge queue. A maintainer or fleet agent turns on auto-merge for a PR from a fork, since that needs write access. The full suite runs daily on `main`.
 Agents (Phantom and other coding agents) work on the Stack repo through branches and pull requests that merge once required checks pass. Their rules and kept limits are in [AGENTS.md](https://github.com/ashlrai/ashlr-stack/blob/main/AGENTS.md). Outside contributors, human or agent, follow the same path in [CONTRIBUTING.md](https://github.com/ashlrai/ashlr-stack/blob/main/CONTRIBUTING.md#contribute-with-an-agent): fork, install, run the checks, open a PR. The one required check is CI Gate (typecheck, Tier-1 security tests and two secret scans); the full suite runs daily on `main`.
 
 ## Install
