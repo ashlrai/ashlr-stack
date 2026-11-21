@@ -716,3 +716,49 @@ describe("Phantom wire example boundaries", () => {
     }
   });
 });
+
+// Folded in from the former docs/phantom-wire-example-review.md test.
+describe("Phantom wire example review questions", () => {
+  it("grounds its questions in the generated Stripe example", async () => {
+    const start = doc.indexOf("\n## Review questions\n");
+    expect(start).toBeGreaterThan(doc.indexOf("\n### Verify the map\n"));
+    const review = doc.slice(start);
+    const harness = setupFakePhantom();
+    try {
+      const result = await wirePhantomForRecipe(
+        { id: "example-review", query: "", createdAt: "", providers: [{ name: "stripe" }] },
+        { cwd: harness.dir },
+      );
+      expect(result.webhooks).toHaveLength(1);
+      const stub = readFileSync(result.webhooks[0], "utf8");
+      expect(stub.split("\n").every((line) => !line || line.startsWith("//"))).toBe(true);
+      for (const source of [
+        'req.headers.get("stripe-signature")',
+        'new Response("Missing signature", { status: 400 })',
+        "await req.text()",
+        "TODO(security): signature verification is NOT implemented here.",
+        'new Response("ok", { status: 200 })',
+      ]) {
+        expect(stub).toContain(source);
+      }
+      for (const statement of [
+        "`Request`",
+        "`stripe-signature`",
+        "any non-empty header",
+        "attacker-controlled input",
+        "not a production-ready handler",
+        "`TODO(security)`",
+      ]) {
+        expect(review).toContain(statement);
+      }
+      for (const heading of ["Input and claimed boundary", "Unfinished verification"]) {
+        const section = review.split(`\n### ${heading}\n`)[1]?.split(/\n#{2,3} /)[0];
+        expect(section).toBeDefined();
+        expect(section?.match(/^- [\s\S]*?\?$/gm)?.length).toBeGreaterThanOrEqual(3);
+      }
+      expect(harness.callsTo("reveal")).toEqual([]);
+    } finally {
+      harness.cleanup();
+    }
+  });
+});

@@ -2065,7 +2065,7 @@ describe("ai/phantom-wire", () => {
 
   it("keeps the example review's source references pointing at the cited lines", () => {
     const review = readFileSync(
-      new URL("../../../../docs/phantom-wire-example-review.md", import.meta.url),
+      new URL("../../../../docs/phantom-wire-example-reading-guide.md", import.meta.url),
       "utf-8",
     );
     const source = readFileSync(
