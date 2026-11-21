@@ -600,3 +600,119 @@ describe("Phantom wire example annotations", () => {
     }
   });
 });
+
+// Folded in from the former phantom-wire-example-boundaries doc and test (and
+// phantom-wire-boundaries-links.test.ts, whose link check the source-map block
+// above already covers). The checks target the guide's "Shown operations and
+// the verification TODO" section.
+const boundaries = doc.slice(
+  doc.indexOf("\n## Shown operations and the verification TODO\n"),
+  doc.indexOf("\n## What wiring reports\n"),
+);
+
+describe("Phantom wire example boundaries", () => {
+  it("has a boundaries section between the reading steps and the wiring outputs", () => {
+    const start = doc.indexOf("\n## Shown operations and the verification TODO\n");
+    expect(start).toBeGreaterThan(doc.indexOf("**Success response.**"));
+    expect(start).toBeLessThan(doc.indexOf("\n## What wiring reports\n"));
+    expect(boundaries).toContain("TODO in an example");
+    expect(boundaries).toContain("not a verifier");
+    expect(boundaries).toContain("Only then parse, trust, or act on the body.");
+  });
+
+  it("distinguishes shown operations from the verification TODO, matching generated stubs", async () => {
+    const providers = ["stripe", "clerk", "supabase", "github"];
+    const harness = setupFakePhantom();
+    try {
+      const result = await wirePhantomForRecipe(
+        {
+          id: "example-boundaries",
+          query: "",
+          createdAt: "",
+          providers: providers.map((name) => ({ name })),
+        },
+        { cwd: harness.dir },
+      );
+      expect(result.webhooks).toHaveLength(providers.length);
+
+      const excerpt = tsBlocks[0];
+      if (!excerpt) throw new Error("Missing documented example excerpt");
+      const stripe = readFileSync(result.webhooks[0], "utf8");
+      expect(stripe).toContain(excerpt);
+
+      for (const path of result.webhooks) {
+        // The reminder must still be comments when the example is uncommented.
+        const lines = readFileSync(path, "utf8").split("\n");
+        const start = lines.findIndex((line) => line.includes("TODO(security): signature verification"));
+        const end = lines.findIndex((line) => line.includes("parse, trust, or act on the body."));
+        expect(start).toBeGreaterThanOrEqual(0);
+        expect(end).toBeGreaterThan(start);
+        for (const line of lines.slice(start, end + 1)) {
+          expect(line).toMatch(/^\/\/\s+\/\//);
+        }
+      }
+
+      // The shown operations the guide names exist in the generated example;
+      // the verification step is named only as a TODO.
+      for (const shown of [
+        'req.headers.get("stripe-signature")',
+        "Missing signature",
+        "await req.text()",
+        'return new Response("ok", { status: 200 })',
+      ]) {
+        expect(doc).toContain(shown);
+        expect(stripe).toContain(shown);
+      }
+      expect(boundaries).toContain("`Missing signature`, status 400");
+      expect(boundaries).toContain("`await req.text()`");
+      expect(boundaries).toContain("`ok`, status 200");
+      expect(stripe).toContain("TODO(security): signature verification is NOT implemented here.");
+
+      // The section's source citations name real identifiers in the module, so
+      // a rename there is caught here as doc drift.
+      for (const cited of [
+        "webhookStubFor",
+        "writeWebhookStub",
+        "wirePhantomForRecipe",
+        "listVaultNames",
+        "findProviderRef",
+        "signatureHeaderFor",
+        "webhookSecretKeyFor",
+        "verificationHintFor",
+      ]) {
+        expect(boundaries).toContain(`\`${cited}\``);
+        expect(source).toContain(cited);
+      }
+
+      // Behavior on each side of the boundary, proven by running the
+      // uncommented example: missing header → 400 before the body is read;
+      // any non-empty value → 200 (nothing is verified).
+      const example = stripe.match(/^\/\/ export async function [\s\S]*?^\/\/ }$/m)?.[0];
+      if (!example) throw new Error("Missing Stripe handler");
+      const path = join(harness.dir, "stripe-boundaries-example.ts");
+      writeFileSync(path, example.replace(/^\/\/ ?/gm, ""));
+      const handler: unknown = (await import(path)).handleStripeWebhook;
+      if (typeof handler !== "function") throw new Error("Missing Stripe handler");
+
+      const unsigned = new Request("https://example.com", { method: "POST", body: "payload" });
+      expect((await handler(unsigned)).status).toBe(400);
+      expect(unsigned.bodyUsed).toBe(false);
+      // A changed body passes too: neither the header nor the body is checked.
+      for (const body of ["payload", "modified"]) {
+        const forged = new Request("https://example.com", {
+          method: "POST",
+          headers: { "stripe-signature": "forged" },
+          body,
+        });
+        expect((await handler(forged)).status).toBe(200);
+        expect(forged.bodyUsed).toBe(true);
+      }
+
+      // No secret retrieval or vault write happened anywhere in wiring.
+      expect(harness.callsTo("reveal")).toEqual([]);
+      expect(harness.callsTo("add")).toEqual([]);
+    } finally {
+      harness.cleanup();
+    }
+  });
+});
