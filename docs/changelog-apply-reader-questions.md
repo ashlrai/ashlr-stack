@@ -107,4 +107,4 @@ check. For a prose walkthrough of the fix see the
 [reader guide](changelog-apply-reader-guide.md), for the entry-level wording
 comparison see the [comparison](changelog-apply-comparison.md), and for its
 exact position in each file see the
-[apply source map](changelog-apply-source-map.md).
+[exact locations](apply-changelog-reader-guide.md#exact-locations).

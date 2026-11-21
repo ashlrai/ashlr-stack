@@ -15,7 +15,23 @@ Start here if you want the documented `stack apply` change and do not know which
 | Vault output and unreadable-vault handling | [0.3.0 (2026-10-31)](../CHANGELOG.md#030-2026-10-31) · [site copy](../packages/site/src/data/CHANGELOG.md#030-2026-10-31) | **Changed and fixed**, plus the detailed **Changed** entry |
 | The original command description | [0.1.0 — 2026-04-19](../CHANGELOG.md#010--2026-04-19-superseded-by-011) · [site copy](../packages/site/src/data/CHANGELOG.md#010--2026-04-19-superseded-by-011) | **AI recommendation layer**, annotated with the history |
 
-The 0.2.1 release has a second **Bug fixes** heading under "Earlier 0.2.1 notes (2026-10-12)", so link to the release anchor, not the subsection name. Related but different `stack apply` fixes (a missing recipe writes nothing; a failed provider no longer stops later ones) are under [0.2.2](../CHANGELOG.md#022-2026-10-25) ([site copy](../packages/site/src/data/CHANGELOG.md#022-2026-10-25)).
+The 0.2.1 release has a second **Bug fixes** heading under "Earlier 0.2.1 notes (2026-10-12)", so link to the release anchor, not the subsection name. Related but different `stack apply` fixes (a missing recipe writes nothing; a failed provider no longer stops later ones) are under [0.2.2](../CHANGELOG.md#022-2026-10-25) ([site copy](../packages/site/src/data/CHANGELOG.md#022-2026-10-25)). For other `stack apply` changes, see [changelog source locations](changelog-source-locations.md).
+
+## Exact locations
+
+Release headings and subheadings repeat (`Changed` and `Bug fixes` occur in several releases), so find an entry by its release heading first, then by the bullet's opening words. Both files list each entry under the same release heading, subheading and bullet.
+
+| Release heading | Subheading | Bullet starts with |
+| --- | --- | --- |
+| `Unreleased` | `Changed` | `stack apply` does not create placeholder secrets. |
+| `0.3.0 (2026-10-31)` | `Changed and fixed` | Apply wiring checks existing secret names without storing placeholders; |
+| `0.3.0 (2026-10-31)` | `Changed` (second occurrence) | After at least one provider succeeds, `stack apply` wiring checks |
+| `0.2.1 (2026-10-16)` | `Bug fixes` (the first of two) | **`stack apply` stops attempting to write placeholder secrets.** |
+| `0.1.0 — 2026-04-19 (superseded by 0.1.1)` | `AI recommendation layer` | **`stack apply [recipe-id]`** (annotated with the later change) |
+
+- The 0.2.1 bullet is the original record of the fix: the first bullet under that release's first **Bug fixes** heading. The other entries restate or extend it.
+- The two files match line for line, so each bullet sits at the same line number in both. `packages/site/tests/changelog.test.ts` guards the copy.
+- 0.2.1 is the version recorded for the change, not proof of what is installed or deployed. The [0.2.2 release notes](../CHANGELOG.md#022-2026-10-25) say 0.2.1 was tagged but its npm publish failed, and 0.2.2 includes its changes.
 
 ## Release by release
 

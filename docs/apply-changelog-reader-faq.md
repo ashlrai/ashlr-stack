@@ -76,6 +76,6 @@ HOME=$(mktemp -d) bun test packages/site/tests/changelog.test.ts
 Expect exactly one `grep` hit in each file, inside 0.2.1 → Bug fixes; no
 `diff` output; and the site tests to pass, including their byte-equality
 check. For a prose walkthrough see the [reader guide](changelog-apply-reader-guide.md);
-for the entry table see the [source index](apply-changelog-source-index.md);
+for the entry table see the [exact locations](apply-changelog-reader-guide.md#exact-locations);
 for version-by-version reading see the [release-by-release table](apply-changelog-reader-guide.md#release-by-release)
 and the [glossary](apply-changelog-reader-guide.md#glossary).
