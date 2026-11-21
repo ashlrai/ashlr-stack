@@ -37,6 +37,7 @@ This section covers the changes from `v0.3.10` through `c6148307`.
 - The MCP package README and `llms-full.txt` document the local lane bridge (`packages/mcp/src/local-lane.ts`): loopback only, `<server>__<tool>` names, and that it exposes mutating tools to any local process.
 - The docs index and `llms-full.txt` no longer say Stack writes `.env`: `stack import` only reads it, and `stack env export --example` writes `.env.example`.
 - The CI Gate summary in the agent references and the "For AI agents" page now lists `bun run check:crypto`.
+- The docs index no longer links the November 7 release train snapshot, which still showed Stack at 0.3.8 with a failed release; `docs/RELEASE.md` records the current npm publication.
 
 **Fixed**
 
