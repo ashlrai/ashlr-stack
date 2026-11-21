@@ -21,7 +21,7 @@ The full suite runs daily on `main`, not per PR, so check it yourself:
 
 - [ ] Tests for this change pass (`bash scripts/fast-check.sh` is a quick pass over changed packages only; `scripts/affected-tests origin/main` also selects the other packages whose tests read your change (`[]` means skip; a nonzero exit is not an empty selection), or `HOME=$(mktemp -d) bun test` for the full suite)
 - [ ] `bun run lint` clean
-- [ ] Doc-only change: `bun run fresh:check` and `HOME=$(mktemp -d) bun test scripts/docs-freshness.test.ts` pass (`scripts/affected-tests` prints `[]` for docs, but tests read them)
+- [ ] Doc-only change: `bun run fresh:check` and `HOME=$(mktemp -d) bun test scripts/docs-freshness.test.ts` pass, plus the tests that name each changed doc (`scripts/affected-tests` prints `[]` for docs, but tests read them; `CONTRIBUTING.md#contribute-with-an-agent` shows how to list them)
 - [ ] If a version, manifest, `CHANGELOG.md`, command, MCP tool or provider changed: `bun run fresh:sync`, then `bun run fresh:check` passes
 - [ ] If a new provider was added: every step in `docs/adding-a-provider.md` (registered in `providers/index.ts` and `catalog.ts`, added to `detect.ts` + `detect-source.ts`, test written, `docs/provider-auth-matrix.md` and `packages/site/src/lib/providers.ts` updated)
 - [ ] If a new CLI command or MCP tool was added: the steps in `STACK.md#typical-tasks` (`completion.ts`, `mcp/src/tools.ts`, `COMMAND_ORDER` in `packages/site/scripts/gen-cli-ref.ts`, `packages/site/src/lib/cli-ref.generated.ts` regenerated and committed)
