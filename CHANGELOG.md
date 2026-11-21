@@ -4,7 +4,7 @@
 
 ### Next release (since v0.3.10)
 
-This section covers the changes from `v0.3.10` through `916b73ad`.
+This section covers the changes from `v0.3.10` through `c6148307`.
 
 **Added**
 
@@ -33,6 +33,10 @@ This section covers the changes from `v0.3.10` through `916b73ad`.
 - The install, quickstart and compare pages now take their MCP tool and provider counts from the generated site facts instead of hard-coded numbers.
 - `STACK.md` now treats the landing hero as a scope rule (change it only in a PR about the hero and check the built page) instead of a human sign-off.
 - The Ashlr ecosystem section is no longer duplicated in the agent guide and `llms.txt`.
+- The telemetry docs (site telemetry and privacy pages, `docs/PRIVACY.md`, `llms-full.txt`) now say what the code does: telemetry is off unless you run `stack telemetry enable`, and there is no default endpoint.
+- The MCP package README and `llms-full.txt` document the local lane bridge (`packages/mcp/src/local-lane.ts`): loopback only, `<server>__<tool>` names, and that it exposes mutating tools to any local process.
+- The docs index and `llms-full.txt` no longer say Stack writes `.env`: `stack import` only reads it, and `stack env export --example` writes `.env.example`.
+- The CI Gate summary in the agent references and the "For AI agents" page now lists `bun run check:crypto`.
 
 **Fixed**
 
