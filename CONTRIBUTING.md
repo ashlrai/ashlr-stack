@@ -30,7 +30,10 @@ Humans and agents follow the same path. Point your coding agent (Claude Code, Co
 5. **Sync generated docs.** If you touched a version, manifest, `CHANGELOG.md`, command, MCP tool or provider, run `bun run fresh:sync` then `bun run fresh:check`. New CLI commands and MCP tools have extra steps in [STACK.md](STACK.md#typical-tasks).
 6. **Add a changelog entry** for a user-visible change, under `## Unreleased` in the root `CHANGELOG.md`. The site copy at `packages/site/src/data/CHANGELOG.md` must stay byte-identical, so re-mirror it with `bun run --cwd packages/site sync-content` and commit both ([docs/changelog-format.md](docs/changelog-format.md)). Agent PRs follow the same rule: `Unreleased` only, never released sections or versions ([AGENTS.md](AGENTS.md#changelog)).
 7. **Push and open a PR.** Push your branch to your fork with plain `git push`, then open a PR against `main` of `ashlrai/ashlr-stack` with the template filled in: what changed, why, and how you tested it. One concern per PR. Do not run `scripts/publish.sh`. It is the npm release script that the release workflow runs; it publishes packages and pushes a tag. It is not the fleet's fork-push `publish.sh` that [AGENTS.md](AGENTS.md) names.
-8. **Merge.** PRs land through GitHub's merge queue once the required check passes. Turning on auto-merge (`gh pr merge --auto`) needs write access; for a PR from a fork, a maintainer or fleet agent turns it on.
+8. **Merge.** PRs land through GitHub's merge queue once the required check passes. Turning on auto-merge (`gh pr merge --auto`) needs write access; for a PR from a fork, a maintainer or fleet agent turns it on. What to expect:
+   - **First PR from a fork.** GitHub holds Actions runs for first-time contributors until a maintainer approves them, so CI Gate shows as waiting, not failed. Once a PR of yours has merged, your runs start on their own.
+   - **No approving review is required.** The `main` ruleset needs a pull request and a passing CI Gate, nothing more. Reviewers may still comment; reply in the thread or push a fix.
+   - **No rebase needed.** Your branch does not have to be up to date with `main`. The merge queue tests your change on top of the latest `main` (CI Gate runs again there) and squash-merges it. If that run fails, the PR leaves the queue; push a fix and it can be queued again.
 
 ### What CI requires
 
