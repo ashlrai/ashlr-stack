@@ -107,5 +107,5 @@ The checked-in files record the change; they do not establish which version
 is installed or what the deployed site shows. For a location-only map that
 also covers mentions on other surfaces, see the
 [site changelog source map](site-changelog-source-map.md); for the removal
-entry alone, see [where to find the site changelog entry](site-changelog-entry-location.md)
+entry alone, see [the site changelog review guide](site-changelog-review.md#worked-example-placeholder-secret-fix)
 and the [site entry reference](apply-site-entry-reference.md).
