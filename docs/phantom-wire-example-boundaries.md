@@ -29,6 +29,8 @@ runs):
 // }
 ```
 
+The signature-verification line is a **TODO in an example**, not a verifier.
+
 ## Operations shown in the example
 
 These operations are written out in the file. Because every line is a comment,
@@ -70,6 +72,17 @@ attacker-controlled input. Do not deploy or act on the example as-is; use the
 provider's supported verifier where available, and test valid and invalid
 signatures, changed bodies, missing headers, and timestamp and replay cases.
 
+## What each observation establishes
+
+If the handler is uncommented and run, these are the only things a request
+reaching it shows:
+
+| Observation | What it establishes | What it does not establish |
+| --- | --- | --- |
+| A non-empty signature header is present | A caller supplied a value for that header. | The sender or body is authentic; the value is never verified. |
+| The body was read and the example returned 200 | The body read completed and the placeholder returned success. | The body was signed, unchanged, safe to process, or preserved as the exact raw bytes needed for verification. |
+| A catalog secret name is reported present | That name appeared in the Phantom inventory. | Its value is valid or usable, or that the webhook secret was retrieved. The stub's secret name may differ from the catalog names checked. |
+
 ## Where each side lives in the source
 
 Both sides come from
@@ -89,12 +102,12 @@ Both sides come from
 The excerpt above and the 400-before-body-read, 200-on-any-header boundary are
 enforced by
 [`scripts/phantom-wire-example-boundaries.test.ts`](../scripts/phantom-wire-example-boundaries.test.ts),
-which regenerates the stubs, uncomments the Stripe handler, and runs it. For
-the full function inventory, see the [code map](phantom-wire-code-map.md).
+which regenerates the stubs, uncomments the Stripe handler, and runs it with an
+original and a modified body. For the full function inventory, see the
+[code map](phantom-wire-code-map.md); for inventory and error details, see the
+[wiring boundary](phantom-wire-boundary.md).
 
 Recipe manifests sit at a second boundary: they are unsigned, and checking
 provider names against the catalog does not authenticate their origin or
-integrity. Use trusted recipes. For what each runtime observation establishes,
-see the [example boundary](phantom-wire-example-boundary.md); for a
-line-by-line walkthrough, see the
+integrity. Use trusted recipes. For a line-by-line walkthrough, see the
 [reading guide](phantom-wire-example-reading-guide.md).

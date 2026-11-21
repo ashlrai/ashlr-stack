@@ -62,6 +62,7 @@ describe("Phantom wire example boundaries", () => {
       }
       expect(doc).toContain("TODO(security): signature verification is NOT implemented here.");
       expect(doc).toContain("attacker-controlled");
+      expect(doc).toContain("TODO in an example");
       expect(stripe).toContain("TODO(security): signature verification is NOT implemented here.");
 
       // The doc's source citations name real identifiers in the module, so a
@@ -97,13 +98,16 @@ describe("Phantom wire example boundaries", () => {
       const unsigned = new Request("https://example.com", { method: "POST", body: "payload" });
       expect((await handler(unsigned)).status).toBe(400);
       expect(unsigned.bodyUsed).toBe(false);
-      const forged = new Request("https://example.com", {
-        method: "POST",
-        headers: { "stripe-signature": "forged" },
-        body: "payload",
-      });
-      expect((await handler(forged)).status).toBe(200);
-      expect(forged.bodyUsed).toBe(true);
+      // A changed body passes too: neither the header nor the body is checked.
+      for (const body of ["payload", "modified"]) {
+        const forged = new Request("https://example.com", {
+          method: "POST",
+          headers: { "stripe-signature": "forged" },
+          body,
+        });
+        expect((await handler(forged)).status).toBe(200);
+        expect(forged.bodyUsed).toBe(true);
+      }
 
       // No secret retrieval or vault write happened anywhere in wiring.
       expect(harness.callsTo("reveal")).toEqual([]);

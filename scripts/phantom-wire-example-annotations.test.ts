@@ -31,11 +31,16 @@ describe("Phantom wire example annotations", () => {
     expect(doc).toContain("any non-empty signature header");
     expect(doc).toContain("signature verification is not\n  implemented");
     expect(doc).toContain("attacker-controlled");
+    expect(doc).toContain("illustrative");
+    expect(doc).toContain("not executable verification");
+    expect(doc).toContain("Any non-empty header passes");
   });
 
   it("matches the Stripe excerpt and the reminder in every generated stub", async () => {
     const excerpt = doc.match(/```ts\n([\s\S]*?)\n```/)?.[1];
     if (!excerpt) throw new Error("Missing generated example");
+    expect(excerpt.split("\n").every((line) => line.startsWith("//"))).toBe(true);
+    expect(excerpt).toContain("signature verification is NOT implemented here.");
     const providers = ["stripe", "clerk", "supabase", "github"];
     const harness = setupFakePhantom();
     try {
