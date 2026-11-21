@@ -35,19 +35,45 @@ bun run typecheck  # astro check + tsc --noEmit
 
 ## Stack
 
-- **Astro 5** - static-first, React islands only where interactivity matters
-  (`Terminal`, `OneCommand`, `ClaudeCodeDemo`)
+- **Astro 5** - static output (no server adapter is configured), with the
+  `@astrojs/react`, `@astrojs/mdx` and `@astrojs/sitemap` integrations plus the
+  local `agentIndex` integration (`scripts/agent-index.mjs`) that writes `llms.txt`
+- **React islands** only where interactivity matters, hydrated with
+  `client:visible` or `client:idle`: the home page's `GenerateStackDemo`,
+  `StackOrbit`, `HeroIntroOverlay`, `LogoMarquee`, `OneCommand`, `StackREPL`,
+  `HowItWorksTabs`, `StackBuilder`, `TemplateExplorer`, `UseCases`,
+  `McpClientsGrid`, `ClaudeCodeDemo` and `FAQ`, plus `SmoothScroll` and
+  `StickyInstall`, which `src/layouts/Base.astro` mounts on the home page only
 - **Tailwind CSS 4** - via `@tailwindcss/vite`, theme tokens in `src/styles/global.css`
-- **Framer Motion** - tasteful, reduced-motion-aware transitions on tabs + chat
+- **Framer Motion** - reduced-motion-aware transitions in `OneCommand`,
+  `ClaudeCodeDemo`, `StackBuilder` and `StackOrbit`
+- **GSAP ScrollTrigger and Lenis** - home-page smooth scrolling and scroll
+  choreography (`SmoothScroll`, `src/lib/motion/scroll.ts`); Lenis is skipped
+  under `prefers-reduced-motion`
 - **simple-icons v13** - brand marks inlined at build time from
   `node_modules/simple-icons/icons/*.svg` (see `src/lib/icons.ts`)
 
 ## Layout
 
 `src/pages/index.astro` composes the landing page from `src/components/`.
-`src/layouts/` supplies the shared chrome; `src/lib/providers.ts` and
-`src/lib/icons.ts` provide the provider catalog and brand marks. Scroll
-animations are installed by `SmoothScroll` and honor reduced-motion settings.
+`src/layouts/` supplies the shared chrome (`Base.astro`), the docs sidebar
+layout (`Docs.astro`, navigation in `src/lib/docs-nav.ts`) and the launch-note
+layouts. Other routes:
+
+- `src/pages/docs/` - the documentation pages served under `/docs`
+- `src/pages/providers/[slug].astro` and `src/pages/use-cases/[slug].astro` -
+  one generated page per catalog provider and per use case
+- `src/pages/compare/` - comparison pages
+- `src/pages/launch/` - launch notes (the sitemap skips the noindex ones)
+- `src/pages/feed.xml.ts` - the RSS feed
+- `src/pages/api/recommend.ts` - only its GET response is prerendered on the
+  static deploy; POST needs a server adapter, and `StackBuilder` falls back to
+  in-browser retrieval
+
+`src/lib/providers.ts` and `src/lib/icons.ts` provide the provider catalog and
+brand marks. `bun run gen:cli-ref` writes `src/lib/cli-ref.generated.ts`,
+`src/lib/mcp-ref.generated.ts` and `src/lib/site-facts.generated.ts`; edit
+their sources instead of the generated files.
 
 ## Design notes
 
