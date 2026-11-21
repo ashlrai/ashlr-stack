@@ -18,7 +18,7 @@ Stack is one tool in the Ashlr ecosystem. Together these tools aim to be an auto
 
 `stack doctor --ecosystem --install` prints install commands for missing tools and runs nothing.
 
-Agents (Phantom and other coding agents) work on this repo through branches and pull requests that merge once required checks pass. Their rules and kept limits are in [AGENTS.md](https://github.com/ashlrai/ashlr-stack/blob/main/AGENTS.md). Outside contributors, human or agent, follow the same path in [CONTRIBUTING.md](https://github.com/ashlrai/ashlr-stack/blob/main/CONTRIBUTING.md#contribute-with-an-agent): fork, run the checks, open a PR. The one required check is CI Gate.
+Agents (Phantom and other coding agents) work on this repo through branches and pull requests that merge once required checks pass. Their rules and kept limits are in [AGENTS.md](https://github.com/ashlrai/ashlr-stack/blob/main/AGENTS.md). Outside contributors, human or agent, follow the same path in [CONTRIBUTING.md](https://github.com/ashlrai/ashlr-stack/blob/main/CONTRIBUTING.md#contribute-with-an-agent): fork, run the checks, open a PR. The one required check is CI Gate (typecheck, Tier-1 security tests, `bun run check:crypto` and two secret scans). A maintainer or fleet agent turns on auto-merge for a PR from a fork.
 
 ## Read-only commands
 
