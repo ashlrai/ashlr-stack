@@ -82,10 +82,14 @@ A guide to common commands; check your installed version's help for availability
 | `stack list [--json]` | Show services wired into this project; `--json` prints `ashlr.stack.list/v1` |
 | `stack info <service>` | Deep-dive on one service (resource, region, docs, MCP name) |
 | `stack status [--json]` | Phantom, services and config at a glance; `--json` prints a stable report (schema `ashlr.stack.status/v1`, secret names only) |
-| `stack doctor [--all] [--fix] [--json]` | Inspect health reports; `--fix` attempts supported repair, `--json` formats the report. Without `--all`, a directory with no `.stack.toml` is an error, not a healthy report |
+| `stack doctor [--all] [--fix] [--json]` | Inspect health reports; `--fix` attempts supported repair, `--json` formats the report. Without `--all`, a directory with no `.stack.toml` is an error, not a healthy report. `stack doctor --ecosystem` instead reports which Ashlr tools are installed and never fails |
 | `stack scan [--auto]` | Detect providers from package manifests, configs, `.env.example` |
 | `stack import [--from <file>]` | Migrate an existing `.env` into Phantom + `.stack.toml` |
 | `stack clone <git-url> [dir]` | git-clone + scan + next-steps |
+| `stack recommend <query> [--save] [--json]` | Rank catalog providers for a free-text project description; `--save` writes `.stack/recipes/<id>.toml` for `stack apply`, and `--synth` asks a local model (LM Studio or Ollama) for rationales, falling back to retrieval only when none is reachable |
+| `stack apply [recipe-id] [--dryRun]` | Replay a saved recipe: provision each provider, check its secret names in Phantom and add webhook stubs; `--noWire` skips the check and stubs, `--noRollback` keeps services that succeeded |
+| `stack swap <from> <to> [--dryRun]` | Migrate to an equivalent provider in the same category; `--keepFrom` provisions the new one side by side, and failures roll back unless `--noRollback` |
+| `stack open <service>` | Open a configured service's dashboard in your browser, or print the URL when no browser opener is available |
 | `stack providers [--json]` | Browse your installed provider catalog; `--json` prints `ashlr.stack.providers/v1` |
 | `stack templates list [--json]` | List starter provider presets; `--json` prints `ashlr.stack.templates/v1` with each template's services |
 | `stack deps [--json]` | ASCII tree of this stack grouped by category; `--json` prints `ashlr.stack.deps/v1` |
@@ -98,6 +102,8 @@ A guide to common commands; check your installed version's help for availability
 | `stack upgrade` | Check npm for a newer release; `--apply` upgrades an npm global CLI with rollback |
 | `stack login <provider>` | Refresh credentials for that provider; existing stored credentials are separate from setup staging |
 | `stack sync --platform <name>` | Push through Phantom to a configured Vercel, Railway or Fly target |
+| `stack telemetry status`, `stack telemetry enable`, `stack telemetry disable` | Show or change the anonymous-telemetry opt-in; the source has no default endpoint, so nothing is sent unless one is configured (see [PRIVACY](https://github.com/ashlrai/ashlr-stack/blob/main/docs/PRIVACY.md)) |
+| `stack fleet [--json]` | Summarize repository CI, open PR counts (via Locus) and dispatcher lane status for the Ashlr build fleet; the read-only `fleet-*` reports, `fleet-act` and `worktree-disk` are listed in [fleet commands](https://github.com/ashlrai/ashlr-stack/blob/main/docs/fleet-commands.md) |
 | `stack onboard [--apply] [--undo]` | Detect Codex, Claude Code, Cursor and Gemini CLI and register the Phantom gateway (`ashlr-hub`) in each; plan only without `--apply`, existing config files backed up before writing; `--undo` restores them |
 
 Full reference with flags, subcommands, and examples: **[stack.ashlr.ai/docs/cli](https://stack.ashlr.ai/docs/cli)**.
