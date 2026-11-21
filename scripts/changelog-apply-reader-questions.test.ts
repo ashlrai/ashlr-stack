@@ -88,7 +88,7 @@ test("every restated entry the doc names exists verbatim in both sources", () =>
       expect(found, `${path}: ${firstLine}`).toBe(true);
     }
   }
-  expect(doc).toContain("](site-changelog-source-map.md)");
+  expect(doc).toContain("](site-changelog-review.md#apply-entry-source-map)");
 });
 
 test("the original apply description explains that missing values need user action", () => {
