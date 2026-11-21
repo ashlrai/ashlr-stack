@@ -7,7 +7,7 @@ import { installScrollChoreo } from "~/lib/motion/scroll";
 /**
  * Global smooth-scroll + GSAP ScrollTrigger setup.
  *
- * Mounted once from <Base.astro> with `client:load`. In `prefers-reduced-motion`,
+ * Mounted once from <Base.astro>, on the home page only, with `client:idle`. In `prefers-reduced-motion`,
  * Lenis is a no-op and ScrollTrigger still runs (snap-on entrance, no scrub).
  */
 
