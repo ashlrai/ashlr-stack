@@ -83,4 +83,4 @@ These check repository files, not a deployed site. For the placeholder-secret
 history behind several of these entries, see the
 [site changelog placeholder timeline](site-changelog-placeholder-timeline.md),
 and for the removal entry specifically see
-[where to find the site changelog entry](site-changelog-entry-location.md).
+[the site changelog review guide](site-changelog-review.md#worked-example-placeholder-secret-fix).
