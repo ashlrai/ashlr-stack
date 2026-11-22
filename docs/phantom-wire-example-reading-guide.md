@@ -279,8 +279,8 @@ and confirms this guide, the map and both excerpts still match:
 HOME=$(mktemp -d) bun test scripts/phantom-wire-example-reading-guide.test.ts
 ```
 
-For module behavior see the [code map](phantom-wire-code-map.md) and
-[comment inventory](phantom-wire-comment-inventory.md); the
+For module behavior and its comments see the
+[code map](phantom-wire-code-map.md); the
 [signature review](phantom-wire-signature-review.md) classifies the reminder as
 deferred work for the handler author.
 

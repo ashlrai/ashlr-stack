@@ -5,7 +5,7 @@ import { webhookStubFor } from "./phantom-wire.ts";
 describe("phantom wire comment context", () => {
   it("documents the body read, verification reminder, and response in their generated order", () => {
     const doc = readFileSync(
-      new URL("../../../../docs/phantom-wire-comment-inventory.md", import.meta.url),
+      new URL("../../../../docs/phantom-wire-code-map.md", import.meta.url),
       "utf8",
     ).replace(/\s+/g, " ");
     expect(doc).toContain(
