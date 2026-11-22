@@ -1,17 +1,22 @@
-import { describe, expect, it } from "bun:test";
-import { readFileSync } from "node:fs";
+import { describe, expect, it, setDefaultTimeout } from "bun:test";
+import { existsSync, readFileSync } from "node:fs";
 import ts from "typescript";
 import { setupFakePhantom } from "../packages/core/src/__tests__/_harness.ts";
 import { wirePhantomForRecipe } from "../packages/core/src/ai/phantom-wire.ts";
+
+setDefaultTimeout(30_000);
 
 const source = readFileSync(
   new URL("../packages/core/src/ai/phantom-wire.ts", import.meta.url),
   "utf8",
 );
-const inventory = readFileSync(
-  new URL("../docs/phantom-wire-comment-inventory.md", import.meta.url),
-  "utf8",
-);
+const inventoryUrl = new URL("../docs/phantom-wire-comment-inventory.md", import.meta.url);
+const inventory = readFileSync(inventoryUrl, "utf8");
+const flat = inventory.replace(/\s+/g, " ");
+
+function entirelyCommented(stub: string): boolean {
+  return stub.split("\n").every((line) => !line || line.startsWith("//"));
+}
 
 describe("Phantom wire comment inventory", () => {
   it("links to the source comments it inventories", () => {
@@ -74,6 +79,50 @@ describe("Phantom wire comment inventory", () => {
       }
       expect(harness.callsTo("reveal")).toEqual([]);
       expect(harness.callsTo("add")).toEqual([]);
+    } finally {
+      harness.cleanup();
+    }
+  });
+
+  it("describes the TODO in each generated, entirely commented handler", async () => {
+    const providers = ["stripe", "clerk", "supabase", "github"];
+    const harness = setupFakePhantom();
+    try {
+      const result = await wirePhantomForRecipe(
+        { id: "comment-context", query: "", createdAt: "", providers: providers.map((name) => ({ name })) },
+        { cwd: harness.dir },
+      );
+      expect(result.webhooks).toHaveLength(providers.length);
+      for (const path of result.webhooks) {
+        const stub = readFileSync(path, "utf8");
+        expect(entirelyCommented(stub)).toBe(true);
+        for (const line of [
+          "//   const body = await req.text();",
+          '//   return new Response("ok", { status: 200 });',
+        ]) {
+          expect(stub).toContain(line);
+          expect(entirelyCommented(stub.replace(line, line.slice(2)))).toBe(false);
+        }
+        const handler = stub.match(/^\/\/ export async function [\s\S]*?^\/\/ }$/m)?.[0];
+        expect(handler).toBeDefined();
+        if (!handler) throw new Error(`Missing handler in ${path}`);
+        const body = handler.indexOf("const body = await req.text();");
+        const todo = handler.indexOf("TODO(security): signature verification is NOT implemented here.");
+        const reminder = handler.indexOf("Verify over the exact raw body bytes with the webhook secret");
+        const success = handler.indexOf('return new Response("ok", { status: 200 })');
+        expect(body).toBeGreaterThanOrEqual(0);
+        expect(todo).toBeGreaterThan(body);
+        expect(reminder).toBeGreaterThan(todo);
+        expect(success).toBeGreaterThan(reminder);
+      }
+      expect(harness.callsTo("reveal")).toEqual([]);
+      expect(flat).toContain("Every line of the generated example is commented out.");
+      expect(flat).toContain("the TODO remains a comment");
+      expect(flat).toContain("any non-empty header reaches the 200");
+      expect(flat).toContain("does not retrieve a webhook secret or validate its value");
+      for (const [, link] of inventory.matchAll(/\]\(([^)#]+)(?:#[^)]+)?\)/g)) {
+        expect(existsSync(new URL(link, inventoryUrl))).toBe(true);
+      }
     } finally {
       harness.cleanup();
     }
