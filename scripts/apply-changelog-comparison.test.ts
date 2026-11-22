@@ -141,6 +141,74 @@ describe("the 0.2.1 fix entry", () => {
       expect(applyFix(changed[0])).not.toBe(applyFix(changed[1]));
     }
   });
+
+  // Folded in from the former docs/changelog-apply-comparison.md and its test,
+  // which duplicated this section from the changelog side.
+  test("fix entry topic table and remaining claims match both changelogs", () => {
+    const report = comparison.split("## The 0.2.1 fix entry\n")[1]?.split("\n## ")[0] ?? "";
+    const fixEntry = applyFix(sources[0]);
+    expect(applyFix(sources[1])).toBe(fixEntry);
+    for (const claim of [
+      "The wiring step never writes to the vault or fills in missing values.",
+      "phantom list --json",
+    ]) {
+      expect(fixEntry).toContain(claim);
+    }
+    for (const topic of [
+      "Wiring and setup",
+      "Required values",
+      "Readable vault",
+      "Unreadable vault",
+      "Previous behavior",
+      "Result fields",
+    ]) {
+      expect(report).toContain(`| ${topic} |`);
+    }
+    expect(report).toContain("](changelog-mirroring.md#the-021-apply-fix)");
+  });
+
+  test("both 0.2.1 fix entries retain the later removal of --rotate", () => {
+    expect(applyFix(sources[0])).toBe(applyFix(sources[1]));
+    expect(applyFix(sources[0])).toContain(
+      "Previously, wiring ran `phantom add <KEY> TODO_STACK_APPLY --rotate` (then without `--rotate`) for every declared secret.",
+    );
+  });
+
+  test("entry comparison detects a behavior mismatch in either source", () => {
+    const behavior = "The wiring step never writes to the vault or fills in missing values.";
+    const contradiction = "The wiring step writes placeholder values to the vault.";
+    for (const index of [0, 1]) {
+      const changed = [...sources];
+      expect(changed[index]).toContain(behavior);
+      changed[index] = changed[index].replace(behavior, contradiction);
+      expect(applyFix(changed[0])).not.toBe(applyFix(changed[1]));
+    }
+  });
+});
+
+describe("current and historical apply descriptions", () => {
+  const descriptions = [
+    { section: "## Unreleased\n", start: "- `stack apply` does not create placeholder secrets." },
+    { section: "## 0.1.0 — 2026-04-19 (superseded by 0.1.1)\n", start: "- **`stack apply [recipe-id]`**" },
+  ];
+
+  function expectApplyDescriptions(changelog: string) {
+    for (const { section, start } of descriptions) {
+      const release = changelog.split(section)[1]?.split("\n## ")[0];
+      expect(release?.split("\n").filter((line) => line.startsWith(start))).toHaveLength(1);
+    }
+  }
+
+  test("each changelog retains its current and historical apply descriptions", () => {
+    for (const changelog of sources) {
+      expectApplyDescriptions(changelog);
+      for (const { start } of descriptions) {
+        const line = changelog.split("\n").find((candidate) => candidate.startsWith(start));
+        expect(line).toBeDefined();
+        expect(() => expectApplyDescriptions(changelog.replace(line ?? "", ""))).toThrow();
+      }
+    }
+  });
 });
 
 // Folded in from the former docs/apply-changelog-consistency-check.md, whose

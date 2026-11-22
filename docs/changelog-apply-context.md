@@ -62,7 +62,7 @@ notes describe source history — compare the installed version and
 
 - [Placeholder history](apply-placeholder-history.md) — the failed attempts,
   their removal, and current wiring behavior.
-- [Apply changelog comparison](changelog-apply-comparison.md) — wording of the
+- [Apply changelog comparison](apply-changelog-comparison.md#the-021-fix-entry) — wording of the
   0.2.1 fix entry in both files.
 - [Exact locations](apply-changelog-reader-guide.md#exact-locations) — the
   fix entry's exact position in each changelog.
