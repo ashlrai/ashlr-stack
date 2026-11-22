@@ -115,6 +115,77 @@ test("links resolve and the verification commands name real paths", () => {
     );
   }
   expect(doc).toContain("diff -u CHANGELOG.md packages/site/src/data/CHANGELOG.md");
+  expect(doc).toContain("grep -n -F 'stops attempting to write placeholder secrets.'");
   expect(doc).toContain("bun test packages/site/tests/changelog.test.ts");
   expect(existsSync(join(root, "packages/site/tests/changelog.test.ts"))).toBe(true);
+});
+
+// Folded in from the former changelog-apply-reader-questions doc and test.
+test("the vault-check details the FAQ gives come from the fix entry in both sources", () => {
+  for (const path of sources) {
+    const entry = read(path)
+      .split("\n")
+      .find((line) => line.startsWith(heading));
+    expect(entry, path).toBeDefined();
+    for (const claim of [
+      "phantom list --json",
+      "secrets in vault N · missing M · webhooks K",
+      "not in Phantom:",
+      "skipped instead of identifying missing names",
+    ]) {
+      expect(entry, `${path}: ${claim}`).toContain(claim);
+      expect(flat, `doc: ${claim}`).toContain(claim);
+    }
+  }
+  expect(flat).toContain(heading.slice(2));
+});
+
+test("every restated entry behind the FAQ exists verbatim in both sources", () => {
+  for (const path of sources) {
+    const lines = read(path).split("\n");
+    for (const firstLine of [
+      "- `stack apply` does not create placeholder secrets. After at least one provider succeeds, wiring checks secret names for every provider in the recipe, including providers that failed",
+      "- Apply wiring checks existing secret names without storing placeholders; unreadable vaults are reported as skipped, not missing.",
+      "- After at least one provider succeeds, `stack apply` wiring checks the recipe's secret names without creating placeholders or filling missing values.",
+      "- **`stack apply` with a missing recipe writes nothing.**",
+      "- **`stack apply` and `stack init --template` keep going after a provider fails.**",
+      "- **`stack apply [recipe-id]`**",
+    ]) {
+      expect(
+        lines.some((line) => line.startsWith(firstLine)),
+        `${path}: ${firstLine}`,
+      ).toBe(true);
+    }
+  }
+  expect(flat).toContain("`stack init --template` keep going after a provider fails");
+  expect(doc).toContain("](site-changelog-review.md#apply-entry-source-map)");
+});
+
+test("the original apply description explains that missing values need user action", () => {
+  for (const path of sources) {
+    const entry = section(read(path), "0.1.0 — 2026-04-19 (superseded by 0.1.1)")
+      .split("\n")
+      .find((line) => line.startsWith("- **`stack apply [recipe-id]`**"));
+    expect(entry, path).toBeDefined();
+    expect(entry, path).toContain("does not write to the vault or fill in missing values");
+    expect(entry, path).toContain("Users must supply each required missing value");
+  }
+});
+
+test("the differences answer names both files, their roles and the diff check", () => {
+  const differences = doc.split("## Do the two changelogs differ?\n")[1]?.split("\n## ")[0];
+  expect(differences).toBeDefined();
+  for (const claim of [
+    "byte-for-byte identical",
+    "sync-content",
+    "source of truth",
+    "diff -u CHANGELOG.md packages/site/src/data/CHANGELOG.md",
+    "a higher status is an error",
+  ]) {
+    expect(differences?.replace(/\s+/g, " "), claim).toContain(claim);
+  }
+  for (const path of sources) {
+    expect(differences).toContain(`\`${path}\``);
+  }
+  expect(doc).toContain("`/docs/changelog`");
 });
