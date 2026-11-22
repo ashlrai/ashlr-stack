@@ -11,17 +11,19 @@ computes, compares, or checks a signature, and none is supposed to.
 This review locates every signature-related statement in the module and
 classifies it as **active behavior** (code that runs when
 `wirePhantomForRecipe` executes) or **commented follow-up** (text emitted for a
-human to act on later). It replaces the former signature note and signature
-status pages. For result shapes, skipped cases, and error paths see the
-[boundary review](phantom-wire-boundary.md); for the broader trust limitations
-see the [verification review](phantom-wire-review.md) and
-[wiring status](phantom-wiring-status.md); for resolution criteria see the
-[verification follow-up](phantom-wire-followup.md).
+human to act on later). It replaces the former signature note, signature
+status and verification follow-up pages; the resolution criteria are in
+[Resolving the follow-up](#resolving-the-follow-up). For result shapes, skipped
+cases, and error paths see the [boundary review](phantom-wire-boundary.md); for
+the broader trust limitations see the
+[verification review](phantom-wire-review.md) and
+[wiring status](phantom-wiring-status.md).
 
 ## The commented signature-verification follow-up
 
 The TODO sits inside the generated example immediately after the request body
-is read and before the success response:
+is read and before the success response. This excerpt is **source context**,
+not a working verifier:
 
 ```ts
 //   const body = await req.text();
@@ -107,6 +109,27 @@ sender nor payload is authenticated, and the body is attacker-controlled.
 Treat the body as untrusted until the provider's documented verification is
 implemented; see [phantom-wire-review.md](phantom-wire-review.md) for the
 deployment guidance.
+
+## Resolving the follow-up
+
+**Status: unresolved.** The TODO stays open until verification is implemented
+in every handler someone actually deploys. A vault inventory only checks secret
+names; it does not retrieve or validate a webhook secret. For each deployed
+handler:
+
+1. Follow the provider's current documentation for the relevant webhook product,
+   including its required headers, secret, and timestamp or replay checks. The
+   hints in the table above are starting points, not verification.
+2. Preserve the exact raw body the provider requires and verify it before
+   parsing, trusting, or acting on the payload. Reject missing, malformed,
+   invalid, or stale signatures as the provider requires. Use a supported
+   verification library where one exists; if you implement a MAC check
+   directly, compare in constant time. The example's `req.text()` alone does
+   not establish that the exact raw bytes are preserved.
+3. Test valid and invalid signatures, altered bodies, missing headers, and any
+   required timestamp or replay handling for that provider. Do not mark the
+   follow-up resolved merely because a header is present or a stub is
+   generated.
 
 ## The other unsigned surface: recipe manifests
 

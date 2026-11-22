@@ -70,4 +70,4 @@ catalog name checks do not establish a recipe's origin or integrity. Use trusted
 recipes. For error details and related context see the
 [boundary review](phantom-wire-boundary.md),
 [signature review](phantom-wire-signature-review.md) and
-[verification follow-up](phantom-wire-followup.md).
+[verification follow-up](phantom-wire-signature-review.md#resolving-the-follow-up).

@@ -5,7 +5,7 @@ import { webhookStubFor } from "./phantom-wire.ts";
 describe("phantom wire verification follow-up", () => {
   test("the documented unresolved TODO matches every generated webhook example", () => {
     const doc = readFileSync(
-      new URL("../../../../docs/phantom-wire-followup.md", import.meta.url),
+      new URL("../../../../docs/phantom-wire-signature-review.md", import.meta.url),
       "utf8",
     );
     expect(doc).toContain("**Status: unresolved.**");

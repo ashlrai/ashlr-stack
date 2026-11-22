@@ -201,7 +201,7 @@ Recipe manifests have a separate limitation: they are unsigned, and catalog
 provider checks do not authenticate their origin or integrity. Use trusted
 recipes. For wiring and failure details, see the
 [data flow](phantom-wire-data-flow.md), the
-[verification follow-up](phantom-wire-followup.md) and the
+[verification follow-up](phantom-wire-signature-review.md#resolving-the-follow-up) and the
 [wiring boundary](phantom-wire-boundary.md).
 
 ## Source map

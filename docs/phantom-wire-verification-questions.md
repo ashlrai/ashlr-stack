@@ -118,7 +118,7 @@ authenticate neither origin nor integrity, so a recipe â€” like a webhook body â
 must come from a trusted source before it is relied on.
 
 For resolution criteria see the
-[verification follow-up](phantom-wire-followup.md); for how this TODO is
+[verification follow-up](phantom-wire-signature-review.md#resolving-the-follow-up); for how this TODO is
 classified against active code see the
 [signature review](phantom-wire-signature-review.md); for adjacent question
 sets see the [reading guide](phantom-wire-example-reading-guide.md) and the
