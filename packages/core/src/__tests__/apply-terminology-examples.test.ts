@@ -7,7 +7,7 @@ import { type Harness, setupFakePhantom } from "./_harness.ts";
 setDefaultTimeout(30_000);
 
 const doc = readFileSync(
-  new URL("../../../../docs/apply-terminology-examples.md", import.meta.url),
+  new URL("../../../../docs/apply-placeholder-terminology.md", import.meta.url),
   "utf-8",
 );
 const examples = [...doc.matchAll(/```json\n([^\n]+)\n```/g)].map((match) => JSON.parse(match[1]));
