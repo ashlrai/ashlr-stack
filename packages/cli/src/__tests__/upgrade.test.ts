@@ -4,6 +4,7 @@
  * Exercises version comparison and command behavior with a mocked registry.
  */
 import { afterEach, describe, expect, mock, test } from "bun:test";
+import { readFileSync } from "node:fs";
 
 import { isNewer, runUpgrade } from "../commands/upgrade.ts";
 
@@ -66,6 +67,18 @@ describe("upgrade command execution", () => {
     const result = await exercise({ apply: true });
     expect(result.calls).toBe(1);
     expect(result.body.status).toBe("upgraded");
+  });
+  test("README JSON statuses cover both check-only and successful apply reports", async () => {
+    const readme = readFileSync(new URL("../../../../README.md", import.meta.url), "utf8");
+    const statuses = readme.match(/^\| `stack upgrade --json` \|[^\n]*?`status` \(([^)]+)\)/m);
+    expect(statuses).not.toBeNull();
+    const documented = [...statuses![1].matchAll(/`([a-z_]+)`/g)].map((m) => m[1]);
+    const reports = [];
+    for (const version of ["0.2.0", "9.9.9", "0.1.0"])
+      reports.push((await exercise({}, version)).body);
+    reports.push((await exercise({ apply: true })).body);
+    expect(documented).toEqual(reports.map((report) => report.status));
+    expect(reports.at(-1)).toMatchObject({ current: "0.2.0", latest: "9.9.9", install: null });
   });
   test("up-to-date and ahead installs are untouched", async () => {
     for (const version of ["0.2.0", "0.1.0"]) {

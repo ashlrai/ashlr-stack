@@ -310,11 +310,13 @@ With `--json`, these commands print one JSON document on stdout, with no banners
 | `stack env diff --json` | `ashlr.stack.env-diff/v1` | `ok`, `missing[]`, `totals` (`declared`, `missing`); exits 1 when any are missing |
 | `stack import --json` | `ashlr.stack.import/v1` | `from`, `dry_run`, `phantom_installed`, `providers`, `unattributed`, `stored`, `skipped_existing`, `skipped_empty`, `services_added`, `services_kept` |
 | `stack remove --json` | `ashlr.stack.remove/v1` | `mode`, `removed[]` (`service`, `secrets_removed[]`, `secrets_kept[]`, `mcp_removed`), `secrets_kept[]`, `upstream_kept`, `keep_remote` |
-| `stack upgrade --json` | `ashlr.stack.upgrade/v1` | `package`, `current`, `latest`, `status` (`up_to_date`, `update_available` or `ahead`), `install` |
+| `stack upgrade --json` | `ashlr.stack.upgrade/v1` | `package`, `current`, `latest`, `status` (`up_to_date`, `update_available`, `ahead` or `upgraded` after `--apply`), `install` (null after a successful upgrade or when no update is available) |
 | `stack doctor --json` | `ashlr.stack.doctor/v1` | The shared `ashlr.doctor` wrapper (`kind`, `schema_version`, `version`, `tool`, `status`, `native_status`, `checks[]`) around the doctor report; see [docs/ashlr-handshake.md](docs/ashlr-handshake.md) |
 | `stack list` or `stack status`, on failure | `ashlr.stack.error/v1` | `error` (message), exit code 1 |
 
 Missing values are `null`. On failure, `stack list` and `stack status` print `ashlr.stack.error/v1`, and `stack doctor` prints its wrapper with `status: "fail"`. The other commands above print `{"error": "..."}` with no `schema` field and exit 1. So check for an `error` field first, then read `schema`. Other `--json` commands, such as `stack scan`, `stack recommend` and `stack onboard`, print JSON without a `schema` field.
+
+`stack status --json` reads local configuration and probes Phantom installation and vault counts. Use `stack doctor --json` or `stack info <service> --json` for the available provider health checks. After `stack upgrade --apply --json` succeeds, `current` still names the version before the upgrade and `latest` names the installed version.
 
 ```bash
 stack status --json | jq -r '.next_step.command'
@@ -326,9 +328,11 @@ stack status --json | jq -r '.next_step.command'
 | --- | --- |
 | 0 | The command succeeded. |
 | 1 | The command failed, including wrong or missing input. |
-| 2 | A doctor check found issues; reserved also for items not found. |
+| 2 | Human `stack doctor --reconcile` found source drift; reserved also for items not found. |
 | 3 | Reserved for an action that is not allowed. |
 | 4 | Reserved for a service that is unavailable. |
+
+Service-check failures from `stack doctor`, including `--json`, exit 1. `stack doctor --reconcile --json` exits 0 even when it reports drift; inspect `orphans`, `untracked`, and the wrapper's `status`. See [diagnostic examples](docs/examples.md#inspect-local-status-and-source-drift).
 
 Existing commands may report different kinds of failure with code 1. `stack exec`
 returns the wrapped command's exit code, or 128 plus the signal number if it
