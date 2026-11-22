@@ -142,3 +142,25 @@ describe("the 0.2.1 fix entry", () => {
     }
   });
 });
+
+// Folded in from the former docs/apply-changelog-consistency-check.md, whose
+// table, 0.2.1 cross-reference and diff command duplicated this comparison.
+describe("consistency check", () => {
+  test("release markers the comparison summarizes exist in the root changelog", () => {
+    for (const [release, markers] of [
+      ["0.3.0 (2026-10-31)", ["phantom-wire skipped: openai"]],
+      ["0.2.2 (2026-10-25)", ["`stack apply` with a missing recipe writes nothing"]],
+      ["0.1.0 — 2026-04-19 (superseded by 0.1.1)", ["`stack_apply` exposed"]],
+    ] as const) {
+      const section = sources[0].split(`## ${release}\n`)[1]?.split("\n## ")[0];
+      expect(section).toBeDefined();
+      for (const marker of markers) expect(section).toContain(marker);
+    }
+  });
+
+  test("comparison locates the 0.2.1 fix as the first Bug fixes bullet", () => {
+    const report = comparison.split("## The 0.2.1 fix entry\n")[1]?.split("\n## ")[0] ?? "";
+    expect(report).toContain("first bullet under **Bug fixes**");
+    expect(report).toContain("“`stack apply` stops attempting to write placeholder\nsecrets.”");
+  });
+});
