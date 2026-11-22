@@ -6,19 +6,24 @@ import { wirePhantomForRecipe } from "../packages/core/src/ai/phantom-wire.ts";
 
 setDefaultTimeout(30_000);
 
-const docUrl = new URL("../docs/phantom-wire-signature-status.md", import.meta.url);
+// This review absorbed the former phantom-wire-signature-note.md and
+// phantom-wire-signature-status.md; both of their checks live here. The
+// provider-hint table is also checked by packages/core/src/__tests__/phantom-wire.test.ts.
+const docUrl = new URL("../docs/phantom-wire-signature-review.md", import.meta.url);
 const doc = readFileSync(docUrl, "utf8");
 const source = readFileSync(
   new URL("../packages/core/src/ai/phantom-wire.ts", import.meta.url),
   "utf8",
 );
 
-describe("Phantom wire signature status", () => {
+describe("Phantom wire signature review", () => {
   it("marks verification as a future step and keeps the example-scope claims aligned", async () => {
     const excerpt = doc.match(/```ts\n([\s\S]*?)\n```/)?.[1];
     if (!excerpt) throw new Error("Missing source excerpt");
     expect(doc).toContain("Status: not implemented");
     expect(doc).toContain("future step");
+    expect(doc).toContain("future concern");
+    expect(doc).toContain("TODO(security)");
     expect(doc).toContain(".stack/webhooks/<provider>.ts");
     expect(doc).toContain("--noWire");
     expect(excerpt).toContain("TODO(security): signature verification is NOT implemented here.");
@@ -26,6 +31,8 @@ describe("Phantom wire signature status", () => {
 
     const links = [...doc.matchAll(/\]\(([^)#]+)(?:#[^)]+)?\)/g)].map((match) => match[1]);
     expect(links).toContain("../packages/core/src/ai/phantom-wire.ts");
+    expect(links).toContain("phantom-wire-followup.md");
+    expect(links).toContain("phantom-wire-boundary.md");
     for (const link of links) expect(existsSync(new URL(link, docUrl))).toBe(true);
 
     const providers = ["stripe", "clerk", "supabase", "github"];
@@ -33,7 +40,7 @@ describe("Phantom wire signature status", () => {
     try {
       const result = await wirePhantomForRecipe(
         {
-          id: "signature-status",
+          id: "signature-review",
           query: "",
           createdAt: "",
           providers: [...providers, "vercel"].map((name) => ({ name })),
@@ -64,7 +71,7 @@ describe("Phantom wire signature status", () => {
 
       const noWire = await wirePhantomForRecipe(
         {
-          id: "signature-status-nowire",
+          id: "signature-review-nowire",
           query: "",
           createdAt: "",
           providers: providers.map((name) => ({ name })),

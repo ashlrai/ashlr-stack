@@ -209,7 +209,7 @@ describe("Phantom wire example source map", () => {
     expect(relative).toContain("../packages/core/src/ai/phantom-wire.ts");
     expect(relative).toContain("phantom-wire-code-map.md");
     expect(relative).toContain("phantom-wire-comment-inventory.md");
-    expect(relative).toContain("phantom-wire-signature-note.md");
+    expect(relative).toContain("phantom-wire-signature-review.md");
     // The verify command names this guide's own pinned test.
     expect(sourceMap).toContain("bun test scripts/phantom-wire-example-reading-guide.test.ts");
   });

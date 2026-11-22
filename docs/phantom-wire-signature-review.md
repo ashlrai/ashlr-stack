@@ -1,21 +1,30 @@
 # Phantom wire signature review
 
-This review locates every signature-related statement in
+**Status: not implemented — a future step.** The only signature-verification
+work item in
 [`packages/core/src/ai/phantom-wire.ts`](../packages/core/src/ai/phantom-wire.ts)
-and classifies it as **active behavior** (code that runs when
+is the `TODO(security)` comment that `webhookStubFor` embeds inside each
+generated webhook example. It is a future concern for whoever deploys a
+handler, not a defect in code that runs today: no code path in the module
+computes, compares, or checks a signature, and none is supposed to.
+
+This review locates every signature-related statement in the module and
+classifies it as **active behavior** (code that runs when
 `wirePhantomForRecipe` executes) or **commented follow-up** (text emitted for a
-human to act on later). For result shapes, skipped cases, and error paths see
-the [boundary review](phantom-wire-boundary.md); for the broader trust
-limitations see the [verification review](phantom-wire-review.md) and
-[wiring status](phantom-wiring-status.md).
+human to act on later). It replaces the former signature note and signature
+status pages. For result shapes, skipped cases, and error paths see the
+[boundary review](phantom-wire-boundary.md); for the broader trust limitations
+see the [verification review](phantom-wire-review.md) and
+[wiring status](phantom-wiring-status.md); for resolution criteria see the
+[verification follow-up](phantom-wire-followup.md).
 
 ## The commented signature-verification follow-up
 
-The module's only signature-verification work item is a comment that
-[`webhookStubFor`](../packages/core/src/ai/phantom-wire.ts) embeds inside each
-generated webhook example, immediately after the example reads the request body:
+The TODO sits inside the generated example immediately after the request body
+is read and before the success response:
 
-```
+```ts
+//   const body = await req.text();
 //   // TODO(security): signature verification is NOT implemented here. The
 //   // header check above proves only that a signature header arrived; its
 //   // value is never compared to anything.
@@ -44,6 +53,10 @@ hint naming the documented scheme. All of it is comment text:
 | Supabase | `x-supabase-signature` | `SUPABASE_WEBHOOK_SECRET` | `x-supabase-signature` per Supabase's documented scheme |
 | GitHub | `x-hub-signature-256` | `GITHUB_WEBHOOK_SECRET` | `sha256=` + HMAC-SHA256 of the raw body |
 
+Resolving the TODO means implementing the provider's documented scheme before
+any generated handler is deployed. Nothing in `wirePhantomForRecipe` itself is
+unsafe: it inventories secret **names** only and never reads values.
+
 ## Active behavior
 
 No code path in this module computes, compares, or checks a signature or MAC,
@@ -61,11 +74,36 @@ and no secret value is ever read. What actually executes during wiring:
 - `noWire` returns early with four empty arrays; `skipped` records providers
   whose inventory could not be classified.
 
-If the generated example is uncommented as-is, its executable lines do exactly
-three things: read the named header and return 400 `Missing signature` when it
-is absent or empty; `await req.text()`; and return 200 `ok` for any non-empty
-header value. The header value is never compared to anything, so the check
-authenticates neither sender nor payload — precisely the gap the TODO flags.
+## Scope of the generated example
+
+Wiring writes the example for `stripe`, `clerk`, `supabase`, and `github` only;
+other catalog providers get no stub, and `--noWire` skips stub generation
+entirely. Each file lands at `.stack/webhooks/<provider>.ts`, **overwriting**
+any existing file at that path.
+
+What the example covers, if someone turns it into code:
+
+- Declares a provider-named handler, `handle<Provider>Webhook(req: Request)`,
+  returning a `Response`.
+- Reads the provider's signature header and returns `Missing signature` with
+  status 400 when it is absent or empty, before the body is read.
+- Reads the request body with `await req.text()`, then reaches the TODO.
+- Returns `ok` with status 200.
+
+What the example does not cover:
+
+- **Secret retrieval.** The `phantom reveal` line is a comment naming which
+  vault key to use at request time; generating the file runs no command and
+  reads no secret value.
+- **Verification.** No signature, MAC, timestamp, or replay check exists
+  anywhere in the example — that is exactly the future step the TODO marks.
+- **Endpoint registration or deployment.** Writing the file registers no route
+  and starts no listener; the stub's existence does not prove requests are
+  authenticated.
+
+If the handler is uncommented as generated, any non-empty value for the
+expected header reaches the 200 response once the body read succeeds: neither
+sender nor payload is authenticated, and the body is attacker-controlled.
 Treat the body as untrusted until the provider's documented verification is
 implemented; see [phantom-wire-review.md](phantom-wire-review.md) for the
 deployment guidance.

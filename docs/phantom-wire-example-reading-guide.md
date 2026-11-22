@@ -169,7 +169,7 @@ until someone uncomments it. Uncommented exactly as generated, it responds:
 
 The 200 does not authenticate the sender or the payload: signature
 verification is not implemented, as the
-[signature status](phantom-wire-signature-status.md) records.
+[signature review](phantom-wire-signature-review.md) records.
 
 ## Caveats and trust
 
@@ -281,7 +281,7 @@ HOME=$(mktemp -d) bun test scripts/phantom-wire-example-reading-guide.test.ts
 
 For module behavior see the [code map](phantom-wire-code-map.md) and
 [comment inventory](phantom-wire-comment-inventory.md); the
-[signature note](phantom-wire-signature-note.md) classifies the reminder as
+[signature review](phantom-wire-signature-review.md) classifies the reminder as
 deferred work for the handler author.
 
 ## Review questions
