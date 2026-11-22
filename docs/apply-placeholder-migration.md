@@ -86,5 +86,112 @@ For this example, use `phantom add OPENAI_API_KEY` in a trusted terminal
 when the name is missing; first resolve the skipped check if the vault was
 unreadable. See [observing an apply](apply-observation.md) for the rest of the
 output, [the placeholder FAQ](apply-placeholder-faq.md) for more detail, and
-the [migration questions](apply-placeholder-migration-questions.md) for reader
-questions about the former behavior.
+the [migration questions](#migration-questions) below for questions about the
+former behavior.
+
+## Migration questions
+
+Each answer is limited to what the [changelog](../CHANGELOG.md) records. The
+changelog describes the code across releases, not the state of an individual
+vault, project or installed copy, and 0.2.1 was tagged without reaching npm.
+
+### What did the former wiring attempt?
+
+For every declared secret, wiring ran
+`phantom add <KEY> TODO_STACK_APPLY --rotate`, then retried without
+`--rotate`. The [0.2.1 entry](../CHANGELOG.md#021-2026-10-16) records this as
+the behavior its fix removed, and the
+[0.1.0 apply entry](../CHANGELOG.md#010--2026-04-19-superseded-by-011) is
+annotated with the same history.
+
+### Did the attempts ever write a placeholder to the vault?
+
+No. Phantom Secrets refuses secret values in command arguments and has no
+`--rotate` option, so every call failed and the printed `envelopes` count was
+always 0. The changelog records failed attempts, not stored placeholders;
+they did not create usable credentials.
+
+### Did the attempts rotate or overwrite stored secrets?
+
+No. There was no `--rotate` option to invoke, every call failed regardless of
+which form ran, and the changelog also records that Phantom never replaces a
+stored name. The attempted option rotated nothing.
+
+### What did the `envelopes` count report?
+
+Always 0, because every placeholder call failed. The fix replaced
+`WireResult.envelopes` with `present` and `missing`, which report checked
+secret names rather than attempted writes.
+
+### Which release removed the attempts?
+
+The removal is recorded under [0.2.1](../CHANGELOG.md#021-2026-10-16), but
+0.2.1's npm publish failed, so nothing from it reached npm.
+[0.2.2](../CHANGELOG.md#022-2026-10-25) superseded it and ships everything
+listed under 0.2.1. The later entries,
+[0.3.0](../CHANGELOG.md#030-2026-10-31) and
+[Unreleased](../CHANGELOG.md#unreleased), describe only the name-checking
+wiring, with the missing-secret example output and the unreadable-vault case.
+
+### How do I tell which wiring my installed copy runs?
+
+Compare the installed version against the release entries above. `stack
+--version` reports the running version, and on releases that have it
+`stack upgrade --json` prints `current` and `latest` while installing
+nothing. `stack apply --help` shows whether the installed copy accepts
+flags such as `--noWire`. This repository's changelog does not establish what
+is installed.
+
+### Did provider setup write placeholders too?
+
+The changelog does not say that. It notes provider setup may store real values
+through its own workflow, separately from wiring. The placeholder attempts
+belonged to the wiring step, which now checks names against
+`phantom list --json` and never writes to the vault or fills missing values.
+
+### Must I delete placeholder values apply left behind?
+
+The changelog prescribes no cleanup of existing secrets. Every recorded call
+failed, so it describes no apply-written placeholders to remove. Whether your
+vault holds one is not answered there; run `phantom list --json` to look. What
+it prescribes runs the other direction: supply each required *missing* value
+yourself.
+
+### Why does apply succeed while secrets are missing?
+
+A missing name alone does not fail apply; provider failures do. Read the
+`secrets in vault N · missing M · webhooks K` line and the `not in Phantom:`
+list rather than the exit status. To supply a missing secret, run
+`phantom add <NAME>` in a trusted terminal and enter the real value when
+prompted. Never pass it as a command argument; apply writes nothing for you.
+
+### What if the vault is unreadable?
+
+Providers are reported as skipped, not missing, so no names are listed. Fix
+vault access and re-run; the changelog does not claim a skipped provider has
+its secrets.
+
+### Do I need to re-run `stack apply` to fix old state?
+
+The changelog prescribes no re-run, and records no apply-written vault state
+to repair. A re-run is a real operation rather than an inspection: apply
+re-runs provider setup for every recipe provider and can create webhook stubs
+even when a provider failed or the vault is unreadable. `--noWire` skips both
+the name check and the stubs. The recorded remediation is supplying each
+required missing value yourself.
+
+### What does the changelog not answer?
+
+- Whether a `TODO_STACK_APPLY` value sits in a particular vault. Every
+  recorded call failed, but the changelog does not establish an individual
+  vault's contents.
+- Whether a historical apply run failed when its placeholder calls failed.
+  The changelog records that the calls failed and `envelopes` printed 0, not
+  the exit status of those runs.
+- Which behavior a given install exhibits. Compare the installed version's
+  own changelog and `stack apply --help`; this repository's changelog does
+  not establish what is installed.
+
+For where each entry records the removal, see the
+[placeholder command history](apply-placeholder-command-history.md) and the
+[changelog placeholder timeline](changelog-placeholder-timeline.md).
