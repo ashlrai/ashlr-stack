@@ -333,8 +333,8 @@ attacker-controlled input.
 These questions also apply to the Clerk, Supabase, and GitHub examples, but
 header names and verification requirements differ. Confirm the scheme for the
 specific product rather than inferring it from a generated hint. See the
-[broader review questions](phantom-wire-review-questions.md) for wiring and
-failure handling.
+[review and verification questions](phantom-wire-verification-questions.md)
+for recipe origin, wiring and failure handling.
 
 ## Stated assumptions and open question, with source references
 

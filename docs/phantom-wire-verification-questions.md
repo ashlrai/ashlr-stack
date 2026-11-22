@@ -22,6 +22,10 @@ requires. This file records the integration questions those comments leave
 **unanswered**. Nothing here is an answer, and nothing in the generated example
 verifies a request.
 
+The later sections cover the rest of the wiring boundary for a design and
+security review: where recipes come from, what a generated example does and
+does not establish, and how wiring failures surface.
+
 ## Unanswered integration questions
 
 Each group below must be resolved for the actual webhook product being
@@ -95,6 +99,65 @@ Confirm every row against the provider's current documentation.
 | supabase | `x-supabase-signature` | `SUPABASE_WEBHOOK_SECRET` | `x-supabase-signature` per Supabase's documented webhook scheme | Does the Supabase webhook feature in use emit this header and scheme, and where is its verification documented? |
 | github | `x-hub-signature-256` | `GITHUB_WEBHOOK_SECRET` | `x-hub-signature-256` is `sha256=` + HMAC-SHA256 of the raw body | Which webhook secret and which raw bytes feed the HMAC, and how is the digest compared safely? |
 
+## Recipe origin
+
+The questions above are about webhook requests. A recipe manifest is a
+separate input with a separate origin and trust decision. The wire function
+receives a `Recipe` and uses its provider names; it does not authenticate the
+recipe. [`readRecipe`](../packages/core/src/ai/recipe.ts) checks the local
+file's shape and catalog names, but the manifest is unsigned. Generating a
+webhook example neither registers an endpoint nor establishes who sent a
+request.
+
+- Where can recipes originate, who can modify them between creation and
+  application, and who decides whether a source is trusted?
+- What origin and integrity evidence, if any, is needed for a recipe before
+  provisioning or wiring, including for direct callers that bypass `readRecipe`?
+- For each intended webhook deployment, which external service and event source
+  is expected, and who owns the configuration that connects it to the handler?
+- How will reviewers distinguish a generated local example from an active
+  endpoint and identify the trust boundary for incoming request bodies?
+
+## Example status
+
+[`writeWebhookStub` and `webhookStubFor`](../packages/core/src/ai/phantom-wire.ts)
+produce fully commented files, not registered or deployed endpoints.
+`listVaultNames` checks secret names, not their values or usability. A
+generated stub and a successful inventory check therefore do not establish
+that a webhook is operational or trusted.
+
+- Who owns converting each example into a handler and verifying that the
+  deployed route uses that handler rather than the unmodified example?
+- What review and tests must pass before the example can be described as
+  production-ready, including forged signatures, altered bodies and unavailable
+  verification inputs?
+- How will operators tell a generated file from a configured, registered,
+  deployed, and successfully verified endpoint?
+- How will repeated wiring avoid losing an owner-maintained handler when the
+  generated path is overwritten?
+
+## Wiring failure handling
+
+In [`wirePhantomForRecipe`](../packages/core/src/ai/phantom-wire.ts), `noWire`
+or an empty provider list returns an empty result without checking the vault
+or writing stubs. A missing Phantom installation skips every provider but
+still writes supported stubs; other installation errors propagate. Inventory
+errors and providers missing from the catalog are recorded as `skipped` rather
+than `missing`. Stub writes overwrite existing files, and a later write
+failure can leave earlier files in place. The
+[`apply` caller](../packages/cli/src/commands/apply.ts) wires the entire recipe
+after at least one provider succeeds and reports a rejected wire call as a
+warning.
+
+- How should a caller distinguish missing secrets from unchecked providers,
+  and what action is expected when Phantom or its inventory is unavailable?
+- Which errors should stop an apply or deployment, and which can remain warnings,
+  given that provisioning may already have succeeded?
+- How should an operator discover and recover from partially written stubs or
+  an existing handler overwritten by a subsequent wiring run?
+- What should happen when only some providers provision successfully but
+  wiring receives the whole recipe?
+
 ## Worked example: Stripe with an empty vault
 
 Consider a recipe with `providers: [{ name: "stripe" }]`, wiring enabled, and a
@@ -120,6 +183,6 @@ must come from a trusted source before it is relied on.
 For resolution criteria see the
 [verification follow-up](phantom-wire-signature-review.md#resolving-the-follow-up); for how this TODO is
 classified against active code see the
-[signature review](phantom-wire-signature-review.md); for adjacent question
-sets see the [reading guide](phantom-wire-example-reading-guide.md) and the
-[review questions](phantom-wire-review-questions.md).
+[signature review](phantom-wire-signature-review.md); for the worked Stripe
+handler and its review questions see the
+[reading guide](phantom-wire-example-reading-guide.md).

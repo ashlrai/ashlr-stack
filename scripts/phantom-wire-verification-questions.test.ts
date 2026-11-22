@@ -166,4 +166,21 @@ describe("Phantom wire verification questions", () => {
       expect(section?.match(/^- [\s\S]*?\?$/gm)?.length ?? 0).toBeGreaterThanOrEqual(2);
     }
   });
+
+  it("covers recipe origin, example status and wiring failures with linked questions", () => {
+    // Folded in from the former phantom-wire-review-questions doc and test.
+    // Its provider-row check (header, secret and an open question per
+    // generated example) is covered by the first test above.
+    const links = [...doc.matchAll(/\]\(([^)#]+)(?:#[^)]+)?\)/g)].map((match) => match[1]);
+    expect(links).toContain("../packages/core/src/ai/recipe.ts");
+    expect(links).toContain("../packages/cli/src/commands/apply.ts");
+
+    for (const heading of ["Recipe origin", "Example status", "Wiring failure handling"]) {
+      const section = doc.split(`\n## ${heading}\n`)[1]?.split("\n## ")[0];
+      expect(section).toBeDefined();
+      expect(section).toContain("../packages/");
+      const questions = section?.match(/^- [\s\S]*?\?$/gm) ?? [];
+      expect(questions.length).toBeGreaterThanOrEqual(3);
+    }
+  });
 });
