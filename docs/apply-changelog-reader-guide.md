@@ -101,6 +101,10 @@ Later entries complete the picture:
 - A successful apply never established that required secrets existed. The current entries make that explicit: missing names alone do not fail apply, while provider failures do.
 - Because every placeholder write failed, apply left no `TODO_STACK_APPLY` value behind in the vault; there is nothing from those attempts to clean up.
 
+### Why the old wording stays in the changelogs
+
+That behavior is historical: the writes always failed, they were removed, and they do not happen today. Two entries still record it. The [0.2.1 fix entry](../CHANGELOG.md#021-2026-10-16) records the removal, and the [0.1.0 `stack apply [recipe-id]` entry](../CHANGELOG.md#010--2026-04-19-superseded-by-011) is the original feature description, annotated that placeholder writes were attempted and every call failed. Released sections are not rewritten (see [AGENTS.md](../AGENTS.md#changelog)), so both keep the old wording. The commands they quote are recorded to document the change; do not run them, and do not add placeholder values yourself: a placeholder is not a credential and can block a real value under the same name.
+
 For an operator checklist against a real environment, see the [upgrade check](apply-upgrade-check.md); for the report examples, see [Reading the report](#reading-the-report).
 
 ## Glossary
@@ -197,10 +201,11 @@ No output and exit status 0 mean they match. Status 1 prints the differences (`-
 ```bash
 grep -n -F 'stops attempting to write placeholder secrets.' \
   CHANGELOG.md packages/site/src/data/CHANGELOG.md
+grep -n -F 'TODO_STACK_APPLY' CHANGELOG.md packages/site/src/data/CHANGELOG.md
 diff -u CHANGELOG.md packages/site/src/data/CHANGELOG.md
 HOME=$(mktemp -d) bun test packages/site/tests/changelog.test.ts scripts/apply-changelog-reader-guide.test.ts
 ```
 
-Expect exactly one `grep` hit in each file, inside 0.2.1 → Bug fixes; no `diff` output; and the tests to pass, including the site test's byte-equality check.
+Expect exactly one hit per file for the first `grep`, inside 0.2.1 → Bug fixes, and two per file for the second, one in the 0.2.1 fix entry and one in the 0.1.0 entry; no `diff` output; and the tests to pass, including the site test's byte-equality check.
 
 For deeper reading see the [comparison](apply-changelog-comparison.md#the-021-fix-entry) for entry-level wording, the [mirroring guide](changelog-mirroring.md#review-before-syncing) for comparing the two files, and the [apply history guide](apply-history-reader-guide.md).

@@ -357,6 +357,64 @@ describe("upgrading from the old wiring", () => {
     expect(doc).toContain("\n## Reading the report\n");
     expect(existsSync(join(root, "docs/apply-upgrade-check.md"))).toBe(true);
   });
+
+  // Folded in from the former docs/changelog-apply-context.md and its test.
+  const FIX_ENTRY = "- **`stack apply` stops attempting to write placeholder secrets.**";
+  const ORIG_ENTRY = "- **`stack apply [recipe-id]`**";
+  const placeholderEntries = (changelog: string): [string, string] => {
+    const fix = section(changelog, "0.2.1 (2026-10-16)")
+      .split("\n")
+      .filter((line) => line.startsWith(FIX_ENTRY));
+    const original = section(changelog, "0.1.0 — 2026-04-19 (superseded by 0.1.1)")
+      .split("\n")
+      .filter((line) => line.startsWith(ORIG_ENTRY));
+    expect(fix).toHaveLength(1);
+    expect(original).toHaveLength(1);
+    return [fix[0], original[0]];
+  };
+
+  test("section explains why the historical placeholder wording stays", () => {
+    for (const claim of [
+      "That behavior is historical",
+      "every call failed",
+      "they do not happen today",
+      "do not run them",
+      "a placeholder is not a credential and can block a real value under the same name",
+      "](../CHANGELOG.md#021-2026-10-16)",
+      "](../CHANGELOG.md#010--2026-04-19-superseded-by-011)",
+      "`stack apply [recipe-id]`",
+    ]) {
+      expect(flatUpgraders).toContain(claim);
+    }
+    expect(read("AGENTS.md")).toContain("\n## Changelog\n");
+  });
+
+  test("both changelogs record the same two placeholder entries", () => {
+    const changelogs = sources.map(read);
+    const [rootFix, rootOriginal] = placeholderEntries(changelogs[0]);
+    const [siteFix, siteOriginal] = placeholderEntries(changelogs[1]);
+    expect(siteFix).toBe(rootFix);
+    expect(siteOriginal).toBe(rootOriginal);
+    for (const entry of [rootFix, rootOriginal]) {
+      expect(entry).toContain("TODO_STACK_APPLY");
+      expect(entry).toContain("failed");
+    }
+    expect(rootFix).toContain("The wiring step never writes to the vault or fills in missing values.");
+    expect(rootOriginal).toContain("Historically, wiring attempted to write a `TODO_STACK_APPLY` placeholder");
+    // Each copy names TODO_STACK_APPLY on exactly those two lines, as Verify says.
+    for (const changelog of changelogs) {
+      expect(changelog.split("\n").filter((line) => line.includes("TODO_STACK_APPLY"))).toHaveLength(2);
+    }
+
+    // Losing either entry in either copy must break detection.
+    for (const index of [0, 1] as const) {
+      for (const entry of [FIX_ENTRY, ORIG_ENTRY]) {
+        const changed = changelogs[index].replace(entry, "- **mutated entry.**");
+        expect(() => placeholderEntries(changed)).toThrow();
+        expect(() => placeholderEntries(changelogs[index === 0 ? 1 : 0])).not.toThrow();
+      }
+    }
+  });
 });
 
 describe("term citations by entry", () => {
@@ -662,7 +720,9 @@ test("the differences section names both files, their roles and the diff check",
 test("the verify section names the grep check and its expected hits", () => {
   const verify = docSection("Verify");
   expect(verify).toContain("grep -n -F 'stops attempting to write placeholder secrets.'");
-  expect(verify.replace(/\s+/g, " ")).toContain("exactly one `grep` hit in each file");
+  expect(verify).toContain("grep -n -F 'TODO_STACK_APPLY' CHANGELOG.md packages/site/src/data/CHANGELOG.md");
+  expect(verify.replace(/\s+/g, " ")).toContain("exactly one hit per file for the first `grep`");
+  expect(verify.replace(/\s+/g, " ")).toContain("two per file for the second");
   for (const path of sources) {
     expect(read(path).split("stops attempting to write placeholder secrets.").length - 1, path).toBe(1);
   }
