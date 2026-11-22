@@ -807,3 +807,241 @@ describe("maintaining these notes", () => {
     });
   });
 });
+
+// Folded in from the former docs/apply-changelog-comparison.md and its test.
+// The comparison now lives in this guide's "Entry-by-entry comparison",
+// "Placeholder-wiring language" and "The 0.2.1 fix entry" sections. Names
+// declared here shadow the guide-level helpers above on purpose: `sources`
+// holds the two changelog texts, not their paths.
+describe("root and site comparison", () => {
+  const paths = ["CHANGELOG.md", "packages/site/src/data/CHANGELOG.md"];
+  const comparison = doc;
+  const sources = paths.map(read);
+
+
+  // Identify each entry by its release, subsection and opening text. Include the
+  // indented examples and sub-bullets so wording changes there are also detected.
+  const entries = [
+    ["## Unreleased", "### Changed", "- `stack apply` does not create placeholder secrets."],
+    ["## 0.3.0 (2026-10-31)", "### Changed and fixed", "- Apply wiring checks existing secret names"],
+    ["## 0.3.0 (2026-10-31)", "### Changed", "- After at least one provider succeeds, `stack apply`"],
+    ["## 0.2.2 (2026-10-25)", "### Agent-facing output", "- **The last lines of a failing command"],
+    ["## 0.2.2 (2026-10-25)", "### Bug fixes", "- **`stack apply` with a missing recipe"],
+    ["## 0.2.2 (2026-10-25)", "### Bug fixes", "- **`stack apply` and `stack init --template`"],
+    ["## 0.2.1 (2026-10-16)", "### Bug fixes", "- **`stack apply` stops attempting"],
+    ["## 0.2.1 (2026-10-16)", "### Hero \"Generate a stack\" demo (from earlier tonight)", "- Clickable in-hero animation"],
+    ["## 0.1.0 — 2026-04-19 (superseded by 0.1.1)", "### AI recommendation layer — `stack recommend` + `stack apply`", "- **`stack recommend [query]`**"],
+    ["## 0.1.0 — 2026-04-19 (superseded by 0.1.1)", "### AI recommendation layer — `stack recommend` + `stack apply`", "- **`stack apply [recipe-id]`**"],
+    ["## 0.1.0 — 2026-04-19 (superseded by 0.1.1)", "### AI recommendation layer — `stack recommend` + `stack apply`", "- **MCP surface**"],
+  ] as const;
+
+  function entry(source: string, release: string, section: string, opening: string): string {
+    const releaseBody = source.split(`${release}\n`)[1]?.split("\n## ")[0];
+    const sectionBody = releaseBody?.split(`${section}\n`)[1]?.split("\n### ")[0];
+    const matches = sectionBody?.split(/\n(?=- )/).filter((part) => part.startsWith(opening)) ?? [];
+    expect(matches, `${release} / ${section} / ${opening}`).toHaveLength(1);
+    return matches[0].trimEnd();
+  }
+
+  test("the documented apply entries match in both checked-in changelogs", () => {
+    for (const [release, section, opening] of entries) {
+      expect(entry(sources[0], release, section, opening)).toBe(entry(sources[1], release, section, opening));
+    }
+    expect(sources[0]).toBe(sources[1]);
+    expect(comparison).toContain("**no wording differences**");
+    for (const path of paths) expect(comparison).toContain(`](../${path})`);
+    for (const location of ["Unreleased → Changed", "0.3.0 → Changed and fixed", "0.3.0 → Changed", "0.2.2 → Agent-facing output", "0.2.2 → Bug fixes", "0.2.1 → Bug fixes", "0.2.1 → Hero", "0.1.0 → AI recommendation layer"]) {
+      expect(comparison).toContain(location);
+    }
+    expect(comparison).toContain("diff -u CHANGELOG.md packages/site/src/data/CHANGELOG.md");
+  });
+
+  test("the entry comparison catches wording changes in examples as well as bullets", () => {
+    const changed = sources[1].replace("secrets in vault 0 · missing 1 · webhooks 0", "secrets in vault 0 · missing 2 · webhooks 0");
+    const [release, section, opening] = entries[2];
+    expect(entry(changed, release, section, opening)).not.toBe(entry(sources[0], release, section, opening));
+  });
+
+  const originalApplyLocation = entries[9];
+  const noPlaceholderWrites = "Wiring no longer attempts to write placeholder values; it does not write to the vault or fill in missing values.";
+
+  function originalApplyEntriesAgree(source: string, site: string): boolean {
+    return source === site && source.includes(noPlaceholderWrites);
+  }
+
+  test("both original apply entries say wiring no longer writes placeholder secrets", () => {
+    const [source, site] = sources.map((changelog) => entry(changelog, ...originalApplyLocation));
+    expect(originalApplyEntriesAgree(source, site)).toBe(true);
+  });
+
+  test("original apply consistency rejects drift and matching regressions", () => {
+    const original = entry(sources[0], ...originalApplyLocation);
+    for (const replacement of ["", "Wiring writes placeholder values to the vault."]) {
+      const changed = original.replace(noPlaceholderWrites, replacement);
+      expect(changed).not.toBe(original);
+      expect(originalApplyEntriesAgree(changed, original)).toBe(false);
+      expect(originalApplyEntriesAgree(original, changed)).toBe(false);
+      expect(originalApplyEntriesAgree(changed, changed)).toBe(false);
+    }
+  });
+
+  // Folded in from the former language-comparison doc and test. The report
+  // describes the checked-in copies; a site build can overwrite a discrepancy,
+  // so compare them directly instead of invoking sync-content.
+  describe("placeholder-wiring language", () => {
+    const section = (heading: string) => comparison.split(`## ${heading}\n`)[1]?.split("\n## ")[0] ?? "";
+
+    test("language comparison is grounded in both checked-in changelogs", () => {
+      const [source, site] = sources;
+      const report = section("Placeholder-wiring language");
+      expect(site).toBe(source);
+      expect(report).toContain("no wording or substantive differences between the two copies");
+      expect(comparison).toContain("diff -u CHANGELOG.md packages/site/src/data/CHANGELOG.md");
+
+      for (const [heading, markers] of [
+        ["Unreleased", ["including providers that failed", "`--noWire` skips both checks and stubs"]],
+        ["0.3.0 (2026-10-31)", ["Provider setup may still persist real credentials", "they do not establish that the vault is empty"]],
+        ["0.2.1 (2026-10-16)", ["every call failed", "`WireResult.envelopes` is replaced by `present` and `missing`"]],
+        ["0.1.0 — 2026-04-19 (superseded by 0.1.1)", ["Missing names alone do not make apply fail", "creates webhook stubs"]],
+      ] as const) {
+        const release = source.split(`## ${heading}\n`)[1]?.split("\n## ")[0];
+        expect(release).toBeDefined();
+        for (const marker of markers) expect(release).toContain(marker);
+        expect(report).toContain(heading.split(" ")[0]);
+      }
+    });
+  });
+
+  // Folded in from the former source-comparison doc and test.
+  describe("the 0.2.1 fix entry", () => {
+    const title = "- **`stack apply` stops attempting to write placeholder secrets.**";
+
+    function applyFix(source: string): string {
+      const release = source.split("## 0.2.1 (2026-10-16)\n")[1]?.split("\n## ")[0];
+      const fixes = release?.split("### Bug fixes\n")[1]?.split("\n### ")[0];
+      const fixEntries = fixes?.split("\n").filter((line) => line.startsWith(title));
+      expect(fixEntries).toHaveLength(1);
+      expect(fixes?.trimStart().startsWith(title)).toBe(true);
+      return fixEntries?.[0] ?? "";
+    }
+
+    test("source comparison locates and describes matching apply fix entries", () => {
+      const report = comparison.split("## The 0.2.1 fix entry\n")[1]?.split("\n## ")[0] ?? "";
+      const fixEntries = paths.map((path, index) => {
+        expect(comparison).toContain(`](../${path}#021-2026-10-16)`);
+        return applyFix(sources[index]);
+      });
+      expect(fixEntries[0]).toBe(fixEntries[1]);
+      expect(report).toContain("**Substantive wording differences: none.**");
+      for (const sourceWording of [
+        "Provider setup may already store real values",
+        "users must supply each required missing value themselves",
+        "reports providers as skipped instead of identifying missing names",
+        "every call failed and the printed `envelopes` count was always 0",
+        "`WireResult.envelopes` is replaced by `present` and `missing`",
+      ]) {
+        expect(fixEntries[0]).toContain(sourceWording);
+      }
+    });
+
+    test("entry comparison detects wording changes in either source", () => {
+      const wording = "Provider setup may already store real values";
+      for (const index of [0, 1]) {
+        const changed = [...sources];
+        expect(changed[index]).toContain(wording);
+        changed[index] = changed[index].replace(wording, "Provider setup can already store real values");
+        expect(applyFix(changed[0])).not.toBe(applyFix(changed[1]));
+      }
+    });
+
+    // Folded in from the former docs/changelog-apply-comparison.md and its test,
+    // which duplicated this section from the changelog side.
+    test("fix entry topic table and remaining claims match both changelogs", () => {
+      const report = comparison.split("## The 0.2.1 fix entry\n")[1]?.split("\n## ")[0] ?? "";
+      const fixEntry = applyFix(sources[0]);
+      expect(applyFix(sources[1])).toBe(fixEntry);
+      for (const claim of [
+        "The wiring step never writes to the vault or fills in missing values.",
+        "phantom list --json",
+      ]) {
+        expect(fixEntry).toContain(claim);
+      }
+      for (const topic of [
+        "Wiring and setup",
+        "Required values",
+        "Readable vault",
+        "Unreadable vault",
+        "Previous behavior",
+        "Result fields",
+      ]) {
+        expect(report).toContain(`| ${topic} |`);
+      }
+      expect(report).toContain("](changelog-mirroring.md#the-021-apply-fix)");
+    });
+
+    test("both 0.2.1 fix entries retain the later removal of --rotate", () => {
+      expect(applyFix(sources[0])).toBe(applyFix(sources[1]));
+      expect(applyFix(sources[0])).toContain(
+        "Previously, wiring ran `phantom add <KEY> TODO_STACK_APPLY --rotate` (then without `--rotate`) for every declared secret.",
+      );
+    });
+
+    test("entry comparison detects a behavior mismatch in either source", () => {
+      const behavior = "The wiring step never writes to the vault or fills in missing values.";
+      const contradiction = "The wiring step writes placeholder values to the vault.";
+      for (const index of [0, 1]) {
+        const changed = [...sources];
+        expect(changed[index]).toContain(behavior);
+        changed[index] = changed[index].replace(behavior, contradiction);
+        expect(applyFix(changed[0])).not.toBe(applyFix(changed[1]));
+      }
+    });
+  });
+
+  describe("current and historical apply descriptions", () => {
+    const descriptions = [
+      { section: "## Unreleased\n", start: "- `stack apply` does not create placeholder secrets." },
+      { section: "## 0.1.0 — 2026-04-19 (superseded by 0.1.1)\n", start: "- **`stack apply [recipe-id]`**" },
+    ];
+
+    function expectApplyDescriptions(changelog: string) {
+      for (const { section, start } of descriptions) {
+        const release = changelog.split(section)[1]?.split("\n## ")[0];
+        expect(release?.split("\n").filter((line) => line.startsWith(start))).toHaveLength(1);
+      }
+    }
+
+    test("each changelog retains its current and historical apply descriptions", () => {
+      for (const changelog of sources) {
+        expectApplyDescriptions(changelog);
+        for (const { start } of descriptions) {
+          const line = changelog.split("\n").find((candidate) => candidate.startsWith(start));
+          expect(line).toBeDefined();
+          expect(() => expectApplyDescriptions(changelog.replace(line ?? "", ""))).toThrow();
+        }
+      }
+    });
+  });
+
+  // Folded in from the former docs/apply-changelog-consistency-check.md, whose
+  // table, 0.2.1 cross-reference and diff command duplicated this comparison.
+  describe("consistency check", () => {
+    test("release markers the comparison summarizes exist in the root changelog", () => {
+      for (const [release, markers] of [
+        ["0.3.0 (2026-10-31)", ["phantom-wire skipped: openai"]],
+        ["0.2.2 (2026-10-25)", ["`stack apply` with a missing recipe writes nothing"]],
+        ["0.1.0 — 2026-04-19 (superseded by 0.1.1)", ["`stack_apply` exposed"]],
+      ] as const) {
+        const section = sources[0].split(`## ${release}\n`)[1]?.split("\n## ")[0];
+        expect(section).toBeDefined();
+        for (const marker of markers) expect(section).toContain(marker);
+      }
+    });
+
+    test("comparison locates the 0.2.1 fix as the first Bug fixes bullet", () => {
+      const report = comparison.split("## The 0.2.1 fix entry\n")[1]?.split("\n## ")[0] ?? "";
+      expect(report).toContain("first bullet under **Bug fixes**");
+      expect(report).toContain("“`stack apply` stops attempting to write placeholder\nsecrets.”");
+    });
+  });
+});
