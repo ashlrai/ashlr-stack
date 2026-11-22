@@ -188,6 +188,35 @@ describe("glossary", () => {
   });
 });
 
+// Folded in from the former changelog-apply-reader-guide doc and its test in
+// apply-changelog.test.ts, which also checks the two report examples against
+// real `stack apply` output.
+describe("reading the report", () => {
+  const report = docSection("Reading the report");
+
+  test("explains the historical apply fix in the 0.2.1 entry's own terms", () => {
+    const fixes = section(read("CHANGELOG.md"), "0.2.1 (2026-10-16)").split("### Bug fixes\n")[1]?.split("\n### ")[0];
+    const entry = fixes?.trimStart().split("\n")[0] ?? "";
+    expect(entry.startsWith("- **`stack apply` stops attempting to write placeholder secrets.**")).toBe(true);
+    expect(report).not.toBe("");
+    for (const detail of ["phantom add <KEY> TODO_STACK_APPLY --rotate", "every call failed", "`present` and `missing`"]) {
+      expect(entry).toContain(detail);
+      expect(report).toContain(detail);
+    }
+    expect(doc).toContain("](../CHANGELOG.md#021-2026-10-16)");
+    expect(report).toContain("missing names alone do not fail it");
+    expect(report).toContain("`--noWire` skips both the name checks and the stubs");
+  });
+
+  test("shows both report examples and never puts a value in arguments", () => {
+    expect(report.match(/```text\n/g)).toHaveLength(2);
+    expect(report).toContain("(not in Phantom: OPENAI_API_KEY");
+    expect(report).toContain("(phantom-wire skipped: openai)");
+    expect(report).toContain("`phantom add OPENAI_API_KEY` in a trusted terminal");
+    expect(report).toContain("Do not put a secret value in command arguments.");
+  });
+});
+
 // Folded in from the former apply-changelog-location, apply-changelog-source-index
 // and changelog-apply-source-map docs and tests.
 describe("exact locations", () => {

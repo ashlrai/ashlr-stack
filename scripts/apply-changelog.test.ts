@@ -113,7 +113,7 @@ await applyCommand.run({ args: { recipeId: "example", noWire: false, noRollback:
     );
     expect(impactExamples).toHaveLength(2);
     expect(result.stdout.split("\n").map((line) => line.trim()).join("\n")).toContain(impactExamples[1]);
-    const readerGuide = readFileSync(join(root, "docs/changelog-apply-reader-guide.md"), "utf8");
+    const readerGuide = readFileSync(join(root, "docs/apply-changelog-reader-guide.md"), "utf8");
     expect(readerGuide).toContain(`\`\`\`text\n${output}\n\`\`\``);
     expect(result.stdout).not.toContain("not in Phantom:");
     const history = readFileSync(join(root, "docs/apply-placeholder-history.md"), "utf8");
@@ -155,22 +155,6 @@ await applyCommand.run({ args: { recipeId: "example", noWire: false, noRollback:
     rmSync(dir, { recursive: true, force: true });
   }
 }, 30_000);
-
-test("reader guide locates and explains the historical apply fix", () => {
-  const changelog = readFileSync(join(root, "CHANGELOG.md"), "utf8");
-  const guide = readFileSync(join(root, "docs/changelog-apply-reader-guide.md"), "utf8");
-  const release = changelog.split("## 0.2.1 (2026-10-16)\n")[1]?.split("\n## ")[0];
-  const fixes = release?.split("### Bug fixes\n")[1]?.split("\n### ")[0];
-  const entry = fixes?.trimStart().split("\n")[0] ?? "";
-  expect(entry.startsWith("- **`stack apply` stops attempting to write placeholder secrets.**")).toBe(true);
-  for (const detail of ["phantom add <KEY> TODO_STACK_APPLY --rotate", "every call failed", "`present` and `missing`"]) {
-    expect(entry).toContain(detail);
-    expect(guide).toContain(detail);
-  }
-  expect(guide).toContain("](../CHANGELOG.md#021-2026-10-16)");
-  expect(guide).toContain("missing\nnames alone do not fail it");
-  expect(guide).toContain("`--noWire` skips\nboth the name checks and the stubs");
-});
 
 test("observation guide inspection commands and apply options exist in the CLI", async () => {
   const guide = readFileSync(join(root, "docs/apply-observation.md"), "utf8");
