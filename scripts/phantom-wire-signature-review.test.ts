@@ -7,8 +7,8 @@ import { wirePhantomForRecipe } from "../packages/core/src/ai/phantom-wire.ts";
 setDefaultTimeout(30_000);
 
 // This review absorbed the former phantom-wire-signature-note.md,
-// phantom-wire-signature-status.md and phantom-wire-followup.md; their checks
-// live here. The provider-hint table is also checked by packages/core/src/__tests__/phantom-wire.test.ts.
+// phantom-wire-signature-status.md, phantom-wire-followup.md and
+// phantom-wire-review.md; their checks live here. The provider-hint table is also checked by packages/core/src/__tests__/phantom-wire.test.ts.
 const docUrl = new URL("../docs/phantom-wire-signature-review.md", import.meta.url);
 const doc = readFileSync(docUrl, "utf8");
 const source = readFileSync(
@@ -29,12 +29,18 @@ describe("Phantom wire signature review", () => {
     expect(doc).toContain("**Status: unresolved.**");
     expect(doc).toContain("**source context**");
     expect(doc).toContain("\n## Resolving the follow-up\n");
+    expect(doc).toContain("Recipe signature verification is **not implemented**");
+    expect(doc).toContain("Webhook signature verification is **not implemented**");
+    expect(doc).toContain("an attacker can forge the request");
+    expect(doc).toContain("can still be applied and cause those providers to be provisioned");
     expect(excerpt).toContain("TODO(security): signature verification is NOT implemented here.");
     expect(source).toContain(excerpt.split("\n").slice(1).join("\n"));
 
     const links = [...doc.matchAll(/\]\(([^)#]+)(?:#[^)]+)?\)/g)].map((match) => match[1]);
     expect(links).toContain("../packages/core/src/ai/phantom-wire.ts");
     expect(links).not.toContain("phantom-wire-followup.md");
+    expect(links).not.toContain("phantom-wire-review.md");
+    expect(links).toContain("phantom-wiring-status.md");
     expect(links).toContain("phantom-wire-boundary.md");
     for (const link of links) expect(existsSync(new URL(link, docUrl))).toBe(true);
 

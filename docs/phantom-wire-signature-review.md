@@ -12,12 +12,11 @@ This review locates every signature-related statement in the module and
 classifies it as **active behavior** (code that runs when
 `wirePhantomForRecipe` executes) or **commented follow-up** (text emitted for a
 human to act on later). It replaces the former signature note, signature
-status and verification follow-up pages; the resolution criteria are in
-[Resolving the follow-up](#resolving-the-follow-up). For result shapes, skipped
-cases, and error paths see the [boundary review](phantom-wire-boundary.md); for
-the broader trust limitations see the
-[verification review](phantom-wire-review.md) and
-[wiring status](phantom-wiring-status.md).
+status, verification follow-up and verification review pages; the resolution
+criteria are in [Resolving the follow-up](#resolving-the-follow-up). For result
+shapes, skipped cases, and error paths see the
+[boundary review](phantom-wire-boundary.md); for the vault inventory, `--noWire`
+and the stub overwrite warning see [wiring status](phantom-wiring-status.md).
 
 ## The commented signature-verification follow-up
 
@@ -103,12 +102,14 @@ What the example does not cover:
   and starts no listener; the stub's existence does not prove requests are
   authenticated.
 
-If the handler is uncommented as generated, any non-empty value for the
-expected header reaches the 200 response once the body read succeeds: neither
-sender nor payload is authenticated, and the body is attacker-controlled.
-Treat the body as untrusted until the provider's documented verification is
-implemented; see [phantom-wire-review.md](phantom-wire-review.md) for the
-deployment guidance.
+Webhook signature verification is **not implemented** in these examples: they
+do not retrieve a secret or compare a signature. If the handler is uncommented
+as generated, any non-empty value for the expected header reaches the 200
+response once the body read succeeds. The header check authenticates neither
+sender nor payload, so an attacker can forge the request and the body is
+attacker-controlled. Treat the body as untrusted until the provider's
+documented verification is implemented; see
+[Resolving the follow-up](#resolving-the-follow-up) before deploying a handler.
 
 ## Resolving the follow-up
 
@@ -133,10 +134,12 @@ handler:
 
 ## The other unsigned surface: recipe manifests
 
-A second "signature verification is not implemented" statement appears in the
-module docstring, about recipe files rather than webhooks: manifests are
-unsigned, and checking provider names against the catalog authenticates neither
-a recipe's origin nor its integrity. Unlike the webhook follow-up, no `TODO`
-marks future work here — it is a stated limitation of the recipe trust model
-(`readRecipe` validates structure and provider names only). Use recipes from a
-trusted source.
+Recipe signature verification is **not implemented**. A second "signature
+verification is not implemented" statement appears in the module docstring,
+about recipe files rather than webhooks: manifests are unsigned, and checking
+provider names against the catalog authenticates neither a recipe's origin nor
+its integrity. Unlike the webhook follow-up, no `TODO` marks future work here —
+it is a stated limitation of the recipe trust model (`readRecipe` validates
+structure and provider names only). An altered recipe that names known
+providers can still be applied and cause those providers to be provisioned.
+Review a recipe's contents and use a trusted source before applying it.

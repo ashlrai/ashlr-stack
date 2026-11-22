@@ -53,7 +53,7 @@ How `stack apply` wires Phantom for a recipe, and what its webhook examples do a
 - Code and data: [code map](phantom-wire-code-map.md), [data flow](phantom-wire-data-flow.md), [assumptions](phantom-wire-assumptions.md) and [comment inventory](phantom-wire-comment-inventory.md).
 - Boundaries: [wire boundary](phantom-wire-boundary.md) (inputs, outputs, error paths, trust boundary and the verification placeholder).
 - Signature verification: [review and follow-up](phantom-wire-signature-review.md).
-- Review: [verification review](phantom-wire-review.md) and [review and verification questions](phantom-wire-verification-questions.md).
+- Review: [signature and verification review](phantom-wire-signature-review.md) and [review and verification questions](phantom-wire-verification-questions.md).
 - Webhook examples: [reading guide](phantom-wire-example-reading-guide.md) (with its trust boundary, wiring outputs, caveats, source map and review questions).
 
 ## The `stack apply` placeholder change

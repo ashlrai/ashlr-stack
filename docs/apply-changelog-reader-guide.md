@@ -126,7 +126,7 @@ The terms below are used in the changelog entries above, in particular the 0.2.1
 | `--noWire` | An apply option that skips both the vault check and webhook stubs; no wiring summary is printed. It does not suppress provider failures. |
 | Applied / failure | A successful apply does not prove all required secrets are present. Missing names alone do not fail apply, but provider failures do. Check both the provider outcome and wiring report. |
 
-For the stub's trust boundary, see [webhook stub review](phantom-wire-review.md).
+For the stub's trust boundary, see [webhook stub review](phantom-wire-signature-review.md#scope-of-the-generated-example).
 
 ## Term citations by entry
 

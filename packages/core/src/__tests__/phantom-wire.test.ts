@@ -2017,9 +2017,10 @@ describe("ai/phantom-wire", () => {
     );
   });
 
-  it("keeps the verification review aligned with the generated webhook examples", async () => {
+  it("keeps the signature review's trust statements aligned with the generated webhook examples", async () => {
+    // The former phantom-wire-review.md was folded into the signature review.
     const review = readFileSync(
-      new URL("../../../../docs/phantom-wire-review.md", import.meta.url),
+      new URL("../../../../docs/phantom-wire-signature-review.md", import.meta.url),
       "utf-8",
     );
     expect(review).toContain("Recipe signature verification is **not implemented**");
