@@ -53,5 +53,5 @@ for unresolved items, but never record secret values.
 Do not rerun apply merely to inspect state: it can provision resources and
 change files. Use [observing an apply](apply-observation.md) and
 [troubleshooting](apply-troubleshooting.md) for inspection and recovery, and
-the [upgrade questionnaire](apply-placeholder-upgrade-questions.md) for output
-examples and further detail.
+the [placeholder FAQ and its upgrade questionnaire](apply-placeholder-faq.md)
+for output examples and further detail.

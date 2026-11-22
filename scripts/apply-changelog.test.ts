@@ -101,12 +101,11 @@ await applyCommand.run({ args: { recipeId: "example", noWire: false, noRollback:
     expect(guide).toContain(`\`\`\`text\n${output}\n\`\`\``);
     const userImpact = readFileSync(join(root, "docs/apply-user-impact.md"), "utf8");
     expect(userImpact).toContain(`\`\`\`text\n${output}\n\`\`\``);
+    // The FAQ also carries the upgrade questionnaire (formerly its own doc).
     const faq = readFileSync(join(root, "docs/apply-placeholder-faq.md"), "utf8");
     expect(faq).toContain(`\`\`\`text\n${output}\n\`\`\``);
     const migration = readFileSync(join(root, "docs/apply-placeholder-migration.md"), "utf8");
     expect(migration).toContain(`\`\`\`text\n${output}\n\`\`\``);
-    const upgradeQuestions = readFileSync(join(root, "docs/apply-placeholder-upgrade-questions.md"), "utf8");
-    expect(upgradeQuestions).toContain(`\`\`\`text\n${output}\n\`\`\``);
     const operatorImpact = readFileSync(join(root, "docs/apply-placeholder-operator-checklist.md"), "utf8");
     const impactExamples = [...operatorImpact.matchAll(/```text\n([\s\S]*?)\n\s*```/g)].map(
       (match) => match[1].split("\n").map((line) => line.trim()).join("\n"),
@@ -143,7 +142,6 @@ await applyCommand.run({ args: { recipeId: "example", noWire: false, noRollback:
     expect(missing.stdout).toContain(missingExample?.[1] ?? "example missing");
     expect(missing.stdout.split("\n").map((line) => line.trim()).join("\n")).toContain(impactExamples[0]);
     expect(migration).toContain(`\`\`\`text\n${missingExample?.[1]}\n\`\`\``);
-    expect(upgradeQuestions).toContain(`\`\`\`text\n${missingExample?.[1]}\n\`\`\``);
     expect(readerGuide).toContain(`\`\`\`text\n${missingExample?.[1]}\n\`\`\``);
     expect(userImpact).toContain(`\`\`\`text\n${missingExample?.[1]}\n\`\`\``);
     expect(userImpact).toContain("`phantom add OPENAI_API_KEY`");
