@@ -6,9 +6,9 @@ import { wirePhantomForRecipe } from "../packages/core/src/ai/phantom-wire.ts";
 
 setDefaultTimeout(30_000);
 
-describe("Phantom wire verification boundary", () => {
+describe("Phantom wire boundary", () => {
   it("matches each generated placeholder and the behavior of the uncommented example", async () => {
-    const docUrl = new URL("../docs/phantom-wire-verification-boundary.md", import.meta.url);
+    const docUrl = new URL("../docs/phantom-wire-boundary.md", import.meta.url);
     const doc = readFileSync(docUrl, "utf8");
     const excerpt = doc.match(/```ts\n([\s\S]*?)\n```/)?.[1];
     if (!excerpt) throw new Error("Missing verification placeholder excerpt");

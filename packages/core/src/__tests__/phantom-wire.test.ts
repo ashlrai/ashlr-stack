@@ -2784,9 +2784,9 @@ describe("ai/phantom-wire", () => {
     },
   );
 
-  it("keeps the trust-boundary doc aligned with the unimplemented verification", async () => {
+  it("keeps the boundary doc trust section aligned with the unimplemented verification", async () => {
     const doc = readFileSync(
-      new URL("../../../../docs/phantom-wire-trust-boundary.md", import.meta.url),
+      new URL("../../../../docs/phantom-wire-boundary.md", import.meta.url),
       "utf-8",
     );
     expect(doc).toContain("Signature verification is not implemented");
