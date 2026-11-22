@@ -291,7 +291,11 @@ describe("Phantom wire example caveats", () => {
     expect(doc.indexOf("\n## Caveats and trust\n")).toBeGreaterThan(0);
     expect(doc.indexOf("\n## Caveats and trust\n")).toBeLessThan(doc.indexOf("\n## Source map\n"));
     expect(caveats).toContain("Recipe manifests have a separate limitation: they are unsigned");
-    for (const link of ["phantom-wire-followup.md", "phantom-wire-boundary.md", "phantom-wire-data-flow.md"]) {
+    for (const link of [
+      "phantom-wire-signature-review.md#resolving-the-follow-up",
+      "phantom-wire-boundary.md",
+      "phantom-wire-data-flow.md",
+    ]) {
       expect(caveats).toContain(`](${link})`);
     }
   });
