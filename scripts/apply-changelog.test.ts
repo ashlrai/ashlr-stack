@@ -107,7 +107,7 @@ await applyCommand.run({ args: { recipeId: "example", noWire: false, noRollback:
     expect(migration).toContain(`\`\`\`text\n${output}\n\`\`\``);
     const upgradeQuestions = readFileSync(join(root, "docs/apply-placeholder-upgrade-questions.md"), "utf8");
     expect(upgradeQuestions).toContain(`\`\`\`text\n${output}\n\`\`\``);
-    const operatorImpact = readFileSync(join(root, "docs/apply-placeholder-operator-impact.md"), "utf8");
+    const operatorImpact = readFileSync(join(root, "docs/apply-placeholder-operator-checklist.md"), "utf8");
     const impactExamples = [...operatorImpact.matchAll(/```text\n([\s\S]*?)\n\s*```/g)].map(
       (match) => match[1].split("\n").map((line) => line.trim()).join("\n"),
     );
