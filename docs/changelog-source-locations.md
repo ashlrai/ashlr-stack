@@ -30,6 +30,6 @@ these starting points in either copy:
 
 The [detailed source map](site-changelog-review.md#apply-entry-source-map) distinguishes nearby
 mentions and lists each known entry. The
-[apply changelog terminology](apply-changelog-terminology.md) defines the terms
+[term citations by entry](apply-changelog-reader-guide.md#term-citations-by-entry) defines the terms
 the entries use and cites each term's entries. These checked-in files describe
 repository content; they do not establish which version is installed or deployed.
