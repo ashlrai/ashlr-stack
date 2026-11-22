@@ -64,4 +64,4 @@ Later entries complete the picture:
 
 For an operator checklist against a real environment, see the
 [upgrade check](apply-upgrade-check.md); for the report examples and their
-interpretation, see the [reader guide](changelog-apply-reader-guide.md).
+interpretation, see the [reader guide](apply-changelog-reader-guide.md#reading-the-report).

@@ -47,6 +47,30 @@ The site copies the root file during its content sync, so each row links the sam
 
 For each required missing value, run `phantom add <NAME>` in a trusted terminal and enter the real value. A successful apply alone does not establish that every required secret is present.
 
+## Reading the report
+
+The 0.2.1 entry records what wiring used to do. For each declared secret it tried `phantom add <KEY> TODO_STACK_APPLY --rotate`, then tried again without `--rotate`. Phantom rejected values in arguments and did not support `--rotate`, so every call failed and the reported `envelopes` count was always zero. Code that reads the wiring result should use `present` and `missing` in place of `envelopes`.
+
+An apply can finish without all required secrets: missing names alone do not fail it, though provider failures do. Review both the provider outcome and the wiring report before depending on the resulting setup.
+
+With a readable vault, the changelog gives this example for a missing `OPENAI_API_KEY` and no webhooks:
+
+```text
+  secrets in vault 0 · missing 1 · webhooks 0
+  (not in Phantom: OPENAI_API_KEY — store with `phantom add <NAME>`)
+```
+
+Supply each required missing value through Phantom: for this example, run `phantom add OPENAI_API_KEY` in a trusted terminal and enter the real value there. Do not put a secret value in command arguments.
+
+If the vault is unreadable, the same recipe instead reports:
+
+```text
+  secrets in vault 0 · missing 0 · webhooks 0 · skipped 1
+  (phantom-wire skipped: openai)
+```
+
+The zero counts cover only checked names; they do not prove that no secrets are missing. Resolve the skipped check before relying on the inventory. Unknown providers can also be skipped. Wiring can create webhook stubs for recipe providers even if they failed or the vault is unreadable; `--noWire` skips both the name checks and the stubs. See [apply troubleshooting](apply-troubleshooting.md) for help investigating skipped checks.
+
 ## Limits worth knowing
 
 - Per the Unreleased entry, a missing name does not itself fail apply, while provider failures do, and `--noWire` skips both checks and stubs.
@@ -81,4 +105,4 @@ diff -u CHANGELOG.md packages/site/src/data/CHANGELOG.md
 HOME=$(mktemp -d) bun test packages/site/tests/changelog.test.ts scripts/apply-changelog-reader-guide.test.ts
 ```
 
-For deeper reading see the [reader FAQ](apply-changelog-reader-faq.md), the [report examples](changelog-apply-reader-guide.md), the [mirroring guide](changelog-mirroring.md#review-before-syncing) for comparing the two files, and the [apply history guide](apply-history-reader-guide.md).
+For deeper reading see the [reader FAQ](apply-changelog-reader-faq.md), the [mirroring guide](changelog-mirroring.md#review-before-syncing) for comparing the two files, and the [apply history guide](apply-history-reader-guide.md).
