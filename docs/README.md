@@ -50,9 +50,8 @@ The fleet commands read the state of the agent fleet that works on the Ashlr rep
 
 How `stack apply` wires Phantom for a recipe, and what its webhook examples do and do not verify. Start with [Phantom wiring status](phantom-wiring-status.md).
 
-- Code and data: [code map](phantom-wire-code-map.md), [data flow](phantom-wire-data-flow.md), [assumptions](phantom-wire-assumptions.md) and [comment inventory](phantom-wire-comment-inventory.md).
+- Code and data: [code map](phantom-wire-code-map.md), [data flow, provider table and trust limits](phantom-wire-data-flow.md) and [comment inventory](phantom-wire-comment-inventory.md).
 - Boundaries: [wire boundary](phantom-wire-boundary.md) (inputs, outputs, error paths, trust boundary and the verification placeholder).
-- Signature verification: [review and follow-up](phantom-wire-signature-review.md).
 - Review: [signature and verification review](phantom-wire-signature-review.md) and [review and verification questions](phantom-wire-verification-questions.md).
 - Webhook examples: [reading guide](phantom-wire-example-reading-guide.md) (with its trust boundary, wiring outputs, caveats, source map and review questions).
 
