@@ -24,7 +24,7 @@ are separate effects. A child command run through `exec` can do anything.
 | `remove` | Remove a service's local wiring. | `stack remove supabase --json` | Changes config and MCP wiring and attempts secret removal; JSON reports retained vault names in `secrets_kept`. Remote resources are retained. |
 | `list` | List configured services. | `stack list --json` | Read. |
 | `info` | Inspect one configured service. | `stack info supabase` | Read and health-check. |
-| `status` | Check stack health. | `stack status --json` | Read and health-check. |
+| `status` | Summarize local configuration and Phantom. | `stack status --json` | Reads config and probes Phantom installation and vault counts. |
 | `env` | Inspect or export the environment map. | `stack env show --json` | `export` writes `.env.example` unless `--stdout` is used; `show` and `diff` read. |
 | `deps` | Show service dependencies. | `stack deps --json` | Read. |
 | `doctor` | Diagnose services and configuration. | `stack doctor --json` | Read normally; `--fix` can remediate services. |

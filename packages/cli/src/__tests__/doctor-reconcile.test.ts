@@ -1,9 +1,8 @@
-import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+import { afterEach, describe, expect, it } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { dirname } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 /**
@@ -162,6 +161,31 @@ describe("doctor --reconcile", () => {
 // ---------------------------------------------------------------------------
 
 describe("doctor --reconcile --json", () => {
+  it("matches every documented reconcile example's exit code and drift state", () => {
+    const examples = readFileSync(new URL("../../../../docs/examples.md", import.meta.url), "utf8");
+    const rows = [
+      ...examples.matchAll(
+        /^\| `stack (doctor --reconcile(?: --json)?)` \| (in sync|drift) \| `(\d+)` \|$/gm,
+      ),
+    ];
+    expect(rows).toHaveLength(4);
+    for (const [, command, state, exit] of rows) {
+      const dir = mkTmp();
+      writeStackToml(dir, ["clerk"]);
+      writePackageJson(dir, state === "in sync" ? { clerk: ["@clerk/nextjs"] } : {});
+      const args = command.split(" ");
+      const { stdout, code } = runCli(args, dir);
+      expect(code).toBe(Number(exit));
+      if (args.includes("--json")) {
+        const report = JSON.parse(stdout);
+        expect(report.status).toBe(state === "drift" ? "warn" : "ok");
+        expect(report.orphans).toEqual(state === "drift" ? ["clerk"] : []);
+      } else {
+        expect(stdout).toContain(state === "drift" ? "orphan" : "No drift");
+      }
+    }
+  });
+
   it("emits valid JSON with correct schema", () => {
     const dir = mkTmp();
     writeStackToml(dir, ["clerk"]);

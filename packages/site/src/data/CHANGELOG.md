@@ -4,7 +4,7 @@
 
 ### Next release (since v0.3.10)
 
-This section covers the changes from `v0.3.10` through `c6148307`.
+This section records merged work since `v0.3.10`. Check your installed version before relying on these changes.
 
 **Added**
 
@@ -22,6 +22,7 @@ This section covers the changes from `v0.3.10` through `c6148307`.
 
 **Changed**
 
+- Related notes are consolidated into the [apply changelog reader guide](docs/apply-changelog-reader-guide.md), [changelog mirroring guide](docs/changelog-mirroring.md), [site changelog review](docs/site-changelog-review.md), and [Phantom wiring example guide](docs/phantom-wire-example-reading-guide.md), with duplicate pages removed and their regression coverage retained in the guide tests.
 - Installation guides, MCP setup examples and agent references now record published version 0.3.10 and its Node.js 20 minimum, while keeping older verification results clearly dated.
 - Regression checks now cover more command help, unknown commands, fleet reports, wiring documentation, repository checks and Git hooks; coverage and security scans also run after merges to main.
 - `stack list --json` and `stack status --json` report failures as `ashlr.stack.error/v1` with exit code 1.
@@ -42,6 +43,7 @@ This section covers the changes from `v0.3.10` through `c6148307`.
 
 **Fixed**
 
+- Diagnostic references distinguish local `status` probes from provider health checks and document the reconcile exit codes: human drift exits 2, while `--reconcile --json` reports drift with exit 0. The README upgrade JSON reference includes `upgraded` after a successful `--apply`.
 - Wiring guides now use the supported `stack apply --noWire` option to skip secret checks and webhook stubs.
 - Contributor guidance correctly lists all six workspace packages.
 - Contributing now warns not to run `scripts/publish.sh` by hand (it publishes packages and pushes a tag); contributors push branches with plain `git push`.

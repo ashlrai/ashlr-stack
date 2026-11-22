@@ -53,6 +53,35 @@ Read-only. A missing tool is reported. The command does not install anything.
 stack doctor --ecosystem --json
 ```
 
+## Inspect local status and source drift
+
+```bash
+stack status --json
+stack doctor --json
+stack doctor --reconcile --json
+```
+
+`status` reads local configuration and probes Phantom installation and vault
+counts. A successful status report does not establish provider health. `doctor`
+runs the health checks available for configured providers; service-check failures
+exit 1, including in JSON mode. Inspect warnings and unchecked services even
+after exit 0.
+
+`doctor --reconcile` compares configured providers with scanner evidence without
+calling Phantom or providers. Missing scanner evidence is a heuristic, so review
+an orphan before removing it. With valid project inputs, the exit codes are:
+
+| Command | Source state | Exit code |
+| --- | --- | --- |
+| `stack doctor --reconcile` | in sync | `0` |
+| `stack doctor --reconcile` | drift | `2` |
+| `stack doctor --reconcile --json` | in sync | `0` |
+| `stack doctor --reconcile --json` | drift | `0` |
+
+The JSON report includes `configured`, `detected`, `orphans`, and `untracked`
+inside the doctor wrapper. Drift sets the wrapper's `status` to `warn`; inspect
+the arrays even after exit 0.
+
 ## MCP server
 
 Claude Code:
