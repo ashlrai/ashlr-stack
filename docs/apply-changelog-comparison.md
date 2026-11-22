@@ -53,6 +53,18 @@ and say an unreadable vault results in providers being reported as skipped.
 Both also describe the failed placeholder-add attempts and the replacement of
 `WireResult.envelopes` with `present` and `missing`.
 
+| Topic | What both entries say |
+| --- | --- |
+| Wiring and setup | Wiring does not write to the vault or fill missing values; provider setup may separately store real values. |
+| Required values | Users supply each required missing value through Phantom in a trusted terminal. |
+| Readable vault | Wiring checks names with `phantom list --json`, reports present and missing counts and lists missing names. |
+| Unreadable vault | Providers are reported as skipped, rather than identified as missing. |
+| Previous behavior | Placeholder-add attempts failed; the printed `envelopes` count was always zero. |
+| Result fields | `WireResult.envelopes` was replaced by `present` and `missing`. |
+
+The [mirroring guide](changelog-mirroring.md#the-021-apply-fix) describes how to
+locate this entry and compare the files.
+
 ## Repeat the comparison
 
 Run from the repository root **before** any site content sync:

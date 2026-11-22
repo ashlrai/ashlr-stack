@@ -105,6 +105,6 @@ Expect exactly one `grep` hit in each file, inside 0.2.1 → Bug fixes; no
 `diff` output; and the site tests to pass, including their byte-equality
 check. For a prose walkthrough of the fix see the
 [reader guide](changelog-apply-reader-guide.md), for the entry-level wording
-comparison see the [comparison](changelog-apply-comparison.md), and for its
+comparison see the [comparison](apply-changelog-comparison.md#the-021-fix-entry), and for its
 exact position in each file see the
 [exact locations](apply-changelog-reader-guide.md#exact-locations).
