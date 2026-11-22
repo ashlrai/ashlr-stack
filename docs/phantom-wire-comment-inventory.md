@@ -33,6 +33,27 @@ errors propagate and earlier writes can remain. No route is registered.
 | Verification TODO | `TODO(security): signature verification is NOT implemented here.` | This remains a comment even if the outer handler is uncommented. It follows the body read and precedes the success response; no signature is compared. |
 | TODO continuation | Warns that the body is attacker-controlled, gives a provider hint, and asks for raw-body verification, constant-time comparison, and rejection before trusting the body. | These are instructions, not a verifier. Implement the provider's current scheme, required headers and replay protections before deploying. The example's `req.text()` alone does not establish preservation of exact raw bytes. |
 
+## The verification TODO in context
+
+Every line of the generated example is commented out. Inside the example, the
+TODO follows `req.text()` and precedes the placeholder 200 response. It tells
+the future handler author to implement the provider's signature verification
+with the webhook secret and the exact body the provider signs, reject invalid
+signatures, and only then trust or act on the payload. Follow the current
+documentation for the webhook product, including required headers and any
+timestamp or replay checks. Use the provider's supported verifier where one
+exists, or a constant-time comparison when implementing a MAC check directly.
+
+Even if the handler lines are uncommented, the TODO remains a comment: a
+missing or empty signature header returns 400, while any non-empty header
+reaches the 200 response if the body read succeeds. The header's presence
+authenticates neither sender nor payload, so the body stays attacker-controlled.
+Implement and test verification before deploying a handler or acting on its
+contents. The vault check inventories secret names; it does not retrieve a
+webhook secret or validate its value.
+
+## Provider names and hints
+
 The template interpolates the following names and hints into comments, not
 verification calls. The hints are starting points; consult the provider's
 current documentation for the specific webhook product.
@@ -47,5 +68,6 @@ current documentation for the specific webhook product.
 The module header's unsigned recipe statement is a separate trust limitation:
 catalog name checks do not establish a recipe's origin or integrity. Use trusted
 recipes. For error details and related context see the
-[boundary review](phantom-wire-boundary.md) and
-[signature review](phantom-wire-signature-review.md).
+[boundary review](phantom-wire-boundary.md),
+[signature review](phantom-wire-signature-review.md) and
+[verification follow-up](phantom-wire-followup.md).
