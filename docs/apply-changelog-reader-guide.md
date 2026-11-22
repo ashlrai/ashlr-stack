@@ -179,7 +179,7 @@ Each apply entry has a label that the terms table cites. Links open the release 
 - Strings that spell `stack apply` outside these entries are mentions, not apply entries: the `stack_apply` MCP tool (0.2.2 → MCP project targeting), a piped `stack apply` example and `stack templates apply` (0.2.2 → Agent-facing output), the hero animation (0.2.1 → Hero "Generate a stack" demo), and the `stack recommend` follow-up line (0.1.0). `--apply` flags on `stack doctor --ecosystem` (0.2.2) and `stack upgrade` (0.3.0) are options on other commands with their own meanings. Rollback named outside 0.2.2-B — `stack add` and `stack remove` (0.2.2 → Vendor-neutral MCP wiring), `stack add` failure (0.2.0 → Added) and `stack upgrade --apply` (0.3.0 → Added) — belongs to those commands, not to apply's partial-failure pass.
 - Within the apply entries, "missing" also describes an absent recipe (0.2.2-A) and an absent secret name (the wiring classification); an "applied" recipe is a run outcome, not proof that required secrets exist.
 
-For the entry-by-entry file mapping behind these labels, see the [site changelog source map](site-changelog-review.md#apply-entry-source-map). For the wiring senses with output examples, see [apply terminology with examples](apply-terminology-examples.md) and [apply wiring terminology](apply-wiring-terminology.md).
+For the entry-by-entry file mapping behind these labels, see the [site changelog source map](site-changelog-review.md#apply-entry-source-map). For the wiring senses with output examples, see [apply placeholder terminology](apply-placeholder-terminology.md#read-the-results) and its [changelog wording](apply-placeholder-terminology.md#changelog-wording).
 
 ## Do the two changelogs differ?
 
