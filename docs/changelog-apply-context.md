@@ -66,7 +66,7 @@ notes describe source history — compare the installed version and
   0.2.1 fix entry in both files.
 - [Exact locations](apply-changelog-reader-guide.md#exact-locations) — the
   fix entry's exact position in each changelog.
-- [Reader FAQ](apply-changelog-reader-faq.md) — answers across
-  both checked-in changelogs.
+- [Do the two changelogs differ?](apply-changelog-reader-guide.md#do-the-two-changelogs-differ) —
+  the roles of both checked-in changelogs and the `diff` check.
 - [Placeholder timeline](changelog-placeholder-timeline.md) — the record
   release by release.
