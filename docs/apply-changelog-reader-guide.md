@@ -4,7 +4,7 @@ Start here if you want the documented `stack apply` change and do not know which
 
 ## The change in one paragraph
 
-`stack apply` no longer attempts to write placeholder secrets. Its wiring step checks declared secret names against Phantom instead of writing to the vault or filling in missing values. Provider setup is separate and may store real credentials. Each required missing value needs user action: run `phantom add <NAME>` from a trusted terminal and enter the real value.
+`stack apply` no longer attempts to write placeholder secrets. Its wiring step checks declared secret names against Phantom; in the 0.2.1 entry's words, it never writes to the vault or fills in missing values. Provider setup is separate and may store real credentials. Each required missing value needs user action: run `phantom add <NAME>` from a trusted terminal and enter the real value.
 
 ## Where to read it
 
@@ -15,7 +15,7 @@ Start here if you want the documented `stack apply` change and do not know which
 | Vault output and unreadable-vault handling | [0.3.0 (2026-10-31)](../CHANGELOG.md#030-2026-10-31) · [site copy](../packages/site/src/data/CHANGELOG.md#030-2026-10-31) | **Changed and fixed**, plus the detailed **Changed** entry |
 | The original command description | [0.1.0 — 2026-04-19](../CHANGELOG.md#010--2026-04-19-superseded-by-011) · [site copy](../packages/site/src/data/CHANGELOG.md#010--2026-04-19-superseded-by-011) | **AI recommendation layer**, annotated with the history |
 
-The 0.2.1 release has a second **Bug fixes** heading under "Earlier 0.2.1 notes (2026-10-12)", so link to the release anchor, not the subsection name. Related but different `stack apply` fixes (a missing recipe writes nothing; a failed provider no longer stops later ones) are under [0.2.2](../CHANGELOG.md#022-2026-10-25) ([site copy](../packages/site/src/data/CHANGELOG.md#022-2026-10-25)). For other `stack apply` changes, see [changelog source locations](changelog-source-locations.md).
+The 0.2.1 fix is the first bullet under the first **Bug fixes** heading. The release has a second **Bug fixes** heading under "Earlier 0.2.1 notes (2026-10-12)", so link to the release anchor, not the subsection name. Related but different `stack apply` fixes (a missing recipe writes nothing; a failed provider no longer stops later ones) are under [0.2.2](../CHANGELOG.md#022-2026-10-25) ([site copy](../packages/site/src/data/CHANGELOG.md#022-2026-10-25)). For other `stack apply` changes, see [changelog source locations](changelog-source-locations.md).
 
 ## Exact locations
 
@@ -74,7 +74,7 @@ The zero counts cover only checked names; they do not prove that no secrets are 
 ## Limits worth knowing
 
 - Per the Unreleased entry, a missing name does not itself fail apply, while provider failures do, and `--noWire` skips both checks and stubs.
-- Wiring can create webhook stubs even if the vault is unreadable; an unreadable vault yields skipped providers, not proof that no names are missing.
+- Wiring can create webhook stubs even if the vault is unreadable; per the 0.2.1 entry, an unreadable vault reports providers as skipped instead of identifying missing names, which is not proof that no names are missing.
 - 0.2.1 was tagged but its npm publish failed; [0.2.2](../CHANGELOG.md#022-2026-10-25) supersedes it. Check the installed version before applying this history.
 
 ## Upgrading from the old wiring
@@ -87,7 +87,7 @@ The [0.1.0 entry](../CHANGELOG.md#010--2026-04-19-superseded-by-011) describes w
 
 ### What the changelog documents now
 
-The [0.2.1 fix](../CHANGELOG.md#021-2026-10-16) is **`stack apply` stops attempting to write placeholder secrets.** Wiring checks declared secret names with `phantom list --json`; it never writes to the vault or fills missing values. `WireResult.envelopes` is replaced by `present` and `missing`, and an unreadable vault reports providers as `skipped` instead of identifying missing names. Each required missing value needs user action: run `phantom add <NAME>` in a trusted terminal and enter the real value, never in a command argument.
+The [0.2.1 fix](../CHANGELOG.md#021-2026-10-16) is **`stack apply` stops attempting to write placeholder secrets.** Wiring checks declared secret names with `phantom list --json`; it never writes to the vault or fills missing values. `WireResult.envelopes` is replaced by `present` and `missing`. With a readable vault it prints `secrets in vault N · missing M · webhooks K` plus a `not in Phantom:` line; with an unreadable vault it reports providers as `skipped` instead of identifying missing names. Each required missing value needs user action: run `phantom add <NAME>` in a trusted terminal and enter the real value, never in a command argument.
 
 Later entries complete the picture:
 
@@ -177,11 +177,30 @@ Each apply entry has a label that the terms table cites. Links open the release 
 
 For the entry-by-entry file mapping behind these labels, see the [site changelog source map](site-changelog-review.md#apply-entry-source-map). For the wiring senses with output examples, see [apply terminology with examples](apply-terminology-examples.md) and [apply wiring terminology](apply-wiring-terminology.md).
 
+## Do the two changelogs differ?
+
+Not in this checkout: the files are byte-for-byte identical, so each entry has the same location, wording, punctuation and issue reference in both. They differ in role, not content:
+
+- `CHANGELOG.md` is the repository changelog and the source of truth for release notes.
+- `packages/site/src/data/CHANGELOG.md` is the copy the site renders at `/docs/changelog`. The site's `sync-content` script overwrites it with the root file before site development and builds, so a site-only edit would be overwritten by the next sync.
+
+Verify rather than assume, because a difference can appear between syncs. From the repository root:
+
+```sh
+diff -u CHANGELOG.md packages/site/src/data/CHANGELOG.md
+```
+
+No output and exit status 0 mean they match. Status 1 prints the differences (`-` lines are from the root changelog, `+` lines from the site copy); a higher status is an error such as a missing file, not a successful comparison.
+
 ## Verify
 
 ```bash
+grep -n -F 'stops attempting to write placeholder secrets.' \
+  CHANGELOG.md packages/site/src/data/CHANGELOG.md
 diff -u CHANGELOG.md packages/site/src/data/CHANGELOG.md
 HOME=$(mktemp -d) bun test packages/site/tests/changelog.test.ts scripts/apply-changelog-reader-guide.test.ts
 ```
 
-For deeper reading see the [reader FAQ](apply-changelog-reader-faq.md), the [mirroring guide](changelog-mirroring.md#review-before-syncing) for comparing the two files, and the [apply history guide](apply-history-reader-guide.md).
+Expect exactly one `grep` hit in each file, inside 0.2.1 → Bug fixes; no `diff` output; and the tests to pass, including the site test's byte-equality check.
+
+For deeper reading see the [comparison](apply-changelog-comparison.md#the-021-fix-entry) for entry-level wording, the [mirroring guide](changelog-mirroring.md#review-before-syncing) for comparing the two files, and the [apply history guide](apply-history-reader-guide.md).
