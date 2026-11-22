@@ -288,3 +288,73 @@ describe("exact locations", () => {
     expect(locations).toContain("0.2.2 includes its changes");
   });
 });
+
+describe("upgrading from the old wiring", () => {
+  const upgraders = docSection("Upgrading from the old wiring");
+  const flatUpgraders = upgraders.replace(/\s+/g, " ");
+
+  test("section links each cited apply entry and the changelog sections support its claims", () => {
+    for (const [heading, fragment, evidence] of [
+      [
+        "0.1.0 — 2026-04-19 (superseded by 0.1.1)",
+        "010--2026-04-19-superseded-by-011",
+        "attempted to write a `TODO_STACK_APPLY` placeholder",
+      ],
+      [
+        "0.2.1 (2026-10-16)",
+        "021-2026-10-16",
+        "`stack apply` stops attempting to write placeholder secrets",
+      ],
+      ["0.2.2 (2026-10-25)", "022-2026-10-25", "its npm publish failed"],
+      [
+        "0.3.0 (2026-10-31)",
+        "030-2026-10-31",
+        "not proof that every required secret is present",
+      ],
+      ["Unreleased", "unreleased", "including providers that failed"],
+    ] as const) {
+      expect(upgraders, `link to ${heading}`).toContain(`](../CHANGELOG.md#${fragment})`);
+      for (const source of sources) {
+        const entry = section(read(source), heading);
+        expect(entry, `${source}: ${heading}`).toBeDefined();
+        expect(entry, `${source}: ${heading}`).toContain(evidence);
+      }
+    }
+  });
+
+  test("section states the previous and current documented behavior accurately", () => {
+    for (const phrase of [
+      "previous `stack apply` wiring",
+      "`phantom add <KEY> TODO_STACK_APPLY --rotate`",
+      "refuses values in command arguments",
+      "always 0",
+      "never writes to the vault or fills missing values",
+      "`WireResult.envelopes` is replaced by `present` and `missing`",
+      "`skipped` instead of identifying missing names",
+      "`phantom add <NAME>` in a trusted terminal",
+      "names alone do not make apply fail",
+      "provider failures do",
+      "webhook stubs even when the vault is unreadable",
+      "both checks and stubs",
+      "npm publish failed",
+    ]) {
+      expect(flatUpgraders).toContain(phrase);
+    }
+  });
+
+  test("historical commands stay in code spans and the section is scoped to source releases", () => {
+    const all = doc.match(/TODO_STACK_APPLY/g) ?? [];
+    const codified = doc.match(/`[^`]*TODO_STACK_APPLY[^`]*`/g) ?? [];
+    expect(codified.length).toBe(all.length);
+    for (const phrase of [
+      "historical, not instructions to run",
+      "not the version installed",
+      "`stack apply --help`",
+    ]) {
+      expect(flatUpgraders).toContain(phrase);
+    }
+    expect(upgraders).toContain("](#reading-the-report)");
+    expect(doc).toContain("\n## Reading the report\n");
+    expect(existsSync(join(root, "docs/apply-upgrade-check.md"))).toBe(true);
+  });
+});
