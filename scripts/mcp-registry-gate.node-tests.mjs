@@ -80,6 +80,7 @@ const assetNames = [
   'stack-linux-arm64',
   'stack-darwin-x64',
   'stack-darwin-arm64',
+  'stack-windows-x64',
 ].flatMap((name) => [name, `${name}.sha256`]);
 const release = () => ({
   tag_name: tag,
@@ -316,6 +317,7 @@ test('successful release run has each exact required producer job, with no skips
     'Build stack-linux-arm64',
     'Build stack-darwin-x64',
     'Build stack-darwin-arm64',
+    'Build stack-windows-x64',
     'Publish to npm',
     'Smoke stack-darwin-arm64 natively',
     'Create GitHub Release',
@@ -349,7 +351,7 @@ test('successful release run has each exact required producer job, with no skips
   assert.throws(() => checkReleaseJobs({ total_count: 0, jobs: null }));
 });
 
-test('all eight uniquely uploaded assets on the exact non-draft release are required', () => {
+test('every published binary and checksum on the exact non-draft release is required', () => {
   assert.equal(checkAssets(release(), tag), true);
   let r = release();
   r.assets.pop();
@@ -492,6 +494,7 @@ test('readiness checks terminal exact run once; pending and failed runs fail imm
     'Build stack-linux-arm64',
     'Build stack-darwin-x64',
     'Build stack-darwin-arm64',
+    'Build stack-windows-x64',
     'Publish to npm',
     'Smoke stack-darwin-arm64 natively',
     'Create GitHub Release',
@@ -544,6 +547,7 @@ test('readiness falls back only from a well-formed incomplete run to a later suc
     'Build stack-linux-arm64',
     'Build stack-darwin-x64',
     'Build stack-darwin-arm64',
+    'Build stack-windows-x64',
     'Publish to npm',
     'Smoke stack-darwin-arm64 natively',
     'Create GitHub Release',
