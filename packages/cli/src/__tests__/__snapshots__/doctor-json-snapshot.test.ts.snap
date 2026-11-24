@@ -20,7 +20,7 @@ exports[`doctor CLI output snapshots --json without a project 1`] = `
   "schema_version": 1,
   "status": "fail",
   "tool": "ashlr-stack",
-  "version": "0.3.10",
+  "version": "0.3.11",
 }
 `;
 
@@ -44,7 +44,7 @@ exports[`doctor CLI output snapshots --json without Phantom 1`] = `
   "schema_version": 1,
   "status": "fail",
   "tool": "ashlr-stack",
-  "version": "0.3.10",
+  "version": "0.3.11",
 }
 `;
 
@@ -74,7 +74,7 @@ exports[`doctor CLI output snapshots --json with no services 1`] = `
   "schema_version": 1,
   "status": "warn",
   "tool": "ashlr-stack",
-  "version": "0.3.10",
+  "version": "0.3.11",
 }
 `;
 
@@ -110,7 +110,7 @@ exports[`doctor CLI output snapshots --json with a failing service 1`] = `
   "schema_version": 1,
   "status": "fail",
   "tool": "ashlr-stack",
-  "version": "0.3.10",
+  "version": "0.3.11",
 }
 `;
 
@@ -242,7 +242,7 @@ exports[`doctor CLI output snapshots --ecosystem --json with healthy, degraded, 
   "schema_version": 1,
   "status": "warn",
   "tool": "ashlr-stack",
-  "version": "0.3.10",
+  "version": "0.3.11",
 }
 `;
 

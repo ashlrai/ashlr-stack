@@ -72,6 +72,22 @@ The notes below were already included in v0.3.10. They remain here to preserve e
 
 - Setup, README and package READMEs separate the source version from the recorded npm publication (0.3.1 for `@ashlr/stack-core`, `@ashlr/stack` and `ashlr-stack-mcp`) and state that the published CLI and MCP packages declare Node.js 20 or newer. Source development uses Bun (#356, #361, #363).
 
+## 0.3.11 (2026-11-24)
+
+Contributor setup on macOS, Windows and Linux, clearer next steps from `stack status` and `stack doctor`, and a stricter diff secret scan.
+
+### Added
+
+- `node scripts/setup.mjs` sets up a clone on macOS, Windows, and Linux and smoke-tests `stack providers --json`. `bash scripts/setup.sh` and `scripts/setup.ps1` call it.
+- The npm `stack` command maps Windows x64 and arm64 to their release binaries and falls back to `dist/index.js` when the binary is not in the package.
+- `stack status` and `stack doctor` end with one plain next step, also in JSON as `next_step`. `stack doctor --ecosystem --json` gives each missing tool a `fix`.
+- The README lists every CLI command's options, the exit codes, and all 13 `ashlr.stack.*/v1` JSON outputs.
+
+### Changed
+
+- The diff secret scan fails closed when a pull request or merge queue run has no base commit.
+- CI Gate on a pull request from a fork no longer needs a cache write.
+
 ## 0.3.10 (2026-11-10)
 
 ### Added

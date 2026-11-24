@@ -29,11 +29,11 @@ export const STACK_MANIFEST = Object.freeze({
     Object.freeze({
       id: "core",
       name: "@ashlr/stack-core",
-      version: "0.3.10",
+      version: "0.3.11",
       distribution: "npm",
     }),
-    Object.freeze({ id: "cli", name: "@ashlr/stack", version: "0.3.10", distribution: "npm" }),
-    Object.freeze({ id: "mcp", name: "ashlr-stack-mcp", version: "0.3.10", distribution: "npm" }),
+    Object.freeze({ id: "cli", name: "@ashlr/stack", version: "0.3.11", distribution: "npm" }),
+    Object.freeze({ id: "mcp", name: "ashlr-stack-mcp", version: "0.3.11", distribution: "npm" }),
     Object.freeze({
       id: "plugin",
       name: "stack",

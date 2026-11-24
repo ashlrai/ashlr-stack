@@ -26,8 +26,8 @@ This guide sets up the tools side by side. Phantom (`phm`), Locus (`locus`), Sta
 |---|---|---|---|
 | Phantom `@ashlr/phantom` | 3.29.15 | 3.29.15 | `npm view @ashlr/phantom version` |
 | Locus `locus-cli` | 0.5.0 | 0.5.1 | `npm view locus-cli version` |
-| Stack `@ashlr/stack` | 0.3.10 | <!-- fresh:begin version-pin -->0.3.10<!-- fresh:end --> | `npm view @ashlr/stack version` |
-| Stack MCP `ashlr-stack-mcp` | 0.3.10 | <!-- fresh:begin version-pin -->0.3.10<!-- fresh:end --> | `npm view ashlr-stack-mcp version` |
+| Stack `@ashlr/stack` | 0.3.10 | <!-- fresh:begin version-pin -->0.3.11<!-- fresh:end --> | `npm view @ashlr/stack version` |
+| Stack MCP `ashlr-stack-mcp` | 0.3.10 | <!-- fresh:begin version-pin -->0.3.11<!-- fresh:end --> | `npm view ashlr-stack-mcp version` |
 
 The Stack publication rows were last checked against the npm registry on November 16, 2026 (0.3.10, each package declaring Node.js 20 or newer); the deeper archive, provenance and consumer verification below covers 0.3.6. The other tool rows and walkthrough observations remain historical; check their current registry versions and installed help before setup.
 
