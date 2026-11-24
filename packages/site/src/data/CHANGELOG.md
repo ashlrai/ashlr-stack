@@ -22,7 +22,7 @@ This section records merged work since `v0.3.10`. Check your installed version b
 
 **Changed**
 
-- On Windows, Phantom lookup finds `phantom.cmd` and `phantom.bat` when `phantom.exe` is absent, and runs those shims through the shell. `phantom.exe` still wins when both are installed.
+- On Windows, Phantom lookup finds `phantom.cmd` and `phantom.bat` when `phantom.exe` is absent. Those shims start through `cmd.exe /e:ON /v:OFF /d /c` with each argument quoted, so a secret name or path cannot break out of the command. `phantom.exe` still wins when both are installed and is spawned with no shell. The published Windows release file the smoke downloads is `stack-windows-x64.exe`.
 - Affected test selection ignores a trailing carriage return on a path, so a Windows checkout of a docs-only fixture no longer selects the full suite.
 - Pull requests and the merge queue now report `Gate (linux)`, `Gate (windows)` and `Gate (macos)` next to CI Gate. Windows and macOS run typecheck and the affected tests when the diff touches path handling, shell scripts, installers, manifests, lockfiles or the workflow. Install smoke on each OS runs on a pull request only for those paths. A published-release smoke downloads the checksum first and refuses to run the binary when the checksum is missing or wrong. The daily run still smoke-tests this commit and the latest release on all three OS.
 - The diff secret scan fails closed when a pull request or merge queue run has no base commit. It no longer scans only the newest commit in that case. A scheduled run still scans the newest commit, and fails if that parent is missing.

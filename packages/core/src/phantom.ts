@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { PhantomNotInstalledError, StackError } from "./errors.ts";
-import { phantomEnv, resolvePhantomBinary } from "./phantom-process.ts";
+import { phantomEnv, phantomSpawnTarget, resolvePhantomBinary } from "./phantom-process.ts";
 
 /**
  * Thin wrapper around the `phantom` CLI. Stack never stores secrets locally —
@@ -89,13 +89,12 @@ export async function exec(args: string[], opts: ExecOptions = {}): Promise<Phan
     // phantom and any grandchild holding its stdio. Interactive runs stay in
     // the foreground group so the TTY keeps working.
     const useGroup = hasTimeout && !opts.interactive && process.platform !== "win32";
-    const windowsShim = process.platform === "win32" && /\.(?:cmd|bat)$/i.test(binary);
-    const child = spawnImpl(binary, args, {
+    const target = phantomSpawnTarget(binary, args);
+    const child = spawnImpl(target.file, target.args, {
       env,
       cwd: opts.cwd,
       stdio: opts.interactive ? "inherit" : ["pipe", "pipe", "pipe"],
-      // Node cannot CreateProcess a .cmd file unless the shell runs it.
-      ...(windowsShim ? { shell: true } : {}),
+      ...(target.windowsVerbatimArguments ? { windowsVerbatimArguments: true } : {}),
       ...(useGroup ? { detached: true } : {}),
     });
 

@@ -24,7 +24,9 @@ export function sha256Bytes(bytes) {
 
 export function releaseAsset(platform, arch) {
   const target = compileTarget(platform, arch);
-  return target ? target.replace(/^bun-/, "stack-") : "";
+  if (!target) return "";
+  const name = target.replace(/^bun-/, "stack-");
+  return platform === "win32" ? `${name}.exe` : name;
 }
 
 export function commitInstallPath(platform, home) {

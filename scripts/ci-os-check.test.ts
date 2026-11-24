@@ -9,7 +9,8 @@ test("compile targets and the documented install path come from the OS", () => {
   expect(compileTarget("linux", "mips")).toBe("");
   expect(commitInstallPath("linux", "/home/runner")).toBe("/home/runner/.ashlr/bin/stack");
   expect(commitInstallPath("win32", "C:\\Users\\runner")).toMatch(/stack\.exe$/);
-  expect(releaseAsset("win32", "x64")).toBe("stack-windows-x64");
+  expect(releaseAsset("win32", "x64")).toBe("stack-windows-x64.exe");
+  expect(releaseAsset("linux", "x64")).toBe("stack-linux-x64");
   expect(parseSha256Line("")).toBe("");
   expect(parseSha256Line("abc")).toBe("");
   const bytes = new TextEncoder().encode("stack");

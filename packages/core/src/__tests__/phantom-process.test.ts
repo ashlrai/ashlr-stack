@@ -4,6 +4,7 @@ import {
   chmodSync,
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   realpathSync,
   rmSync,
   symlinkSync,
@@ -11,8 +12,13 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, join, resolve } from "node:path";
-import { PhantomNotInstalledError } from "../errors.ts";
-import { phantomEnv, resolvePhantomBinary } from "../phantom-process.ts";
+import { PhantomNotInstalledError, StackError } from "../errors.ts";
+import {
+  phantomEnv,
+  phantomSpawnTarget,
+  resolvePhantomBinary,
+  windowsBatchCommandLine,
+} from "../phantom-process.ts";
 
 const dirs: string[] = [];
 function tmp(): string {
@@ -103,6 +109,76 @@ describe("Phantom process boundary", () => {
       expect(() => resolvePhantomBinary({ PATH: bin })).toThrow(PhantomNotInstalledError);
     }
   });
+
+  test("a cmd shim quotes secret names and paths instead of handing them to the shell", () => {
+    const script = "C:\\Tools\\phantom.cmd";
+    const secret = "OPENAI_API_KEY";
+    const injection = "value & whoami > injected.txt";
+    const percent = "%PATH%";
+    const payload = "%CMDCMDLINE:~-1%&calc.exe";
+    const quoted = 'say "hi"';
+    const path = "C:\\Program Files\\stack";
+    const line = windowsBatchCommandLine(script, [
+      secret,
+      injection,
+      percent,
+      payload,
+      quoted,
+      path,
+      "",
+    ]);
+    expect(line.startsWith('cmd.exe /e:ON /v:OFF /d /c "')).toBe(true);
+    expect(line.endsWith('"')).toBe(true);
+    expect(line).toContain(`"${script}"`);
+    expect(line).toContain(` ${secret} `);
+    expect(line).toContain(`"${injection}"`);
+    expect(line).toContain('"%%cd:~,%PATH%%cd:~,%"');
+    expect(line).toContain('"%%cd:~,%CMDCMDLINE:~-1%%cd:~,%&calc.exe"');
+    expect(line).toContain('"say ""hi"""');
+    expect(line).toContain(`"${path}"`);
+    expect(line.endsWith(' """')).toBe(true);
+    expect(line.includes("shell")).toBe(false);
+    const target = phantomSpawnTarget(script, [injection], "win32");
+    expect(target.windowsVerbatimArguments).toBe(true);
+    expect(target.file === "cmd.exe" || target.file.endsWith("\\cmd.exe")).toBe(true);
+    expect(target.args.slice(0, 4)).toEqual(["/e:ON", "/v:OFF", "/d", "/c"]);
+    expect(target.args[4]).toBe(
+      windowsBatchCommandLine(script, [injection]).slice("cmd.exe /e:ON /v:OFF /d /c ".length),
+    );
+    expect(phantomSpawnTarget("C:\\Tools\\phantom.exe", [secret], "win32")).toEqual({
+      file: "C:\\Tools\\phantom.exe",
+      args: [secret],
+    });
+    expect(() => windowsBatchCommandLine(script, ["line\nbreak"])).toThrow(StackError);
+    expect(() => windowsBatchCommandLine("C:\\bad%name.cmd", [])).toThrow(StackError);
+  });
+
+  test.skipIf(process.platform !== "win32")(
+    "cmd.exe keeps metacharacters inside one phantom argument",
+    () => {
+      const dir = tmp();
+      const marker = join(dir, "argv.json");
+      const record = join(dir, "record.mjs");
+      writeFileSync(
+        record,
+        'import { writeFileSync } from "node:fs"; writeFileSync(process.argv[2], JSON.stringify(process.argv.slice(3)));\n',
+      );
+      const cmd = join(dir, "phantom.cmd");
+      writeFileSync(
+        cmd,
+        `@echo off\r\n"${process.execPath}" "${record}" "${marker}" "%~1" "%~2" "%~3"\r\n`,
+      );
+      const args = ["OPENAI_API_KEY", "value & whoami > injected.txt", "%PATH%"];
+      const spec = phantomSpawnTarget(cmd, args, "win32");
+      const result = spawnSync(spec.file, spec.args, {
+        cwd: dir,
+        encoding: "utf8",
+        windowsVerbatimArguments: true,
+      });
+      expect(result.status).toBe(0);
+      expect(JSON.parse(readFileSync(marker, "utf8"))).toEqual(args);
+    },
+  );
 
   test("resolves the first executable to an absolute path, including relative PATH entries", () => {
     const root = tmp();
