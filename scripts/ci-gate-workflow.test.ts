@@ -109,7 +109,9 @@ test("OS gates report beside CI Gate and do not join its needs", () => {
     expect(block).toMatch(/runs-on: ubuntu-latest\n/);
     expect(block).toContain("node scripts/ci-os-gate.mjs");
   }
-  expect(job("gate-linux")).toContain("needs: [fast, secret-scan, secret-shape, install-smoke-linux]");
+  expect(job("gate-linux")).toContain("needs: [classify, fast, secret-scan, secret-shape, install-smoke-linux]");
+  expect(job("install-smoke-linux")).toContain("needs: classify");
+  expect(job("install-smoke-linux")).toContain("needs.classify.outputs.run_os == 'true'");
   expect(job("gate-windows")).toContain("needs: [classify, os-windows, install-smoke-windows]");
   expect(job("gate-macos")).toContain("needs: [classify, os-macos, install-smoke-macos]");
   expect(job("os-windows")).toContain("runs-on: windows-latest");

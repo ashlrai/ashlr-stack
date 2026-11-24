@@ -1,7 +1,8 @@
+import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { chmodSync, mkdirSync } from "node:fs";
+import { chmodSync, copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { homedir, tmpdir } from "node:os";
 import { delimiter, dirname, join } from "node:path";
-import { homedir } from "node:os";
 
 export function compileTarget(platform, arch) {
   const cpu = arch === "arm64" || arch === "aarch64" ? "arm64" : arch === "x64" || arch === "x86_64" ? "x64" : "";
@@ -10,6 +11,20 @@ export function compileTarget(platform, arch) {
   if (platform === "darwin") return `bun-darwin-${cpu}`;
   if (platform === "win32") return `bun-windows-${cpu}`;
   return "";
+}
+
+export function parseSha256Line(text) {
+  const field = text.trim().split(/\s+/)[0] ?? "";
+  return /^[a-fA-F0-9]{64}$/.test(field) ? field.toLowerCase() : "";
+}
+
+export function sha256Bytes(bytes) {
+  return createHash("sha256").update(bytes).digest("hex");
+}
+
+export function releaseAsset(platform, arch) {
+  const target = compileTarget(platform, arch);
+  return target ? target.replace(/^bun-/, "stack-") : "";
 }
 
 export function commitInstallPath(platform, home) {
@@ -33,6 +48,55 @@ function assertProviders(env) {
   run("stack", ["providers", "--json"], env);
 }
 
+function curlTo(url, dest) {
+  return spawnSync(
+    "curl",
+    ["--proto", "=https", "--tlsv1.2", "--fail", "--location", "--silent", "--show-error", "--output", dest, url],
+    { stdio: "inherit" },
+  );
+}
+
+function installVerifiedRelease(home) {
+  const asset = releaseAsset(process.platform, process.arch);
+  if (!asset) {
+    console.error(`::error::no release asset for ${process.platform}/${process.arch}`);
+    process.exit(1);
+  }
+  const base = `https://github.com/ashlrai/ashlr-stack/releases/latest/download/${asset}`;
+  const dir = mkdtempSync(join(tmpdir(), "stack-release-"));
+  const shaPath = join(dir, "asset.sha256");
+  const binPath = join(dir, "asset.bin");
+  try {
+    const sha = curlTo(`${base}.sha256`, shaPath);
+    if (sha.status !== 0) {
+      console.error("::error::release checksum is missing; refusing to download the binary");
+      process.exit(1);
+    }
+    const expected = parseSha256Line(readFileSync(shaPath, "utf8"));
+    if (!expected) {
+      console.error("::error::release checksum is not a sha256; refusing to download the binary");
+      process.exit(1);
+    }
+    const bin = curlTo(base, binPath);
+    if (bin.status !== 0) {
+      console.error("::error::release binary download failed");
+      process.exit(1);
+    }
+    const actual = sha256Bytes(readFileSync(binPath));
+    if (actual !== expected) {
+      console.error("::error::release checksum mismatch; refusing to run the binary");
+      process.exit(1);
+    }
+    const outfile = commitInstallPath(process.platform, home);
+    mkdirSync(dirname(outfile), { recursive: true });
+    copyFileSync(binPath, outfile);
+    if (process.platform !== "win32") chmodSync(outfile, 0o755);
+    assertProviders(withPath([dirname(outfile)]));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
 function main() {
 const mode = process.argv[2];
 const home = homedir();
@@ -48,12 +112,7 @@ if (mode === "commit") {
   if (process.platform !== "win32") chmodSync(outfile, 0o755);
   assertProviders(withPath([dirname(outfile)]));
 } else if (mode === "release") {
-  if (process.platform === "win32") run("pwsh", ["-NoProfile", "-File", "scripts/install.ps1"]);
-  else run("bash", ["scripts/install.sh"]);
-  const dirs = process.platform === "win32"
-    ? [join(home, ".local", "bin"), join(home, ".bun", "bin"), join(process.env.APPDATA ?? "", "npm"), join(process.env.LOCALAPPDATA ?? "", "Programs", "ashlr-stack", "bin")]
-    : [join(home, ".ashlr", "bin"), join(home, ".bun", "bin"), join(home, ".local", "bin")];
-  assertProviders(withPath(dirs));
+  installVerifiedRelease(home);
 } else {
   console.error("::error::usage: ci-install-smoke.mjs commit|release");
   process.exit(1);

@@ -565,6 +565,8 @@ jobs:
 
   install-smoke-linux:
     name: install smoke (linux)
+    needs: classify
+    if: always() && needs.classify.result == 'success' && needs.classify.outputs.run_os == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -681,7 +683,7 @@ jobs:
   gate-linux:
     name: Gate (linux)
     if: always()
-    needs: [fast, secret-scan, secret-shape, install-smoke-linux]
+    needs: [classify, fast, secret-scan, secret-shape, install-smoke-linux]
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:

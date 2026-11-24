@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { compileTarget, commitInstallPath } from "./ci-install-smoke.mjs";
+import { compileTarget, commitInstallPath, parseSha256Line, releaseAsset, sha256Bytes } from "./ci-install-smoke.mjs";
 import { firstTestFailure, firstTscDiagnostic } from "./ci-os-test.mjs";
 
 test("compile targets and the documented install path come from the OS", () => {
@@ -9,6 +9,13 @@ test("compile targets and the documented install path come from the OS", () => {
   expect(compileTarget("linux", "mips")).toBe("");
   expect(commitInstallPath("linux", "/home/runner")).toBe("/home/runner/.ashlr/bin/stack");
   expect(commitInstallPath("win32", "C:\\Users\\runner")).toMatch(/stack\.exe$/);
+  expect(releaseAsset("win32", "x64")).toBe("stack-windows-x64");
+  expect(parseSha256Line("")).toBe("");
+  expect(parseSha256Line("abc")).toBe("");
+  const bytes = new TextEncoder().encode("stack");
+  const sum = sha256Bytes(bytes);
+  expect(parseSha256Line(`${sum}  stack-linux-x64`)).toBe(sum);
+  expect(parseSha256Line(`${sum.toUpperCase()}  stack-linux-x64`)).toBe(sum);
 });
 
 test("the first failing test and the first typecheck error keep file and line", () => {
