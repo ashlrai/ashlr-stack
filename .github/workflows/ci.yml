@@ -35,14 +35,31 @@ jobs:
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: "1.4.4"
-      - name: Cache Bun install
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+          # A pinned version turns this action's cache on. Fork pull requests
+          # cannot write it, and a restore error fails the step. Skip it there.
+          no-cache: "${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}"
+      # Restore only. The combined cache action saves in a post step, and a
+      # fork pull request cannot write the cache. Saving is a separate step
+      # that does not run for forks, so a refused write cannot fail this job.
+      - name: Restore Bun install cache
+        id: bun-cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ~/.bun/install/cache
           key: bun-${{ runner.os }}-1.4.4-${{ hashFiles('**/bun.lock', '**/bun.lockb') }}
           restore-keys: bun-${{ runner.os }}-1.4.4-
       - name: Install
         run: bun install --frozen-lockfile
+      - name: Save Bun install cache
+        if: >-
+          steps.bun-cache.outputs.cache-hit != 'true' &&
+          (github.event_name != 'pull_request' ||
+           github.event.pull_request.head.repo.full_name == github.repository)
+        continue-on-error: true
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-1.4.4-${{ hashFiles('**/bun.lock', '**/bun.lockb') }}
       - name: Typecheck (root workspace)
         run: bunx tsc --noEmit -p tsconfig.json
       - name: Tier-1 security tests
@@ -60,9 +77,10 @@ jobs:
       matrix:
         bun: ["1.2.0", "latest"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       # Docs-only PRs skip the steps below, but the job still runs and reports,
       # so the required check never strands. docs/provider-auth-matrix.md (read
@@ -87,13 +105,13 @@ jobs:
           echo "code=$code" >> "$GITHUB_OUTPUT"
           echo "full suite: $code"
 
-      - uses: oven-sh/setup-bun@v2
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         if: steps.scope.outputs.code == 'true'
         with:
           bun-version: ${{ matrix.bun }}
 
       - name: Cache Bun install
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ~/.bun/install/cache
           key: bun-${{ runner.os }}-${{ matrix.bun }}-${{ hashFiles('**/bun.lock', '**/bun.lockb') }}
@@ -134,7 +152,7 @@ jobs:
 
       # The npm packages ship Bun-built bundles that run under Node >= 20.
       # Build them and drive both under Node 20 so Node compat can't regress.
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         if: steps.scope.outputs.code == 'true'
         with:
           node-version: "20"
@@ -160,16 +178,18 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
 
-      - uses: oven-sh/setup-bun@v2
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         if: github.event.pull_request.draft != true
         with:
           bun-version: latest
 
       - name: Cache Bun install
         if: github.event.pull_request.draft != true
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ~/.bun/install/cache
           key: bun-${{ runner.os }}-latest-${{ hashFiles('**/bun.lock', '**/bun.lockb') }}
@@ -230,9 +250,10 @@ jobs:
     timeout-minutes: 45
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       # Docs-only PRs skip the steps below, but the job still runs and reports,
       # so the required check never strands. docs/provider-auth-matrix.md (read
@@ -257,13 +278,13 @@ jobs:
           echo "code=$code" >> "$GITHUB_OUTPUT"
           echo "full suite: $code"
 
-      - uses: oven-sh/setup-bun@v2
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         if: steps.scope.outputs.code == 'true'
         with:
           bun-version: latest
 
       - name: Cache Bun install
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ~/.bun/install/cache
           key: bun-${{ runner.os }}-latest-${{ hashFiles('**/bun.lock', '**/bun.lockb') }}
@@ -291,7 +312,6 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
       - name: Install pinned Gitleaks
         env:
@@ -315,6 +335,18 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           set -euo pipefail
+          # A pull_request checkout is the merge commit. A stale fork's base
+          # tip is not always an ancestor of the head, so fetch any missing
+          # endpoint from this repository before the range is computed.
+          fetch_if_missing() {
+            local sha="$1"
+            if [ -z "$sha" ]; then return 0; fi
+            if git cat-file -e "${sha}^{commit}" 2>/dev/null; then return 0; fi
+            git fetch --no-tags origin "$sha"
+          }
+          fetch_if_missing "$PR_BASE"
+          fetch_if_missing "$MG_BASE"
+          fetch_if_missing "$HEAD_SHA"
           case "$EVENT_NAME" in
             pull_request) base="$(git merge-base "$PR_BASE" "$HEAD_SHA")" ;;
             merge_group) base="$MG_BASE" ;;
@@ -340,7 +372,6 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
       - name: Scan candidate diff (fail closed)
         env:
@@ -351,6 +382,14 @@ jobs:
           set -euo pipefail
           echo "${SCRUB_SHA256}  .github/tests/secret-shape/scrub.pl" | sha256sum --check --strict
           if [ -z "${BASE_SHA}" ]; then BASE_SHA="$(git rev-parse "${HEAD_SHA}^1")"; fi
+          # Same reachability rule as the diff secret scan: the base tip of a
+          # stale fork is fetched from this repository, never from the fork.
+          if ! git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null; then
+            git fetch --no-tags origin "${BASE_SHA}"
+          fi
+          if ! git cat-file -e "${HEAD_SHA}^{commit}" 2>/dev/null; then
+            git fetch --no-tags origin "${HEAD_SHA}"
+          fi
           base="$(git merge-base "${BASE_SHA}" "${HEAD_SHA}")"
           git diff --no-color --no-ext-diff "${base}" "${HEAD_SHA}" > "${RUNNER_TEMP}/candidate.diff"
           perl .github/tests/secret-shape/scrub.pl --check --allow-fixtures < "${RUNNER_TEMP}/candidate.diff"

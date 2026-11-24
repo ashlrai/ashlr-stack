@@ -22,6 +22,7 @@ This section records merged work since `v0.3.10`. Check your installed version b
 
 **Changed**
 
+- CI Gate on a pull request from a fork no longer needs a cache write. The Bun install cache is restored when one exists and saved only for a same-repository pull request, the merge queue, or a scheduled run. The secret scans fetch a missing base commit from this repository before they diff, so a stale fork is still scanned on the commits it added.
 - Related notes are consolidated into the [apply changelog reader guide](docs/apply-changelog-reader-guide.md), [changelog mirroring guide](docs/changelog-mirroring.md), [site changelog review](docs/site-changelog-review.md), and [Phantom wiring example guide](docs/phantom-wire-example-reading-guide.md), with duplicate pages removed and their regression coverage retained in the guide tests.
 - Installation guides, MCP setup examples and agent references now record published version 0.3.10 and its Node.js 20 minimum, while keeping older verification results clearly dated.
 - Regression checks now cover more command help, unknown commands, fleet reports, wiring documentation, repository checks and Git hooks; coverage and security scans also run after merges to main.
