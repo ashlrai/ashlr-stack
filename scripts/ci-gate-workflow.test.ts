@@ -65,8 +65,27 @@ test("secret scans and Tier-1 tests still run on pull requests", () => {
   expect(shape).toContain("scrub.pl --check --allow-fixtures");
   expect(shape).toContain('git fetch --no-tags origin "${BASE_SHA}"');
   const scan = job("secret-scan");
-  expect(scan).toContain('git fetch --no-tags origin "$sha"');
+  expect(scan).toContain('git fetch --no-tags origin "$base"');
   expect(scan).not.toMatch(/\n\s+ref:/);
   expect(shape).not.toMatch(/\n\s+ref:/);
   expect(ci).not.toMatch(/contents: write|pull-requests:|id-token:/);
+});
+
+test("secret scan does not fall back to HEAD~1 on pull_request or merge_group", () => {
+  const scan = job("secret-scan");
+  const script = scan.slice(scan.indexOf("run: |"));
+  expect(script).toContain('pull_request) base="$PR_BASE"');
+  expect(script).toContain('merge_group) base="$MG_BASE"');
+  expect(script).toContain('schedule|workflow_dispatch) base="${HEAD_SHA}~1"');
+  expect(script.split("HEAD_SHA}~1").length - 1).toBe(1);
+  expect(script).not.toMatch(/then base="\$\{HEAD_SHA\}~1"/);
+  expect(script).not.toContain("fetch_if_missing");
+  expect(script).toMatch(/\[\[ "\$base" =~ \^\[0-9a-f\]\{40\}\$ \]\] && ! git cat-file -e "\$\{base\}\^\{commit\}"/);
+  expect(script).toContain('git fetch --no-tags origin "$base" || true');
+  expect(script).toMatch(/if \[ -z "\$base" \] \|\| ! git cat-file -e "\$\{base\}\^\{commit\}"/);
+  expect(script).toContain("refusing to scan a shorter range");
+  expect(script).toContain("exit 1");
+  const shape = job("secret-shape");
+  expect(shape).toContain("5aa902abedbb3bf7fa8d893b93969e247c82ff62ac26cd082215caabfb740265");
+  expect(shape).toContain("scrub.pl --check --allow-fixtures");
 });
