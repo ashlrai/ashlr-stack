@@ -1,20 +1,34 @@
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { affectedTests, changedPaths } from "./affected-tests.ts";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const executable = fileURLToPath(new URL("./affected-tests", import.meta.url));
 const product = ["./packages/cli", "./packages/core", "./packages/mcp", "./packages/site"];
+// The selector is a bash script. Windows cannot CreateProcess a shebang, so
+// the test runs it through bash there. The script itself stays the POSIX entry.
+function runExecutable(args: string[], opts: { cwd?: string } = {}) {
+  if (process.platform === "win32") {
+    return spawnSync("bash", [executable, ...args], { ...opts, encoding: "utf8" });
+  }
+  return spawnSync(executable, args, { ...opts, encoding: "utf8" });
+}
+
 const fixture = (name: string) =>
   readFileSync(new URL(`./__fixtures__/affected-tests/${name}.txt`, import.meta.url), "utf8")
     .trim()
-    .split("\n");
+    .split(/\r?\n/)
+    .filter(Boolean);
 
 describe("affected test selection", () => {
   test("docs-only fixture skips tests", () => {
     expect(affectedTests(fixture("docs-only"))).toEqual([]);
+  });
+  test("a trailing CR from a CRLF checkout does not select the full suite", () => {
+    expect(affectedTests(["README.md\r", "docs/config.md\r", "packages/core/README.md\r"])).toEqual([]);
   });
   test("single-module fixture selects its package", () => {
     expect(affectedTests(fixture("single-module"))).toEqual(["./packages/telemetry-worker"]);
@@ -115,13 +129,13 @@ describe("affected test selection", () => {
     expect(() => changedPaths("--help", root)).toThrow();
   });
   test("executable works outside the repository", () => {
-    const result = spawnSync(executable, ["HEAD"], { cwd: "/", encoding: "utf8" });
+    const result = runExecutable(["HEAD"], { cwd: tmpdir() });
     expect(result.status).toBe(0);
     expect(result.stdout).toBe("[]\n");
   });
   test("CLI failures emit no target list", () => {
     for (const args of [[], ["HEAD", "extra"], ["refs/heads/affected-tests-missing-base"]]) {
-      const result = spawnSync(executable, args, { encoding: "utf8" });
+      const result = runExecutable(args);
       expect(result.status).toBe(1);
       expect(result.stdout).toBe("");
       expect(result.stderr.length).toBeGreaterThan(0);

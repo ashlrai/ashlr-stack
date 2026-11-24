@@ -89,3 +89,34 @@ test("secret scan does not fall back to HEAD~1 on pull_request or merge_group", 
   expect(shape).toContain("5aa902abedbb3bf7fa8d893b93969e247c82ff62ac26cd082215caabfb740265");
   expect(shape).toContain("scrub.pl --check --allow-fixtures");
 });
+
+test("OS gates report beside CI Gate and do not join its needs", () => {
+  expect(job("gate")).toMatch(/needs: \[fast, secret-scan, test, site, lint, secret-shape\]/);
+  for (const [id, name] of [
+    ["gate-linux", "Gate (linux)"],
+    ["gate-windows", "Gate (windows)"],
+    ["gate-macos", "Gate (macos)"],
+    ["install-smoke-linux", "install smoke (linux)"],
+    ["install-smoke-windows", "install smoke (windows)"],
+    ["install-smoke-macos", "install smoke (macos)"],
+  ] as const) {
+    const block = job(id);
+    expect(block).toContain(`name: ${name}\n`);
+  }
+  for (const id of ["gate-linux", "gate-windows", "gate-macos"]) {
+    const block = job(id);
+    expect(block).toMatch(/if: always\(\)\n/);
+    expect(block).toMatch(/runs-on: ubuntu-latest\n/);
+    expect(block).toContain("node scripts/ci-os-gate.mjs");
+  }
+  expect(job("gate-linux")).toContain("needs: [classify, fast, secret-scan, secret-shape, install-smoke-linux]");
+  expect(job("install-smoke-linux")).toContain("needs: classify");
+  expect(job("install-smoke-linux")).toContain("needs.classify.outputs.run_os == 'true'");
+  expect(job("gate-windows")).toContain("needs: [classify, os-windows, install-smoke-windows]");
+  expect(job("gate-macos")).toContain("needs: [classify, os-macos, install-smoke-macos]");
+  expect(job("os-windows")).toContain("runs-on: windows-latest");
+  expect(job("os-macos")).toContain("runs-on: macos-latest");
+  expect(job("classify")).toContain("node scripts/ci-os-scope.mjs");
+  expect(job("install-smoke-linux")).toContain("bun scripts/ci-install-smoke.mjs release");
+  expect(ci).not.toMatch(/pull_request_target|workflow_run|id-token:|secrets\./);
+});

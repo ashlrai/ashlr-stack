@@ -2,9 +2,22 @@ import { expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { delimiter, join } from "node:path";
 
 const root = join(import.meta.dir, "..");
+
+function installPhantom(bin: string, script: string) {
+  const file = join(bin, "phantom");
+  writeFileSync(file, script);
+  chmodSync(file, 0o700);
+  if (process.platform === "win32") {
+    writeFileSync(join(bin, "phantom.cmd"), `@echo off\r\nbash "%~dp0phantom" %*\r\n`);
+  }
+}
+
+function phantomPath(bin: string): string {
+  return `${bin}${delimiter}${process.env.PATH ?? process.env.Path ?? ""}`;
+}
 
 test("original apply entry describes placeholder writes as past attempts", () => {
   const changelog = readFileSync(join(root, "CHANGELOG.md"), "utf8");
@@ -40,12 +53,10 @@ test("the changelog's unreadable vault example matches apply output", () => {
   try {
     const bin = join(dir, "bin");
     mkdirSync(bin);
-    const phantom = join(bin, "phantom");
-    writeFileSync(
-      phantom,
+    installPhantom(
+      bin,
       '#!/bin/sh\ncase "$1" in\n --version) echo fixture;;\n list) exit 1;;\n *) exit 1;;\nesac\n',
     );
-    chmodSync(phantom, 0o700);
     mkdirSync(join(dir, ".stack", "recipes"), { recursive: true });
     writeFileSync(join(dir, ".stack.toml"), "");
     writeFileSync(
@@ -78,7 +89,8 @@ await applyCommand.run({ args: { recipeId: "example", noWire: false, noRollback:
       env: {
         ...process.env,
         HOME: dir,
-        PATH: `${bin}:${process.env.PATH ?? ""}`,
+        PATH: phantomPath(bin),
+        Path: phantomPath(bin),
         NO_COLOR: "1",
         CI: "1",
       },
@@ -125,14 +137,14 @@ await applyCommand.run({ args: { recipeId: "example", noWire: false, noRollback:
 
     // A readable, empty inventory should produce the FAQ's missing-name example
     // and must not invoke Phantom to add a placeholder.
-    writeFileSync(
-      phantom,
+    installPhantom(
+      bin,
       '#!/bin/sh\nprintf "%s\\n" "$*" >> phantom-calls\ncase "$1" in\n --version) echo fixture;;\n list) echo "[]";;\n *) exit 1;;\nesac\n',
     );
     const missing = spawnSync("bun", [script], {
       cwd: dir,
       encoding: "utf8",
-      env: { ...process.env, HOME: dir, PATH: `${bin}:${process.env.PATH ?? ""}`, NO_COLOR: "1", CI: "1" },
+      env: { ...process.env, HOME: dir, PATH: phantomPath(bin), Path: phantomPath(bin), NO_COLOR: "1", CI: "1" },
       timeout: 20_000,
     });
     expect(missing.status).toBe(0);
@@ -177,12 +189,10 @@ test("partial failure still checks the whole recipe without creating secrets", (
   try {
     const bin = join(dir, "bin");
     mkdirSync(bin);
-    const phantom = join(bin, "phantom");
-    writeFileSync(
-      phantom,
+    installPhantom(
+      bin,
       '#!/bin/sh\nprintf "%s\\n" "$*" >> phantom-calls\ncase "$1" in\n --version) echo fixture;;\n list) echo "[]";;\n *) exit 1;;\nesac\n',
     );
-    chmodSync(phantom, 0o700);
     mkdirSync(join(dir, ".stack", "recipes"), { recursive: true });
     writeFileSync(join(dir, ".stack.toml"), "");
     writeFileSync(
@@ -206,7 +216,7 @@ await applyCommand.run({ args: { recipeId: "example", noWire: process.argv.inclu
     const result = spawnSync("bun", [script], {
       cwd: dir,
       encoding: "utf8",
-      env: { ...process.env, HOME: dir, PATH: `${bin}:${process.env.PATH ?? ""}`, NO_COLOR: "1", CI: "1" },
+      env: { ...process.env, HOME: dir, PATH: phantomPath(bin), Path: phantomPath(bin), NO_COLOR: "1", CI: "1" },
       timeout: 20_000,
     });
     expect(result.status).toBe(1);
@@ -227,7 +237,7 @@ await applyCommand.run({ args: { recipeId: "example", noWire: process.argv.inclu
     const noWire = spawnSync("bun", [script, "--noWire"], {
       cwd: dir,
       encoding: "utf8",
-      env: { ...process.env, HOME: dir, PATH: `${bin}:${process.env.PATH ?? ""}`, NO_COLOR: "1", CI: "1" },
+      env: { ...process.env, HOME: dir, PATH: phantomPath(bin), Path: phantomPath(bin), NO_COLOR: "1", CI: "1" },
       timeout: 20_000,
     });
     expect(noWire.status).toBe(1);

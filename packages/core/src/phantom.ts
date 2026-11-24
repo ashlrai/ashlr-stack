@@ -89,10 +89,13 @@ export async function exec(args: string[], opts: ExecOptions = {}): Promise<Phan
     // phantom and any grandchild holding its stdio. Interactive runs stay in
     // the foreground group so the TTY keeps working.
     const useGroup = hasTimeout && !opts.interactive && process.platform !== "win32";
+    const windowsShim = process.platform === "win32" && /\.(?:cmd|bat)$/i.test(binary);
     const child = spawnImpl(binary, args, {
       env,
       cwd: opts.cwd,
       stdio: opts.interactive ? "inherit" : ["pipe", "pipe", "pipe"],
+      // Node cannot CreateProcess a .cmd file unless the shell runs it.
+      ...(windowsShim ? { shell: true } : {}),
       ...(useGroup ? { detached: true } : {}),
     });
 
