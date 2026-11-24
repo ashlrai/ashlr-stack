@@ -4,6 +4,30 @@ Thanks for poking around. Stack is early and the surface is intentionally curate
 
 Stack is one tool in the [Ashlr ecosystem](README.md#part-of-the-ashlr-ecosystem). Most changes here come from coding agents (Phantom and others) that open and merge their own pull requests. Human contributions are just as welcome and go through the same checks. If you are an agent, read [AGENTS.md](AGENTS.md) and [STACK.md](STACK.md) first.
 
+## Chat
+
+Questions and working sessions happen in [The Dev Shack](https://discord.gg/jBQrSU6XeD) on Discord.
+
+## Set up
+
+From a clone, on macOS or Linux:
+
+```bash
+bash scripts/setup.sh
+```
+
+The script does not prompt, and running it again is safe. It checks that the system is macOS or Linux, installs Bun when `bun` is not on `PATH`, requires Node.js 20 or newer, runs `bun install --frozen-lockfile`, and smoke-tests `stack providers --json` from this checkout. A Dev Container runs the same script when the container is created (`.devcontainer/devcontainer.json`).
+
+## Tests
+
+After setup, run the full suite in a throwaway home:
+
+```bash
+HOME=$(mktemp -d) bun test
+```
+
+Typecheck with `bunx tsc --noEmit -p tsconfig.json`. Lint with `bun run lint`. The required pull request check is CI Gate. Its commands are under [Run the gate locally](#run-the-gate-locally). The [Dev loop](#dev-loop) lists the everyday commands.
+
 ## Finding something to work on
 
 New here? Start with the [good first issue](https://github.com/ashlrai/ashlr-stack/labels/good%20first%20issue) label. Issues also labeled [help wanted](https://github.com/ashlrai/ashlr-stack/labels/help%20wanted) are ones we would especially like a PR for.
@@ -14,6 +38,16 @@ New here? Start with the [good first issue](https://github.com/ashlrai/ashlr-sta
 - Questions are welcome in issues. We read all of them.
 - Everyone, human or agent, follows the [Code of Conduct](CODE_OF_CONDUCT.md).
 
+## Pull request flow
+
+1. Fork `ashlrai/ashlr-stack` if you do not have write access, then clone your fork.
+2. Create a branch. Do not commit on `main`.
+3. Open a pull request against `main`. Say what changed, why, and how you tested it.
+4. Wait until CI Gate is green. That is the required check.
+5. The pull request merges through GitHub's merge queue. The queue runs CI Gate again on the latest `main` and squash-merges.
+
+[Contribute with an agent](#contribute-with-an-agent) is the same path with the commands written out.
+
 ## Contribute with an agent
 
 Humans and agents follow the same path. Point your coding agent (Claude Code, Codex, Cursor) at this section, [AGENTS.md](AGENTS.md) and [STACK.md](STACK.md#agent-quickstart-from-a-clone), then let it work.
@@ -21,7 +55,7 @@ Humans and agents follow the same path. Point your coding agent (Claude Code, Co
 **You need** git, [Bun](https://bun.sh) and Node.js 20 or newer. The required CI Gate pins Bun 1.4.4; the daily full suite also runs Bun 1.2.0 and the latest release. Node is needed because `bun run check:crypto`, `bun run fresh:sync`, `bun run fresh:check` and the release smoke scripts run under `node`. To run the two secret scans locally you also need Perl and, optionally, [Gitleaks](https://github.com/gitleaks/gitleaks).
 
 1. **Fork and clone.** Without write access to `ashlrai/ashlr-stack`, fork it on GitHub and clone your fork. Work on a branch, never on `main`.
-2. **Install.** `bun install --frozen-lockfile`. A new git worktree starts without `node_modules`, so run it in each worktree too. Optionally run `bun run setup-hooks` once per clone to wire the pre-commit hook in `.githooks/`, which runs `bunx biome check .`.
+2. **Install.** `bash scripts/setup.sh` (or `bun install --frozen-lockfile` on its own). A new git worktree starts without `node_modules`, so run it in each worktree too. Optionally run `bun run setup-hooks` once per clone to wire the pre-commit hook in `.githooks/`, which runs `bunx biome check .`.
 3. **Run the checks your change touches.** Both helpers compare against `origin/main`, so `git fetch origin` first. In a fork, `origin` is your fork, so bring its `main` up to date with `ashlrai/ashlr-stack` first, or the helpers and the [gate commands](#run-the-gate-locally) compare against a stale base:
 
      ```bash
