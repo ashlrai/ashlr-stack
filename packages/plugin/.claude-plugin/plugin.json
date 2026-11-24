@@ -12,8 +12,8 @@
   "keywords": ["claude-code", "plugin", "mcp", "stack", "devops", "ashlr"],
   "mcpServers": {
     "ashlr-stack": {
-      "command": "bash",
-      "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/mcp-entrypoint.sh"]
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/mcp-entrypoint.mjs"]
     }
   }
 }

@@ -10,9 +10,14 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { delimiter, join, resolve } from "node:path";
+import { delimiter, join, resolve, win32 } from "node:path";
 import { PhantomNotInstalledError } from "../errors.ts";
-import { phantomEnv, resolvePhantomBinary } from "../phantom-process.ts";
+import {
+  commandNeedsWindowsShell,
+  phantomEnv,
+  phantomLookupPaths,
+  resolvePhantomBinary,
+} from "../phantom-process.ts";
 
 const dirs: string[] = [];
 function tmp(): string {
@@ -98,6 +103,29 @@ describe("Phantom process boundary", () => {
     const expected = binary(bin);
     expect(resolvePhantomBinary({ PATH: `missing${delimiter}bin` }, root)).toBe(expected);
     expect(resolvePhantomBinary({ PATH: `${bin}${delimiter}${tmp()}` })).toBe(expected);
+  });
+
+  test("Windows lookup uses semicolon PATH entries and path.win32 joins", () => {
+    const paths = phantomLookupPaths(
+      { PATH: "C:\\Tools;D:\\Other", PATHEXT: ".EXE;.CMD" },
+      "C:\\work",
+      "win32",
+    );
+    expect(paths).toEqual([
+      win32.join("C:\\Tools", "phantom.EXE"),
+      win32.join("C:\\Tools", "phantom.CMD"),
+      win32.join("D:\\Other", "phantom.EXE"),
+      win32.join("D:\\Other", "phantom.CMD"),
+    ]);
+    expect(paths[0]).toBe("C:\\Tools\\phantom.EXE");
+    expect(commandNeedsWindowsShell("C:\\Tools\\phantom.CMD", "win32")).toBe(true);
+    expect(commandNeedsWindowsShell("C:\\Tools\\phantom.EXE", "win32")).toBe(false);
+    expect(commandNeedsWindowsShell("/usr/local/bin/phantom", "linux")).toBe(false);
+  });
+
+  test("Windows drops an empty PATH entry instead of searching the cwd", () => {
+    const paths = phantomLookupPaths({ PATH: ";C:\\Tools;", PATHEXT: ".EXE" }, "C:\\work", "win32");
+    expect(paths).toEqual([win32.join("C:\\Tools", "phantom.EXE")]);
   });
 
   test("missing PATH, empty entries and directories fail closed", () => {

@@ -11,7 +11,7 @@ is present:
 - `/stack:recommend <query>` - retrieve catalog matches and save a reusable recipe
 - `/stack:apply <recipe-id>` - replay provider setup and attempt optional wiring; inspect failures
 
-The plugin starts the MCP server through `scripts/mcp-entrypoint.sh`. It prefers `ashlr-stack-mcp` on PATH; otherwise it locates the monorepo server source relative to the script and runs it with Bun. The server shells out to the `stack` CLI (override with `STACK_BIN`). The CLI is the canonical implementation. The startup notice does not run a health check or configure a provider.
+The plugin starts the MCP server through `scripts/mcp-entrypoint.mjs` (`node`, so it runs on macOS, Windows, and Linux). It prefers `ashlr-stack-mcp` on PATH; otherwise it locates the monorepo server source relative to the script and runs it with Bun. On Windows a global `ashlr-stack-mcp.cmd` shim is started with a shell so PATHEXT can find it. The server shells out to the `stack` CLI (override with `STACK_BIN`). The CLI is the canonical implementation. The startup notice does not run a health check or configure a provider.
 
 ## Install
 

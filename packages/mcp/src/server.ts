@@ -30,12 +30,18 @@ function runStack(
   cwd: string | undefined,
 ): Promise<{ stdout: string; stderr: string; code: number }> {
   return new Promise((resolve) => {
+    const windowsShim =
+      process.platform === "win32" &&
+      (STACK.source === "path" || /\.(cmd|bat)$/i.test(STACK.command));
     const child = spawn(STACK.command, [...STACK.prefixArgs, ...args], {
       // A project-scoped tool's validated `cwd` (realpath); otherwise inherit
       // the server's own working directory.
       cwd,
       env: { ...process.env, ...(cwd ? { PWD: cwd } : {}), NO_COLOR: "1", CI: "1" },
       stdio: ["ignore", "pipe", "pipe"],
+      // `stack` on Windows is usually stack.cmd. CreateProcess skips PATHEXT.
+      shell: windowsShim,
+      windowsHide: true,
     });
     let stdout = "";
     let stderr = "";

@@ -55,7 +55,24 @@ export interface EcosystemEntry {
  * this process's environment reaches another tool.
  */
 export function probeEnv(env: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv {
-  const keep = ["PATH", "HOME", "USER", "LANG", "LC_ALL", "TMPDIR", "SYSTEMROOT", "PATHEXT"];
+  const keep = [
+    "PATH",
+    "Path",
+    "HOME",
+    "USERPROFILE",
+    "APPDATA",
+    "LOCALAPPDATA",
+    "USER",
+    "LANG",
+    "LC_ALL",
+    "TMPDIR",
+    "TEMP",
+    "TMP",
+    "SYSTEMROOT",
+    "SystemRoot",
+    "PATHEXT",
+    "ComSpec",
+  ];
   const out: NodeJS.ProcessEnv = {};
   for (const key of keep) if (env[key] !== undefined) out[key] = env[key];
   out.NO_COLOR = "1";
@@ -77,6 +94,9 @@ export const defaultProbeRunner: ProbeRunner = (command, timeoutMs) =>
       child = spawn(command, ["--ashlr-handshake", "--json"], {
         env: probeEnv(),
         stdio: ["ignore", "pipe", "ignore"],
+        // Companion CLIs installed with npm on Windows are .cmd shims.
+        shell: process.platform === "win32",
+        windowsHide: true,
         timeout: timeoutMs,
         killSignal: "SIGKILL",
       });

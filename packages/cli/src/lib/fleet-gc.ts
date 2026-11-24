@@ -2,7 +2,8 @@ import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import type { Dirent } from "node:fs";
 import { lstat, readFile, readdir, realpath } from "node:fs/promises";
-import { basename, dirname, join, resolve } from "node:path";
+import { homedir } from "node:os";
+import { basename, dirname, join, posix, resolve, win32 } from "node:path";
 import { promisify } from "node:util";
 import {
   type FleetSourceStatus,
@@ -13,6 +14,25 @@ import {
 } from "./fleet-jsonl.ts";
 
 const execFileAsync = promisify(execFile);
+
+/** Directories where a gh binary is installed, including Windows when HOME is unset. */
+export function ghBinaryCandidates(
+  env: NodeJS.ProcessEnv = process.env,
+  platform: NodeJS.Platform = process.platform,
+): string[] {
+  const paths = platform === "win32" ? win32 : posix;
+  const home =
+    platform === "win32" ? env.USERPROFILE || env.HOME || homedir() : env.HOME || homedir();
+  const names = platform === "win32" ? "gh.exe" : "gh";
+  const out = ["/opt/homebrew/bin/gh", "/usr/local/bin/gh", "/usr/bin/gh"];
+  if (home) out.push(paths.join(home, ".local", "bin", names));
+  if (platform === "win32") {
+    const local = env.LOCALAPPDATA || (home ? paths.join(home, "AppData", "Local") : "");
+    if (local) out.push(paths.join(local, "GitHub CLI", "gh.exe"));
+    if (env.ProgramFiles) out.push(paths.join(env.ProgramFiles, "GitHub CLI", "gh.exe"));
+  }
+  return out;
+}
 
 /**
  * fleet-gc collector — read-only dry-run classification of dispatcher worktrees.
@@ -1188,9 +1208,7 @@ export async function collectFleetGc(options: FleetGcOptions): Promise<FleetGcRe
   }
   sources.lsof = lsofOk ? "ok" : "unavailable";
 
-  const ghCandidates = ["/opt/homebrew/bin/gh", "/usr/local/bin/gh", "/usr/bin/gh"];
-  if (process.env.HOME) ghCandidates.push(join(process.env.HOME, ".local", "bin", "gh"));
-  const ghBin = options.ghBin ?? (await firstExisting(ghCandidates)) ?? "gh";
+  const ghBin = options.ghBin ?? (await firstExisting(ghBinaryCandidates())) ?? "gh";
 
   const deadline = started + budgetSeconds * 1000;
   const ctx: DeepContext & { root: string } = {
