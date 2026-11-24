@@ -80,7 +80,8 @@ Repo build and test steps stay in [STACK.md](./STACK.md#agent-quickstart-from-a-
 - Releases and publishes run through each repo's sanctioned release workflow, which any agent may dispatch.
 
 ## Getting started
-Build, test and run instructions for agents are in [STACK.md](./STACK.md#agent-quickstart-from-a-clone). The first-time contributor path for humans and agents (fork, the checks to run, what the required CI Gate check needs, and how a PR merges) is in [CONTRIBUTING.md](./CONTRIBUTING.md#contribute-with-an-agent).
+One-command setup from a clone, on macOS or Linux: `bash scripts/setup.sh`. It does not prompt, it is safe to run again, and it smoke-tests `stack providers --json`. A Dev Container runs it on create (`.devcontainer/devcontainer.json`). The same steps are in [CONTRIBUTING.md](./CONTRIBUTING.md#set-up).
+Build, test and run instructions for agents are in [STACK.md](./STACK.md#agent-quickstart-from-a-clone). The first-time contributor path for humans and agents (fork, the checks to run, what the required CI Gate check needs, and how a PR merges) is in [CONTRIBUTING.md](./CONTRIBUTING.md#contribute-with-an-agent). Chat is [The Dev Shack](https://discord.gg/jBQrSU6XeD) on Discord.
 
 ## Docs freshness
 

@@ -9,6 +9,7 @@
 [![source v0.3.10](https://img.shields.io/badge/source-v0.3.10-blue.svg)](CHANGELOG.md)
 <!-- fresh:end -->
 [![npm downloads](https://img.shields.io/npm/dm/%40ashlr%2Fstack?logo=npm&label=npm%20downloads)](https://www.npmjs.com/package/@ashlr/stack)
+[![Discord](https://img.shields.io/badge/Discord-The%20Dev%20Shack-5865F2?logo=discord&logoColor=white)](https://discord.gg/jBQrSU6XeD)
 
 **Configure supported services from your terminal or your AI agent.** Stack uses provider-specific OAuth or supplied credentials, provisions where the adapter supports it, and records selected credentials in [Phantom Secrets](https://phm.dev/secrets), Stack configuration and provider MCP entries. Vercel requires an existing personal access token; Stack does not create that token. Export an empty `.env.example` separately with `stack env export --example`.
 
@@ -143,6 +144,8 @@ git clone https://github.com/ashlrai/ashlr-stack && cd ashlr-stack
 bun install --frozen-lockfile
 bun run packages/cli/src/index.ts --help
 ```
+
+`bash scripts/setup.sh` does that install and smoke-tests `stack providers --json`. Details are in [CONTRIBUTING.md](CONTRIBUTING.md#set-up).
 
 Run source commands with `bun run packages/cli/src/index.ts <command>`. For MCP from source, build the CLI (`bun run --cwd packages/cli build`) or set `STACK_BIN`. `--frozen-lockfile` installs exactly what `bun.lock` pins, as CI does, so the lockfile stays out of your diff. Agents working on this repo should read [AGENTS.md](AGENTS.md) and [STACK.md](STACK.md); the checks to run before a PR are in [CONTRIBUTING.md](CONTRIBUTING.md#contribute-with-an-agent).
 
@@ -414,7 +417,7 @@ AshlrAI is an engineering firm. We build tools like Ashlr Stack to make our own 
 - **Start here:** read [CONTRIBUTING.md](CONTRIBUTING.md). Your coding agent can follow [AGENTS.md](AGENTS.md) and [llms.txt](llms.txt).
 - **Pick an issue:** [`good first issue`](https://github.com/ashlrai/ashlr-stack/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) or [`help wanted`](https://github.com/ashlrai/ashlr-stack/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22).
 - **See the whole lineup:** [ashlr.ai/open-source](https://ashlr.ai/open-source).
-<!-- TODO(discord): add the AshlrAI Discord invite here, and a Discord badge in the header, once the public invite link is confirmed. -->
+- **Chat:** join [The Dev Shack](https://discord.gg/jBQrSU6XeD) on Discord.
 
 ### Star history
 
