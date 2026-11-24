@@ -47,6 +47,7 @@ test("rendered Unicode entries preserve emoji, accents, and source order", async
 
 - First: café launch 🚀
 - Second: résumé support ✨
+- Combining: cafe\u0301 and a\u0315\u0300 stay in order
 - Third: naïve search 🔍
 `;
   const body = markdown.replace(/^#\s+Changelog\s*\n+/, "");
@@ -55,6 +56,7 @@ test("rendered Unicode entries preserve emoji, accents, and source order", async
   expect(html).toContain(`<ul>
 <li>First: café launch 🚀</li>
 <li>Second: résumé support ✨</li>
+<li>Combining: cafe\u0301 and a\u0315\u0300 stay in order</li>
 <li>Third: naïve search 🔍</li>
 </ul>`);
 });
