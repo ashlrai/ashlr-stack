@@ -335,24 +335,26 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           set -euo pipefail
-          # A pull_request checkout is the merge commit. A stale fork's base
-          # tip is not always an ancestor of the head, so fetch any missing
-          # endpoint from this repository before the range is computed.
-          fetch_if_missing() {
-            local sha="$1"
-            if [ -z "$sha" ]; then return 0; fi
-            if git cat-file -e "${sha}^{commit}" 2>/dev/null; then return 0; fi
-            git fetch --no-tags origin "$sha"
-          }
-          fetch_if_missing "$PR_BASE"
-          fetch_if_missing "$MG_BASE"
-          fetch_if_missing "$HEAD_SHA"
+          # pull_request and merge_group scan every added commit. schedule and
+          # workflow_dispatch scan the newest commit. A missing base used to
+          # fall back to HEAD~1 and hide every earlier commit in the diff.
           case "$EVENT_NAME" in
-            pull_request) base="$(git merge-base "$PR_BASE" "$HEAD_SHA")" ;;
+            pull_request) base="$PR_BASE" ;;
             merge_group) base="$MG_BASE" ;;
-            *) base="" ;;
+            schedule|workflow_dispatch) base="${HEAD_SHA}~1" ;;
+            *)
+              echo "::error::secret scan has no base for event ${EVENT_NAME}"
+              exit 1
+              ;;
           esac
-          if [ -z "$base" ] || ! git cat-file -e "${base}^{commit}" 2>/dev/null; then base="${HEAD_SHA}~1"; fi
+          # Fetch a missing 40-character commit. An empty base is not fetched.
+          if [[ "$base" =~ ^[0-9a-f]{40}$ ]] && ! git cat-file -e "${base}^{commit}" 2>/dev/null; then
+            git fetch --no-tags origin "$base" || true
+          fi
+          if [ -z "$base" ] || ! git cat-file -e "${base}^{commit}" 2>/dev/null; then
+            echo "::error::secret scan base ${base} is not in this checkout; refusing to scan a shorter range"
+            exit 1
+          fi
           # A PR must not allowlist its own leak: ignore any repo-supplied config.
           rm -f .gitleaks.toml .gitleaksignore
           echo "scanning ${base}..${HEAD_SHA}"
