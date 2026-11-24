@@ -33,9 +33,11 @@
   ],
   "type": "module",
   "bin": {
-    "stack": "./dist/index.js"
+    "stack": "./bin/stack.mjs"
   },
   "files": [
+    "bin/**/*",
+    "binaries/**/*",
     "dist/**/*",
     "README.md",
     "LICENSE"

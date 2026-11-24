@@ -16,7 +16,7 @@ describe("npm tarballs ship their bins", () => {
   // prepublishOnly packs a tarball with no dist/ and a global install of it has
   // no bin. `npm publish` runs prepack as well.
   for (const [dir, bin, entry] of [
-    ["packages/cli", "stack", "dist/index.js"],
+    ["packages/cli", "stack", "bin/stack.mjs"],
     ["packages/mcp", "ashlr-stack-mcp", "dist/server.js"],
   ] as const) {
     test(`${dir} builds ${entry} in prepack`, () => {
@@ -24,7 +24,8 @@ describe("npm tarballs ship their bins", () => {
       expect(pkg.bin).toEqual({ [bin]: `./${entry}` });
       expect(pkg.scripts.prepack).toBe("bun run build");
       expect(pkg.scripts.prepublishOnly).toBeUndefined();
-      expect(pkg.scripts.build).toContain(`const f='${entry}'`);
+      const built = entry.startsWith("bin/") ? "dist/index.js" : entry;
+      expect(pkg.scripts.build).toContain(`const f='${built}'`);
       expect(pkg.files).toContain("dist/**/*");
     });
   }

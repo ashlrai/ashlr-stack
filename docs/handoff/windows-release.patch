@@ -1,0 +1,152 @@
+diff --git a/.github/workflows/release.yml b/.github/workflows/release.yml
+index 4ea8814..74d9ea2 100644
+--- a/.github/workflows/release.yml
++++ b/.github/workflows/release.yml
+@@ -168,6 +168,13 @@ jobs:
+           - target: bun-darwin-arm64
+             os: ubuntu-latest
+             asset: stack-darwin-arm64
++          # Cross-compiled from Linux. bun-windows-arm64 emits a PE32+ Aarch64 exe.
++          - target: bun-windows-x64
++            os: ubuntu-latest
++            asset: stack-windows-x64.exe
++          - target: bun-windows-arm64
++            os: ubuntu-latest
++            asset: stack-windows-arm64.exe
+     steps:
+       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+         with:
+@@ -492,8 +499,8 @@ jobs:
+ 
+           ## Binaries
+ 
+-          Prebuilt for macOS (arm64 + x64) and Linux (arm64 + x64). SHA-256
+-          checksums are published alongside each asset.
++          Prebuilt for macOS (arm64 + x64), Linux (arm64 + x64), and Windows
++          (x64 + arm64, .exe). SHA-256 checksums are published alongside each asset.
+ 
+           ## What's next
+ 
+@@ -519,6 +526,10 @@ jobs:
+             dist/stack-darwin-x64.sha256
+             dist/stack-darwin-arm64
+             dist/stack-darwin-arm64.sha256
++            dist/stack-windows-x64.exe
++            dist/stack-windows-x64.exe.sha256
++            dist/stack-windows-arm64.exe
++            dist/stack-windows-arm64.exe.sha256
+           generate_release_notes: true
+           fail_on_unmatched_files: true
+           draft: false
+diff --git a/.github/workflows/windows-install-smoke.yml b/.github/workflows/windows-install-smoke.yml
+new file mode 100644
+index 0000000..d87839f
+--- /dev/null
++++ b/.github/workflows/windows-install-smoke.yml
+@@ -0,0 +1,53 @@
++name: Windows install smoke
++
++# Not part of the default CI matrix. Runs when a release is published, and
++# when a pull request touches the installer, the npm wrapper, or OS-specific
++# path code. Other pull requests do not start this job.
++
++on:
++  release:
++    types: [published]
++  pull_request:
++    paths:
++      - packages/cli/bin/**
++      - packages/cli/package.json
++      - scripts/install.sh
++      - scripts/install.ps1
++      - scripts/setup.mjs
++      - scripts/setup.sh
++      - scripts/setup.ps1
++      - scripts/fast-check.mjs
++      - scripts/fast-check.sh
++      - scripts/fast-check.ps1
++      - packages/core/src/phantom-process.ts
++      - packages/cli/src/lib/fleet-gc.ts
++      - .github/workflows/release.yml
++      - .github/workflows/windows-install-smoke.yml
++
++permissions:
++  contents: read
++
++jobs:
++  windows-install:
++    name: Windows npm wrapper smoke
++    runs-on: windows-latest
++    steps:
++      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
++
++      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
++        with:
++          node-version: "20"
++
++      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
++        with:
++          bun-version: "1.4.4"
++
++      - name: Install and build the JavaScript CLI
++        run: |
++          bun install --frozen-lockfile
++          bun run --cwd packages/cli build
++
++      - name: Run the npm wrapper
++        run: |
++          node packages/cli/bin/stack.mjs --version
++          node packages/cli/bin/stack.mjs providers --json
+diff --git a/scripts/mcp-registry-gate.mjs b/scripts/mcp-registry-gate.mjs
+index 1de6b6d..e6db19b 100644
+--- a/scripts/mcp-registry-gate.mjs
++++ b/scripts/mcp-registry-gate.mjs
+@@ -9,6 +9,8 @@ const assets = [
+   'stack-linux-arm64',
+   'stack-darwin-x64',
+   'stack-darwin-arm64',
++  'stack-windows-x64.exe',
++  'stack-windows-arm64.exe',
+ ].flatMap((n) => [n, `${n}.sha256`]);
+ const fail = (message) => {
+   throw new Error(message);
+diff --git a/scripts/mcp-registry-gate.node-tests.mjs b/scripts/mcp-registry-gate.node-tests.mjs
+index d809fc9..cecf50b 100644
+--- a/scripts/mcp-registry-gate.node-tests.mjs
++++ b/scripts/mcp-registry-gate.node-tests.mjs
+@@ -80,6 +80,8 @@ const assetNames = [
+   'stack-linux-arm64',
+   'stack-darwin-x64',
+   'stack-darwin-arm64',
++  'stack-windows-x64.exe',
++  'stack-windows-arm64.exe',
+ ].flatMap((name) => [name, `${name}.sha256`]);
+ const release = () => ({
+   tag_name: tag,
+@@ -316,6 +318,8 @@ test('successful release run has each exact required producer job, with no skips
+     'Build stack-linux-arm64',
+     'Build stack-darwin-x64',
+     'Build stack-darwin-arm64',
++    'Build stack-windows-x64.exe',
++    'Build stack-windows-arm64.exe',
+     'Publish to npm',
+     'Smoke stack-darwin-arm64 natively',
+     'Create GitHub Release',
+@@ -492,6 +496,8 @@ test('readiness checks terminal exact run once; pending and failed runs fail imm
+     'Build stack-linux-arm64',
+     'Build stack-darwin-x64',
+     'Build stack-darwin-arm64',
++    'Build stack-windows-x64.exe',
++    'Build stack-windows-arm64.exe',
+     'Publish to npm',
+     'Smoke stack-darwin-arm64 natively',
+     'Create GitHub Release',
+@@ -544,6 +550,8 @@ test('readiness falls back only from a well-formed incomplete run to a later suc
+     'Build stack-linux-arm64',
+     'Build stack-darwin-x64',
+     'Build stack-darwin-arm64',
++    'Build stack-windows-x64.exe',
++    'Build stack-windows-arm64.exe',
+     'Publish to npm',
+     'Smoke stack-darwin-arm64 natively',
+     'Create GitHub Release',
