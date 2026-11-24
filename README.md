@@ -8,6 +8,7 @@
 <!-- fresh:begin version-badge -->
 [![source v0.3.10](https://img.shields.io/badge/source-v0.3.10-blue.svg)](CHANGELOG.md)
 <!-- fresh:end -->
+[![npm downloads](https://img.shields.io/npm/dm/%40ashlr%2Fstack?logo=npm&label=npm%20downloads)](https://www.npmjs.com/package/@ashlr/stack)
 
 **Configure supported services from your terminal or your AI agent.** Stack uses provider-specific OAuth or supplied credentials, provisions where the adapter supports it, and records selected credentials in [Phantom Secrets](https://phm.dev/secrets), Stack configuration and provider MCP entries. Vercel requires an existing personal access token; Stack does not create that token. Export an empty `.env.example` separately with `stack env export --example`.
 
@@ -405,6 +406,31 @@ Use [SUPPORT.md](SUPPORT.md). Security reports stay private: [SECURITY.md](SECUR
 ## Star Ashlr Stack
 
 If this is the control plane you want agents to find, star the repo: [github.com/ashlrai/ashlr-stack](https://github.com/ashlrai/ashlr-stack).
+
+## Join the mission
+
+AshlrAI is an engineering firm. We build tools like Ashlr Stack to make our own work faster and more AI-native, then open-source them so every engineer can do the same. If you build with coding agents, build this with us.
+
+- **Start here:** read [CONTRIBUTING.md](CONTRIBUTING.md). Your coding agent can follow [AGENTS.md](AGENTS.md) and [llms.txt](llms.txt).
+- **Pick an issue:** [`good first issue`](https://github.com/ashlrai/ashlr-stack/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) or [`help wanted`](https://github.com/ashlrai/ashlr-stack/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22).
+- **See the whole lineup:** [ashlr.ai/open-source](https://ashlr.ai/open-source).
+<!-- TODO(discord): add the AshlrAI Discord invite here, and a Discord badge in the header, once the public invite link is confirmed. -->
+
+### Star history
+
+<a href="https://star-history.com/#ashlrai/ashlr-stack&Date">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=ashlrai/ashlr-stack&type=Date&theme=dark" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=ashlrai/ashlr-stack&type=Date" />
+    <img alt="Ashlr Stack star history" src="https://api.star-history.com/svg?repos=ashlrai/ashlr-stack&type=Date" width="600" />
+  </picture>
+</a>
+
+### Contributors
+
+<a href="https://github.com/ashlrai/ashlr-stack/graphs/contributors">
+  <img alt="Ashlr Stack contributors" src="https://contrib.rocks/image?repo=ashlrai/ashlr-stack" />
+</a>
 
 ## Contributing
 
