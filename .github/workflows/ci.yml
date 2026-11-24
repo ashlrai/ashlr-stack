@@ -490,6 +490,11 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 15
     steps:
+      - name: Keep LF endings
+        shell: bash
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
@@ -530,6 +535,10 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 15
     steps:
+      - name: Keep LF endings
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0

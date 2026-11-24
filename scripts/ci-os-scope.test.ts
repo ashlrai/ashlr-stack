@@ -21,6 +21,7 @@ test("the path gate includes path handling, scripts, installers, manifests, lock
     "bun.lock",
     ".github/workflows/ci.yml",
     ".github/homebrew-formula.template.rb",
+    ".gitattributes",
     "scripts/ci-os-scope.mjs",
     "scripts/ci-install-smoke.mjs",
   ];

@@ -21,7 +21,7 @@ export function isOsSensitive(path) {
     return true;
   }
   if (path.startsWith(".github/workflows/")) return true;
-  if (path === ".github/homebrew-formula.template.rb") return true;
+  if (path === ".github/homebrew-formula.template.rb" || path === ".gitattributes") return true;
   if (path.startsWith("scripts/ci-os") || path.startsWith("scripts/ci-install-smoke")) return true;
   if (PATH_MODULES.has(path)) return true;
   return /(?:^|\/)[^/]*path[^/]*\.(?:ts|tsx|mjs|js)$/i.test(path);

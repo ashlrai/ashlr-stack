@@ -1,2 +1,5 @@
+# Check out text as LF. A Windows runner otherwise rewrites LF files to CRLF
+# and changelog and fixture parsers that split on LF miss their headings.
+* text=auto eol=lf
 # Keep the CRLF fixtures byte-for-byte; autocrlf/eol must not normalize them.
 packages/site/tests/__fixtures__/*-crlf.md -text eol=crlf
