@@ -9,6 +9,7 @@ const assets = [
   'stack-linux-arm64',
   'stack-darwin-x64',
   'stack-darwin-arm64',
+  'stack-windows-x64',
 ].flatMap((n) => [n, `${n}.sha256`]);
 const fail = (message) => {
   throw new Error(message);
