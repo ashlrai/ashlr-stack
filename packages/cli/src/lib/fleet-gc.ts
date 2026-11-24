@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import type { Dirent } from "node:fs";
 import { lstat, readFile, readdir, realpath } from "node:fs/promises";
 import { homedir } from "node:os";
-import { basename, dirname, join, resolve } from "node:path";
+import { basename, dirname, join, posix, resolve, win32 } from "node:path";
 import { promisify } from "node:util";
 import {
   type FleetSourceStatus,
@@ -20,14 +20,16 @@ export function ghBinaryCandidates(
   env: NodeJS.ProcessEnv = process.env,
   platform: NodeJS.Platform = process.platform,
 ): string[] {
-  const home = env.USERPROFILE || env.HOME || homedir();
+  const paths = platform === "win32" ? win32 : posix;
+  const home =
+    platform === "win32" ? env.USERPROFILE || env.HOME || homedir() : env.HOME || homedir();
   const names = platform === "win32" ? "gh.exe" : "gh";
   const out = ["/opt/homebrew/bin/gh", "/usr/local/bin/gh", "/usr/bin/gh"];
-  if (home) out.push(join(home, ".local", "bin", names));
+  if (home) out.push(paths.join(home, ".local", "bin", names));
   if (platform === "win32") {
-    const local = env.LOCALAPPDATA || (home ? join(home, "AppData", "Local") : "");
-    if (local) out.push(join(local, "GitHub CLI", "gh.exe"));
-    if (env.ProgramFiles) out.push(join(env.ProgramFiles, "GitHub CLI", "gh.exe"));
+    const local = env.LOCALAPPDATA || (home ? paths.join(home, "AppData", "Local") : "");
+    if (local) out.push(paths.join(local, "GitHub CLI", "gh.exe"));
+    if (env.ProgramFiles) out.push(paths.join(env.ProgramFiles, "GitHub CLI", "gh.exe"));
   }
   return out;
 }
