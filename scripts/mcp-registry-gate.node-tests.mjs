@@ -351,7 +351,7 @@ test('successful release run has each exact required producer job, with no skips
   assert.throws(() => checkReleaseJobs({ total_count: 0, jobs: null }));
 });
 
-test('all eight uniquely uploaded assets on the exact non-draft release are required', () => {
+test('every published binary and checksum on the exact non-draft release is required', () => {
   assert.equal(checkAssets(release(), tag), true);
   let r = release();
   r.assets.pop();
