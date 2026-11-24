@@ -34,3 +34,10 @@ The full suite runs daily on `main`, not per PR, so check it yourself:
 ## Notes for reviewers
 
 <!-- Anything risky, breaking, or worth a closer look. From a fork? Say so; a maintainer or fleet agent turns on auto-merge. On a first PR, CI Gate waits until a maintainer approves the workflow runs. -->
+
+## Agent used (optional)
+
+<!-- Helps us learn which coding tools contribute. Leave blank for a fully human PR.
+     Examples: Codex, Claude Code, Cursor, GitHub Copilot, Gemini CLI, Grok, Devin, Aider, Windsurf, local model (name it). -->
+
+Agent used:
