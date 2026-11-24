@@ -9,6 +9,7 @@ const entries = [
   "- 日本語のエントリ: 設定ファイルを読み込む。",
   "- Emoji 🚀 and ZWJ family 👨‍👩‍👧 stay intact; combining e\u0301 (e + U+0301) too.",
   "- RTL שלום עולם and مرحبا بالعالم with “smart quotes” – en dash.",
+  "- Emoji variants: skin tone 👍🏽, flag 🇯🇵, and presentation selector ❤️.",
 ];
 const fixture = `# Changelog\n\n${heading}\n\n### Added\n\n${entries.join("\n")}\n\n## 0.3.0 (2026-10-31)\n\n- plain\n`;
 
@@ -36,6 +37,9 @@ test("unicode entry text survives rendering to HTML", async () => {
     expect(html).toContain(text);
   }
   expect(html).toContain("<code>stack añadir</code>");
+  expect(html).toContain("<li>Emoji 🚀 and ZWJ family 👨‍👩‍👧 stay intact; combining e\u0301 (e + U+0301) too.</li>");
+  expect(html).toContain("<li>Emoji variants: skin tone 👍🏽, flag 🇯🇵, and presentation selector ❤️.</li>");
+  expect(html).not.toContain("\uFFFD");
 });
 
 test("rendered Unicode entries preserve emoji, accents, and source order", async () => {
