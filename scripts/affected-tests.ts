@@ -7,7 +7,11 @@ const product = ["./packages/core", "./packages/cli", "./packages/mcp", "./packa
 /** Conservative package targets, including runtime and source-inspection consumers. */
 export function affectedTests(paths: readonly string[]): string[] | "ALL" {
   const targets = new Set<string>();
-  for (const path of paths) {
+  for (const raw of paths) {
+    // Windows checkouts of LF fixtures can hand the test a trailing CR.
+    // A doc path with that CR used to miss every pattern and select ALL.
+    const path = raw.replace(/\r$/, "");
+    if (!path) continue;
     // Configuration always wins over documentation classification.
     const name = path.split("/").at(-1) ?? "";
     if (

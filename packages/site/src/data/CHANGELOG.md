@@ -22,6 +22,7 @@ This section records merged work since `v0.3.10`. Check your installed version b
 
 **Changed**
 
+- Affected test selection ignores a trailing carriage return on a path, so a Windows checkout of a docs-only fixture no longer selects the full suite.
 - Pull requests and the merge queue now report `Gate (linux)`, `Gate (windows)` and `Gate (macos)` next to CI Gate. Windows and macOS run typecheck and the affected tests when the diff touches path handling, shell scripts, installers, manifests, lockfiles or the workflow. Each OS also smoke-tests the documented install of this commit, and the daily run smoke-tests the latest published release as well.
 - The diff secret scan fails closed when a pull request or merge queue run has no base commit. It no longer scans only the newest commit in that case. A scheduled run still scans the newest commit, and fails if that parent is missing.
 - CI Gate on a pull request from a fork no longer needs a cache write. The Bun install cache is restored when one exists and saved only for a same-repository pull request, the merge queue, or a scheduled run. The secret scans fetch a missing base commit from this repository before they diff, so a stale fork is still scanned on the commits it added.

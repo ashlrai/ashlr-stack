@@ -10,11 +10,15 @@ const product = ["./packages/cli", "./packages/core", "./packages/mcp", "./packa
 const fixture = (name: string) =>
   readFileSync(new URL(`./__fixtures__/affected-tests/${name}.txt`, import.meta.url), "utf8")
     .trim()
-    .split("\n");
+    .split(/\r?\n/)
+    .filter(Boolean);
 
 describe("affected test selection", () => {
   test("docs-only fixture skips tests", () => {
     expect(affectedTests(fixture("docs-only"))).toEqual([]);
+  });
+  test("a trailing CR from a CRLF checkout does not select the full suite", () => {
+    expect(affectedTests(["README.md\r", "docs/config.md\r", "packages/core/README.md\r"])).toEqual([]);
   });
   test("single-module fixture selects its package", () => {
     expect(affectedTests(fixture("single-module"))).toEqual(["./packages/telemetry-worker"]);
