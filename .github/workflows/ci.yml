@@ -1,7 +1,8 @@
 name: CI
 
 # PR and merge_group run one fast required check (CI Gate): typecheck,
-# Tier-1 security tests and the secret scan. The full suite (Bun matrix,
+# Tier-1 security tests and the secret scan. Gate (linux), Gate (windows)
+# and Gate (macos) report beside it and are not part of its needs. The full suite (Bun matrix,
 # site build, lint) runs twice a day on main and on workflow_dispatch; a red
 # scheduled run files a P0 FIX-MAIN issue (fix-main.yml). Push to main no
 # longer runs CI: the merge queue already ran the gate on the merged tree.
@@ -461,3 +462,263 @@ jobs:
           path: fixup-queue.txt
           if-no-files-found: error
           retention-days: 7
+
+  # Linux job that decides whether Windows and macOS runners start. A docs-only
+  # or unrelated diff skips them. An unreadable diff runs them.
+  classify:
+    name: OS path gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      run_os: ${{ steps.scope.outputs.run_os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Classify OS-sensitive changes
+        id: scope
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+        run: node scripts/ci-os-scope.mjs
+
+  os-windows:
+    name: Typecheck + affected tests (windows)
+    needs: classify
+    if: always() && needs.classify.result == 'success' && needs.classify.outputs.run_os == 'true'
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: "1.4.4"
+          no-cache: "${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}"
+      - name: Restore Bun install cache
+        id: bun-cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-1.4.4-${{ hashFiles('**/bun.lock', '**/bun.lockb') }}
+          restore-keys: bun-${{ runner.os }}-1.4.4-
+      - name: Install
+        run: bun install --frozen-lockfile
+      - name: Save Bun install cache
+        if: >-
+          steps.bun-cache.outputs.cache-hit != 'true' &&
+          (github.event_name != 'pull_request' ||
+           github.event.pull_request.head.repo.full_name == github.repository)
+        continue-on-error: true
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-1.4.4-${{ hashFiles('**/bun.lock', '**/bun.lockb') }}
+      - name: Typecheck and affected tests
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+        run: bun scripts/ci-os-test.mjs
+
+  os-macos:
+    name: Typecheck + affected tests (macos)
+    needs: classify
+    if: always() && needs.classify.result == 'success' && needs.classify.outputs.run_os == 'true'
+    runs-on: macos-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: "1.4.4"
+          no-cache: "${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}"
+      - name: Restore Bun install cache
+        id: bun-cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-1.4.4-${{ hashFiles('**/bun.lock', '**/bun.lockb') }}
+          restore-keys: bun-${{ runner.os }}-1.4.4-
+      - name: Install
+        run: bun install --frozen-lockfile
+      - name: Save Bun install cache
+        if: >-
+          steps.bun-cache.outputs.cache-hit != 'true' &&
+          (github.event_name != 'pull_request' ||
+           github.event.pull_request.head.repo.full_name == github.repository)
+        continue-on-error: true
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-1.4.4-${{ hashFiles('**/bun.lock', '**/bun.lockb') }}
+      - name: Typecheck and affected tests
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+        run: bun scripts/ci-os-test.mjs
+
+  install-smoke-linux:
+    name: install smoke (linux)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: "1.4.4"
+          no-cache: "${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}"
+      - name: Restore Bun install cache
+        id: bun-cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-1.4.4-${{ hashFiles('**/bun.lock', '**/bun.lockb') }}
+          restore-keys: bun-${{ runner.os }}-1.4.4-
+      - name: Install
+        run: bun install --frozen-lockfile
+      - name: Save Bun install cache
+        if: >-
+          steps.bun-cache.outputs.cache-hit != 'true' &&
+          (github.event_name != 'pull_request' ||
+           github.event.pull_request.head.repo.full_name == github.repository)
+        continue-on-error: true
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-1.4.4-${{ hashFiles('**/bun.lock', '**/bun.lockb') }}
+      - name: Install this commit and run the first command
+        run: bun scripts/ci-install-smoke.mjs commit
+      - name: Install the latest published release and run the first command
+        if: always() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+        run: bun scripts/ci-install-smoke.mjs release
+
+  install-smoke-windows:
+    name: install smoke (windows)
+    needs: classify
+    if: always() && needs.classify.result == 'success' && needs.classify.outputs.run_os == 'true'
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: "1.4.4"
+          no-cache: "${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}"
+      - name: Restore Bun install cache
+        id: bun-cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-1.4.4-${{ hashFiles('**/bun.lock', '**/bun.lockb') }}
+          restore-keys: bun-${{ runner.os }}-1.4.4-
+      - name: Install
+        run: bun install --frozen-lockfile
+      - name: Save Bun install cache
+        if: >-
+          steps.bun-cache.outputs.cache-hit != 'true' &&
+          (github.event_name != 'pull_request' ||
+           github.event.pull_request.head.repo.full_name == github.repository)
+        continue-on-error: true
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-1.4.4-${{ hashFiles('**/bun.lock', '**/bun.lockb') }}
+      - name: Install this commit and run the first command
+        run: bun scripts/ci-install-smoke.mjs commit
+      - name: Install the latest published release and run the first command
+        if: always() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+        run: bun scripts/ci-install-smoke.mjs release
+
+  install-smoke-macos:
+    name: install smoke (macos)
+    needs: classify
+    if: always() && needs.classify.result == 'success' && needs.classify.outputs.run_os == 'true'
+    runs-on: macos-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: "1.4.4"
+          no-cache: "${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}"
+      - name: Restore Bun install cache
+        id: bun-cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-1.4.4-${{ hashFiles('**/bun.lock', '**/bun.lockb') }}
+          restore-keys: bun-${{ runner.os }}-1.4.4-
+      - name: Install
+        run: bun install --frozen-lockfile
+      - name: Save Bun install cache
+        if: >-
+          steps.bun-cache.outputs.cache-hit != 'true' &&
+          (github.event_name != 'pull_request' ||
+           github.event.pull_request.head.repo.full_name == github.repository)
+        continue-on-error: true
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-1.4.4-${{ hashFiles('**/bun.lock', '**/bun.lockb') }}
+      - name: Install this commit and run the first command
+        run: bun scripts/ci-install-smoke.mjs commit
+      - name: Install the latest published release and run the first command
+        if: always() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+        run: bun scripts/ci-install-smoke.mjs release
+
+  gate-linux:
+    name: Gate (linux)
+    if: always()
+    needs: [fast, secret-scan, secret-shape, install-smoke-linux]
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Require linux jobs
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: node scripts/ci-os-gate.mjs
+
+  gate-windows:
+    name: Gate (windows)
+    if: always()
+    needs: [classify, os-windows, install-smoke-windows]
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Require windows jobs
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: node scripts/ci-os-gate.mjs
+
+  gate-macos:
+    name: Gate (macos)
+    if: always()
+    needs: [classify, os-macos, install-smoke-macos]
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Require macos jobs
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: node scripts/ci-os-gate.mjs
