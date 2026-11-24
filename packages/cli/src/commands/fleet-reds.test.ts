@@ -60,6 +60,11 @@ test("node:test spec failure keeps the complete Unicode test name", () => {
 test("empty output has no failing test", () => {
   expect(firstFailingTest("")).toBeNull();
 });
+test("an unmarked TAP not ok line is reported as a failure", () => {
+  const log = "not ok 1 - rejects expired token";
+  expect(failingTests(log)).toEqual(["rejects expired token"]);
+  expect(firstFailingTest(log)).toBe("rejects expired token");
+});
 test("finds a failure on the final line without a trailing newline", () => {
   expect(firstFailingTest("ok 1 - passing\nnot ok 2 - final failure")).toBe("final failure");
 });
