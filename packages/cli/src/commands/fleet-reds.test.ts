@@ -195,6 +195,22 @@ test("a ✖ failure marked TODO is excluded from reported failures", () => {
   expect(firstFailingTest("✖ a # TODO\n✖ b # TODO\n✖ c")).toBe("c");
 });
 
+test("a ✗ failure marked TODO is excluded from the full failure list", () => {
+  const lines = [
+    "✗ first failure (1ms)",
+    "✗ known gap # TODO pending fix",
+    "✗ later failure (2ms)",
+  ];
+  const ghLog = lines
+    .map((line) => `Tests\tRun\t2026-11-09T05:00:00.0000000Z \u001b[31m${line}\u001b[0m`)
+    .join("\r\n");
+  for (const log of [lines.join("\n"), ghLog]) {
+    expect(failingTests(log)).toEqual(["first failure", "later failure"]);
+    expect(firstFailingTest(log)).toBe("first failure");
+  }
+  expect(failingTests("✗ known gap # TODO pending fix")).toEqual([]);
+});
+
 test("unmarked TAP failures are reported, including names that only resemble a directive", () => {
   expect(firstFailingTest("ok 1 - passing\nnot ok 2 - plain failure")).toBe("plain failure");
   expect(firstFailingTest("not ok 1 no dash failure")).toBe("no dash failure");
