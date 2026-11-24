@@ -70,6 +70,26 @@ test("inline code entries are retained as codespan tokens with delimiters", () =
   expect(older.raw).toContain("`stack scan`");
 });
 
+test.each([
+  ["--filter=@ashlr/stack-site", "--filter=@ashlr/stack-site"],
+  ["~/.config/stack/config.json", "~/.config/stack/config.json"],
+  ["foo_bar.*[baz](qux)!", "foo_bar.*[baz](qux)!"],
+  ["{providers: [a, b]}; a | b", "{providers: [a, b]}; a | b"],
+  ['stack add <provider> --label="a&b"', "stack add &lt;provider&gt; --label=&quot;a&amp;b&quot;"],
+])("inline code punctuation stays unchanged in the rendered entry: %s", (code, escaped) => {
+  const markdown = `## 0.2.0 (2026-05-01)\n\n### Added\n\n- Run \`${code}\` now.\n`;
+  const versions = parseVersions(markdown);
+  expect(versions).toHaveLength(1);
+
+  const [version] = versions;
+  const spans = collectCodespans(version.body);
+  expect(spans.map((span) => span.text)).toEqual([code]);
+  expect(spans.map((span) => span.raw)).toEqual([`\`${code}\``]);
+  expect(version.raw).toContain(`- Run \`${code}\` now.`);
+  // HTML entities preserve the visible punctuation while keeping code literal.
+  expect(marked.parser(version.body)).toBe(`<h3>Added</h3>\n<ul>\n<li>Run <code>${escaped}</code> now.</li>\n</ul>\n`);
+});
+
 test("published changelog retains inline code with delimiters in version bodies", () => {
   const published = readFileSync(join(root, "packages/site/src/data/CHANGELOG.md"), "utf8");
   const versions = parseVersions(published);
