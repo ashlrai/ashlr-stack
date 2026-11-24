@@ -60,9 +60,7 @@ describe("ConfigNotFoundError", () => {
     const err = new ConfigNotFoundError("/work/app/.stack.toml");
     expect(err).toBeInstanceOf(StackError);
     expect(err.code).toBe("CONFIG_NOT_FOUND");
-    expect(err.message).toBe(
-      "No .stack.toml at /work/app/.stack.toml. Run `stack init` first.",
-    );
+    expect(err.message).toBe("No .stack.toml at /work/app/.stack.toml. Run `stack init` first.");
   });
 });
 
