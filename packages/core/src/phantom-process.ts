@@ -54,18 +54,26 @@ export function phantomEnv(source: NodeJS.ProcessEnv): Record<string, string> {
   return env;
 }
 
+function phantomFileNames(): readonly string[] {
+  if (process.platform !== "win32") return ["phantom"];
+  // npm and the Windows shims are phantom.cmd, not phantom.exe. Prefer the
+  // native image, then the shell shims CreateProcess can start.
+  return ["phantom.exe", "phantom.cmd", "phantom.bat", "phantom"];
+}
+
 /** Resolve before spawn changes cwd; do not search an implicit current directory. */
 export function resolvePhantomBinary(env: NodeJS.ProcessEnv, cwd = process.cwd()): string {
-  const name = process.platform === "win32" ? "phantom.exe" : "phantom";
   for (const dir of (env.PATH ?? "").split(delimiter)) {
     if (!dir) continue;
-    const candidate = resolve(cwd, dir, name);
-    try {
-      if (!statSync(candidate).isFile()) continue;
-      accessSync(candidate, constants.X_OK);
-      return candidate;
-    } catch {
-      // Missing or non-executable entries do not shadow a later installation.
+    for (const name of phantomFileNames()) {
+      const candidate = resolve(cwd, dir, name);
+      try {
+        if (!statSync(candidate).isFile()) continue;
+        accessSync(candidate, constants.X_OK);
+        return candidate;
+      } catch {
+        // Missing or non-executable entries do not shadow a later installation.
+      }
     }
   }
   throw new PhantomNotInstalledError();

@@ -91,6 +91,19 @@ describe("Phantom process boundary", () => {
     expect(phantomEnv({ PATH: delimiter })).toEqual({ PATH: "" });
   });
 
+  test("a cmd shim is a Windows phantom and is ignored on other systems", () => {
+    const bin = tmp();
+    const cmd = join(bin, "phantom.cmd");
+    writeFileSync(cmd, "@echo off\r\nexit /b 0\r\n");
+    if (process.platform === "win32") {
+      expect(resolvePhantomBinary({ PATH: bin })).toBe(cmd);
+      const exe = binary(bin);
+      expect(resolvePhantomBinary({ PATH: bin })).toBe(exe);
+    } else {
+      expect(() => resolvePhantomBinary({ PATH: bin })).toThrow(PhantomNotInstalledError);
+    }
+  });
+
   test("resolves the first executable to an absolute path, including relative PATH entries", () => {
     const root = tmp();
     const bin = join(root, "bin");
