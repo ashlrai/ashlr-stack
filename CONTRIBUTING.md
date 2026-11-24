@@ -8,15 +8,51 @@ Stack is one tool in the [Ashlr ecosystem](README.md#part-of-the-ashlr-ecosystem
 
 Questions and working sessions happen in [The Dev Shack](https://discord.gg/jBQrSU6XeD) on Discord.
 
+## Install the CLI
+
+### macOS
+
+```bash
+curl -fsSL https://stack.ashlr.ai/install.sh | bash
+```
+
+### Linux
+
+```bash
+curl -fsSL https://stack.ashlr.ai/install.sh | bash
+```
+
+### Windows
+
+```powershell
+irm https://stack.ashlr.ai/install.ps1 | iex
+```
+
+On every system, `npm i -g @ashlr/stack` is the registry install. Node.js 20 or newer is required.
+
 ## Set up
 
-From a clone, on macOS or Linux:
+From a clone, one command. It does not prompt, and running it again is safe. It requires Node.js 20 or newer, installs Bun when `bun` is missing, runs `bun install --frozen-lockfile`, and smoke-tests `stack providers --json`. A Dev Container runs the shell entry when the container is created (`.devcontainer/devcontainer.json`).
+
+### macOS
 
 ```bash
 bash scripts/setup.sh
 ```
 
-The script does not prompt, and running it again is safe. It checks that the system is macOS or Linux, installs Bun when `bun` is not on `PATH`, requires Node.js 20 or newer, runs `bun install --frozen-lockfile`, and smoke-tests `stack providers --json` from this checkout. A Dev Container runs the same script when the container is created (`.devcontainer/devcontainer.json`).
+### Linux
+
+```bash
+bash scripts/setup.sh
+```
+
+### Windows
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup.ps1
+```
+
+`node scripts/setup.mjs` is the same setup on all three systems. `scripts/fast-check.ps1` is the Windows twin of `bash scripts/fast-check.sh`.
 
 ## Tests
 

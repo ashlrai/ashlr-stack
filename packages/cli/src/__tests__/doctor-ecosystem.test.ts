@@ -69,6 +69,24 @@ describe("stack doctor --ecosystem", () => {
     expect(env).toEqual({ PATH: "/bin", HOME: "/h", NO_COLOR: "1" });
   });
 
+  test("probe env keeps Windows home and config dirs", () => {
+    expect(
+      probeEnv({
+        USERPROFILE: "C:\\Users\\dev",
+        APPDATA: "C:\\Users\\dev\\AppData\\Roaming",
+        LOCALAPPDATA: "C:\\Users\\dev\\AppData\\Local",
+        PATHEXT: ".COM;.EXE;.BAT;.CMD",
+        GITHUB_TOKEN: "t",
+      }),
+    ).toEqual({
+      USERPROFILE: "C:\\Users\\dev",
+      APPDATA: "C:\\Users\\dev\\AppData\\Roaming",
+      LOCALAPPDATA: "C:\\Users\\dev\\AppData\\Local",
+      PATHEXT: ".COM;.EXE;.BAT;.CMD",
+      NO_COLOR: "1",
+    });
+  });
+
   test("default runner: a missing binary is missing", async () => {
     expect(await defaultProbeRunner("ashlr-definitely-not-installed-xyz", 500)).toEqual({
       kind: "missing",

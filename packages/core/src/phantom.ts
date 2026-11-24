@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { PhantomNotInstalledError, StackError } from "./errors.ts";
-import { phantomEnv, resolvePhantomBinary } from "./phantom-process.ts";
+import { commandNeedsWindowsShell, phantomEnv, resolvePhantomBinary } from "./phantom-process.ts";
 
 /**
  * Thin wrapper around the `phantom` CLI. Stack never stores secrets locally —
@@ -93,6 +93,10 @@ export async function exec(args: string[], opts: ExecOptions = {}): Promise<Phan
       env,
       cwd: opts.cwd,
       stdio: opts.interactive ? "inherit" : ["pipe", "pipe", "pipe"],
+      // npm and bun global installs on Windows are phantom.cmd. CreateProcess
+      // cannot start those shims. A shell can, and the argv stays a list.
+      shell: commandNeedsWindowsShell(binary),
+      windowsHide: true,
       ...(useGroup ? { detached: true } : {}),
     });
 

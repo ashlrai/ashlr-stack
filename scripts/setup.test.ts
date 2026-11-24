@@ -1,51 +1,66 @@
 import { spawnSync } from "node:child_process";
-import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { readFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { describe, expect, test } from "bun:test";
+import { noticeFor } from "../packages/plugin/hooks/session-start.mjs";
+import { bunInstallArgv, supportedPlatform } from "./setup.mjs";
 
 const root = resolve(import.meta.dir, "..");
 
-function runSetup(env: NodeJS.ProcessEnv = process.env) {
-  return spawnSync("bash", ["scripts/setup.sh"], {
+function runSetup(entry: string) {
+  return spawnSync(entry === "node" ? "node" : "bash", entry === "node" ? ["scripts/setup.mjs"] : ["scripts/setup.sh"], {
     cwd: root,
     encoding: "utf8",
-    env,
+    env: process.env,
   });
 }
 
-describe("scripts/setup.sh", () => {
-  test("rejects an operating system other than macOS or Linux", () => {
-    const bin = mkdtempSync(join(tmpdir(), "stack-setup-uname-"));
-    try {
-      writeFileSync(
-        join(bin, "uname"),
-        '#!/bin/sh\nif [ "$1" = "-s" ]; then echo FreeBSD; exit 0; fi\nexec /usr/bin/uname "$@"\n',
-      );
-      chmodSync(join(bin, "uname"), 0o755);
-      const result = runSetup({
-        ...process.env,
-        PATH: `${bin}:${process.env.PATH ?? ""}`,
-      });
-      expect(result.status).toBe(1);
-      expect(result.stderr).toContain("macOS and Linux");
-      expect(result.stderr).toContain("FreeBSD");
-    } finally {
-      rmSync(bin, { recursive: true, force: true });
-    }
+describe("scripts/setup.mjs", () => {
+  test("accepts macOS, Windows, and Linux only", () => {
+    expect(supportedPlatform("darwin")).toBe(true);
+    expect(supportedPlatform("linux")).toBe(true);
+    expect(supportedPlatform("win32")).toBe(true);
+    expect(supportedPlatform("freebsd")).toBe(false);
   });
 
-  test("is idempotent and smoke-tests the provider catalog", () => {
-    const first = runSetup();
-    expect(first.status, first.stdout + first.stderr).toBe(0);
-    expect(first.stdout).toContain(
-      "setup: ready (stack providers --json, schema ashlr.stack.providers/v1).",
-    );
+  test("installs Bun with the Windows PowerShell one-liner or the Unix curl script", () => {
+    expect(bunInstallArgv("win32")).toEqual({
+      command: "powershell.exe",
+      args: [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        "irm https://bun.sh/install.ps1 | iex",
+      ],
+    });
+    expect(bunInstallArgv("linux").command).toBe("bash");
+    expect(bunInstallArgv("darwin").args.join(" ")).toContain("curl -fsSL https://bun.sh/install | bash");
+  });
 
-    const second = runSetup();
-    expect(second.status, second.stdout + second.stderr).toBe(0);
-    expect(second.stdout).toContain(
-      "setup: ready (stack providers --json, schema ashlr.stack.providers/v1).",
-    );
+  test("shell entry and node entry are idempotent and smoke-test the catalog", () => {
+    for (const entry of ["node", "bash"] as const) {
+      const result = runSetup(entry);
+      expect(result.status, result.stdout + result.stderr).toBe(0);
+      expect(result.stdout).toContain(
+        "setup: ready (stack providers --json, schema ashlr.stack.providers/v1).",
+      );
+    }
   }, 180_000);
+
+  test("contributor shell scripts use LF, and the Windows bash shim template does too", () => {
+    for (const path of ["scripts/setup.sh", "scripts/fast-check.sh", "scripts/setup.mjs"]) {
+      expect(readFileSync(join(root, path), "utf8")).not.toContain("\r");
+    }
+    const installer = readFileSync(join(root, "scripts/install.ps1"), "utf8");
+    expect(installer).toContain("#!/usr/bin/env bash`n");
+    expect(installer).not.toContain("#!/usr/bin/env bash`r`n");
+  });
+});
+
+describe("session start notice", () => {
+  test("counts service sections in a CRLF stack file", () => {
+    const text = "[stack]\r\nversion = \"1\"\r\n\r\n[services.openai]\r\nprovider = \"openai\"\r\n";
+    expect(noticeFor(text)).toContain("(1 services)");
+  });
 });

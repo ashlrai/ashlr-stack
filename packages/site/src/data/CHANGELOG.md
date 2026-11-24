@@ -8,7 +8,8 @@ This section records merged work since `v0.3.10`. Check your installed version b
 
 **Added**
 
-- The README links [The Dev Shack](https://discord.gg/jBQrSU6XeD) on Discord. `bash scripts/setup.sh` sets up a clone on macOS or Linux (idempotent, no prompts) and smoke-tests `stack providers --json`.
+- The README links [The Dev Shack](https://discord.gg/jBQrSU6XeD) on Discord. `node scripts/setup.mjs` sets up a clone on macOS, Windows, and Linux (idempotent, no prompts) and smoke-tests `stack providers --json`. `bash scripts/setup.sh` and `scripts/setup.ps1` call it.
+- Install steps for macOS, Linux, and Windows are separate headings in the README and CONTRIBUTING. Windows uses `irm https://stack.ashlr.ai/install.ps1 | iex`. Phantom lookup on Windows follows PATHEXT, including `.cmd` shims.
 - The README now lists the available options for every CLI command and subcommand.
 - `stack status` and `stack doctor` end with one plain next step, also in JSON as `next_step` (`summary`, `command`).
 - `stack doctor --ecosystem --json` gives each missing tool a `fix` with a summary and a command, or `null`.

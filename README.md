@@ -21,11 +21,37 @@ New projects stall on account setup, copied keys, and agent config. Stack turns 
 
 Use Node.js 20 or newer. No account or API key is needed for this first command.
 
-1. Install the CLI: `npm i -g @ashlr/stack`.
+1. Install the CLI: `npm i -g @ashlr/stack`. One command per system is below.
 2. Run `stack providers --json`.
 3. Look for `schema: "ashlr.stack.providers/v1"`, a `total`, and a `providers` list with names, categories, and authentication methods. An empty `unavailable` list means every provider loaded.
 
 This command reads the bundled catalog without configuring services. If your shell cannot find `stack`, reopen it after installation. For more tasks, use the [command map](docs/cli-command-map.md) or the examples below.
+
+### macOS
+
+```bash
+curl -fsSL https://stack.ashlr.ai/install.sh | bash
+```
+
+`npm i -g @ashlr/stack` installs the same CLI from the npm registry.
+
+### Linux
+
+```bash
+curl -fsSL https://stack.ashlr.ai/install.sh | bash
+```
+
+`npm i -g @ashlr/stack` installs the same CLI from the npm registry.
+
+### Windows
+
+In PowerShell:
+
+```powershell
+irm https://stack.ashlr.ai/install.ps1 | iex
+```
+
+`npm i -g @ashlr/stack` installs the same CLI from the npm registry. The explicit `https://` scheme matters: Windows PowerShell 5.1 will not follow the redirect if the scheme is omitted.
 
 ### Try more read-only commands
 

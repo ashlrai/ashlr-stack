@@ -54,18 +54,49 @@ export function phantomEnv(source: NodeJS.ProcessEnv): Record<string, string> {
   return env;
 }
 
+/** Names PATHEXT would try for `phantom` on Windows, in PATHEXT order. */
+export function phantomBinaryNames(
+  platform: NodeJS.Platform,
+  pathext = ".COM;.EXE;.BAT;.CMD",
+): string[] {
+  if (platform !== "win32") return ["phantom"];
+  const names: string[] = [];
+  for (const raw of pathext.split(";")) {
+    const ext = raw.trim();
+    if (!ext) continue;
+    const suffix = ext.startsWith(".") ? ext : `.${ext}`;
+    names.push(`phantom${suffix}`);
+  }
+  return names.length > 0 ? names : ["phantom.exe"];
+}
+
+/** `.cmd` and `.bat` shims do not start with CreateProcess. They need a shell. */
+export function commandNeedsWindowsShell(
+  file: string,
+  platform: NodeJS.Platform = process.platform,
+): boolean {
+  return platform === "win32" && /\.(cmd|bat)$/i.test(file);
+}
+
 /** Resolve before spawn changes cwd; do not search an implicit current directory. */
-export function resolvePhantomBinary(env: NodeJS.ProcessEnv, cwd = process.cwd()): string {
-  const name = process.platform === "win32" ? "phantom.exe" : "phantom";
+export function resolvePhantomBinary(
+  env: NodeJS.ProcessEnv,
+  cwd = process.cwd(),
+  platform: NodeJS.Platform = process.platform,
+): string {
+  const names = phantomBinaryNames(platform, env.PATHEXT);
   for (const dir of (env.PATH ?? "").split(delimiter)) {
     if (!dir) continue;
-    const candidate = resolve(cwd, dir, name);
-    try {
-      if (!statSync(candidate).isFile()) continue;
-      accessSync(candidate, constants.X_OK);
-      return candidate;
-    } catch {
-      // Missing or non-executable entries do not shadow a later installation.
+    for (const name of names) {
+      const candidate = resolve(cwd, dir, name);
+      try {
+        if (!statSync(candidate).isFile()) continue;
+        // Windows script shims have no Unix execute bit. PATHEXT is the lookup.
+        if (platform !== "win32") accessSync(candidate, constants.X_OK);
+        return candidate;
+      } catch {
+        // Missing or non-executable entries do not shadow a later installation.
+      }
     }
   }
   throw new PhantomNotInstalledError();

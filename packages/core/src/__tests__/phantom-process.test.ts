@@ -12,7 +12,7 @@ import {
 import { tmpdir } from "node:os";
 import { delimiter, join, resolve } from "node:path";
 import { PhantomNotInstalledError } from "../errors.ts";
-import { phantomEnv, resolvePhantomBinary } from "../phantom-process.ts";
+import { commandNeedsWindowsShell, phantomEnv, resolvePhantomBinary } from "../phantom-process.ts";
 
 const dirs: string[] = [];
 function tmp(): string {
@@ -98,6 +98,23 @@ describe("Phantom process boundary", () => {
     const expected = binary(bin);
     expect(resolvePhantomBinary({ PATH: `missing${delimiter}bin` }, root)).toBe(expected);
     expect(resolvePhantomBinary({ PATH: `${bin}${delimiter}${tmp()}` })).toBe(expected);
+  });
+
+  test("Windows PATHEXT resolves a .cmd shim that has no Unix execute bit", () => {
+    const dir = tmp();
+    const cmd = join(dir, "phantom.CMD");
+    writeFileSync(cmd, "@echo off\r\n");
+    expect(resolvePhantomBinary({ PATH: dir, PATHEXT: ".CMD" }, dir, "win32")).toBe(cmd);
+    expect(commandNeedsWindowsShell(cmd, "win32")).toBe(true);
+    expect(commandNeedsWindowsShell(cmd, "linux")).toBe(false);
+  });
+
+  test("Windows tries PATHEXT in order, so .EXE wins over a later .CMD", () => {
+    const dir = tmp();
+    writeFileSync(join(dir, "phantom.CMD"), "@echo off\r\n");
+    const exe = join(dir, "phantom.EXE");
+    writeFileSync(exe, "");
+    expect(resolvePhantomBinary({ PATH: dir, PATHEXT: ".EXE;.CMD" }, dir, "win32")).toBe(exe);
   });
 
   test("missing PATH, empty entries and directories fail closed", () => {

@@ -15,6 +15,7 @@ test("fast check detects package changes and reports type errors", () => {
     mkdirSync(join(temp, "scripts"));
     mkdirSync(join(temp, "packages", "sample"), { recursive: true });
     cpSync(join(root, "scripts", "fast-check.sh"), join(temp, "scripts", "fast-check.sh"));
+    cpSync(join(root, "scripts", "fast-check.mjs"), join(temp, "scripts", "fast-check.mjs"));
     symlinkSync(join(root, "node_modules"), join(temp, "node_modules"), "dir");
     writeFileSync(join(temp, "packages/sample/package.json"), '{"name":"sample"}\n');
     writeFileSync(join(temp, "packages/sample/tsconfig.json"), '{"compilerOptions":{"strict":true,"skipLibCheck":true,"noEmit":true},"include":["*.ts"]}\n');
