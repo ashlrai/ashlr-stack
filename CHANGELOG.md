@@ -8,7 +8,7 @@ This section records merged work since `v0.3.10`. Check your installed version b
 
 **Added**
 
-- The release build cross-compiles `stack-windows-x64` and publishes it with its sha256 next to the Linux and macOS binaries.
+- The release build cross-compiles `stack-windows-x64.exe` and publishes it with its sha256 next to the Linux and macOS binaries. The outfile keeps the `.exe` suffix, and that file is not passed to chmod.
 - The README now lists the available options for every CLI command and subcommand.
 - `stack status` and `stack doctor` end with one plain next step, also in JSON as `next_step` (`summary`, `command`).
 - `stack doctor --ecosystem --json` gives each missing tool a `fix` with a summary and a command, or `null`.

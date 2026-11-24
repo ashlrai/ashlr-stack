@@ -170,9 +170,11 @@ jobs:
             asset: stack-darwin-arm64
           # Cross-compiled on ubuntu, same as the Darwin assets. The native
           # Windows proof is the install smoke job, not this builder.
+          # The outfile ends in .exe. Bun appends .exe when the name does not,
+          # and that extra suffix would miss both chmod and the checksum.
           - target: bun-windows-x64
             os: ubuntu-latest
-            asset: stack-windows-x64
+            asset: stack-windows-x64.exe
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -241,7 +243,7 @@ jobs:
 
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
-          bun-version: latest
+          bun-version: "1.4.4"
 
       - name: Install deps
         run: bun install --frozen-lockfile
@@ -253,7 +255,10 @@ jobs:
             --compile \
             --target=${{ matrix.target }} \
             --outfile=dist/${{ matrix.asset }}
-          chmod +x dist/${{ matrix.asset }}
+          case "${{ matrix.asset }}" in
+            *.exe) ;;
+            *) chmod +x "dist/${{ matrix.asset }}" ;;
+          esac
 
       - name: Generate SHA-256
         run: |
@@ -498,8 +503,8 @@ jobs:
 
           ## Binaries
 
-          Prebuilt for macOS (arm64 + x64) and Linux (arm64 + x64). SHA-256
-          checksums are published alongside each asset.
+          Prebuilt for macOS (arm64 + x64), Linux (arm64 + x64) and Windows (x64).
+          SHA-256 checksums are published alongside each asset.
 
           ## What's next
 
@@ -525,8 +530,8 @@ jobs:
             dist/stack-darwin-x64.sha256
             dist/stack-darwin-arm64
             dist/stack-darwin-arm64.sha256
-            dist/stack-windows-x64
-            dist/stack-windows-x64.sha256
+            dist/stack-windows-x64.exe
+            dist/stack-windows-x64.exe.sha256
           generate_release_notes: true
           fail_on_unmatched_files: true
           draft: false
