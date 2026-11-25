@@ -6,6 +6,15 @@ const path = resolve(import.meta.dir, "../docs/apply-placeholder-review-checklis
 const doc = readFileSync(path, "utf8");
 const changelog = readFileSync(resolve(import.meta.dir, "../CHANGELOG.md"), "utf8");
 
+test("name classification lists both present and missing outcomes", () => {
+  const classification = doc.match(
+    /^- \[ \] \*\*Classify each required name\.\*\*.*(?:\n {2}.*)*/m,
+  )?.[0];
+  expect(classification).toBeDefined();
+  expect(classification).toMatch(/\bpresent\b/);
+  expect(classification).toMatch(/\bmissing\b/);
+});
+
 test("review guidance reflects the historical failure and current name checks", () => {
   expect(changelog).toContain("every call failed");
   expect(changelog).toContain("a missing name does not itself fail apply");
