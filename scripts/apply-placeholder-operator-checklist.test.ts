@@ -9,6 +9,10 @@ const docPath = resolve(import.meta.dir, "../docs/apply-placeholder-operator-che
 const doc = readFileSync(docPath, "utf8");
 const changelog = readFileSync(resolve(import.meta.dir, "../CHANGELOG.md"), "utf8");
 
+// Check across wrapped lines and shell continuations, while keeping separately
+// backtick-delimited commands and historical marker mentions apart.
+const placeholderCommand = /\bphantom\s+add\b[^`]*\bTODO_STACK_APPLY\b/;
+
 function examples(text: string): string[] {
   return [...text.matchAll(/```text\n([\s\S]*?)\n\s*```/g)].map((match) =>
     match[1]
@@ -19,6 +23,27 @@ function examples(text: string): string[] {
 }
 
 describe("apply placeholder operator checklist", () => {
+  it("keeps the current operator guidance free of placeholder write commands", () => {
+    expect(doc).not.toMatch(placeholderCommand);
+  });
+
+  it.each([
+    "`phantom add OPENAI_API_KEY TODO_STACK_APPLY`",
+    "`phantom add OPENAI_API_KEY 'TODO_STACK_APPLY' --rotate`",
+    "```sh\nphantom\tadd OPENAI_API_KEY TODO_STACK_APPLY\n```",
+    "~~~bash\nphantom  add OPENAI_API_KEY TODO_STACK_APPLY\n~~~",
+    "    phantom add OPENAI_API_KEY TODO_STACK_APPLY",
+    "```bash\nphantom add OPENAI_API_KEY \\\n  TODO_STACK_APPLY\n```",
+  ])("detects an unsafe command added to the current guidance: %s", (command) => {
+    expect(`${doc}\n${command}`).toMatch(placeholderCommand);
+  });
+
+  it("allows prompted entry alongside a separate historical marker mention", () => {
+    expect("Run `phantom add OPENAI_API_KEY`; never enter `TODO_STACK_APPLY`.").not.toMatch(
+      placeholderCommand,
+    );
+  });
+
   it("uses the changelog's missing and unreadable inventory examples", () => {
     const samples = examples(doc);
     expect(samples).toHaveLength(2);
