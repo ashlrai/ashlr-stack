@@ -12,7 +12,7 @@ const source = readFileSync(
 );
 
 describe("Phantom wire data flow", () => {
-  it("reads the example body before returning success", async () => {
+  it("reads the example body before the signature-verification TODO and success", async () => {
     const harness = setupFakePhantom({});
     try {
       const result = await wirePhantomForRecipe(
@@ -21,8 +21,13 @@ describe("Phantom wire data flow", () => {
       );
       const stub = readFileSync(result.webhooks[0]!, "utf8");
       const body = stub.indexOf("const body = await req.text();");
+      const verificationTodo = stub.indexOf(
+        "TODO(security): signature verification is NOT implemented here.",
+      );
       const success = stub.indexOf("status: 200");
       expect(body).toBeGreaterThanOrEqual(0);
+      expect(verificationTodo).toBeGreaterThan(body);
+      expect(success).toBeGreaterThan(verificationTodo);
       expect(success).toBeGreaterThan(body);
       expect(doc).toContain("reads the body, and returns 200");
     } finally {
