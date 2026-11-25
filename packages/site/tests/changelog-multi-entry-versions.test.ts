@@ -22,6 +22,25 @@ function parse(markdown: string): { heading: string; entries: string[] }[] {
 
 const fixture = readFileSync(join(import.meta.dir, "__fixtures__/changelog-multi-entry-versions.md"), "utf8");
 
+test("one version keeps both entries in source order when parsed and rendered", async () => {
+  const markdown = `# Changelog
+
+## 1.0.0
+
+- Zeta feature.
+- Alpha fix.
+`;
+
+  expect(parse(markdown)).toEqual([
+    { heading: "1.0.0", entries: ["Zeta feature.", "Alpha fix."] },
+  ]);
+
+  const html = await marked.parse(markdown);
+  expect(html.trim()).toBe(
+    '<h1>Changelog</h1>\n<h2>1.0.0</h2>\n<ul>\n<li>Zeta feature.</li>\n<li>Alpha fix.</li>\n</ul>',
+  );
+});
+
 test("every version keeps all of its entries, across subsections, in source order", () => {
   expect(parse(fixture)).toEqual([
     { heading: "1.2.0 (2026-06-03)", entries: ["Alpha feature.", "Beta feature.", "Gamma fix."] },
