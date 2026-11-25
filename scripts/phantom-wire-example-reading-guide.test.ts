@@ -116,7 +116,34 @@ function reminderExcerpt(): string {
   return excerpt;
 }
 
+function resolveSourceMapFile(markdown: string, base: URL): URL {
+  const section = markdown.split("\n## Source map\n")[1]?.split("\n## ")[0];
+  const target = section?.match(/\[`phantom-wire\.ts`\]\(([^)\s]+)\)/)?.[1];
+  if (!target) throw new Error("Missing phantom-wire.ts source-map link");
+  const url = new URL(target, base);
+  if (!existsSync(url) || !statSync(url).isFile()) {
+    throw new Error(`Source-map link target is not an existing file: ${target}`);
+  }
+  return url;
+}
+
 describe("Phantom wire example source map", () => {
+  it("resolves the documented source-map file link relative to the guide", () => {
+    expect(resolveSourceMapFile(doc, docUrl).href).toBe(sourceUrl.href);
+  });
+
+  it("rejects a missing source-map file target", () => {
+    const broken = doc.replace(
+      "[`phantom-wire.ts`](../packages/core/src/ai/phantom-wire.ts) that produce each",
+      "[`phantom-wire.ts`](../packages/core/src/ai/does-not-exist.ts) that produce each",
+    );
+    expect(broken).not.toBe(doc);
+    expect(() => resolveSourceMapFile(broken, docUrl)).toThrow("not an existing file");
+    expect(() => resolveSourceMapFile("no source map here", docUrl)).toThrow(
+      "Missing phantom-wire.ts source-map link",
+    );
+  });
+
   it("has a Source map section with the generated-example and reminder subsections", () => {
     expect(doc).toContain("\n## Source map\n");
     const subsections = ["### The generated example", "### The verification reminder", "### Verify the map"];
