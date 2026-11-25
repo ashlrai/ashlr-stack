@@ -85,6 +85,19 @@ test("two inline code spans retain their intervening prose in source order", () 
   );
 });
 
+test("inline code adjacent to punctuation preserves the complete rendered entry", () => {
+  const entry = "Run (`stack scan`), then `stack apply`: finish with `stack doctor`.";
+  const [version] = parseVersions(`## 0.2.0 (2026-05-01)\n\n- ${entry}\n`);
+
+  const spans = collectCodespans(version.body);
+  expect(spans.map((span) => span.text)).toEqual(["stack scan", "stack apply", "stack doctor"]);
+  expect(spans.map((span) => span.raw)).toEqual(["`stack scan`", "`stack apply`", "`stack doctor`"]);
+  expect(version.raw).toBe(`\n\n- ${entry}\n`);
+  expect(marked.parser(version.body)).toBe(
+    "<ul>\n<li>Run (<code>stack scan</code>), then <code>stack apply</code>: finish with <code>stack doctor</code>.</li>\n</ul>\n",
+  );
+});
+
 test.each([
   ["--filter=@ashlr/stack-site", "--filter=@ashlr/stack-site"],
   ["~/.config/stack/config.json", "~/.config/stack/config.json"],
