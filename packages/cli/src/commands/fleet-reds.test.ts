@@ -142,6 +142,50 @@ test("a passing-only TAP log has no failing test", () => {
     expect(failingTests(log)).toEqual([]);
   }
 });
+for (const [reporter, output] of [
+  [
+    "TAP",
+    [
+      "TAP version 13",
+      "# Subtest: unavailable feature",
+      "ok 1 - unavailable feature # SKIP needs a tty",
+      "1..1",
+      "# tests 1",
+      "# suites 0",
+      "# pass 0",
+      "# fail 0",
+      "# cancelled 0",
+      "# skipped 1",
+      "# todo 0",
+      "# duration_ms 1.2",
+    ],
+  ],
+  [
+    "spec",
+    [
+      "﹣ unavailable feature (1.2ms) # SKIP needs a tty",
+      "ℹ tests 1",
+      "ℹ suites 0",
+      "ℹ pass 0",
+      "ℹ fail 0",
+      "ℹ cancelled 0",
+      "ℹ skipped 1",
+      "ℹ todo 0",
+      "ℹ duration_ms 1.2",
+    ],
+  ],
+] as const) {
+  test(`node:test ${reporter} output with only a skipped test has no failing test`, () => {
+    const ghLog = output
+      .map((line) => `Tests\tRun\t2026-11-09T05:00:00.0000000Z \x1b[36m${line}\x1b[0m`)
+      .join("\r\n");
+    for (const log of [output.join("\n"), ghLog]) {
+      expect(firstFailingTest(log)).toBeNull();
+      expect(failingTests(log)).toEqual([]);
+    }
+  });
+}
+
 test("a TAP not ok line marked SKIP is not a failure", () => {
   expect(firstFailingTest("not ok 1 - unavailable feature # SKIP")).toBeNull();
 });
