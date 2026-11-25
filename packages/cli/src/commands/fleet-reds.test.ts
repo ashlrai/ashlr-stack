@@ -381,6 +381,24 @@ test("reports real TAP failures without reporting TODO failures", async () => {
     }
   }
 });
+test("reports real TAP failures without reporting SKIP failures", async () => {
+  const skipped =
+    "Test job\tRun tests\t2026-10-30T12:00:00.1234567Z not ok 1 - needs a tty # SKIP no tty";
+  const report = await collectFleetReds(async (args, signal) => {
+    if (!args.includes("--job")) return client(args, signal);
+    return args.includes("1") ? skipped : `${skipped}\nnot ok 2 - actual failure`;
+  });
+  expect(report.repos).toHaveLength(DOCTOR_REPOS.length);
+  for (const repo of report.repos) {
+    expect(repo.runs).toHaveLength(2);
+    for (const run of repo.runs ?? []) {
+      expect(run.jobs).toEqual([
+        { name: "Tests 1", firstFailingTest: null, logStatus: "unrecognized" },
+        { name: "Tests 3", firstFailingTest: "actual failure", logStatus: "parsed" },
+      ]);
+    }
+  }
+});
 test("empty job output retains failed jobs without identifying a failing test", async () => {
   const report = await collectFleetReds(async (args, signal) =>
     args.includes("--job") ? "" : client(args, signal),
