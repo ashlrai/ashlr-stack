@@ -11,6 +11,7 @@ const entries = [
   "- RTL שלום עולם and مرحبا بالعالم with “smart quotes” – en dash.",
   "- Emoji variants: skin tone 👍🏽, flag 🇯🇵, and presentation selector ❤️.",
   "- Emoji punctuation: launch 🚀! sparkle ✨, search 🔍?",
+  "- Experimental 🧪 support preserves the surrounding text.",
 ];
 const fixture = `# Changelog\n\n${heading}\n\n### Added\n\n${entries.join("\n")}\n\n## 0.3.0 (2026-10-31)\n\n- plain\n`;
 
@@ -41,6 +42,8 @@ test("unicode entry text survives rendering to HTML", async () => {
   expect(html).toContain("<li>Emoji 🚀 and ZWJ family 👨‍👩‍👧 stay intact; combining e\u0301 (e + U+0301) too.</li>");
   expect(html).toContain("<li>Emoji variants: skin tone 👍🏽, flag 🇯🇵, and presentation selector ❤️.</li>");
   expect(html).toContain("<li>Emoji punctuation: launch 🚀! sparkle ✨, search 🔍?</li>");
+  // U+1F9EA is outside the basic multilingual plane (a UTF-16 surrogate pair).
+  expect(html).toContain("<li>Experimental 🧪 support preserves the surrounding text.</li>");
   expect(html).not.toContain("\uFFFD");
 });
 
