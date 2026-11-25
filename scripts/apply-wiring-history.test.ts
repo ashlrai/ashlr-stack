@@ -7,6 +7,12 @@ const docPath = join(root, "docs/apply-wiring-history.md");
 const doc = readFileSync(docPath, "utf8");
 const changelog = readFileSync(join(root, "CHANGELOG.md"), "utf8");
 
+test("wiring history puts the --rotate attempt before the retry without it", () => {
+  expect(doc).toMatch(
+    /`phantom add <KEY> TODO_STACK_APPLY --rotate`,\s+then retried without\s+`--rotate`/,
+  );
+});
+
 test("wiring history agrees with the changelog about the attempted command and fix", () => {
   const fix = changelog.split("## 0.2.1 (2026-10-16)")[1]?.split("\n## ")[0];
   expect(fix).toBeDefined();
