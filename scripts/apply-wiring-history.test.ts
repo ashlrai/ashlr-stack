@@ -49,6 +49,7 @@ test("apply changelog entry separates failed historical attempts from current wi
 });
 
 test("historical marker is not presented as a usable credential", () => {
+  expect(doc).toMatch(/`TODO_STACK_APPLY` was a dummy\s+value/);
   expect(doc).toContain("do not run it");
   expect(doc).toContain("not a usable");
   expect(doc).toContain("do not store it as a secret");

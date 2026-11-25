@@ -10,7 +10,7 @@ For each declared secret, wiring attempted
 `phantom add <KEY> TODO_STACK_APPLY --rotate`, then retried without
 `--rotate`. Phantom Secrets does not support `--rotate` and rejects secret
 values in command arguments. Both attempts failed, so the old `envelopes`
-count was always zero. `TODO_STACK_APPLY` was a marker, not a usable
+count was always zero. `TODO_STACK_APPLY` was a dummy value, not a usable
 credential; do not store it as a secret.
 
 ## Documented change
