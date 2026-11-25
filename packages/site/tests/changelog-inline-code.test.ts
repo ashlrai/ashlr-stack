@@ -70,6 +70,21 @@ test("inline code entries are retained as codespan tokens with delimiters", () =
   expect(older.raw).toContain("`stack scan`");
 });
 
+test("two inline code spans retain their intervening prose in source order", () => {
+  const entry = "Run `stack scan` before `stack apply` to wire providers.";
+  const versions = parseVersions(`## 0.2.0 (2026-05-01)\n\n- ${entry}\n`);
+  expect(versions).toHaveLength(1);
+
+  const [version] = versions;
+  const spans = collectCodespans(version.body);
+  expect(spans.map((span) => span.text)).toEqual(["stack scan", "stack apply"]);
+  expect(spans.map((span) => span.raw)).toEqual(["`stack scan`", "`stack apply`"]);
+  expect(version.raw).toBe(`\n\n- ${entry}\n`);
+  expect(marked.parser(version.body)).toBe(
+    "<ul>\n<li>Run <code>stack scan</code> before <code>stack apply</code> to wire providers.</li>\n</ul>\n",
+  );
+});
+
 test.each([
   ["--filter=@ashlr/stack-site", "--filter=@ashlr/stack-site"],
   ["~/.config/stack/config.json", "~/.config/stack/config.json"],
