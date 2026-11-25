@@ -39,6 +39,20 @@ test("marker search excludes an unmarked neighboring entry", () => {
   ]);
 });
 
+test("parsed entry retains prose before and after a TODO marker", () => {
+  const markdown = `## 1.0.0
+
+- Apply the generated migration with \`TODO_STACK_APPLY\` before starting the service.
+`;
+
+  expect(findEntriesWith(markdown, "TODO_STACK_APPLY")).toEqual([
+    {
+      raw: "- Apply the generated migration with `TODO_STACK_APPLY` before starting the service.",
+      text: "Apply the generated migration with `TODO_STACK_APPLY` before starting the service.",
+    },
+  ]);
+});
+
 test("TODO_STACK_APPLY marker is intact in parsed root CHANGELOG.md entries", () => {
   const entries = findEntriesWith(changelog, "TODO_STACK_APPLY");
   expect(entries.length).toBeGreaterThanOrEqual(2);
