@@ -53,6 +53,19 @@ test("parsed entry retains prose before and after a TODO marker", () => {
   ]);
 });
 
+test("TODO marker renders as literal inline code", async () => {
+  const markdown = `## 1.0.0
+
+- Apply \`TODO_STACK_APPLY <recipe-id>\` before starting the service.
+`;
+
+  const html = await marked.parse(markdown, { gfm: true, breaks: false });
+
+  expect(html).toBe(
+    "<h2>1.0.0</h2>\n<ul>\n<li>Apply <code>TODO_STACK_APPLY &lt;recipe-id&gt;</code> before starting the service.</li>\n</ul>\n",
+  );
+});
+
 test("TODO_STACK_APPLY marker is intact in parsed root CHANGELOG.md entries", () => {
   const entries = findEntriesWith(changelog, "TODO_STACK_APPLY");
   expect(entries.length).toBeGreaterThanOrEqual(2);
