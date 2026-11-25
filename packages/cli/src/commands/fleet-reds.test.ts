@@ -240,12 +240,22 @@ test("colored Vitest failure with CRLF line endings returns a clean name", () =>
 });
 
 test("TODO in a failure name without a directive is reported", () => {
-  expect(firstFailingTest("not ok 1 - handles TODO items\nnot ok 2 - later failure")).toBe(
-    "handles TODO items",
-  );
-  expect(firstFailingTest("✖ handles TODO items (2ms)\n✖ later failure (1ms)")).toBe(
-    "handles TODO items",
-  );
+  for (const lines of [
+    [
+      "not ok 1 - known gap # TODO pending fix",
+      "not ok 2 - handles TODO items",
+      "not ok 3 - later failure",
+    ],
+    ["✖ known gap (1ms) # TODO pending fix", "✖ handles TODO items (2ms)", "✖ later failure (1ms)"],
+  ]) {
+    const ghLog = lines
+      .map((line) => `Tests\tRun\t2026-11-09T05:00:00.0000000Z \u001b[31m${line}\u001b[0m`)
+      .join("\r\n");
+    for (const log of [lines.join("\n"), ghLog]) {
+      expect(failingTests(log)).toEqual(["handles TODO items", "later failure"]);
+      expect(firstFailingTest(log)).toBe("handles TODO items");
+    }
+  }
 });
 
 test("one SKIP-marked failure and one unmarked failure report only the unmarked one", () => {
