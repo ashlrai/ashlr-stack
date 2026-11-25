@@ -130,6 +130,8 @@ The one required check is **CI Gate** in `.github/workflows/ci.yml`. On a pull r
 
 On a pull request the checks list also shows the full-suite jobs (the Bun test matrix, the site build and Lint) as skipped. That is expected: CI Gate accepts those three as skipped on pull requests and in the merge queue, and fails if any other job does not pass. No other workflow runs on a pull request; CodeQL, coverage and Scorecard run on `main`.
 
+For a Coverage failure, run `bun scripts/coverage-diagnostic.ts` from the repo root. It reports test-command failures separately from missing LCOV files; see the [coverage diagnostic guide](scripts/coverage-diagnostic.md) for JSON fields and exit codes.
+
 The full suite (the Bun test matrix, the site build with `astro check`, and Biome lint) runs daily on `main` and on manual dispatch, not on each PR. A red daily run opens a FIX-MAIN issue and agents fix `main` forward. Run the full suite locally before you open anything large, so your change does not turn the daily run red. Its commands are in [STACK.md](STACK.md#commands-the-ci-expects-to-pass).
 
 Never commit secret values. Use Phantom Secrets placeholders in examples and fixtures; the two secret scans fail closed.

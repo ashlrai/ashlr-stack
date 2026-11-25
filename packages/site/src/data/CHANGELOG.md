@@ -8,6 +8,7 @@ This section records merged work since `v0.3.10`. Check your installed version b
 
 **Added**
 
+- `bun scripts/coverage-diagnostic.ts` reproduces coverage locally with JSON outcomes for test-command failures, missing LCOV, and runner errors, using an isolated HOME and fresh artifacts.
 - The README links [The Dev Shack](https://discord.gg/jBQrSU6XeD) on Discord. `node scripts/setup.mjs` sets up a clone on macOS, Windows, and Linux (idempotent, no prompts) and smoke-tests `stack providers --json`. `bash scripts/setup.sh` and `scripts/setup.ps1` call it.
 - Install steps for macOS, Linux, and Windows are separate headings in the README and CONTRIBUTING. Windows uses `irm https://stack.ashlr.ai/install.ps1 | iex`. Phantom lookup on Windows follows PATHEXT, including `.cmd` shims.
 - The npm `stack` command maps Windows x64 to `binaries/stack-windows-x64.exe` and Windows arm64 to `binaries/stack-windows-arm64.exe`. An unknown platform exits with the supported list. When the release exe is not in the package yet, the command runs `dist/index.js`.
