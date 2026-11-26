@@ -3,9 +3,11 @@ import { mkdirSync, mkdtempSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+const DEFAULT_TIMEOUT_MS = 600_000;
+
 export interface CoverageDiagnostic {
   schema: "ashlr.stack.coverage-diagnostic/v1";
-  status: "passed" | "test-command-failed" | "missing-artifact" | "runner-error";
+  status: "passed" | "test-command-failed" | "missing-artifact" | "runner-error" | "timed-out";
   test_exit_code: number | null;
   signal: string | null;
   artifact_bytes: number;
@@ -16,9 +18,11 @@ export function coverageResult(
   testExitCode: number | null,
   signal: string | null,
   artifactBytes: number,
+  timedOut = false,
 ): CoverageDiagnostic {
-  const status =
-    testExitCode === null || signal !== null
+  const status = timedOut
+    ? "timed-out"
+    : testExitCode === null || signal !== null
       ? "runner-error"
       : testExitCode !== 0
         ? "test-command-failed"
@@ -43,7 +47,14 @@ export function coverageResult(
 }
 
 /** Reproduce Coverage's Bun command; isolate HOME and artifacts, stream test output to stderr. */
-export function diagnoseCoverage(cwd: string, testFiles: string[] = []): CoverageDiagnostic {
+export function diagnoseCoverage(
+  cwd: string,
+  testFiles: string[] = [],
+  timeoutMs = DEFAULT_TIMEOUT_MS,
+): CoverageDiagnostic {
+  if (!Number.isSafeInteger(timeoutMs) || timeoutMs <= 0 || timeoutMs > 2_147_483_647) {
+    throw new Error("Timeout must be a positive integer no greater than 2147483647 milliseconds.");
+  }
   if (testFiles.some((path) => path.startsWith("-"))) {
     throw new Error("Pass test paths only; coverage options are fixed to match CI.");
   }
@@ -59,17 +70,37 @@ export function diagnoseCoverage(cwd: string, testFiles: string[] = []): Coverag
         cwd,
         env: { ...process.env, HOME: home },
         stdio: ["ignore", 2, 2],
+        timeout: timeoutMs,
+        killSignal: "SIGKILL",
       },
     );
     const artifact = statSync(join(coverage, "lcov.info"), { throwIfNoEntry: false });
-    return coverageResult(result.status, result.signal, artifact?.isFile() ? artifact.size : 0);
+    return coverageResult(
+      result.status,
+      result.signal,
+      artifact?.isFile() ? artifact.size : 0,
+      result.error !== undefined && "code" in result.error && result.error.code === "ETIMEDOUT",
+    );
   } finally {
     rmSync(scratch, { recursive: true, force: true });
   }
 }
 
 if (import.meta.main) {
-  const report = diagnoseCoverage(process.cwd(), process.argv.slice(2));
+  let report: CoverageDiagnostic;
+  try {
+    const args = process.argv.slice(2);
+    const prefix = "--timeout-ms=";
+    const timeout = args[0]?.startsWith(prefix)
+      ? Number(args.shift()?.slice(prefix.length))
+      : DEFAULT_TIMEOUT_MS;
+    report = diagnoseCoverage(process.cwd(), args, timeout);
+  } catch {
+    console.error(
+      "Coverage diagnostic could not run. Check test paths, timeout and directory access.",
+    );
+    report = coverageResult(null, null, 0);
+  }
   console.log(JSON.stringify(report));
   process.exitCode = report.exit_code;
 }
