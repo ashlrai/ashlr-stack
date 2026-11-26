@@ -645,6 +645,27 @@ describe("term citations by entry", () => {
 // Folded in from the former apply-changelog-reader-faq doc and test.
 const heading = "- **`stack apply` stops attempting to write placeholder secrets.**";
 
+test("the former reader FAQ separates the historical placeholder command from current instructions", () => {
+  const upgrade = docSection("Upgrading from the old wiring");
+  const subsection = (title: string) =>
+    upgrade.split(`### ${title}\n`)[1]?.split("\n### ")[0]?.replace(/\s+/g, " ") ?? "";
+  const historical = subsection("What the earlier behavior was");
+  expect(historical).toContain("`phantom add <KEY> TODO_STACK_APPLY --rotate`");
+  expect(historical).toContain("then retried without `--rotate`");
+  expect(historical).toContain("Both forms failed every time");
+  expect(historical).toContain("no placeholder was ever stored");
+  expect(historical).toContain("historical, not instructions to run");
+
+  const current = subsection("What the changelog documents now");
+  expect(current).toContain("checks declared secret names with `phantom list --json`");
+  expect(current).toContain("never writes to the vault or fills missing values");
+  expect(current).toContain("`WireResult.envelopes` is replaced by `present` and `missing`");
+  expect(current).toContain("run `phantom add <NAME>` in a trusted terminal");
+  expect(current).toContain("enter the real value, never in a command argument");
+  expect(current).not.toContain("TODO_STACK_APPLY");
+  expect(current).not.toContain("--rotate");
+});
+
 test("the fix is where the guide says it is: first bullet of 0.2.1's first Bug fixes", () => {
   for (const path of sources) {
     const release = section(read(path), "0.2.1 (2026-10-16)");
