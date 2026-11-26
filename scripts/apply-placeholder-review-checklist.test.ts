@@ -6,6 +6,12 @@ const path = resolve(import.meta.dir, "../docs/apply-placeholder-review-checklis
 const doc = readFileSync(path, "utf8");
 const changelog = readFileSync(resolve(import.meta.dir, "../CHANGELOG.md"), "utf8");
 
+test("historical placeholder attempts failed without establishing vault contents", () => {
+  const introduction = doc.split(/\n\s*\n/)[1].replace(/\s+/g, " ");
+  expect(introduction).toMatch(/old wiring attempted to add `TODO_STACK_APPLY`, but every attempt failed/);
+  expect(introduction).toContain("zero `envelopes` count does not prove what is in the vault");
+});
+
 test("name classification lists both present and missing outcomes", () => {
   const classification = doc.match(
     /^- \[ \] \*\*Classify each required name\.\*\*.*(?:\n {2}.*)*/m,
