@@ -73,3 +73,16 @@ test("every relative link in the doc resolves to a file", () => {
     expect(existsSync(resolve(dirname(docPath), target)), `broken link: ${match[1]}`).toBe(true);
   }
 });
+
+test("timeline lists 0.1.0 before 0.2.1", () => {
+  const timeline = doc.split(/^## Timeline\s*$/m)[1]?.split(/^## /m)[0] ?? "";
+  const releases = [...timeline.matchAll(/^\| `## (\d+\.\d+\.\d+)(?:\s|\()/gm)].map(
+    (match) => match[1],
+  );
+  const initial = releases.indexOf("0.1.0");
+  const stop = releases.indexOf("0.2.1");
+
+  expect(initial, "missing 0.1.0 timeline entry").toBeGreaterThanOrEqual(0);
+  expect(stop, "missing 0.2.1 timeline entry").toBeGreaterThanOrEqual(0);
+  expect(stop, "0.2.1 must follow 0.1.0").toBeGreaterThan(initial);
+});
