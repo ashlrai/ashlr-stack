@@ -41,7 +41,8 @@ describe("apply placeholder terminology", () => {
     expect(rows).toHaveLength(1);
     const meaning = rows?.[0].split("|")[2];
     expect(meaning).toContain("A literal dummy value that old wiring attempted to add");
-    expect(meaning).toContain("not a credential or a secret name");
+    expect(meaning).toContain("not a usable credential or a secret name");
+    expect(meaning).toContain("required secrets need real values from their providers");
     expect(meaning).toContain("The calls failed; the placeholder was not successfully stored");
   });
 
@@ -74,7 +75,7 @@ describe("apply placeholder terminology", () => {
 
   test("the glossary defines the historical value and current inventory terms", () => {
     expect(doc).toContain("A literal dummy value");
-    expect(doc).toContain("not a credential or a secret name");
+    expect(doc).toContain("not a usable credential or a secret name");
     expect(doc).toContain("not successfully stored by those attempts");
     expect(doc).toContain("wiring no longer writes to the vault or fills missing");
     expect(doc).toContain("Skipped does not mean missing or present");
