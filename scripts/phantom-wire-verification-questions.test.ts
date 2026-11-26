@@ -23,6 +23,16 @@ describe("Phantom wire verification questions", () => {
     // doc identifies the TODO as emitted, not paraphrased.
     const excerpt = doc.match(/```ts\n([\s\S]*?)\n```/)?.[1];
     expect(excerpt).toBeDefined();
+    // Pin the full quoted reminder: containment alone would also accept a
+    // shortened quote that silently drops part of the verification warning.
+    expect(excerpt).toBe(
+      [
+        "//   const body = await req.text();",
+        "//   // TODO(security): signature verification is NOT implemented here. The",
+        "//   // header check above proves only that a signature header arrived; its",
+        "//   // value is never compared to anything.",
+      ].join("\n"),
+    );
     expect(excerpt).toContain("TODO(security): signature verification is NOT implemented here.");
     expect(source).toContain(excerpt ?? "");
 
