@@ -18,6 +18,18 @@ const source = readFileSync(
 );
 
 describe("Phantom wire verification questions", () => {
+  it("describes the generated webhook verification TODO as unimplemented in prose", () => {
+    // A warning inside a quoted stub alone must not satisfy the doc's status claim.
+    const introduction = doc.split("\n## Unanswered integration questions\n")[0]
+      .replace(/```[\s\S]*?```/g, "")
+      .replace(/\s+/g, " ");
+
+    expect(introduction).toContain("`TODO(security)` comment that `webhookStubFor` emits");
+    expect(introduction).toContain("Signature verification does not exist in this module.");
+    expect(introduction).toContain("no code path computes or compares a signature or MAC");
+    expect(introduction).toContain("nothing in the generated example verifies a request.");
+  });
+
   it("quotes the generated example's verification TODO verbatim and asks only unanswered questions", async () => {
     // The excerpt must be a verbatim slice of every generated example so the
     // doc identifies the TODO as emitted, not paraphrased.
