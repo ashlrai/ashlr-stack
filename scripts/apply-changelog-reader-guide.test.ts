@@ -205,6 +205,28 @@ describe("reading the report", () => {
     );
   });
 
+  test("identifies both the placeholder command and its retry as past behavior", () => {
+    const history = report.trim().split(/\n\s*\n/)[0].replace(/\s+/g, " ");
+    const expectPastAttempts = (text: string) => {
+      expect(text).toContain("The 0.2.1 entry records what wiring used to do.");
+      expect(text).toContain(
+        "For each declared secret it tried `phantom add <KEY> TODO_STACK_APPLY --rotate`, then tried again without `--rotate`.",
+      );
+      expect(text).toContain("so every call failed");
+    };
+
+    expectPastAttempts(history);
+    // Reject either attempt becoming a current instruction, even when the
+    // surrounding historical introduction is still present.
+    for (const [past, instruction] of [
+      ["it tried `phantom add", "run `phantom add"],
+      ["then tried again without", "then try again without"],
+    ]) {
+      expect(history).toContain(past);
+      expect(() => expectPastAttempts(history.replace(past, instruction))).toThrow();
+    }
+  });
+
   test("explains the historical apply fix in the 0.2.1 entry's own terms", () => {
     const fixes = section(read("CHANGELOG.md"), "0.2.1 (2026-10-16)").split("### Bug fixes\n")[1]?.split("\n### ")[0];
     const entry = fixes?.trimStart().split("\n")[0] ?? "";
