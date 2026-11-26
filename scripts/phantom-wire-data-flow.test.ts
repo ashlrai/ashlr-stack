@@ -12,6 +12,21 @@ const source = readFileSync(
 );
 
 describe("Phantom wire data flow", () => {
+  it("describes the handler and its verification reminder as commented out", () => {
+    const section = doc
+      .split("\n## Signature-verification TODO and trust limits\n")[1]
+      ?.split(/\n## /)[0]
+      ?.replace(/\s+/g, " ");
+    expect(section).toBeDefined();
+    expect(section).toContain(
+      "commented guidance for a future handler, not implemented verification.",
+    );
+    expect(section).toContain(
+      "Each generated file is entirely commented out, including its `TODO(security)`, the secret retrieval and the provider-specific verification hint.",
+    );
+    expect(section).toContain("If the example handler is uncommented as written");
+  });
+
   it("reads the example body before the signature-verification TODO and success", async () => {
     const harness = setupFakePhantom({});
     try {
