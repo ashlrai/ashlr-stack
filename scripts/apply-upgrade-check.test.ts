@@ -6,6 +6,12 @@ const docPath = resolve(import.meta.dir, "../docs/apply-upgrade-check.md");
 const doc = readFileSync(docPath, "utf8");
 const changelog = readFileSync(resolve(import.meta.dir, "../CHANGELOG.md"), "utf8");
 
+test("upgrade checklist directs readers to search for both apply and its placeholder", () => {
+  expect(doc.replace(/\s+/g, " ")).toMatch(
+    /Search deployment scripts and runbooks for `stack apply`, `TODO_STACK_APPLY`/,
+  );
+});
+
 test("upgrade checklist tracks the changelog's historical and current behavior", () => {
   const fix = changelog.split("## 0.2.1 (2026-10-16)")[1]?.split("\n## ")[0] ?? "";
   const current = changelog.split("## Unreleased")[1]?.split("\n## ")[0] ?? "";
