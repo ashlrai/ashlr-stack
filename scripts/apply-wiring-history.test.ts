@@ -59,6 +59,11 @@ test("historical marker is not presented as a usable credential", () => {
   }
 });
 
+test("history identifies the marker and records the zero-success count", () => {
+  expect(doc).toMatch(/`TODO_STACK_APPLY` was a dummy\s+value/);
+  expect(doc).toMatch(/Both attempts failed, so the old `envelopes`\s+count was always zero/);
+});
+
 test("relative references and changelog headings exist", () => {
   const headings = [...changelog.matchAll(/^#+ (.+)$/gm)].map((match) =>
     match[1].toLowerCase().replace(/[^\w\s-]/g, "").replace(/ /g, "-"),
