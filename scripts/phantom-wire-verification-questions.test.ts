@@ -141,15 +141,20 @@ describe("Phantom wire verification questions", () => {
     // The reminder is the TODO(security) block inside the handler body. It
     // must appear exactly once: zero leaves the stub without the warning that
     // `body` is unauthenticated, and two would duplicate or contradict it.
-    for (const provider of ["stripe", "clerk", "supabase", "github"]) {
+    for (const provider of ["stripe", "clerk", "supabase", "github", "other"]) {
       const stub = webhookStubFor(provider);
       const reminders = stub.match(/TODO\(security\): signature verification is NOT implemented here\./g);
       expect(reminders, `${provider} stub`).toHaveLength(1);
       // The reminder sits inside the commented handler body, between the body
       // read and the success response — not in the file-header prose.
-      const todo = stub.indexOf("TODO(security)");
-      expect(todo).toBeGreaterThan(stub.indexOf("await req.text()"));
-      expect(todo).toBeLessThan(stub.indexOf('return new Response("ok"'));
+      const bodyRead = stub.indexOf("//   const body = await req.text();");
+      const todo = stub.indexOf("//   // TODO(security)");
+      const reminderEnd = stub.indexOf("//   // parse, trust, or act on the body.");
+      const success = stub.indexOf('//   return new Response("ok", { status: 200 });');
+      expect(bodyRead, `${provider} body read`).toBeGreaterThanOrEqual(0);
+      expect(todo, `${provider} reminder after body read`).toBeGreaterThan(bodyRead);
+      expect(reminderEnd, `${provider} complete reminder`).toBeGreaterThan(todo);
+      expect(success, `${provider} success after reminder`).toBeGreaterThan(reminderEnd);
       // Its provider-specific hint is emitted with it, exactly once.
       expect(stub.split(verificationHintFor(provider))).toHaveLength(2);
     }
