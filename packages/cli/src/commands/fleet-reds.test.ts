@@ -17,7 +17,11 @@ const fixtures = [
     "TAP version 13\n    not ok 1 - rejects expiry\nnot ok 2 - parent suite",
     "rejects expiry",
   ],
-  ["node:test spec", "✔ accepts token (1.2ms)\n✖ rejects expiry (2.1ms)", "rejects expiry"],
+  [
+    "node:test spec",
+    "✔ accepts token (1.2ms)\n✖ rejects expiry (2.1ms)\n✖ rejects invalid signature (3ms)",
+    "rejects expiry",
+  ],
   [
     "nextest",
     "     PASS [ 0.002s] auth tests::accepts\n     FAIL [ 0.003s] auth tests::rejects_expiry\n FAIL [ 0.001s] auth tests::later",
