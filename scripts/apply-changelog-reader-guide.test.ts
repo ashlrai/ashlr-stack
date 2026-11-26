@@ -199,6 +199,12 @@ describe("glossary", () => {
 describe("reading the report", () => {
   const report = docSection("Reading the report");
 
+  test("records the rotate attempt before the retry without it", () => {
+    expect(report.replace(/\s+/g, " ")).toContain(
+      "For each declared secret it tried `phantom add <KEY> TODO_STACK_APPLY --rotate`, then tried again without `--rotate`.",
+    );
+  });
+
   test("explains the historical apply fix in the 0.2.1 entry's own terms", () => {
     const fixes = section(read("CHANGELOG.md"), "0.2.1 (2026-10-16)").split("### Bug fixes\n")[1]?.split("\n### ")[0];
     const entry = fixes?.trimStart().split("\n")[0] ?? "";
