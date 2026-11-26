@@ -17,6 +17,15 @@ const source = readFileSync(
 );
 
 describe("Phantom wire signature review", () => {
+  it("identifies the verification TODO as a comment, not verification code", () => {
+    const followUp = doc.split("## The commented signature-verification follow-up\n")[1]?.split("\n## ")[0];
+    expect(followUp).toBeDefined();
+    expect(followUp).toContain("not a working verifier");
+    expect(followUp).toContain("It stays a comment even after the example is activated.");
+    expect(followUp).toContain("the runnable lines still contain no\n  verification call, MAC computation, or comparison.");
+    expect(followUp).toContain("//   // TODO(security): signature verification is NOT implemented here.");
+  });
+
   it("marks verification as a future step and keeps the example-scope claims aligned", async () => {
     const excerpt = doc.match(/```ts\n([\s\S]*?)\n```/)?.[1];
     if (!excerpt) throw new Error("Missing source excerpt");
