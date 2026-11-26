@@ -143,6 +143,24 @@ test("the doc records the historical command and where its removal is documented
   }
 });
 
+test.each([
+  {
+    attempt: "first attempt",
+    command: "phantom add <KEY> TODO_STACK_APPLY --rotate",
+    explanation: "failed because Phantom Secrets has no `--rotate` option.",
+  },
+  {
+    attempt: "retry",
+    command: "phantom add <KEY> TODO_STACK_APPLY",
+    explanation: "failed because Phantom Secrets refuses secret values in command arguments",
+  },
+])("the doc describes the $attempt as a failed historical command", ({ attempt, command, explanation }) => {
+  const bullets = doc.match(/^- .+(?:\n {2}.+)*/gm) ?? [];
+  const bullet = bullets.find((text) => text.includes(`\`${command}\``))?.replace(/\s+/g, " ");
+  expect(bullet).toStartWith(`- The ${attempt}, \`${command}\``);
+  expect(bullet).toContain(explanation);
+});
+
 test("the doc never presents the placeholder command as a current instruction", () => {
   for (const block of doc.matchAll(/```\w*\n[\s\S]*?```/g)) {
     expect(block[0]).not.toContain("TODO_STACK_APPLY");
