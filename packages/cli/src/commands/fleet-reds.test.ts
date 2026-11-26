@@ -144,6 +144,40 @@ test("a passing-only TAP log has no failing test", () => {
 });
 for (const [reporter, output] of [
   [
+    "vitest",
+    [
+      " ✓ test/auth.test.ts (2 tests) 4ms",
+      " Test Files  1 passed (1)",
+      "      Tests  2 passed (2)",
+    ],
+  ],
+  ["vitest verbose", [" ✓ auth > accepts token 1ms", " ✓ auth > rejects expiry 2ms"]],
+  [
+    "node:test spec",
+    ["✔ accepts token (1.2ms)", "✔ rejects expiry (2.1ms)", "ℹ pass 2", "ℹ fail 0"],
+  ],
+  [
+    "nextest",
+    [
+      "     PASS [ 0.002s] auth tests::accepts",
+      "     PASS [ 0.003s] auth tests::rejects_expiry",
+      "  Summary [ 0.005s] 2 tests run: 2 passed, 0 skipped",
+    ],
+  ],
+] as const) {
+  test(`all-passing ${reporter} output has no failing test`, () => {
+    const ghLog = output
+      .map((line) => `Tests\tRun\t2026-11-09T05:00:00.0000000Z \x1b[32m${line}\x1b[0m`)
+      .join("\r\n");
+    for (const log of [output.join("\n"), ghLog]) {
+      expect(firstFailingTest(log)).toBeNull();
+      expect(failingTests(log)).toEqual([]);
+    }
+  });
+}
+
+for (const [reporter, output] of [
+  [
     "TAP",
     [
       "TAP version 13",
