@@ -146,6 +146,11 @@ describe("glossary", () => {
     expect(duplicateTerms("| Term | Meaning in these notes |\n| --- | --- |\n| `Example` | One |\n| example | Two |")).toEqual(["example"]);
   });
 
+  test("the placeholder definition identifies TODO_STACK_APPLY as a dummy value", () => {
+    const meaning = glossaryEntries(glossary).get("placeholder / todo_stack_apply");
+    expect(meaning).toMatch(/^A dummy value\b/);
+  });
+
   test("glossary entries for present and missing are distinct", () => {
     const entries = glossaryEntries(glossary);
     const present = entries.get("present");
