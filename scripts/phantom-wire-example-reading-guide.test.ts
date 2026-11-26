@@ -22,6 +22,13 @@ const tsBlocks = [...doc.matchAll(/```ts\n([\s\S]*?)\n```/g)].map((m) => m[1]);
 const sourceMap = doc.slice(doc.indexOf("\n## Source map\n"));
 
 describe("Phantom wire example reading guide", () => {
+  it("links the source map to the implementation and states the verification limit", () => {
+    expect(sourceMap).toContain("\n## Source map\n");
+    expect(sourceMap).toContain("](../packages/core/src/ai/phantom-wire.ts)");
+    expect(existsSync(sourceUrl)).toBe(true);
+    expect(sourceMap).toContain("signature verification is not implemented");
+  });
+
   it("follows generated examples in order and identifies their trust boundary", async () => {
     const providers = ["stripe", "clerk", "supabase", "github"];
     const harness = setupFakePhantom();
