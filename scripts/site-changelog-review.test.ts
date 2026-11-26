@@ -250,6 +250,21 @@ test("the placeholder timeline identifies the stop entry and its operational qua
   }
 });
 
+test("the placeholder timeline links 0.1.0 before 0.2.1", () => {
+  const timeline = doc.split("\n## Apply placeholder timeline\n")[1]?.split("\n## ")[0] ?? "";
+  const links = [...timeline.matchAll(/^\| (\[[^\]]+\]\([^)]+\)) \|/gm)].map(
+    (match) => match[1],
+  );
+  const initial = links.indexOf(
+    `[0.1.0](${sitePath}#010--2026-04-19-superseded-by-011)`,
+  );
+  const stop = links.indexOf(`[0.2.1 (2026-10-16)](${sitePath}#021-2026-10-16)`);
+
+  expect(initial, "missing linked 0.1.0 timeline row").toBeGreaterThanOrEqual(0);
+  expect(stop, "missing linked 0.2.1 timeline row").toBeGreaterThanOrEqual(0);
+  expect(stop, "linked 0.2.1 must follow linked 0.1.0").toBeGreaterThan(initial);
+});
+
 test("guide links and anchors resolve", () => {
   const headings = new Set([...doc.matchAll(/^#{2,3} (.+)$/gm)].map((match) => slug(match[1])));
   const releaseAnchors = new Set(releases.map(([, anchor]) => anchor));
