@@ -63,6 +63,14 @@ test("history distinguishes failed attempts, their removal and current operation
   }
 });
 
+test("the historical placeholder was a failed attempt, not a usable credential", () => {
+  const history = doc.split("## Current behavior")[0].replace(/\s+/g, " ");
+  expect(history).toContain("tried to store a `TODO_STACK_APPLY` placeholder");
+  expect(history).toContain("None of those writes ever succeeded");
+  expect(history).toContain("Those calls failed; they did not create usable credentials");
+  expect(history).toContain("Do not add placeholder values yourself: they are not credentials");
+});
+
 test("history summarises the 0.2.1 fix with the same terms as the changelog", () => {
   const fix = section("0.2.1 (2026-10-16)");
   for (const detail of [
