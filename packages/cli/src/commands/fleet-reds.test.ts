@@ -208,6 +208,37 @@ test("node:test expected TODO failures do not hide the first real failing test",
     ),
   ).toBe("real failure");
 });
+for (const [reporter, lines] of [
+  [
+    "TAP",
+    [
+      "not ok 1 - expected failure # TODO pending fix",
+      "    not ok 2 - unavailable feature # SKIP needs a tty",
+      "not ok 3 - another known gap # todo",
+      "not ok 4 - another unavailable feature # skip",
+    ],
+  ],
+  [
+    "spec",
+    [
+      "✖ expected failure (1.2ms) # TODO pending fix",
+      "    ✖ unavailable feature (2ms) # SKIP needs a tty",
+      "✗ another known gap (1ms) # todo",
+      "✗ another unavailable feature (1ms) # skip",
+    ],
+  ],
+] as const) {
+  test(`node:test ${reporter} output with only TODO and SKIP failures has no real failure`, () => {
+    const ghLog = lines
+      .map((line) => `Tests\tRun\t2026-11-09T05:00:00.0000000Z \x1b[31m${line}\x1b[0m`)
+      .join("\r\n");
+    for (const log of [lines.join("\n"), ghLog]) {
+      expect(firstFailingTest(log)).toBeNull();
+      expect(failingTests(log)).toEqual([]);
+    }
+  });
+}
+
 test("TAP TODO failure followed by a real failure reports the real failure", () => {
   const tap = [
     "TAP version 13",
