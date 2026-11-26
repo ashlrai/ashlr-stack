@@ -35,6 +35,16 @@ function relativeFileLinks(markdown: string): string[] {
 }
 
 describe("apply placeholder terminology", () => {
+  test("the glossary identifies TODO_STACK_APPLY as a historical placeholder", () => {
+    const glossary = doc.split("\n## Glossary\n")[1]?.split("\n## ")[0];
+    const rows = glossary?.split("\n").filter((line) => /^\|\s*`TODO_STACK_APPLY`\s*\|/.test(line));
+    expect(rows).toHaveLength(1);
+    const meaning = rows?.[0].split("|")[2];
+    expect(meaning).toContain("A literal dummy value that old wiring attempted to add");
+    expect(meaning).toContain("not a credential or a secret name");
+    expect(meaning).toContain("The calls failed; the placeholder was not successfully stored");
+  });
+
   test("both changelogs record the history and removal described by the glossary", () => {
     for (const changelog of changelogs) {
       const initial = changelog.split("## 0.1.0 — 2026-04-19")[1];
