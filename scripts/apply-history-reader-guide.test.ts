@@ -40,3 +40,10 @@ test("guide separates attempted history from the fix and later behavior", () => 
     expect(text).toContain(detail);
   }
 });
+
+test("guide records the initial rotate attempt followed by the retry without it", () => {
+  const text = guide.replace(/\s+/g, " ");
+  expect(text).toContain(
+    "Originally, wiring attempted to add a `TODO_STACK_APPLY` placeholder for each declared secret, first with `--rotate` and then without it.",
+  );
+});
