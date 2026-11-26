@@ -36,3 +36,11 @@ test("reader note distinguishes the unpublished 0.2.1 tag from 0.2.2", () => {
   expect(note.replace(/\s+/g, " ")).toContain("0.2.1 was tagged but not published to npm");
   expect(note).toContain("0.2.2 includes its changes");
 });
+
+test("the reader note describes the command and retry as failed historical attempts", () => {
+  const paragraph = note.split(/\n\s*\n/)[1].replace(/\s+/g, " ");
+  expect(paragraph).toContain(
+    "describes a historical attempt by apply wiring: `phantom add <KEY> TODO_STACK_APPLY --rotate`, followed by a retry without `--rotate`.",
+  );
+  expect(paragraph).toContain("These are not commands to run. Both attempts failed");
+});
