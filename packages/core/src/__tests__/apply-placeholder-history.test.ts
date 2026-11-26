@@ -53,3 +53,10 @@ test("location distinguishes failed historical attempts from the fix", () => {
   expect(location).toContain("provider setup may separately store real");
   expect(location).toContain("](../CHANGELOG.md#022-2026-10-25)");
 });
+
+test("location identifies the marker as part of earlier wiring", () => {
+  expect(location).toMatch(
+    /Originally, wiring attempted to add `TODO_STACK_APPLY` for each declared secret\./,
+  );
+  expect(location).toMatch(/Phantom rejected those attempts, so they did not create placeholders/);
+});
