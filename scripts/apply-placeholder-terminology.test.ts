@@ -41,6 +41,8 @@ describe("apply placeholder terminology", () => {
     expect(rows).toHaveLength(1);
     const meaning = rows?.[0].split("|")[2];
     expect(meaning).toContain("A literal dummy value that old wiring attempted to add");
+    expect(meaning).toContain("`phantom add <KEY> TODO_STACK_APPLY --rotate`");
+    expect(meaning).toContain("`phantom add <KEY> TODO_STACK_APPLY`");
     expect(meaning).toContain("not a usable credential or a secret name");
     expect(meaning).toContain("required secrets need real values from their providers");
     expect(meaning).toContain("The calls failed; the placeholder was not successfully stored");
