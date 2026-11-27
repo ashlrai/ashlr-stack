@@ -100,7 +100,8 @@ test("package files entries reference existing paths", () => {
     };
     const files = manifest.files ?? [];
     for (const f of files) {
-      if (f.startsWith("dist") || f.startsWith("!")) continue;
+      // dist/ and binaries/ are produced by the build and release workflow, so a clean checkout lacks them.
+      if (f.startsWith("dist") || f.startsWith("binaries") || f.startsWith("!")) continue;
       const checkPath = join(packageDir, f);
       const isFile = statSync(checkPath, { throwIfNoEntry: false })?.isFile();
       const isDir = statSync(checkPath, { throwIfNoEntry: false })?.isDirectory();
