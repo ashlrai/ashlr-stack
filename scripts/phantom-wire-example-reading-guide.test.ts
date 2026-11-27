@@ -799,3 +799,22 @@ describe("Phantom wire example review questions", () => {
     }
   });
 });
+
+describe("Phantom wire example reading guide: reminder placement", () => {
+  it("shows the verification reminder after the body read and says verification is not implemented", () => {
+    const excerpt = tsBlocks[0];
+    if (!excerpt) throw new Error("Missing generated example");
+    const bodyRead = excerpt.indexOf("await req.text()");
+    const reminder = excerpt.indexOf("TODO(security): signature verification is NOT implemented here.");
+    const success = excerpt.indexOf('return new Response("ok", { status: 200 })');
+    expect(bodyRead).toBeGreaterThanOrEqual(0);
+    expect(reminder).toBeGreaterThan(bodyRead);
+    expect(success).toBeGreaterThan(reminder);
+
+    // The prose lists the steps in the same order.
+    expect(doc.indexOf("**Body.**")).toBeLessThan(doc.indexOf("**Security TODO.**"));
+    expect(doc.indexOf("**Security TODO.**")).toBeLessThan(doc.indexOf("**Success response.**"));
+    expect(doc).toContain("signature verification is NOT\n   implemented here.");
+    expect(sourceMap).toContain("signature verification is not implemented");
+  });
+});
