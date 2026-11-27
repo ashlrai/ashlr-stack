@@ -115,8 +115,8 @@ separately so they are not mistaken for apply releases.
 These bullets spell `stack apply`, or something close to it, but record a
 change to another surface:
 
-- **Unreleased → Next release (since v0.3.10) → Fixed:** "The Phantom wire assumptions doc links `" records source line links in documentation and a test that checks them; command behavior is unchanged.
-- **Unreleased → Next release (since v0.3.10) → Fixed:** "Wiring guides now use the supported `stack apply --noWire`" records a documentation correction; command behavior is unchanged.
+- **Unreleased → Included in v0.3.11 (detailed notes) → Fixed:** "The Phantom wire assumptions doc links `" records source line links in documentation and a test that checks them; command behavior is unchanged.
+- **Unreleased → Included in v0.3.11 (detailed notes) → Fixed:** "Wiring guides now use the supported `stack apply --noWire`" records a documentation correction; command behavior is unchanged.
 - **0.3.8 → Testing:** "Expanded coverage for `stack apply` when" describes
   test coverage for missing secrets, Phantom, wiring and changelog parsing.
 - **0.2.2 → Agent-facing output:** "The last lines of a failing command reach
