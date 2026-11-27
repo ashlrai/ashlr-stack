@@ -14,7 +14,8 @@ name, status, evidence and next action; do not record or share values in
 checklists, tickets, logs or command arguments.
 
 - [ ] **Establish scope.** Use the saved recipe and prior apply output to list
-  the required secret names and provider outcomes. Wiring runs only if at
+  the required secret names and provider outcomes. Review the affected wiring
+  for those names and providers. Wiring runs only if at
   least one provider succeeds, then checks the whole recipe, including failed
   providers. Missing names alone do not fail apply; provider failures do.
 - [ ] **Identify unknowns.** A skipped or failed wiring check, an unreadable

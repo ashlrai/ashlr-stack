@@ -12,6 +12,15 @@ test("historical placeholder attempts failed without establishing vault contents
   expect(introduction).toContain("zero `envelopes` count does not prove what is in the vault");
 });
 
+test("directs readers to review affected secret wiring and webhook stubs", () => {
+  const normalized = doc.replace(/\s+/g, " ");
+  expect(normalized).toContain("Use the saved recipe and prior apply output to list the required secret names and provider outcomes");
+  expect(normalized).toContain("Review the affected wiring for those names and providers");
+  expect(normalized).toContain("checks the whole recipe, including failed providers");
+  expect(normalized).toContain("Review webhook stubs if applicable");
+  expect(normalized).toContain("they need signature verification before use");
+});
+
 test("name classification lists both present and missing outcomes", () => {
   const classification = doc.match(
     /^- \[ \] \*\*Classify each required name\.\*\*.*(?:\n {2}.*)*/m,
