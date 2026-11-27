@@ -51,3 +51,10 @@ test("checklist directs operators to identify dependencies and safely resolve un
     expect(existsSync(resolve(dirname(docPath), target)), `broken link: ${match[1]}`).toBe(true);
   }
 });
+
+test("first checklist item names apply and the old placeholder and sends readers to affected scripts", () => {
+  const first = doc.split("- [ ] ")[1]?.replace(/\s+/g, " ") ?? "";
+  expect(first).toContain("`stack apply`");
+  expect(first).toContain("`TODO_STACK_APPLY`");
+  expect(first).toMatch(/Search deployment scripts and runbooks/);
+});
