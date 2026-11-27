@@ -2,14 +2,31 @@
 
 ## Unreleased
 
-### Next release (since v0.3.10)
+### Next release (since v0.3.11)
 
-This section records merged work since `v0.3.10`. Check your installed version before relying on these changes.
+This section records merged work since `v0.3.11`. Check your installed version before relying on these changes.
 
 **Added**
 
 - `bun scripts/git-coordination.ts` coordinates concurrent fetches, creates isolated detached worktrees, and retries index contention within a deadline while preserving live Git locks; typed APIs and usage are in `scripts/git-coordination.md`.
 - `bun scripts/coverage-diagnostic.ts` reproduces coverage locally with JSON outcomes for test-command failures, missing LCOV, and runner errors, using an isolated HOME and fresh artifacts.
+- Contributing points a failing Coverage check at `bun scripts/coverage-diagnostic.ts` and its [guide](scripts/coverage-diagnostic.md).
+- A new [upgrade questions guide for the old apply placeholder](docs/apply-placeholder-upgrade-questions.md) answers whether the historical placeholder was a usable credential and what to check after upgrading.
+
+**Changed**
+
+- The apply placeholder terminology and wiring history docs now name the two historical `phantom add` calls (with and without `--rotate`) and call the old value a dummy value that was never stored. The review checklist says to review the affected wiring for the required secret names and providers.
+
+**Testing**
+
+- Added coverage for the fleet reds report, the apply placeholder guides, the Phantom wire documentation guides and the site changelog parser (inline code, multi-entry versions, Unicode, TODO markers).
+
+### Included in v0.3.11 (detailed notes)
+
+These notes were listed here before the `v0.3.11` tag and ship in [0.3.11](#0311-2026-11-24). They remain for existing documentation links and are not new changes for the next release.
+
+**Added**
+
 - The README links [The Dev Shack](https://discord.gg/jBQrSU6XeD) on Discord. `node scripts/setup.mjs` sets up a clone on macOS, Windows, and Linux (idempotent, no prompts) and smoke-tests `stack providers --json`. `bash scripts/setup.sh` and `scripts/setup.ps1` call it.
 - Install steps for macOS, Linux, and Windows are separate headings in the README and CONTRIBUTING. Windows uses `irm https://stack.ashlr.ai/install.ps1 | iex`. Phantom lookup on Windows follows PATHEXT, including `.cmd` shims.
 - The npm `stack` command maps Windows x64 to `binaries/stack-windows-x64.exe` and Windows arm64 to `binaries/stack-windows-arm64.exe`. An unknown platform exits with the supported list. When the release exe is not in the package yet, the command runs `dist/index.js`.
