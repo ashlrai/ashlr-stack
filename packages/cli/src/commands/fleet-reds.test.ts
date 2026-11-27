@@ -375,20 +375,23 @@ test("one SKIP-marked failure and one unmarked failure report only the unmarked 
   const ts = "Tests\tRun\t2026-11-09T05:00:00.0000000Z ";
   for (const [skipped, unmarked] of [
     ["not ok 1 - flaky on windows # SKIP no tty", "not ok 2 - real failure"],
-    ["✖ flaky on windows (1ms) # skip", "✖ real failure (2ms)"],
+    ["✖ flaky on windows (1ms) # SKIP", "✖ real failure (2ms)"],
   ] as const) {
     // Order must not matter: the skipped line never wins, before or after the real one.
     for (const log of [`${skipped}\n${unmarked}`, `${unmarked}\n${skipped}`]) {
       const expected = firstFailingTest(log);
       expect(expected).toBe("real failure");
+      expect(failingTests(log)).toEqual(["real failure"]);
       const gh = log
         .split("\n")
         .map((line) => `${ts}\u001b[31m${line}\u001b[39m`)
         .join("\r\n");
       expect(firstFailingTest(gh)).toBe(expected);
+      expect(failingTests(gh)).toEqual(["real failure"]);
     }
     // A lone SKIP-marked failure reports nothing.
     expect(firstFailingTest(skipped)).toBeNull();
+    expect(failingTests(skipped)).toEqual([]);
   }
 });
 
@@ -512,6 +515,22 @@ test("reports real TAP failures without reporting SKIP failures", async () => {
     return args.includes("1") ? skipped : `${skipped}\nnot ok 2 - actual failure`;
   });
   expect(report.repos).toHaveLength(DOCTOR_REPOS.length);
+  for (const repo of report.repos) {
+    expect(repo.runs).toHaveLength(2);
+    for (const run of repo.runs ?? []) {
+      expect(run.jobs).toEqual([
+        { name: "Tests 1", firstFailingTest: null, logStatus: "unrecognized" },
+        { name: "Tests 3", firstFailingTest: "actual failure", logStatus: "parsed" },
+      ]);
+    }
+  }
+});
+test("reports an unmarked spec failure without reporting a SKIP failure", async () => {
+  const skipped = "✖ needs a tty (1ms) # SKIP";
+  const report = await collectFleetReds(async (args, signal) => {
+    if (!args.includes("--job")) return client(args, signal);
+    return args.includes("1") ? skipped : `${skipped}\n✖ actual failure (2ms)`;
+  });
   for (const repo of report.repos) {
     expect(repo.runs).toHaveLength(2);
     for (const run of repo.runs ?? []) {
