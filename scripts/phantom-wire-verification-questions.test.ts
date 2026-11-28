@@ -160,6 +160,36 @@ describe("Phantom wire verification questions", () => {
     }
   });
 
+  it("keeps every line of the generated reminder commented in every covered stub", () => {
+    // The reminder is the TODO(security) block between the body read and the
+    // success response. If any of its lines carried executable code, `stack
+    // apply` would ship a handler that trusts an unauthenticated,
+    // attacker-controlled body. So every line of the block must stay a `//`
+    // comment (blank lines carry no code either) in every generated handler
+    // this file covers: the four wired providers plus the generic fallback.
+    const covered = ["stripe", "clerk", "supabase", "github", "other"];
+    for (const provider of covered) {
+      const lines = webhookStubFor(provider).split("\n");
+      const start = lines.findIndex((line) =>
+        line.includes("TODO(security): signature verification is NOT implemented here."),
+      );
+      const end = lines.findIndex((line) => line.includes("parse, trust, or act on the body."));
+      expect(start, `${provider}: reminder start found`).toBeGreaterThanOrEqual(0);
+      expect(end, `${provider}: reminder end found`).toBeGreaterThan(start);
+      // A line is a comment iff its first non-whitespace char opens one, so
+      // reformatting (indenting) the block stays legal; code on the line is not.
+      const isComment = (line: string) => line === "" || line.trimStart().startsWith("//");
+      const offending = lines
+        .slice(start, end + 1)
+        .map((line, offset) => [start + offset + 1, line] as const)
+        .filter(([, line]) => !isComment(line));
+      expect(
+        offending.map(([lineNo, line]) => `line ${lineNo}: ${line}`),
+        `${provider}: reminder must stay fully commented`,
+      ).toEqual([]);
+    }
+  });
+
   it("keeps question groups unanswered, links resolvable, and no verification claim", () => {
     for (const statement of [
       "`TODO(security)`",
