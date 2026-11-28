@@ -53,6 +53,19 @@ test("parsed entry retains prose before and after a TODO marker", () => {
   ]);
 });
 
+test("bare TODO_STACK_APPLY marker renders as literal entry text", async () => {
+  const markdown = `## 1.0.0
+
+- Keep TODO_STACK_APPLY visible in the changelog entry.
+`;
+
+  const html = await marked.parse(markdown, { gfm: true, breaks: false });
+
+  expect(html).toBe(
+    "<h2>1.0.0</h2>\n<ul>\n<li>Keep TODO_STACK_APPLY visible in the changelog entry.</li>\n</ul>\n",
+  );
+});
+
 test("TODO marker renders as literal inline code", async () => {
   const markdown = `## 1.0.0
 
