@@ -21,6 +21,7 @@ This section records merged work since `v0.3.11`. Check your installed version b
 
 - Added coverage for the fleet reds report, the apply placeholder guides, the Phantom wire documentation guides and the site changelog parser (inline code, multi-entry versions, Unicode, TODO markers).
 - The Phantom wire comment-context test now derives the covered handlers from the materializer's `WEBHOOK_PROVIDERS` set and checks that, in each generated stub, the body read precedes the verification reminder and the reminder precedes the success response.
+- Added a Phantom wire test that keeps every line of the generated `TODO(security)` signature reminder commented in the Stripe, Clerk, Supabase, GitHub and generic webhook stubs, so generated handlers cannot ship executable code in that block.
 
 ### Included in v0.3.11 (detailed notes)
 
