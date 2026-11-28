@@ -122,17 +122,7 @@ That adds `/stack:add`, `/stack:apply`, `/stack:doctor`, `/stack:list`, `/stack:
 
 ## Part of the Ashlr ecosystem
 
-Stack is one tool in the Ashlr ecosystem. Together these tools aim to be an autonomous, code-first, agent-native software factory, chasing open-source RSI (recursive self-improvement). Agents do the work, and the human acts as a passive board member. Stack's job in that factory is the service layer: it turns provider setup into commands an agent can run and parse.
-
-| Tool | Command | Role |
-|---|---|---|
-| Phantom (`@ashlr/phantom`) | `phm` | Runs the agents that improve these repos, for example `phm improve`. |
-| [Phantom Secrets](https://github.com/ashlrai/phantom-secrets) | `phantom` | Vault. Stack stores the secrets you select here. |
-| [Locus](https://github.com/ashlrai/locus) | `locus` | Identity plane. Pins which account a session acts as; `stack exec --as` uses it. |
-| [Lexicon](https://github.com/ashlrai/lexicon) | `lexicon` | Voice lexicon. Keeps dictated names spelled right. |
-| [Ashlr Markdown](https://github.com/ashlrai/ashlr-md) | `mdopener-mcp` | Desktop Markdown app with an MCP server. |
-| [Ashlr plugin](https://github.com/ashlrai/ashlr-plugin) | `ashlr-plugin` | Plugin for Claude Code and Codex. |
-| Ashlr Stack (this repo) | `stack` | Configures services and wires them into agents. |
+Stack configures supported services for agents in the [AshlrAI open-source ecosystem](https://github.com/ashlrai#the-open-source-ecosystem). It records selected credentials in [Phantom Secrets](https://phm.dev/secrets). `stack exec --as` uses [Locus](https://github.com/ashlrai/locus) for identity pinning.
 
 `stack doctor --ecosystem` shows which of these are installed, with versions. It is read-only and never fails. `stack doctor --ecosystem --install` prints install commands for missing tools and runs nothing. A full walkthrough is in [docs/getting-started-ecosystem.md](docs/getting-started-ecosystem.md).
 
@@ -442,7 +432,7 @@ AshlrAI is an engineering firm. We build tools like Ashlr Stack to make our own 
 
 - **Start here:** read [CONTRIBUTING.md](CONTRIBUTING.md). Your coding agent can follow [AGENTS.md](AGENTS.md) and [llms.txt](llms.txt).
 - **Pick an issue:** [`good first issue`](https://github.com/ashlrai/ashlr-stack/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) or [`help wanted`](https://github.com/ashlrai/ashlr-stack/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22).
-- **See the whole lineup:** [ashlr.ai/open-source](https://ashlr.ai/open-source).
+- **See the whole lineup:** [AshlrAI open-source ecosystem](https://github.com/ashlrai#the-open-source-ecosystem).
 - **Chat:** join [The Dev Shack](https://discord.gg/jBQrSU6XeD) on Discord.
 
 ### Star history
@@ -465,7 +455,7 @@ AshlrAI is an engineering firm. We build tools like Ashlr Stack to make our own 
 
 Issues and PRs are welcome. Look for [`good first issue`](https://github.com/ashlrai/ashlr-stack/labels/good%20first%20issue) to get started, and read [CONTRIBUTING.md](CONTRIBUTING.md). Its [agent path](CONTRIBUTING.md#contribute-with-an-agent) covers forking, the checks to run and what the required CI Gate check needs before a PR merges. For questions and bug reports, see [SUPPORT.md](SUPPORT.md). Report security problems privately per [SECURITY.md](SECURITY.md).
 
-Ashlr Stack is one of the open-source tools from [Ashlr](https://ashlr.ai). See [Part of the Ashlr ecosystem](#part-of-the-ashlr-ecosystem) for the sibling tools. The site is [stack.ashlr.ai](https://stack.ashlr.ai).
+Ashlr Stack is one of the open-source tools from [AshlrAI](https://ashlr.ai). See [Part of the Ashlr ecosystem](#part-of-the-ashlr-ecosystem) for the sibling tools. The site is [stack.ashlr.ai](https://stack.ashlr.ai).
 
 ## License
 
