@@ -43,7 +43,7 @@ export interface WireResult {
  * Providers with webhooks worth pre-wiring. Keep this list tight and update
  * the provider-specific secret and signature header mappings for each entry.
  */
-const WEBHOOK_PROVIDERS = new Set(["stripe", "clerk", "supabase", "github"]);
+export const WEBHOOK_PROVIDERS = new Set(["stripe", "clerk", "supabase", "github"]);
 
 export async function wirePhantomForRecipe(
   recipe: Recipe,
