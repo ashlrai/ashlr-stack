@@ -20,6 +20,7 @@ This section records merged work since `v0.3.11`. Check your installed version b
 **Testing**
 
 - Added coverage for the fleet reds report, the apply placeholder guides, the Phantom wire documentation guides and the site changelog parser (inline code, multi-entry versions, Unicode, TODO markers).
+- The Phantom wire comment-context test now derives the covered handlers from the materializer's `WEBHOOK_PROVIDERS` set and checks that, in each generated stub, the body read precedes the verification reminder and the reminder precedes the success response.
 
 ### Included in v0.3.11 (detailed notes)
 

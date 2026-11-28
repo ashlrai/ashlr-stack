@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { readFileSync } from "node:fs";
-import { webhookStubFor } from "./phantom-wire.ts";
+import { WEBHOOK_PROVIDERS, webhookStubFor } from "./phantom-wire.ts";
 
 describe("phantom wire comment context", () => {
   it("documents the body read, verification reminder, and response in their generated order", () => {
@@ -21,14 +21,18 @@ describe("phantom wire comment context", () => {
       "Even if the handler lines are uncommented, the TODO remains a comment:",
     );
 
-    for (const provider of ["stripe", "clerk", "supabase", "github"]) {
+    // Every covered handler, per the materializer's own provider set.
+    expect(WEBHOOK_PROVIDERS.size).toBeGreaterThan(0);
+    for (const provider of WEBHOOK_PROVIDERS) {
       const stub = webhookStubFor(provider);
       const body = stub.indexOf("const body = await req.text();");
       const todo = stub.indexOf("TODO(security): signature verification is NOT implemented here.");
+      const reminderEnd = stub.indexOf("parse, trust, or act on the body.");
       const response = stub.indexOf('return new Response("ok", { status: 200 });');
       expect(body).toBeGreaterThanOrEqual(0);
       expect(todo).toBeGreaterThan(body);
-      expect(response).toBeGreaterThan(todo);
+      expect(reminderEnd).toBeGreaterThan(todo);
+      expect(response).toBeGreaterThan(reminderEnd);
       // Removing the outer comment activates the example, but not its TODO.
       const uncommented = stub.replace(/^\/\/ ?/gm, "");
       expect(uncommented).toContain("  const body = await req.text();");
